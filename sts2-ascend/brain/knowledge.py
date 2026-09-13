@@ -967,6 +967,19 @@ DEFAULT_POLICY = {
                                      # 全场无本体时重生体就是唯一的血池与终点，计入竞速账；
                                      # 有本体在场时仍按旧口径剔除（506 局教义不动）。
                                      # false 即回滚旧版（重生体一律不计入血池，零行为差异）
+     # --- 名册原生白名单闸（第1441~1446局批复盘新增，静态键） ---
+    "respawn_roster_native_gate": True,  # 跨局重生名册读侧按原生重生物种白名单
+                                     # （RESPAWN_NATIVE_SPECIES）否决生效：名册 confirmations
+                                     # 只证明「该敌键多次预测击杀落空」，而敌键是种级键——同场
+                                     # 击杀 ≥2 个同种不同实例（NIBBIT 群、花园幽灵鳗×4）同样
+                                     # 累计落空账。stats.json 名册 28 条中 19+ 条经原生
+                                     # mechanics 全量扫描确认无任何自重生/复召机制，却每场
+                                     # T1 起驱动「全场均为已证实重生体」教义（1444-F4 NIBBIT、
+                                     # 1445-F4 TOADPOLE、1445-F13 PHANTASMAL_GARDENER×4 注记
+                                     # 逐字在产）。开键后非白名单条目不激活重生教义，否决观测
+                                     # 另记 stats.respawn_native_vetoes（每场每敌至多一次）；
+                                     # 名册原账与同场坐实检测零改动。false 即严格回滚旧口径
+                                     # （名册 confirmations≥2 即生效，selfcheck 3yr 回滚锚）
      # --- 竞速账药水授信（第654~663/675~680批复盘新增，静态键） ---
     "race_potion_flat_credit": 12.0, # Boss 竞速账里每瓶进攻类药水折算的血池削减：预留教义把进攻药水
                                      # 封存到 Boss 窗口兑现，旧竞速账却只认 deck_burst——已入库的药水
@@ -1194,6 +1207,10 @@ DEFAULT_STATS = {
                          # （跨局重生召唤物名册，第 506~508 局批复盘新增：同种敌人
                          #   在 ≥2 场独立战斗中被「预测击杀≥2 次仍存活」实证后，
                          #   后续战斗第 1 回合即按重生体三重压制，不再先烧 2 次输出）
+    "respawn_native_vetoes": {},  # enemy_key -> {"vetoes": n}
+                          # （名册原生白名单否决观测，第 1441~1446 局批复盘新增：
+                          #   名册命中但 RESPAWN_NATIVE_SPECIES 白名单否决的次数，
+                          #   每场战斗每敌至多一次；只观测，不改名册原账）
     "leak_death_blocks": {},  # card_id -> {"total": n, "seen_at": {source: n}}
                               # （LEAK_DEATH_GUARD 留痕，第 801 局批复盘新增：致死负面
                               #   负载牌在 offer 池/商店货架出现的次数与来源。屏蔽本身
@@ -1379,6 +1396,34 @@ def clamp(value: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, value))
 
 
+# 原生重生物种白名单（RESPAWN_ROSTER_NATIVE_GATE，第 1441~1446 局批复盘新增）：
+# 跨局重生名册的 confirmations 只证明「该敌键多次预测击杀落空」，而敌键是种级
+# 键——同场击杀 ≥2 个同种不同实例（NIBBIT 群、花园幽灵鳗×4、噬尸蛞蝓群）同样
+# 累计落空账。stats.json 名册 28 条中 19+ 条经原生 mechanics/monsters.jsonl
+# 全量扫描确认无任何自重生/复召机制（仅 AXEBOT/TEST_SUBJECT 带 respawnTrigger、
+# OSTY/DECIMILLIPEDE_SEGMENT 带 Revive 动画态），却每场 T1 起驱动「全场均为已
+# 证实重生体」教义（1444-F4 NIBBIT、1445-F4 TOADPOLE、1445-F13
+# PHANTASMAL_GARDENER×4 注记逐字在产）。读侧按本白名单否决名册生效：原账不动
+# （误计数继续记录、否决另记 respawn_native_vetoes 可逐局对账），行为效应一刀
+# 切断；policy 键 respawn_roster_native_gate=False 严格回滚旧口径。
+RESPAWN_NATIVE_SPECIES = (
+    "WRIGGLER",               # 扭动虫：召唤体循环复召（506~508 局实证，名册 99 封顶）
+    "EYE_WITH_TEETH",         # 利齿之眼：雾菇循环复召（52~53 局实证，名册 99 封顶）
+    "EXOSKELETON",            # 外骨骼：复召型召唤物（名册 99 封顶实证）
+    "INKLET",                 # 小墨灵：复召型召唤物（名册 99 封顶实证）
+    "AXEBOT",                 # 原生 respawnTrigger/_respawnMaxHpBonus 字段
+    "TEST_SUBJECT",           # 原生 _respawnTrigger/_respawns 字段
+    "OSTY",                   # 原生 Revive 动画态（复生机制）
+    "DECIMILLIPEDE_SEGMENT",  # 原生 Revive 动画态（体节复生）
+)
+
+
+def respawn_native_species(enemy_key: str) -> bool:
+    """该敌键是否属于原生存在重生/复召机制的物种（大写化子串匹配）。"""
+    key = str(enemy_key or "").upper()
+    return any(tok in key for tok in RESPAWN_NATIVE_SPECIES)
+
+
 def act_floor_band(row_in_act: int) -> int:
     """幕内层段号（第 266 局批次复盘）：1=前段(1~5层)、2=中段(6~11层)、3=后段(12层起)。
 
@@ -1515,6 +1560,9 @@ class Knowledge:
         # 迁移：跨局重生召唤物名册与进幕快照（第 506~508 局批复盘新增）。
         # 纯增量结构：旧库无此键即从空累积，不回填、读取端 .get 兜底
         self.stats.setdefault("respawn_adds", {})
+        # 迁移：名册原生白名单否决观测（第 1441~1446 局批复盘新增）。纯增量结构：
+        # 旧库无此键即从空累积，读取端 .get 兜底，不回填
+        self.stats.setdefault("respawn_native_vetoes", {})
         self.stats.setdefault("act_entries", [])
         # 迁移：LEAK_DEATH_GUARD 留痕（第 801 局批复盘新增）。纯增量结构：
         # 旧库无此键即从空累积，读取端 .get 兜底，不回填
@@ -2757,6 +2805,23 @@ class Knowledge:
             return int(e.get("confirmations", 0) or 0) >= 2
         except (TypeError, ValueError):
             return False
+
+    def mark_respawn_native_veto(self, enemy_key: str) -> None:
+        """登记一次「名册条目被原生白名单否决」观测（第 1441~1446 局批复盘新增）。
+
+        调用时机：policy 端 _is_respawn_add 读名册命中（confirmations≥2）但
+        RESPAWN_NATIVE_SPECIES 白名单否决的瞬间（每场战斗每敌至多一次）。只进
+        stats.respawn_native_vetoes 计数，不改名册原账——让存量污染条目此后
+        每一场普通战都留下可逐局对账的否决读数（原账 confirmations 记录的是
+        同种多实例误计数的原料，否决数记录的是它被拦下的频率）。
+        """
+        if not self._learning_write_allowed():
+            return
+        if not enemy_key:
+            return
+        d = self.stats.setdefault("respawn_native_vetoes", {})
+        e = d.setdefault(str(enemy_key), {"vetoes": 0})
+        e["vetoes"] = min(9999, int(e.get("vetoes", 0) or 0) + 1)
 
     def mark_leak_death_block(self, source: str, card_id: str) -> None:
         """LEAK_DEATH_GUARD 留痕：致死负面负载牌出现在某来源候选池并被屏蔽。

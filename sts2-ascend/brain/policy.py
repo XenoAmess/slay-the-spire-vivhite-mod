@@ -39,7 +39,7 @@ from character_strategy import (
     vivhite_crimson_ritual_totals,
 )
 from decision_trace import DecisionTraceBuilder, ensure_decision_trace
-from knowledge import Knowledge, clamp
+from knowledge import Knowledge, clamp, respawn_native_species
 from window_layers import reassert_viewer_topmost
 
 # 精英闸门在负分区间的加性罚基数：乘法折扣对负分会"越乘越好"（第 43 局实证），
@@ -673,6 +673,7 @@ class Policy:
         self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
         self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
         self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
+        self._respawn_veto_reported: set = set()  # 本场已登记过原生白名单否决观测的敌键（防重复计数）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -3844,6 +3845,7 @@ class Policy:
             self._kills_combat = ctx.combat
             self._combat_kills = {}
             self._respawn_reported = set()
+            self._respawn_veto_reported = set()
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -6540,9 +6542,32 @@ class Policy:
         if kid and kid in self._respawn_reported:
             return True
         try:
-            return self.know.is_known_respawn_add(kid)
+            known = self.know.is_known_respawn_add(kid)
         except Exception:
             return False
+        if not known:
+            return False
+        # RESPAWN_ROSTER_NATIVE_GATE（第 1441~1446 局批复盘）：名册 confirmations≥2
+        # 只证明「该敌键多次预测击杀落空」，而敌键是种级键——同场击杀 ≥2 个同种
+        # 不同实例（NIBBIT 群、花园幽灵鳗×4、噬尸蛞蝓群）同样累计落空账。stats.json
+        # 名册 28 条中 19+ 条（NIBBIT16/TOADPOLE4/CHOMPER5/CORPSE_SLUG33/
+        # PHANTASMAL_GARDENER11/MYTE13/THIEVING_HOPPER13/PARAFRIGHT19/TOUGH_EGG17/
+        # TWO_TAILED_RAT36/SOUL_FYSH2/WATERFALL_GIANT1 等）经原生
+        # mechanics/monsters.jsonl 全量扫描确认无任何自重生/复召机制，却每场 T1 起
+        # 驱动「全场均为已证实重生体」教义（1444-F4 NIBBIT、1445-F4 TOADPOLE、
+        # 1445-F13 PHANTASMAL_GARDENER×4 注记逐字在产）。读侧按原生白名单否决：
+        # 名册原账与同场坐实检测零改动（误计数继续记录），否决观测另记
+        # respawn_native_vetoes（每场每敌至多一次）；键=False 严格回滚旧口径。
+        if (self.know.policy.get("respawn_roster_native_gate", True)
+                and not respawn_native_species(kid)):
+            if kid and kid not in self._respawn_veto_reported:
+                self._respawn_veto_reported.add(kid)
+                try:
+                    self.know.mark_respawn_native_veto(kid)
+                except Exception:
+                    pass
+            return False
+        return True
 
     def _enemy_power_stack(self, enemy: dict, *keywords: str) -> float:
         """读取敌人当前持有的某类增益层数（力量/滑溜同构账本合并，原

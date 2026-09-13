@@ -9931,3 +9931,174 @@ retry_resolution: none (no replay target; local production behavior fix)
    条目核对；④ 竞速台账 427/951 走向；⑤ SLEEP_GUARD_PASS_OBS 首发
    （部署后族母遭遇）续盯；⑥ BARRICADE_BANK_VALUE/LETHAL_
    SURVIVABLE_LINE 首发续盯。
+# 2026-09-13｜第 1441~1446 局复盘（异步追及队列 6 局 exact_batch 全败；行为修复 ×1：RESPAWN_ROSTER_NATIVE_GATE 名册原生白名单闸——同种多实例误计数的存量污染条目读侧一刀切失效，「全场均为已证实重生体」教义回归真重生体）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，无
+  replay target。
+- 上一批（1436~1440）last_paths 关键标签存在性核读：ENEMY_INTANGIBLE_
+  CAP_OBS、enemy_intangible_dmg_cap、selfcheck 3int、SLEEP_GUARD_PASS_OBS
+  （sleep_guard_pass_obs）、BARRICADE_BANK_VALUE、LETHAL_SURVIVABLE_LINE
+  均在当前 HEAD 在产，无「记录已闭环但代码不在产」分叉。
+- 上批观察点兑现核对：① ENEMY_INTANGIBLE_CAP_OBS 未首发——本批六局
+  无任何无实体/沉睡/壁垒机制现场（rg 全量核对），续盯；② 无实体穿透
+  复发=0：stats.json respawn_adds 自 1440 局存档（0d5080a2）至 HEAD
+  逐键 diff 零变化（SOUL_FYSH 停 2、WATERFALL_GIANT 停 1、无新条目），
+  污染源切断结论巩固；④ 竞速台账 427/951→432/962≈44.9%（应验+5：
+  1441/1442/1444/1445/1446 F17，反向+3：1441 F6/F7、1446 F14 判死后
+  获胜），带内偏上限续记；⑤ SLEEP_GUARD_PASS_OBS 未首发（六局零沉睡
+  遭遇）；⑥ **LETHAL_SURVIVABLE_LINE 首发 3 次逐字符合设计**——
+  1441-F7（10血对意图19，买命格挡跃跃欲试）、1445-F17（14血对意图15，
+  打出防御）、1446-F14（24血对意图25，可击杀打击照常放行不被格挡挤占），
+  覆盖缺口全部=意图-生命、非斩杀让位/斩杀放行语义正确；BARRICADE_BANK_
+  VALUE 无触发原料（1444-F3 壁垒参选价值 2.6 未拿）。
+
+retry_resolution: none (no replay target; local production behavior fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：跨局重生名册的生效判定（confirmations≥2）对「同种
+  多实例同场」零防御——敌键是种级键（enemy_id/name），同场击杀 ≥2 个
+  同种不同实例（NIBBIT 群、花园幽灵鳗×4、噬尸蛞蝓群）同样累计
+  _combat_kills≥2 → 误判「该死没死=会复活」并登记名册；≥2 场后该种
+  永久激活重生教义（三重压制/全场解除压制/血池信贷），此后每场 T1 起
+  扭曲普通战行为。原生机制全量扫描（mechanics/monsters.jsonl 2202 条）
+  确认仅 AXEBOT/TEST_SUBJECT 带 respawnTrigger、OSTY/DECIMILLIPEDE_
+  SEGMENT 带 Revive 动画态，加历史实证的循环复召召唤物（WRIGGLER/
+  EYE_WITH_TEETH/EXOSKELETON/INKLET，名册 99 封顶）外，名册 28 条中
+  19+ 条无任何自重生机制——读侧按原生白名单设闸可一刀切掉存量污染的
+  行为效应，且不动名册原账（误计数继续记录、否决另留痕可逐局对账）。
+- **EVIDENCE**：① stats.json respawn_adds 污染读数：NIBBIT=16、
+  CORPSE_SLUG=33、TWO_TAILED_RAT=36、PARAFRIGHT=19、TOUGH_EGG=17、
+  MYTE=13、THIEVING_HOPPER=13、PHANTASMAL_GARDENER=11、SOUL_FYSH=2 等，
+  原生核读这些物种的 mechanics 记录无任何 respawn/revive/summon-self
+  方法（NIBBIT 仅 ButtMove/HissMove/SliceMove；TOADPOLE 仅 SpikeSpit/
+  Spiken/Whirl；PHANTASMAL_GARDENER 仅 Bite/Enlarge/Flail/Lash）；
+  ② 本批行为污染现场逐字在产：1444-F4 小啃兽（NIBBIT）、1445-F4 蟾蜍
+  蝌蚪（TOADPOLE）、1445-F13 花园幽灵鳗×4（PHANTASMAL_GARDENER）、
+  1445-F14 噬尸蛞蝓（CORPSE_SLUG）普通战全带「全场均为已证实重生体，
+  解除重生压制以终结战斗」注记；③ 污染源已断（上批 ENEMY_INTANGIBLE_
+  DMG_CAP 落地后本批名册零增长）——剩余问题=存量条目持续生效，读侧
+  闸门是唯一不碰在线 stats.json 的最小切口（隔离仓对在线状态只读，
+  且「读侧否决≠清账」保留误计数原料供后续核销）。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① NIBBIT/TOADPOLE/PHANTASMAL_
+  GARDENER/CORPSE_SLUG 等普通战 T1 起「全场均为已证实重生体」与
+  「重生体计入血池」注记绝迹；② stats.json 新增 respawn_native_vetoes
+  键逐局增长（每场每污染种至多 +1，可逐局对账拦截频率）；③ 真重生体
+  战（WRIGGLER/EYE_WITH_TEETH/EXOSKELETON/INKLET/AXEBOT 族）压制教义
+  与 506 局行为闭环照常；④ respawn_adds 原账继续记录同场坐实原料
+  （若某非白名单物种 confirmations 持续增长，即同种多实例误计数仍在
+  累积的直接证据，供写侧修复立项）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1441..1446]，exact 6/6、missing=0；6 局全败（生涯
+  0/1446）。死亡分布：一幕 Boss F17 五局（1441/1442/1444/1445/1446）、
+  1443 同层（key_reasons 同型竞速判死链）；死因组合含 WATERFALL_GIANT
+  （1445）、CEREMONIAL_BEAST（1446）等高位杀手。
+- 主样本 1446（D50SYB2V0L71）packet 内 119 条切片（kept 119/omitted 93，
+  bounded tail+aggregates）+ 1444/1445 runs 全文核读：Boss 前夜竞速
+  预演判死全部实战兑现（击杀需 16~20 回合＞满血可存活 7 回合）；1444/
+  1445/1446 篝火 RACE_AUDIT_HEAL_OVERRIDE 弃疗改路线与
+  RACE_AUDIT_DOOM_WAIVER_GATE 否决留痕在产。
+- 部署时序：RESPAWN_ROSTER_NATIVE_GATE 为本批新落地，不覆盖本批任何
+  对局（1444/1445 的「全场重生体」注记为 pre-fix 口径，即本批修复对象
+  本身），证据与修复无时序混淆。上批 ENEMY_INTANGIBLE_DMG_CAP
+  （03453064，08:56）早于 1441 启程后的有效窗口，本批名册零增长为其
+  真机验证口径。
+- 主矛盾不变：输出速率缺口。六局 Boss 竞速判死全部坐实，旋钮代谢链
+  全顶格（kill_bonus 20.00、boss_entry_min_hp_pct 0.88 距上限 0.02、
+  burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成上限、kill_race_
+  prior_eff 触底）——判死缺口属设计内终态，不重复立案。
+
+## 二、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 见一节末段，不重复展开。
+2. **本批实验靶点：重生名册存量污染的读侧闸门（已立项）。** 详见
+   HYPOTHESIS 与三节；机制前提经原生 mechanics 全量扫描核读，非估值
+   争议。同种多实例误计数是写侧缺口（敌键种级化），但写侧修复需要
+   载荷侧实例唯一标识（当前 payload 未证实提供），本批先落地读侧
+   闸门切断行为效应，写侧原料由 respawn_adds 原账+respawn_native_
+   vetoes 台账继续积累。
+3. **LETHAL_SURVIVABLE_LINE 首发 3/3 逐字符合设计**（1441-F7/1445-
+   F17/1446-F14，见〇节）——可负担格挡买命与斩杀放行语义均正确，
+   首验 3/3 达封账线，杠杆封账保留。
+4. **REMOVAL_COST_FLIP_AUDIT**：本批 1445-F13 一条「减员成本随附
+   （去除减员分后中标不变）」——随附型，翻案计数维持 3/3 不新增；
+   KIN 原料本批零遭遇，裁决继续待料。
+5. **RACE_HAND_TAX_FIRE**：1443×3 条注记在产（税负局判决方向不变），
+   HAND_TAX_NOTE_DEDUP 后无双拼（per-reason count=1），续记。
+6. **竞速审计悲观率台账**：432/962≈44.9%，连续多批稳定于 30%~46%
+   带内偏上限，续记不动作。
+7. **SLEEP_GUARD_PASS_OBS / BARRICADE_BANK_VALUE / EXHAUST_FIZZLE_
+   EXEMPT / SLIPPERY_TTK_BREAK_EST**：本批均无对应现场（零沉睡遭遇、
+   壁垒参选未拿、无痛殴空转、滑溜贴线 0），顺延不判失效。
+
+## 三、本次调整（行为修复 ×1：RESPAWN_ROSTER_NATIVE_GATE 名册原生白名单闸）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_NATIVE_GATE**（跨局重生名册生效判定对「同种多实例同场误计数」零防御，19+ 条无原生重生机制的存量污染条目每场 T1 起驱动重生教义；证据：stats.json 名册 28 条读数 + mechanics/monsters.jsonl 全量扫描仅 4 种带 respawn/revive 字段 + 1444-F4 NIBBIT/1445-F4 TOADPOLE/1445-F13 PHANTASMAL_GARDENER×4/1445-F14 CORPSE_SLUG 普通战「全场均为已证实重生体」注记逐字在产；机制先例：ENEMY_INTANGIBLE_DMG_CAP 批「凡以落空次数为证据的推断器，先把结算模型与原生修正对齐」同教义——本批把「生效读侧」与原生机制对齐） |
+| 代码动作 | ① brain/knowledge.py：新增模块级 RESPAWN_NATIVE_SPECIES 白名单（WRIGGLER/EYE_WITH_TEETH/EXOSKELETON/INKLET 历史实证循环复召 + AXEBOT/TEST_SUBJECT/OSTY/DECIMILLIPEDE_SEGMENT 原生 respawn/revive 字段）与 respawn_native_species() 判定（大写化子串）；新增 mark_respawn_native_veto() 观测账本（stats.respawn_native_vetoes，每场每敌至多一次，封顶 9999，旧库 setdefault 迁移）；DEFAULT_POLICY 新增静态键 respawn_roster_native_gate: True（含证据与回滚注释；policy.json 零改动，缺键走默认）；② brain/policy.py `_is_respawn_add` 名册读分支：confirmations≥2 命中后经白名单复核——非白名单物种判 False（不激活三重压制/全场解除/血池信贷），同场首次否决登记 mark_respawn_native_veto（_respawn_veto_reported 随战斗身份重置）；同场坐实检测（_combat_kills≥2）、名册写入（mark_respawn_add）、_kill_bonus 的 ignore_respawn 通道全部逐字不动；③ brain/selfcheck.py：3yr 扩展 3yr-gate 锚组（原账不受否决影响/否决生效/否决留痕/同场去重/白名单不误伤/大小写子串/键=False 严格回滚），3rs 名册键改白名单内物种（RC_WRIGGLER_A/B）并新增④非白名单条目不激活全场重生教义锚 |
+| 性质边界 | 行为有界：只改名册读侧生效判定——名册原账（confirmations 继续累积）、同场坐实检测、三重压制对白名单物种的全部语义、竞速血池信贷（race_all_respawn_pool_credit）、152 局全场解除教义全部零改动；非重生物种战斗从此评分逐分回到名册前的原生口径；键=False 严格回滚（selfcheck 3yr-gate 回滚锚） |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3yr-gate 七锚、3rs④ 新锚与 3yr/3rs①~③/3int/3sg/3bb/3br/3htx 等全部旧锚原样通过） |
+| 未来 3~10 局观测指标 | ① 普通战「全场均为已证实重生体」/「重生体计入血池」注记绝迹核对（1444-F4/1445-F13 型同型）；② stats.respawn_native_vetoes 逐局读数（每污染种每场 ≤1）；③ 真重生体战压制教义存续（WRIGGLER/EYE_WITH_TEETH 族遭遇时注记与转火行为不变）；④ respawn_adds 原账走向（非白名单物种 confirmations 继续增长=同种多实例误计数仍在累积，≥3 独立对局增量即立项写侧实例键修复）；⑤ 竞速台账 432/962 走向 |
+| 继续调整条件 | 注记绝迹且真重生体战行为不变 ≥3 局 → 杠杆封账保留；若非白名单物种 confirmations 持续 ≥+3 独立对局 → 立项写侧修复（敌键实例化或坐实门槛改为「同实例」）；若白名单误伤真重生体（新复召机制物种被否决致学费重交 ≥2 局）→ 按原生 mechanics 核读补白名单词条而非回滚 |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_native_gate: false` 即读侧严格回滚旧口径（名册 confirmations≥2 即生效，selfcheck 3yr-gate 回滚锚为对照）；或删除 knowledge/policy/selfcheck 三处改动零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（读侧闸门落地，
+   非登记延后）。「写侧实例键修复」已按预注册口径登记触发条件
+   （confirmations 增量 ≥3 独立对局），不属零代码债务。
+2. **ENEMY_INTANGIBLE_DMG_CAP（1436~1440 批行为修复）**：真机验证
+   口径巩固——本批名册零增长（SOUL_FYSH 停 2、WATERFALL_GIANT 停 1、
+   无新条目），穿透复发 0；ENEMY_INTANGIBLE_CAP_OBS 注记未首发
+   （六局无无实体窗口现场），续盯不判失效。
+3. **SOUL_FYSH/WATERFALL_GIANT 存量名册条目**：本批读侧闸门将其行为
+   效应一刀切（两物种均无原生重生机制，已被白名单否决覆盖）——上批
+   登记的「宿主清账窄动作」必要性下降：条目留着也不再生效，仅原账
+   数字残留；是否清账交宿主评估，本批不再建议优先执行。
+4. **LETHAL_SURVIVABLE_LINE（1414~1419 批）**：首发 3/3 逐字符合设计
+   （1441-F7/1445-F17/1446-F14），达封账线，封账保留。
+5. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：翻案 3/3 维持，
+   本批一条随附（1445-F13）；KIN 原料零遭遇，裁决待料；宿主撤回窄
+   动作维持暂缓。
+6. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：1443×3 注记在产、
+   per-reason count=1 无双拼，续记。
+7. **竞速审计悲观率台账**：432/962≈44.9% 带内偏上限，续记。
+8. **INVULN_TARGET_VETO**：封账保留（1391/1401/1402 三局首验），
+   本批无无敌帧现场，顺延。
+9. **SLEEP_GUARD_PASS_OBS / BARRICADE_BANK_VALUE / EXHAUST_FIZZLE_
+   EXEMPT / SLIPPERY_TTK_BREAK_EST / HP_COST 豁免疫价**：本批无对应
+   现场（零沉睡、壁垒未拿、无痛殴、滑溜贴线 0），顺延不判失效；
+   EXHAUST 拦截绝迹第 4 批。
+10. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    ENGINE_COMMIT_LOWHP_DISCOUNT / SLEEP_GUARD 首 tick 穿透 /
+    SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+    对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **「该死没死」型推断器的证据键必须按实例而非物种**：名册误计数的
+   根因是敌键种级化——同场击杀两个同种不同个体与「同一个体复活
+   两次」在种级键下不可区分。凡以计数为证据的跨局学习结构，都要先
+   问「键的粒度能否区分替代解释」；区分不了时，读侧按原生机制白名单
+   设闸比写侧硬修更小、更不易漏（与 ENEMY_INTANGIBLE_DMG_CAP 批
+   「结算模型与原生修正对齐」同教义的读侧形态）。
+2. **读侧否决≠清账**：在线状态隔离仓只读时，存量污染的行为效应可以
+   在读侧一刀切，同时保留原账继续累积原料——原账（confirmations）
+   与否决账（vetoes）双轨并行，写侧修复的立项证据（增量 ≥3 独立
+   对局）不用重建证据链。
+3. **原生机制全量扫描是白名单类改动的第一道门禁**：2202 条
+   mechanics 记录程序化扫描（respawn/revive 逐字段）一句话判定「仅
+   4 种自重生」，比凭记忆点名可靠——凡「按机制名单放行/否决」的
+   改动，名单必须附扫描口径与命中字段。
+4. 观察点（下批复盘核对）：① 普通战「全场重生体」注记绝迹核对；
+   ② respawn_native_vetoes 逐局读数；③ 真重生体战压制存续核对；
+   ④ respawn_adds 原账增量（写侧立项线 ≥3 独立对局）；⑤ 竞速台账
+   432/962 走向；⑥ ENEMY_INTANGIBLE_CAP_OBS/SLEEP_GUARD_PASS_OBS/
+   BARRICADE_BANK_VALUE 首发续盯；⑦ REMOVAL_COST KIN 原料。

@@ -10520,6 +10520,32 @@ def main() -> int:
     ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD"})
     assert (ra_know.stats.get("respawn_adds", {}).get("SPRING_ADD") or {}).get("confirmations") == 1, \
         "同场重复确认不得重复计数（每场每敌至多一次）"
+    # 3yr-gate) RESPAWN_ROSTER_NATIVE_GATE（第 1441~1446 局批复盘）：名册 confirmations
+    #      只证明「该敌键多次预测击杀落空」，而敌键是种级键——同场击杀 ≥2 个同种不同
+    #      实例（NIBBIT 群、花园幽灵鳗×4）同样累计落空账；stats.json 名册 28 条中 19+
+    #      条经原生 mechanics 全量扫描确认无任何自重生/复召机制，却每场 T1 起驱动
+    #      「全场均为已证实重生体」教义（1444-F4 NIBBIT、1445-F4 TOADPOLE、1445-F13
+    #      PHANTASMAL_GARDENER×4 注记逐字在产）。读侧白名单否决：原账不动、否决留痕
+    ra_know.mark_respawn_add("NIBBIT")
+    ra_know.mark_respawn_add("NIBBIT")
+    assert ra_know.is_known_respawn_add("NIBBIT"), \
+        "名册原账不受白名单影响（读侧否决≠清账）"
+    assert not ra_pol._is_respawn_add({"enemy_id": "NIBBIT", "name": "小啃兽"}), \
+        "非原生重生物种的名册条目未被白名单否决"
+    assert (ra_know.stats.get("respawn_native_vetoes", {}).get("NIBBIT") or {}).get("vetoes") == 1, \
+        "否决观测未登记"
+    ra_pol._is_respawn_add({"enemy_id": "NIBBIT"})
+    assert (ra_know.stats.get("respawn_native_vetoes", {}).get("NIBBIT") or {}).get("vetoes") == 1, \
+        "同场重复否决不得重复计数（每场每敌至多一次）"
+    assert ra_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
+        "白名单内物种（循环复召召唤物）不得被误否决"
+    assert knowledge.respawn_native_species("AXEBOT") and knowledge.respawn_native_species("wriggler_x"), \
+        "白名单大小写/子串匹配失效"
+    assert not knowledge.respawn_native_species("TOADPOLE"), "非重生物种误命中白名单"
+    ra_know.policy["respawn_roster_native_gate"] = False
+    assert ra_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
+        "respawn_roster_native_gate=False 未严格回滚旧口径"
+    ra_know.policy["respawn_roster_native_gate"] = True
     # 名册生效后的行为闭环：辅助体不再吸引转火，输出直奔高威胁本体
     def roster_combat():
         st = spike_combat()
@@ -10548,13 +10574,15 @@ def main() -> int:
     #      重生体计入竞速账；race_all_respawn_pool_credit=False 一键回滚旧版。
     rc_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-racepooled-")))
-    for _key in ("RC_ADD_A", "RC_ADD_B"):
+    # 名册键须命中原生重生物种白名单（RESPAWN_ROSTER_NATIVE_GATE，1441~1446 批），
+    # 否则读侧被否决、all_respawn 恒 False，本夹具测的正是白名单内物种的血池信贷
+    for _key in ("RC_WRIGGLER_A", "RC_WRIGGLER_B"):
         rc_know.mark_respawn_add(_key)
         rc_know.mark_respawn_add(_key)
     rc_ctx = type("RCCtx", (), {"combat": None, "current_combat_is_hard": False,
                                 "credit_tags": []})()
 
-    def rc_state(hp_now, incoming, deck, e0="RC_ADD_A", e1="RC_ADD_B",
+    def rc_state(hp_now, incoming, deck, e0="RC_WRIGGLER_A", e1="RC_WRIGGLER_B",
                  hp0=45, hp1=45):
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
@@ -10602,9 +10630,21 @@ def main() -> int:
     #    无升级轨迹，竞速不开账
     pol_rc3 = policy.Policy(rc_know, random.Random(11))
     d_rc3 = pol_rc3.decide(rc_state(52, 24, weak_rc_deck,
-                                    e0="RC_BODY", e1="RC_ADD_B", hp0=10, hp1=90), rc_ctx)
+                                    e0="RC_BODY", e1="RC_WRIGGLER_B", hp0=10, hp1=90), rc_ctx)
     assert "斩杀竞速投影" not in d_rc3.reason, \
         f"有本体时重生体不应计入竞速血池: {d_rc3.reason}"
+    # ④ 非原生白名单物种的名册存量污染条目不得激活全场重生教义
+    #    （RESPAWN_ROSTER_NATIVE_GATE：1444-F4 NIBBIT、1445-F13 花园幽灵鳗×4 型
+    #    「全场均为已证实重生体」注记一刀切绝迹，名册原账不动）
+    for _key in ("RC_NIBBIT_A", "RC_NIBBIT_B"):
+        rc_know.mark_respawn_add(_key)
+        rc_know.mark_respawn_add(_key)
+    pol_rc4 = policy.Policy(rc_know, random.Random(11))
+    d_rc4 = pol_rc4.decide(rc_state(52, 24, weak_rc_deck,
+                                    e0="RC_NIBBIT_A", e1="RC_NIBBIT_B"), rc_ctx)
+    assert "全场均为已证实重生体" not in d_rc4.reason \
+        and "重生体计入血池" not in d_rc4.reason, \
+        f"非白名单名册条目仍驱动全场重生教义: {d_rc4.reason}"
 
 
     # 3ys) 进幕快照账本（第 506~508 局批复盘新增）：二幕消耗战已成主死因，
