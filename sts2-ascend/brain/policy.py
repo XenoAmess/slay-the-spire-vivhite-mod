@@ -3690,18 +3690,6 @@ class Policy:
                                 f"；防守线复核虽报可行但击杀需{ttk:.0f}回合"
                                 f"＞{_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
                                 f"翻盘比超限不予放行（{_flip_cap_tag}）")
-                            # 翻盘比否决计数（RACE_FLIP_VETO_OBS，第830~843局
-                            # 批复盘新增，静态键）：843-F44 同一场防守线两次报
-                            # 可行仍全攻到阵亡，而审计台账只记判死胜负、数不出
-                            # 「复核可行仅被翻盘比否决」的频率——此处按 tick 计数，
-                            # 战斗收官由 agent 拼入战斗记录与 stats.race_audit。
-                            # 纯观测：否决判决、评分与留痕原文逐字不动；
-                            # 键=False 时计数恒 0，下游零显形（严格回滚）。
-                            if bool(pol.get("race_flip_veto_obs", True)):
-                                _ra_fv = getattr(self, "_race_audit", None)
-                                if isinstance(_ra_fv, dict):
-                                    _ra_fv["flip_veto"] = int(
-                                        _ra_fv.get("flip_veto", 0) or 0) + 1
                         if _feas:
                             # 滚雪球锁持（RACE_ESC_LATCH_HOLD，第271~294局批复盘）：
                             # 实测口径入锁后，esc（滚雪球）局的静态联合复核逐 tick
@@ -3891,10 +3879,7 @@ class Policy:
             # FUZZY 型竞速误报白损 25~30 血/次）——本账只在判死入锁时记账，
             # 战斗收官由 agent 一次性弹出并与实战结局拼线，量化「判死却获胜」
             # 的系统性悲观率。纯观测：不参与任何评分/阈值分支
-            # flip_veto（RACE_FLIP_VETO_OBS，第830~843局批复盘新增）：本场防守线
-            # 联合复核报可行、仅被翻盘比上限否决的 tick 计数；键关时恒 0
-            self._race_audit = {"latched": False, "latch_round": None,
-                                "esc": False, "flip_veto": 0}
+            self._race_audit = {"latched": False, "latch_round": None, "esc": False}
         # 集火记忆同样按战斗实例隔离（第 695~697 批复盘）：火线粘性只在同一场
         # 战斗内有意义，敌人索引跨场重排后旧记忆必须作废
         if self._focus_combat is not ctx.combat:

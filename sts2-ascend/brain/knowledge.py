@@ -905,18 +905,6 @@ DEFAULT_POLICY = {
                                        # 火力与 fire inflate 不动），取 0.20 保守档（低于非 esc 桶
                                        # 0.35）；留痕「升级桶×(1+换挡上浮…)」可 grep。置 0 即
                                        # 整体关闭（回滚＝旧版裸实测口径，零行为差异）
-     "race_flip_veto_obs": True,     # 翻盘比否决观测（RACE_FLIP_VETO_OBS，第830~843局批复盘新增，
-                                     # 静态键）：竞速判死战中「防守线联合复核报可行、仅被翻盘比
-                                     # 上限否决」的频率此前无任何持久化观测——843-F44
-                                     # （MECHA_KNIGHT）同一场两次「复核报可行但翻盘比超限不予
-                                     # 放行」仍全攻到 T6 阵亡，本批 11 场判死战仅 1 场获胜
-                                     # （生涯台账 453/1143≈40% 且持续下滑），无法对账翻盘比
-                                     # 上限是否误杀边缘局可行防守线。policy 侧按 tick 计数进
-                                     # _race_audit.flip_veto，agent 收官拼入战斗记录「防守线
-                                     # 翻盘比否决×N」并累计 stats.race_audit.flip_veto /
-                                     # flip_veto_won / flip_veto_died。纯观测：否决判决、评分
-                                     # 与既有留痕逐字不动；False=严格回滚（计数恒 0，注记段与
-                                     # 台账键零显形，selfcheck 3fv③ 护住）
       "race_upshift_fresh_turns": 2,   # 入锁新鲜窗抑制换挡上浮（RACE_UPSHIFT_STALE，第1409~1413
                                        # 局批复盘新增，静态键）：上浮前提是实测均值取自换挡前防守
                                        # 回合；入锁后全攻回合随即进入实测窗——1413-F17 瀑布巨兽
