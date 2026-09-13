@@ -11491,3 +11491,14 @@
 - 当前低价值卡牌：BULLY(10分/2.3944382525871335局)，STRIKE_IRONCLAD(12分/6.225539456726552局)，BASH(14分/5.267764155691694局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1445 胜，当前目标进阶 0
+
+## 第 1446 局复盘（2026-09-13 13:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：EQUILIBRIUM, BREAKTHROUGH, HEADBUTT, DRUM_OF_BATTLE, POMMEL_STRIKE, MOLTEN_FIST, STONE_ARMOR, FLAME_BARRIER, TAUNT, CINDER, RAMPAGE
+- 本局遗物：JOSS_PAPER, RAZOR_TOOTH
+- 战斗记录：F4 Monster战 掉血0｜自损1（可行动段1/非行动段1，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血1｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血0; F14 Elite战 掉血33｜竞速审计：T5判死→实战9回合获胜; F15 Monster战 掉血3; F17 Boss战 掉血53｜自损1（可行动段1/非行动段23，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.6507982347150705局)，PACTS_END(25分/85.80168273536779局)，OFFERING(24分/21.974735096425146局)，PERFECTED_STRIKE(24分/4.508389211164528局)，MANGLE(24分/71.57561737936342局)
+- 当前低价值卡牌：BULLY(10分/2.3860577187030785局)，STRIKE_IRONCLAD(12分/6.203750068628009局)，BASH(14分/5.2493269811467735局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1446 胜，当前目标进阶 0
