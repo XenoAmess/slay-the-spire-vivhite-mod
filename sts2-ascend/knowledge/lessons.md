@@ -11590,3 +11590,14 @@
 - 当前低价值卡牌：BULLY(10分/2.3200608164463143局)，STRIKE_IRONCLAD(12分/6.032158122760422局)，BASH(14分/5.104133796181893局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血58，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.40 → 0.43（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1454 胜，当前目标进阶 0
+
+## 第 1455 局复盘（2026-09-13 21:31）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：HOWL_FROM_BEYOND, SWORD_BOOMERANG, EQUILIBRIUM, MOLTEN_FIST, POMMEL_STRIKE, MOLTEN_FIST, UPPERCUT, CINDER, UNRELENTING, DISMANTLE, INFLAME, CRUELTY, UPPERCUT, ULTIMATE_STRIKE, IMPERVIOUS, CINDER, BLUDGEON, BREAKTHROUGH, TAUNT, TRUE_GRIT
+- 本局遗物：MANGO, ORNAMENTAL_FAN
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血31｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血32; F20 Monster战 掉血4; F21 Monster战 掉血28｜竞速审计：T3判死→实战8回合获胜; F23 Monster战 掉血30（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.5373950127810136局)，PACTS_END(25分/84.11908294519203局)，OFFERING(24分/21.29214307110154局)，PERFECTED_STRIKE(24分/4.368346998637628局)，MANGLE(24分/70.33836717685904局)
+- 当前低价值卡牌：BULLY(10分/2.311940603588752局)，STRIKE_IRONCLAD(12分/6.011045569330761局)，BASH(14分/5.086269327895256局)
+- 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.43 → 0.46（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1455 胜，当前目标进阶 0
