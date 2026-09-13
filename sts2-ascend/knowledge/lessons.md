@@ -11579,3 +11579,14 @@
 - 当前低价值卡牌：BULLY(10分/2.3282095498708624局)，STRIKE_IRONCLAD(12分/6.053344829664247局)，BASH(14分/5.122061009715898局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.40（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F25——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1453 胜，当前目标进阶 0
+
+## 第 1454 局复盘（2026-09-13 20:40）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：MOLTEN_FIST, TRUE_GRIT, TWIN_STRIKE, BREAKTHROUGH, ARMAMENTS, MOLTEN_FIST, FLAME_BARRIER, IRON_WAVE, HEMOKINESIS, DISMANTLE, CRIMSON_MANTLE, HEADBUTT, RUPTURE, TAUNT, RAMPAGE, TAUNT, WHIRLWIND, STONE_ARMOR
+- 本局遗物：FESTIVE_POPPER, BOOK_OF_FIVE_RINGS, HAPPY_FLOWER
+- 战斗记录：F19 Monster战 掉血15｜自损2（可行动段2/非行动段16，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血15; F27 Monster战 掉血10｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血27｜自损9（可行动段9/非行动段22，SELF_LOSS_PHASE_OBS）; F30 Unknown战 掉血6｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血58｜自损5（可行动段5/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.5498193806131595局)，PACTS_END(25分/84.41453381353942局)，OFFERING(24分/21.366927316710022局)，PERFECTED_STRIKE(24分/4.383689913334298局)，MANGLE(24分/70.58541613332568局)
+- 当前低价值卡牌：BULLY(10分/2.3200608164463143局)，STRIKE_IRONCLAD(12分/6.032158122760422局)，BASH(14分/5.104133796181893局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血58，每回合14≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.40 → 0.43（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
+- 生涯战绩：0/1454 胜，当前目标进阶 0
