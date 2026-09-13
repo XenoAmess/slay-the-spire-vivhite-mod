@@ -9357,3 +9357,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.219728948601554局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.0828537595568153局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/31.054888168017513局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.43（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/847 胜，当前目标进阶 1
+
+## 第 848 局复盘（2026-09-13 10:00）
+- 结果：💀 失败｜进阶 1｜到达层数 31｜当局评分 31
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_SCALE_TRANSFORMATION, FISTICUFFS, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RECURRENT_STARLIGHT, JACKPOT
+- 本局遗物：HORN_CLEAT, BOOK_OF_FIVE_RINGS, ETERNAL_FEATHER, WAR_PAINT
+- 战斗记录：F15 Monster战 掉血7｜自损12（可行动段12/非行动段12，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血33｜自损40（可行动段40/非行动段23，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血27｜自损24（可行动段24/非行动段4，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血27｜自损16（可行动段16/非行动段11，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血5｜自损16（可行动段16/非行动段16，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血47｜自损28（可行动段28/非行动段55，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PREDATOR(37分/2.743876781401956局)，OMNISLICE(37分/7.51326587113704局)，HAND_OF_GREED(36分/7.693493659904453局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/8.488018252188791局)，CINDER(35分/2.707562513013627局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/5.201459897281448局)，VIVHITE_CARD_GEODESIC_VEIL(22分/3.0720637713983665局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/30.946196059429454局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Elite战实测自损28/掉血47（60%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.43 → 0.44（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F31——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F31——药水交药线部分胜利回收）；行至 F31 但致命战自损28/掉血47≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：1/848 胜，当前目标进阶 1
