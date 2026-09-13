@@ -11447,3 +11447,14 @@
 - 当前低价值卡牌：BULLY(10分/2.4282557726869323局)，STRIKE_IRONCLAD(12分/6.313465008986029局)，BASH(14分/5.342162699911252局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1441 胜，当前目标进阶 0
+
+## 第 1442 局复盘（2026-09-13 09:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SHRUG_IT_OFF, UPPERCUT, CINDER, VICIOUS, UNRELENTING, TRUE_GRIT, UNMOVABLE, MOLTEN_FIST, CRUELTY, HOWL_FROM_BEYOND, SHRUG_IT_OFF, RUPTURE
+- 本局遗物：FESTIVE_POPPER, WHETSTONE, MINIATURE_CANNON
+- 战斗记录：F5 Monster战 掉血0; F7 Monster战 掉血20; F12 Monster战 掉血0; F14 Elite战 掉血6; F15 Monster战 掉血0; F17 Boss战 掉血56｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.702359782626941局)，PACTS_END(25分/87.01349102792442局)，OFFERING(24分/22.285092252224917局)，PERFECTED_STRIKE(24分/4.572062827555154局)，MANGLE(24分/72.58650578994023局)
+- 当前低价值卡牌：BULLY(10分/2.419756877482528局)，STRIKE_IRONCLAD(12分/6.291367881454578局)，BASH(14分/5.323465130461563局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1442 胜，当前目标进阶 0
