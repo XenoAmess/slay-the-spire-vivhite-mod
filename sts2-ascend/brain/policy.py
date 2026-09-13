@@ -720,6 +720,7 @@ class Policy:
         self._hp_gate_stall_uncovered = 0  # 謦欬门连续未覆盖拦截回合数（VIVHITE_HP_GATE_STALL_UNCOVERED 观测账）
         self._hp_gate_stall_any = 0      # 謦欬门连续拦截回合数（不论意图是否覆盖，VIVHITE_HP_GATE_STALL_ANY 账）
         self._hp_gate_stall_any_fired = False  # 本场放行由全拦截口径触发（留痕分流用）
+        self._hp_gate_stall_esc = 0      # 门拦空过回合的意图趋势累计（HP_GATE_STALL_ESC_OBS 账）
         self._hp_repeat_plays = {}    # 本回合同名謦欬牌已打出次数（VIVHITE_HP_REPEAT_PLAY_TAX 账）
         self._hp_repeat_round = None  # 复打账上次重置的回合号（回合/战斗切换即清零）
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
@@ -2881,6 +2882,7 @@ class Policy:
             self._hp_gate_stall_uncovered = 0
             self._hp_gate_stall_any = 0
             self._hp_gate_stall_any_fired = False
+            self._hp_gate_stall_esc = 0
             self._hp_repeat_plays = {}
             self._hp_repeat_round = None
         if self._stall_turn_seen != round_no:
@@ -4547,6 +4549,23 @@ class Policy:
                     "vivhite_hp_gate_uncovered_obs", 0) or 0))
             except (TypeError, ValueError):
                 _hp_gate_unc_obs = False
+        # 謦欬门空过升级账观测（HP_GATE_STALL_ESC_OBS，第 873~899 局批复盘新增，
+        # 静态键）：门拦空过回合在敌意图升级轨迹（_intent_trend>0）下并非免费
+        # ——每空过一轮，当轮意图增量被计入未来战损。本批 369 次门拦空过中 98
+        # 次同帧带意图升级注记、累计 +762 意图增量（27/27 局全覆盖），但逐回合
+        # 「意图升级+N」注记（84~85 批）与闩锁拦截回合数（537~552 批）都没有
+        # 聚合「空过期间累计升级」，闩锁在升级轨迹下是否放得太晚无法裁决。
+        # 开启时把门拦空过回合的意图趋势逐场累计，在空过留痕与闩锁放行注记上
+        # 披露聚合值；不改放行/评分/动作（纯观测锚）。0=关闭（注记消失，
+        # 旧行为零差异），非白绮角色零改动（_hp_gate_blocked 恒空不进分支）。
+        _hp_gate_esc_obs = False
+        if (getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID):
+            try:
+                _hp_gate_esc_obs = bool(int(pol.get(
+                    "hp_gate_stall_esc_obs", 1) or 0))
+            except (TypeError, ValueError):
+                _hp_gate_esc_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
@@ -4924,14 +4943,19 @@ class Policy:
                     self._focus_drift_flips += 1
                 self._focus_played_index = target
             if _hp_gate_stall_break:
+                _hp_gate_esc_note = (
+                    f"，空过期间意图趋势累计+{self._hp_gate_stall_esc}"
+                    "（HP_GATE_STALL_ESC_OBS）"
+                    if _hp_gate_esc_obs and self._hp_gate_stall_esc > 0 else "")
                 if self._hp_gate_stall_any_fired:
                     why += (f"｜謦欬门全拦截僵局放行：连续拦截"
                             f"{self._hp_gate_stall_any}回合（含意图未覆盖回合）"
-                            f"且敌血量零进展{self._stall_no_progress}回合≥3，"
+                            f"且敌血量零进展{self._stall_no_progress}回合≥3"
+                            f"{_hp_gate_esc_note}，"
                             f"本场余量门停用（VIVHITE_HP_GATE_STALL_ANY）")
                 else:
                     why += (f"｜謦欬门僵局放行：连续低危拦截{self._hp_gate_stall}回合"
-                            f"≥{_hp_gate_stall_limit}，本场余量门停用"
+                            f"≥{_hp_gate_stall_limit}{_hp_gate_esc_note}，本场余量门停用"
                             f"（VIVHITE_HP_GATE_STALL_BREAK）")
             commit_cid = (card.get("card_id") or "").upper().rstrip("+")
             commit_trial = False
@@ -5272,6 +5296,12 @@ class Policy:
                 # 回合结束仍有謦欬候选被拦即累加；无拦截回合清零
                 self._hp_gate_stall_any = (self._hp_gate_stall_any + 1
                                            if _hp_gate_blocked else 0)
+                # 空过升级账（HP_GATE_STALL_ESC_OBS）：门拦空过回合的意图趋势
+                # 逐场累计——空过在升级轨迹下不是免费回合，聚合值供闩锁时点
+                # 裁决；只记账不改分，注记显形由 _hp_gate_esc_obs 门控
+                if _hp_gate_blocked:
+                    self._hp_gate_stall_esc += int(
+                        getattr(self, "_intent_trend", 0) or 0)
                 self._hp_gate_stall_round = round_no
             if _hp_gate_blocked:
                 _gate_note = ("；謦欬出牌门拦下"
@@ -5299,6 +5329,10 @@ class Policy:
                                    f"/{_hp_gate_stall_any_limit}含未覆盖（零进展"
                                    f"{self._stall_no_progress}，"
                                    "VIVHITE_HP_GATE_STALL_ANY 进度）")
+                if _hp_gate_esc_obs and self._hp_gate_stall_esc > 0:
+                    _gate_note += (f"；门拦空过升级账：意图趋势累计"
+                                   f"+{self._hp_gate_stall_esc}"
+                                   "（HP_GATE_STALL_ESC_OBS）")
                 if _hp_gate_unc_obs and self._hp_gate_stall_uncovered > 0:
                     _gate_note += (f"；连续未覆盖拦截"
                                    f"{self._hp_gate_stall_uncovered}回合"

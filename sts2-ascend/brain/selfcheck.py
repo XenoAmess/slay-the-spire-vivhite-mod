@@ -3155,6 +3155,83 @@ def main() -> int:
         assert "VIVHITE_HP_GATE_STALL_ANY" not in d_ao.reason, \
             f"any=0 回滚键下不得出现全拦截留痕: {d_ao.reason}"
 
+    # 3pesc) 謦欬门空过升级账观测（HP_GATE_STALL_ESC_OBS，第 873~899 局批复盘）：
+    #      门拦空过回合在敌意图升级轨迹（_intent_trend>0）下并非免费——本批 369
+    #      次门拦空过中 98 次同帧带意图升级注记、累计 +762 意图增量（27/27 局
+    #      全覆盖；873 局 F4 缩小甲虫战空过 6/4 回合、意图 7→13 交替升级）。
+    #      逐回合「意图升级+N」注记（84~85 批）与闩锁拦截回合数（537~552 批）
+    #      都不聚合「空过期间累计升级」，STALL_ANY 闩锁（4 回合+零进展 3）在
+    #      升级轨迹下是否放得太晚无法裁决。门拦空过留痕与闩锁放行注记披露该
+    #      累计值（纯观测，不改放行/评分/动作）；0=注记消失（旧行为零差异）。
+    # ① 意图递升空过：留痕带累计值、账本随门拦空过回合累加
+    vknow_es = _vivhite_know("sts2-selfcheck-vhgate-escobs-")
+    vknow_es.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_es.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_es.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3prv：钉住旧门语义
+    vpol_es = policy.Policy(vknow_es, random.Random(11))
+    vctx_es = _vgate_ctx()
+    for _turn, _inc in ((1, 5), (2, 12), (3, 19)):
+        d_es = vpol_es.decide(_vgate_stall(_turn, _inc), vctx_es)
+        assert d_es.action == "end_turn", \
+            f"升级轨迹下余量门必须照旧拦截: turn={_turn} {d_es}"
+        if vpol_es._hp_gate_stall_esc > 0:
+            assert "HP_GATE_STALL_ESC_OBS" in d_es.reason, \
+                f"空过升级账留痕缺失: turn={_turn} {d_es.reason}"
+    assert vpol_es._hp_gate_stall_esc > 0, \
+        f"意图递升的门拦空过回合必须累计升级账: {vpol_es._hp_gate_stall_esc}"
+    # ② 闩锁放行注记带同一累计量（放行时点账=此前全部空过回合的趋势和）
+    d_es = vpol_es.decide(_vgate_stall(4, 26), vctx_es)
+    assert d_es.action == "end_turn", f"达阈值前照旧拦截: {d_es}"
+    _esc_at_latch = vpol_es._hp_gate_stall_esc
+    d_es = vpol_es.decide(_vgate_stall(5, 33), vctx_es)
+    assert d_es.action == "play_card", \
+        f"连续拦截≥4 且零进展≥3 后本场余量门应停用并放行: {d_es}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_es.reason \
+        and f"空过期间意图趋势累计+{_esc_at_latch}" in d_es.reason \
+        and "HP_GATE_STALL_ESC_OBS" in d_es.reason, \
+        f"闩锁放行注记缺空过升级账: {d_es.reason}"
+    # 新战斗账本重置（combat 身份变化）
+    d_es2 = vpol_es.decide(_vgate_stall(1, 5), _vgate_ctx())
+    assert vpol_es._hp_gate_stall_esc == 0, \
+        f"新战斗空过升级账必须重置: {vpol_es._hp_gate_stall_esc}"
+    assert "HP_GATE_STALL_ESC_OBS" not in d_es2.reason, \
+        f"零累计时不得显形升级账注记: {d_es2.reason}"
+    # ③ 意图恒定时零累计零显形（升级账只认递升轨迹）
+    vknow_ez = _vivhite_know("sts2-selfcheck-vhgate-escobs-zero-")
+    vknow_ez.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_ez.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_ez.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vpol_ez = policy.Policy(vknow_ez, random.Random(11))
+    vctx_ez = _vgate_ctx()
+    for _turn in (1, 2, 3):
+        d_ez = vpol_ez.decide(_vgate_stall(_turn, 10), vctx_ez)
+        assert d_ez.action == "end_turn", \
+            f"恒定意图下照旧拦截: turn={_turn} {d_ez}"
+        assert "HP_GATE_STALL_ESC_OBS" not in d_ez.reason, \
+            f"零升级空过不得显形升级账: turn={_turn} {d_ez.reason}"
+    assert vpol_ez._hp_gate_stall_esc == 0, \
+        f"恒定意图下升级账必须保持为零: {vpol_ez._hp_gate_stall_esc}"
+    # ④ obs=0 一键回滚：同一递升序列行为逐字一致、注记全灭、闩锁照旧
+    vknow_eo = _vivhite_know("sts2-selfcheck-vhgate-escobs-off-")
+    vknow_eo.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_eo.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_eo.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_eo.policy["hp_gate_stall_esc_obs"] = 0
+    vpol_eo = policy.Policy(vknow_eo, random.Random(11))
+    vctx_eo = _vgate_ctx()
+    for _turn, _inc in ((1, 5), (2, 12), (3, 19), (4, 26)):
+        d_eo = vpol_eo.decide(_vgate_stall(_turn, _inc), vctx_eo)
+        assert d_eo.action == "end_turn", \
+            f"obs=0 回滚键下拦截行为不得改变: turn={_turn} {d_eo}"
+        assert "HP_GATE_STALL_ESC_OBS" not in d_eo.reason, \
+            f"obs=0 回滚键下不得出现升级账留痕: turn={_turn} {d_eo.reason}"
+    d_eo = vpol_eo.decide(_vgate_stall(5, 33), vctx_eo)
+    assert d_eo.action == "play_card", \
+        f"obs=0 回滚键下闩锁放行不得改变: {d_eo}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_eo.reason \
+        and "HP_GATE_STALL_ESC_OBS" not in d_eo.reason, \
+        f"obs=0 回滚键下放行注记不得带升级账: {d_eo.reason}"
+
     # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
     #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，
     #      余量门拦下弦光投影实付2血/绯色面积+实付4血/终止条件实付4血（合计

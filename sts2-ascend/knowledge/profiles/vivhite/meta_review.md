@@ -2677,3 +2677,88 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 873~899 局批复盘：门拦空过不是免费回合——空过期间意图升级累计观测（HP_GATE_STALL_ESC_OBS）
+
+日期：2026-09-14
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬余量门制造的「门拦空过」回合在敌意图升级轨迹
+  （_intent_trend>0）下并非免费——每空过一轮，当轮意图增量被银行进未来
+  战损。但生产口径只有逐回合「意图升级+N」注记（84~85 批）与闩锁放行时的
+  拦截回合数（537~552 批），没有任何口径聚合「门拦空过期间累计的意图
+  升级」——STALL_ANY 闩锁（连续拦截 4 回合+敌血量零进展 3 回合）在升级
+  轨迹下是否放得太晚，现有留痕无法裁决。本批不先改闩锁时点与门带：先落地
+  可证伪的生产观测，让后续 run 的决策链直接给出放行时点的升级累计账。
+- **EVIDENCE**：本批 27 局全负（进阶 1）。逐条 grep 873~899 全部 run 文件：
+  謦欬门拦空过共 369 次（约 14 次/局），其中 98 次同帧带「意图升级+N」
+  注记、累计 +762 意图增量（≈+7.8/次），27/27 局全覆盖。873 局
+  （ZQ81M14JAMFY）F4 缩小甲虫战逐条核读：门拦空过连续 6/4 回合，意图
+  7→13 交替升级，零进展账被救场牌擦伤反复清零（0→1→0），闩锁始终未在
+  该战放行，hp 71→39；875 局（Z8RAQ82KF36R）F15 空过期间意图 +11/+9
+  同型。闩锁本批放行 103 次，但放行注记只报拦截回合数与零进展数，不报
+  空过期间升级累计。旋钮侧：謦欬三级旋钮已全尽封账（上批 lessons 实证），
+  本观测不动任何旋钮。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链——① 门拦空过留痕出现「门拦空过
+  升级账：意图趋势累计+N（HP_GATE_STALL_ESC_OBS）」，闩锁放行注记带
+  「空过期间意图趋势累计+N」；② 若放行时点的累计值普遍 ≥10（约等于多送
+  一整套意图）且该类战斗继续高战损 → 下一批行为化（升级轨迹下 STALL_ANY
+  提前放行、或把意图趋势计入余量门门带）；③ 若累计值普遍 0~3 →「空过
+  免费」证成，假设证伪，闩锁时点维持。证伪/撤回：注记零显形而门拦空过
+  仍在 → 复查 _intent_trend/accumulate 接线；撤回=hp_gate_stall_esc_obs=0
+  （注记消失，评分/放行/闩锁逐字不动，夹具④护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：__init__ 新增 _hp_gate_stall_esc（与
+  _hp_gate_stall_any 同战斗实例生命周期，_combat_stall_check 复位段连带
+  清零）；end_turn 收口处（每回合一次，与 STALL_ANY 账同点）在仍有謦欬
+  候选被拦时把当轮 _intent_trend 累计入账；静态键 hp_gate_stall_esc_obs
+  （默认 1）门控两处披露——门拦空过留痕追加「门拦空过升级账：意图趋势
+  累计+N（HP_GATE_STALL_ESC_OBS）」，STALL_ANY/STALL_BREAK 闩锁放行注记
+  追加「空过期间意图趋势累计+N」。只追加文本，放行条件、闩锁时点、评分、
+  门带、复打税各收口逐字不动；非白绮角色 _hp_gate_blocked 恒空零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  hp_gate_stall_esc_obs=1，注释登记本批实证与 0=一键回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3pesc 四分支——① 意图递升（5→12
+  →19）门拦空过：账本随回合累加且留痕显形；② 闩锁放行注记带放行时点
+  累计量，新战斗账本重置且零累计零显形；③ 意图恒定序列：账本保持为零、
+  注记零显形；④ hp_gate_stall_esc_obs=0 严格回滚（同一递升序列拦截/
+  放行行为逐字一致、注记全灭、闩锁照旧）。
+- 不改闩锁时点、余量门带、謦欬三级旋钮与任何其他判定路径；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3pesc 四
+  分支；既有 3pri 僵局放行族、3prv 全拦截族、3prm 未覆盖观测族、3pru
+  自由回合族、3prn 救场放行族、3fdd/3fdl 换线阻尼/翻线锁族等全部既有
+  夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+38/-2，账字段+战斗复位+键读取+累计+两处注记）、
+  brain/knowledge.py（+9，静态键+注释）、brain/selfcheck.py（+77，
+  3pesc 四分支）；未触碰只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：HP_GATE_STALL_ESC_OBS 显形次数与累计值分布（本批
+  基线：98 次升级空过/+762 意图增量/27 局）、闩锁放行时点的累计值、
+  升级轨迹战斗的空过回合数与战损对照。
+- 放行时点累计普遍 ≥10 且该类战斗继续高战损 → 下一批行为化（升级轨迹下
+  STALL_ANY 提前放行或意图趋势计入门带）；累计普遍 0~3 → 假设证伪，
+  闩锁时点维持现值；回滚=hp_gate_stall_esc_obs=0（旧口径零差异，夹具
+  ④护住）。
+- 上批 FOCUS_DRIFT_LOCK 结算：本批即其「未来 3~10 局」窗口——末 30 个
+  run 文件 LOCK 注 56 次在产，FLUSH+OBS 合计 49 次/27 局（≈1.8/局）较
+  857~872 基线 43 次/16 局（≈2.7/局）下降约三成，杠杆在产且频率下降，
+  按预登记维持 focus_drift_lock_step=2.0 现值不回滚。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
