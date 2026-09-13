@@ -10638,18 +10638,37 @@ def main() -> int:
         "非原生重生物种的名册条目未被白名单否决"
     assert (ra_know.stats.get("respawn_native_vetoes", {}).get("NIBBIT") or {}).get("vetoes") == 1, \
         "否决观测未登记"
+    # RESPAWN_ROSTER_VETO_OBS（第 1447~1451 局批复盘）：否决面 reason 侧留痕——
+    # respawn_native_vetoes 恒空无法区分「无现场」与「闸门未装载」，
+    # 被否决敌名须与台账同闸进入注记名清单（每场每敌至多一次）
+    assert ra_pol._respawn_veto_note_names == ["小啃兽"], \
+        f"否决注记名未与台账同闸登记: {ra_pol._respawn_veto_note_names}"
     ra_pol._is_respawn_add({"enemy_id": "NIBBIT"})
     assert (ra_know.stats.get("respawn_native_vetoes", {}).get("NIBBIT") or {}).get("vetoes") == 1, \
         "同场重复否决不得重复计数（每场每敌至多一次）"
+    assert ra_pol._respawn_veto_note_names == ["小啃兽"], \
+        "同场重复否决不得重复追加注记名"
     assert ra_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
         "白名单内物种（循环复召召唤物）不得被误否决"
+    assert "扭动虫" not in ra_pol._respawn_veto_note_names, \
+        "白名单内物种不得产生否决注记名"
     assert knowledge.respawn_native_species("AXEBOT") and knowledge.respawn_native_species("wriggler_x"), \
         "白名单大小写/子串匹配失效"
     assert not knowledge.respawn_native_species("TOADPOLE"), "非重生物种误命中白名单"
+    ra_know.mark_respawn_add("TOADPOLE")
+    ra_know.mark_respawn_add("TOADPOLE")
     ra_know.policy["respawn_roster_native_gate"] = False
     assert ra_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
         "respawn_roster_native_gate=False 未严格回滚旧口径"
+    assert ra_pol._is_respawn_add({"enemy_id": "TOADPOLE", "name": "毒蟾"}), \
+        "回滚键下非白名单名册条目未恢复生效"
+    assert "毒蟾" not in ra_pol._respawn_veto_note_names, \
+        "respawn_roster_native_gate=False 不应产生否决注记名（注记与台账同灭）"
     ra_know.policy["respawn_roster_native_gate"] = True
+    assert not ra_pol._is_respawn_add({"enemy_id": "TOADPOLE", "name": "毒蟾"}), \
+        "回滚键恢复后非白名单名册条目未被重新否决"
+    assert "毒蟾" in ra_pol._respawn_veto_note_names, \
+        "回滚键恢复后否决注记名未补记"
     # 名册生效后的行为闭环：辅助体不再吸引转火，输出直奔高威胁本体
     def roster_combat():
         st = spike_combat()
@@ -10723,6 +10742,8 @@ def main() -> int:
     d_rc1 = pol_rc1.decide(rc_state(52, 24, weak_rc_deck), rc_ctx)
     assert "斩杀竞速投影" in d_rc1.reason and "重生体计入血池" in d_rc1.reason, \
         f"全场重生体血池未计入竞速账: {d_rc1.reason}"
+    assert "RESPAWN_ROSTER_VETO_OBS" not in d_rc1.reason, \
+        f"白名单内物种不得产生否决注记: {d_rc1.reason}"
     # ② 回滚键关闭：血池归零 → 竞速不开账（旧版行为锚）
     rc_know.policy["race_all_respawn_pool_credit"] = False
     pol_rc2 = policy.Policy(rc_know, random.Random(11))
@@ -10749,6 +10770,11 @@ def main() -> int:
     assert "全场均为已证实重生体" not in d_rc4.reason \
         and "重生体计入血池" not in d_rc4.reason, \
         f"非白名单名册条目仍驱动全场重生教义: {d_rc4.reason}"
+    # ⑤ RESPAWN_ROSTER_VETO_OBS（第 1447~1451 局批复盘）：非白名单名册条目被
+    #    否决时 reason 侧必须留痕——vetoes 台账恒空无法区分「无现场」与
+    #    「闸门未装载」，注记使否决面可从 run 文件逐局核对
+    assert "RESPAWN_ROSTER_VETO_OBS" in d_rc4.reason, \
+        f"非白名单名册条目被否决时 reason 侧未留痕: {d_rc4.reason}"
 
 
     # 3ys) 进幕快照账本（第 506~508 局批复盘新增）：二幕消耗战已成主死因，

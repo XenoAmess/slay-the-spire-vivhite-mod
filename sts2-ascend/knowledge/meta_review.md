@@ -10102,3 +10102,127 @@ retry_resolution: none (no replay target; local production behavior fix)
    ④ respawn_adds 原账增量（写侧立项线 ≥3 独立对局）；⑤ 竞速台账
    432/962 走向；⑥ ENEMY_INTANGIBLE_CAP_OBS/SLEEP_GUARD_PASS_OBS/
    BARRICADE_BANK_VALUE 首发续盯；⑦ REMOVAL_COST KIN 原料。
+
+## 第 1447~1451 局复盘（2026-09-13，异步追及队列）
+
+retry_resolution: none (no replay target; local production observability fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：RESPAWN_ROSTER_NATIVE_GATE 的「否决面」在生产证据中
+  不可证伪——`stats.respawn_native_vetoes` 恒 `{}` 无法区分「本批确实
+  没有非白名单名册敌被评估」与「闸门未装载/静默吞异常」；`_is_respawn_add`
+  否决分支只写 stats 台账、决策 reason 零留痕，而 run 文件是复盘唯一可
+  逐局核对的载体。
+- **EVIDENCE**：① 部署时序——gate 提交于 16:04:11，1447（14:14 启程）/
+  1448（15:04）为 pre-gate、1449（16:04:50）/1450/1451 为 post-gate；
+  ② 行为面已真机生效——1447/1448「全场均为已证实重生体」注记命中
+  NIBBIT/树叶史莱姆等非白名单物种（18+26 条），1449~1451 同型注记
+  15 条全部命中白名单物种（墨宝 INKLET/外骨骼虫 EXOSKELETON），非白
+  名单假教义一刀切绝迹；③ 但 respawn_native_vetoes={}，1451 Boss
+  战（KIN_FOLLOWER+KIN_PRIEST，名册 conf=3）全程只打同族神官、随从
+  键从未进入评估环，vetoes 空既合理又无法证明——观测缺口成立。
+- **EXPECTED_SIGNAL**：未来 3~10 局非白名单名册物种（NIBBIT/LEAF_SLIME/
+  CORPSE_SLUG/TWO_TAILED_RAT 等）参战时，决策 reason 出现「名册重生
+  条目被原生白名单否决（RESPAWN_ROSTER_VETO_OBS）」注记且
+  respawn_native_vetoes 同步 +1；两者其一缺失即定位缺口（注记在而
+  台账无=写账异常；台账有而注记无=reason 链断裂；现场确有该物种而
+  皆无=闸门未装载）。
+
+## 〇、样本与部署时序审读
+
+- 队列 requested=[1447..1451]，exact 5/5、missing=0；5 局全败（生涯
+  0/1451）。死亡分布：一幕 Boss F17 三局（1447/1448/1451）、1449 F21
+  普通战（二幕）、1450 F24 普通战（BOWLBUG 组合）。
+- 主样本 1451（8CBD2R1Y0P3M）packet 内 123 条切片（kept 123/omitted
+  148，bounded tail+aggregates）+ runs 全文核读：F16 篝火六 Boss 变体
+  分账全必败（击杀需 16~20 回合＞满血可存活 7~8 回合），回血 29 点
+  「有望越过悲观安全线」仍 F17 阵亡（掉血 98，T2 判死→实战 14 回合）；
+  1449/1450 一幕 Boss 竞速判死后实战获胜（台账 won 432→434 即此二局），
+  随后死于二幕普通战（T6/T5 判死均兑现）。
+- 部署时序：RESPAWN_ROSTER_NATIVE_GATE（上批，16:04:11）恰好落在
+  1448 与 1449 之间——本批自带 pre/post 对照，行为面验证见
+  HYPOTHESIS-EVIDENCE②，无时序混淆。本批新落地 RESPAWN_ROSTER_VETO_OBS
+  不覆盖本批任何对局，证据与修复无时序混淆。
+- 主矛盾不变：输出速率缺口。三局一幕 Boss 竞速判死全部坐实，旋钮
+  代谢链全顶格（kill_bonus 20.00、boss_entry_min_hp_pct 0.88、
+  burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成上限），
+  kill_race_prior_eff 换向阻尼内振荡（0.38→0.41→0.39）——判死缺口
+  属设计内终态，不重复立案。
+
+## 一、归因分析（本批共性）
+
+1. **主矛盾不变：输出速率缺口。** 见〇节末段，不重复展开。
+2. **本批实验靶点：重生名册闸的否决面可观测性（已立项）。** 行为面
+   pre/post 对照已封账（白名单外假重生教义绝迹、白名单内真重生教义
+   存续），否决面留痕为本批新增生产观测。
+3. **竞速审计悲观率台账**：434/970≈44.7%，连续多批稳定于 30%~46%
+   带内，续记不动作。
+4. **KIN 随从原生机制核读**：mechanics/monsters.jsonl 全量 128 种
+   扫描，respawn/revive 字段仅 AXEBOT/TEST_SUBJECT/OSTY/
+   DECIMILLIPEDE_SEGMENT 四种（与现白名单逐字一致）；KinPriest 仅有
+   随从全灭语音/集火强化，无任何复活/复召字段——KIN_FOLLOWER 名册
+   conf=3 确证为同种多实例误计数，白名单无误伤，不补词条。
+5. **二幕普通战竞速判死（1449-F21/1450-F24）**：判死均实战兑现，
+   属同一输出缺口在二幕的延伸现场，不单独立案。
+
+## 二、本次调整（生产观测 ×1：RESPAWN_ROSTER_VETO_OBS 否决面 reason 留痕）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_VETO_OBS**（名册原生白名单闸的否决面在 run 文件零留痕：respawn_native_vetoes 恒空无法区分「无非白名单名册敌被评估」与「闸门未装载/静默吞异常」；证据：1449~1451 post-gate 三局 15 条全场重生体注记全部命中白名单物种（行为面 pre/post 对照成立）+ vetoes={} + 1451 Boss 战随从键从未进入评估环；机制先例：ENEMY_POWERS_SNAPSHOT_OBS 批「载荷缺口 vs 逻辑缺口从决策链不可分辨即落地快照观测」同教义） |
+| 代码动作 | ① brain/policy.py：`Policy.__init__` 新增 `_respawn_veto_note_names` 列表（随 `_kills_combat` 战斗身份重置）；`_is_respawn_add` 否决分支在 mark_respawn_native_veto 同闸（每场每敌至多一次、键=False 不执行）把被否决敌名追加进清单；`_combat_kill_race_projection` 收口处在 danger_note 追加「名册重生条目被原生白名单否决：<名>（RESPAWN_ROSTER_VETO_OBS）」（清单非空即附，与「全场重生体」注记同排放点）；② brain/selfcheck.py：3yr-gate 扩展六锚（注记名同闸登记/同场去重/白名单不产名/键=False 注记与台账同灭/恢复后重新否决并补记），3rs① 新增白名单战斗无否决注记锚、3rs 新增⑤非白名单名册战斗 reason 必含 RESPAWN_ROSTER_VETO_OBS 锚 |
+| 性质边界 | 纯观测零行为差异：不改名册原账、不改否决判定、不改评分/判决/动作；唯一新增面是 danger_note 在否决发生场的文本段；键=False 时否决分支不执行，注记与 vetoes 台账同灭（严格回滚，selfcheck 3yr-gate 回滚锚） |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3yr-gate 全锚、3rs①⑤ 新锚与 3yr/3rs①~④/3int/3sg/3bb/3br/3htx 等全部旧锚原样通过） |
+| 未来 3~10 局观测指标 | ① 非白名单名册物种参战局 reason 出现 RESPAWN_ROSTER_VETO_OBS 注记且 vetoes 同步 +1（双通道互证）；② 白名单物种战（INKLET/EXOSKELETON/WRIGGLER 族）零否决注记（不误伤锚真机复核）；③ respawn_adds 原账增量（写侧立项线 ≥3 独立对局，本批零增量）；④ 竞速台账 434/970 走向 |
+| 继续调整条件 | 双通道互证 ≥1 局即封账保留；若现场确有非白名单名册物种而注记/台账皆无 ≥2 局 → 立项查闸门装载与评估环覆盖；若非白名单 confirmations 增量 ≥3 独立对局 → 按预注册口径立项写侧实例键修复 |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_native_gate: false` 即注记与台账同灭（selfcheck 3yr-gate 回滚锚为对照）；或删除 policy.py 三处+selfcheck 两处改动零残留回滚 |
+
+## 三、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（生产观测落地，
+   非登记延后）。
+2. **RESPAWN_ROSTER_NATIVE_GATE（1441~1446 批行为修复）**：真机验证
+   口径封账——pre/post 对照成立（1447/1448 非白名单假教义 44 条 →
+   1449~1451 绝迹，白名单真教义 15 条存续）；respawn_adds 原账 28 条
+   本批零增量（写侧立项线未触发）；vetoes 恒空的可证伪性缺口由本批
+   RESPAWN_ROSTER_VETO_OBS 补上。
+3. **ENEMY_INTANGIBLE_DMG_CAP**：名册零增长第 2 批（SOUL_FYSH 停 2、
+   WATERFALL_GIANT 停 1），穿透复发 0；ENEMY_INTANGIBLE_CAP_OBS 注记
+   未首发（本批无无实体窗口现场），续盯不判失效。
+4. **LETHAL_SURVIVABLE_LINE / INVULN_TARGET_VETO**：封账保留，本批无
+   对应现场，顺延。
+5. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：翻案 3/3 维持，
+   本批零随附；KIN 原料：1451 Boss 战为 KIN 组合但全程单目标输出
+   神官，减员成本候选环无多元现场，裁决继续待料。
+6. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：本批零税负局注记，
+   无双拼现场，续记。
+7. **竞速审计悲观率台账**：434/970≈44.7% 带内，续记。
+8. **SLEEP_GUARD_PASS_OBS / BARRICADE_BANK_VALUE / EXHAUST_FIZZLE_
+   EXEMPT / SLIPPERY_TTK_BREAK_EST / HP_COST 豁免疫价**：本批无对应
+   现场，顺延不判失效；EXHAUST 拦截绝迹第 5 批。
+9. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+   ENGINE_COMMIT_LOWHP_DISCOUNT / SLEEP_GUARD 首 tick 穿透 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+   对应现场，顺延不判失效。
+
+## 四、新沉淀的经验知识
+
+1. **「生效侧封账」不等于「机制可证伪」**：读侧闸门的行为面可用
+   pre/post 注记对照封账（有=生效），但否决面（何时拦、拦了谁）
+   若只写 stats 台账，复盘从 run 文件永远分不清「无现场」与
+   「未装载」——凡带静默分支的机制，留痕必须与判决同链（reason）
+   落双通道，单通道台账不构成证据。
+2. **部署时序恰好落在批次内时，批次自带 pre/post 对照**：1447/1448
+   与 1449~1451 跨 gate 提交点，同型注记的物种命中分布就是免费的
+   A/B 实验——复盘先查部署时序再判「注记绝迹」归因，避免把
+   pre-fix 旧局误记为修复后复发。
+3. **原生机制扫描复查是白名单维护的固定动作**：KIN_FOLLOWER
+   conf=3 疑似「神官复活随从」，128 种全量扫描一句话证伪（无任何
+   复活字段）——白名单词条增补必须先过扫描，不凭战斗观感点名。
+4. 观察点（下批复盘核对）：① RESPAWN_ROSTER_VETO_OBS 首发与
+   vetoes 双通道互证；② 白名单战零否决注记；③ respawn_adds 原账
+   增量（写侧立项线 ≥3 独立对局）；④ 竞速台账 434/970 走向；
+   ⑤ ENEMY_INTANGIBLE_CAP_OBS/SLEEP_GUARD_PASS_OBS 首发续盯；
+   ⑥ REMOVAL_COST KIN 原料。
