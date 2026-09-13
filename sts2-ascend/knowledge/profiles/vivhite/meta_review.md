@@ -2425,3 +2425,85 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 830~843 局批复盘：判死战防守线翻盘比否决频率不可观测——RACE_FLIP_VETO_OBS 观测位
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判死战中「防守线联合复核报可行、仅被翻盘比上限否决」
+  的反事实频率当前零观测。若否决在阵亡判死战中高频显形且判死后胜率持续
+  <30%，翻盘比上限（Boss/长战各 1.5）可能在边缘局误杀可行防守线，全攻
+  提速沦为自证死期；若否决计数≈0，则证明这些战斗的防守线从未真正可行，
+  问题在更上游的 ttk/tsurv 口径，翻盘比上限无辜。
+- **EVIDENCE**：843 局（KAU7T03UYMNK）F44 MECHA_KNIGHT 精英战逐条复核：
+  T1「防守线复核虽报可行但击杀需7回合＞1.5×可存活4回合，翻盘比超限不予
+  放行（LONGFIGHT_JOINT_FLIP_TTK_CAP）」→ 全攻提速；终局前 08:59:59
+  联合复核再报「格挡3+输出31/回合的混合分配即可在净火力下追平击杀所需
+  2回合」——同一场防守线两次报可行仍全攻到底，hp 87→0 T6 阵亡（自损36，
+  含謦欬实付29与灼伤滞留税8~10/回合）。本批 14 局 11 场判死战
+  （830-F17/831-F33/832-F33/833-F17/836-F33/837-F35/838-F33/840-F33/
+  841-F28/842-F17/843-F44）仅 842-F7 一场判死后获胜（≈9%）；生涯
+  race_audit 台账 449/1129→453/1143（本批 +4/+14≈28.6%，持续低于 30%
+  预注册线）。台账只有 latched/won/died/esc 分桶，数不出否决频率×结局。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 判死战战斗记录出现「防守线翻盘比
+  否决×N（RACE_FLIP_VETO_OBS）」段，stats.race_audit 新增 flip_veto /
+  flip_veto_won / flip_veto_died 计数；② flip_veto_died ≥3 场且判死后
+  胜率继续 <30% → 下一批评估翻盘比上限窄带松动实验（如 1.5→2.0，仅
+  Boss 或仅长战单侧）；③ flip_veto 计数≈0 → 假设证伪，防守线从未可行，
+  维持上限不动。撤回=race_flip_veto_obs=False（计数恒 0，注记段与台账
+  键零显形，判决/评分零差异，selfcheck 3fv② 护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_race_audit 账本新增 flip_veto 计数键
+  （初始 0）；战斗端防守线复核翻盘比否决分支（JOINT_FLIP_TTK_CAP /
+  LONGFIGHT_JOINT_FLIP_TTK_CAP）在新静态键 race_flip_veto_obs（默认
+  True）下按 tick +1。否决判决、danger_note 原文、评分与各收口逐字不动；
+  键=False 时计数恒 0（严格回滚）。
+- sts2-ascend/brain/agent.py：_flush_combat_agg 弹出 latched 审计账时，
+  flip_veto>0 且观测键开 → 战斗记录追加「防守线翻盘比否决×N
+  （RACE_FLIP_VETO_OBS）」段（位于「（阵亡）」后缀之前，后缀位置不变），
+  stats.race_audit 累计 flip_veto（tick 总数）与 flip_veto_won /
+  flip_veto_died（含否决战斗的胜负分桶）；veto=0 或键关时段落与台账键
+  均不出现。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  race_flip_veto_obs=True，注释登记 843-F44 实证、本批 11 场判死战 1 胜
+  的台账读数与 False=严格回滚语义。
+- sts2-ascend/brain/selfcheck.py：combat_flip_probe 增加 pol_out /
+  flip_veto_obs 探针参数；新增 3fv 六分支——① Boss 翻盘比否决 flip_veto
+  按 tick=1 且判决留痕逐字不变；② 观测键关闭否决原文仍在但 flip_veto 恒
+  0；③ 滑溜守卫否决（非翻盘比）入锁战斗 flip_veto 保持 0 不误计；
+  ④ agent 侧注记段显形+胜负分桶并表+「（阵亡）」后缀位置不变；⑤ 观测键
+  关闭台账零累加、注记段消失（finally 复位）。
+- 不改竞速判决、翻盘比上限数值、全攻提速口径与任何其他旋钮；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fv 六分支；
+  既有 3br 翻盘比上限族、3y 审计并表族、3fdd 漂移阻尼族、3tr 荆棘族、
+  3rsl 救场滑溜族、3prg2 謦欬回收族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+15，账本键+否决分支计数+注释）、brain/agent.py
+  （+17，注记段+胜负分桶并表+注释）、brain/knowledge.py（+12，静态键+
+  注释）、brain/selfcheck.py（+62，探针参数+3fv 六分支）；未触碰只读
+  在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批
+  无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：RACE_FLIP_VETO_OBS 显形场数与 N 分布、
+  stats.race_audit.flip_veto_died / flip_veto_won 分桶、判死后胜率
+  （对照本批 28.6% 与 30% 预注册线）。
+- flip_veto_died ≥3 场且胜率 <30% → 下一批翻盘比上限窄带松动实验；
+  flip_veto 计数≈0 → 假设证伪（防守线从未可行），上限维持，观测键可
+  False 撤回（零差异，夹具②护住）；若松动实验落地，本观测保留作
+  前后对照基线。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

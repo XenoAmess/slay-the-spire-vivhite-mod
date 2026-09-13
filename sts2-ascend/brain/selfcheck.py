@@ -9101,7 +9101,8 @@ def main() -> int:
     def combat_flip_probe(cap, slippery=False, slippery_guard=True,
                           node_type="Boss", enemy_hp=185, longfight_cap=None,
                           ttk_obs=True, latched=True, latch_hold=False,
-                          esc_rounds=2, hand_override=None):
+                          esc_rounds=2, hand_override=None, pol_out=None,
+                          flip_veto_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -9158,8 +9159,11 @@ def main() -> int:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
         cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
+        cap_pol.know.policy["race_flip_veto_obs"] = flip_veto_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
+        if pol_out is not None:
+            pol_out.append(cap_pol)
         return cap_pol.decide(cap_state, cap_ctx)
 
     d_combat_cap = combat_flip_probe(1.5)
@@ -11264,6 +11268,64 @@ def main() -> int:
                          "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
+
+    # 3fv) 翻盘比否决观测（RACE_FLIP_VETO_OBS，第830~843局批复盘）：
+    #     843-F44 同一场防守线两次报可行仍全攻到 T6 阵亡，本批 11 场判死战
+    #     仅 1 场获胜，而审计台账数不出「复核可行仅被翻盘比上限否决」的频率。
+    #     ① policy 侧——Boss 战斗端复核报可行仅被翻盘比否决时 flip_veto 按
+    #     tick +1 且否决判决/留痕逐字不变；② 观测键关闭时否决留痕原文仍在
+    #     但 flip_veto 恒 0（严格回滚）；③ 非翻盘比否决（滑溜守卫否决）的
+    #     入锁战斗 flip_veto 保持 0 不误计；④ agent 侧——含否决的判死战斗
+    #     记录追加「防守线翻盘比否决×N」段并按胜负分桶并表 stats.race_audit，
+    #     观测键关闭时段落与台账键零显形。
+    _fv_pol = []
+    d_fv = combat_flip_probe(1.5, pol_out=_fv_pol)
+    _fv_audit = _fv_pol[0].pop_race_audit()
+    assert "JOINT_FLIP_TTK_CAP" in d_fv.reason \
+        and _fv_audit.get("latched") and _fv_audit.get("flip_veto") == 1, \
+        f"翻盘比否决未按 tick 计数: {d_fv.action}（{d_fv.reason}）（{_fv_audit}）"
+    _fv_pol_off = []
+    d_fv_off = combat_flip_probe(1.5, pol_out=_fv_pol_off, flip_veto_obs=False)
+    _fv_audit_off = _fv_pol_off[0].pop_race_audit()
+    assert "JOINT_FLIP_TTK_CAP" in d_fv_off.reason \
+        and _fv_audit_off.get("latched") \
+        and not _fv_audit_off.get("flip_veto"), \
+        f"观测键关闭未严格回滚: {d_fv_off.reason}（{_fv_audit_off}）"
+    _fv_pol_slp = []
+    d_fv_slp = combat_flip_probe(0.0, slippery=True, pol_out=_fv_pol_slp)
+    _fv_audit_slp = _fv_pol_slp[0].pop_race_audit()
+    assert "SLIPPERY_RACE_GUARD" in d_fv_slp.reason \
+        and _fv_audit_slp.get("latched") \
+        and not _fv_audit_slp.get("flip_veto"), \
+        f"非翻盘比否决被误计: {d_fv_slp.reason}（{_fv_audit_slp}）"
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2,
+                                   "esc": False, "flip_veto": 2}
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _fv_stats = ra_agent.know.stats["race_audit"]
+    assert _fv_stats.get("flip_veto") == 2 \
+        and _fv_stats.get("flip_veto_died") == 1 \
+        and "flip_veto_won" not in _fv_stats, \
+        f"翻盘比否决未按胜负分桶并表: {_fv_stats}"
+    assert "防守线翻盘比否决×2（RACE_FLIP_VETO_OBS）" \
+        in ra_agent.ctx.combat_notes[-1], \
+        f"战斗记录缺翻盘比否决段: {ra_agent.ctx.combat_notes[-1]}"
+    assert ra_agent.ctx.combat_notes[-1].endswith("（阵亡）"), \
+        f"翻盘比否决段破坏了（阵亡）后缀位置: {ra_agent.ctx.combat_notes[-1]}"
+    ra_agent.know.policy["race_flip_veto_obs"] = False
+    try:
+        ra_agent.policy._race_audit = {"latched": True, "latch_round": 2,
+                                       "esc": False, "flip_veto": 2}
+        ra_agent.ctx.combat_agg = _ra_agg(False, True)
+        ra_agent._flush_combat_agg()
+        _fv_stats_rb = ra_agent.know.stats["race_audit"]
+        assert _fv_stats_rb.get("flip_veto") == 2 \
+            and _fv_stats_rb.get("flip_veto_died") == 1, \
+            f"观测键关闭后台账被误加: {_fv_stats_rb}"
+        assert "RACE_FLIP_VETO_OBS" not in ra_agent.ctx.combat_notes[-1], \
+            f"观测键关闭后注记段未消失: {ra_agent.ctx.combat_notes[-1]}"
+    finally:
+        ra_agent.know.policy["race_flip_veto_obs"] = True
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。

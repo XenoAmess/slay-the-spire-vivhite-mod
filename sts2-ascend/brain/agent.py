@@ -3696,6 +3696,23 @@ class Agent:
             if _ra.get("esc"):
                 _ra_esc_key = "esc_won" if _ra_won else "esc_died"
                 _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
+            # 翻盘比否决并表（RACE_FLIP_VETO_OBS，第830~843局批复盘新增，
+            # 静态键）：policy 侧按 tick 计数的「防守线联合复核报可行、仅被
+            # 翻盘比上限否决」随审计账弹出——战斗记录追加「防守线翻盘比否决
+            # ×N」段，stats.race_audit 累计否决 tick 总数与含否决战斗的胜负
+            # 分桶，供后续批次直接统计「否决频率×实战结局」（843-F44 同场
+            # 两次报可行仍全攻阵亡是最小现场）。纯观测：判决/评分零改动；
+            # 键=False 或 veto=0 时段落与台账键均不出现（严格回滚）。
+            _ra_fv = int(_ra.get("flip_veto", 0) or 0)
+            if (_ra_fv > 0
+                    and bool(self.know.policy.get("race_flip_veto_obs", True))):
+                note += (f"｜防守线翻盘比否决×{_ra_fv}"
+                         "（RACE_FLIP_VETO_OBS）")
+                _ra_stats["flip_veto"] = int(
+                    _ra_stats.get("flip_veto", 0) or 0) + _ra_fv
+                _ra_fv_key = "flip_veto_won" if _ra_won else "flip_veto_died"
+                _ra_stats[_ra_fv_key] = int(
+                    _ra_stats.get(_ra_fv_key, 0) or 0) + 1
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
