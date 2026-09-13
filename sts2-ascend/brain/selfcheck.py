@@ -1403,6 +1403,11 @@ def main() -> int:
                             "intents": [{"total_damage": 20}]}]},
             "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
 
+    # 夹具卫生：全部夹具共享 ctx（ctx.combat=None 视为同一战斗实例），3yh 是
+    # 独立逻辑战斗——FOCUS_DRIFT_LOCK 的逐战斗翻线计数/打出火线记忆须与既有
+    # _focus_index 一样显式复位，避免前序夹具（如 3yk 重生体连打）漏账干扰。
+    pol._focus_drift_flips = 0
+    pol._focus_played_index = None
     d_sup = pol.decide(support_state(0), ctx)
     assert d_sup.action == "play_card" and d_sup.params.get("target_index") == 0 \
         and "辅助" in d_sup.reason, \
@@ -6092,6 +6097,105 @@ def main() -> int:
             and sl_pol._focus_drift_pending == [], \
         f"战斗实例更替未连带清空挂账: pending={sl_pol._focus_drift_pending}"
     sl_pol._focus_index = None
+
+    # 3fdl) FOCUS_DRIFT_LOCK 火线翻线锁（第857~872局批复盘）：852~856批预登记
+    # 的行为化闸门已满足——本批 FOCUS_DRIFT_FLUSH_OBS 35 次命中 10/16 局、16 局
+    # 全负，872-F33 CRUSHER+ROCKET T1碾碎爪→T2火箭 非击杀翻线后 4 回合阵亡；
+    # 固定阻尼 4.0 对「本场已翻过线」零记忆。步长 2.0：首次翻线后阻尼 6.0，
+    # 完整辅助体/力量≥4 层教义（拉力 8.0）仍可合法换线，边际互拉被按住。
+    # ① 端到端：实际打出火线偏离上一张打出火线（非击杀、上一目标在场）翻线
+    # 计数+1，同状态再 decide 不重复计数，首次翻线前评分零 LOCK 注；
+    # ② 升级阻尼按住胜过固定 4.0 的拉力：已翻线1次（有效阻尼 6.0）、对方
+    # 力量 5 层（拉力≈5.71>4.0）——记忆目标中标、阻尼注 +6.0、LOCK 注显形
+    # 含翻线次数；③ focus_drift_lock_step=0 严格回滚：同②场景对方中标、
+    # 阻尼/LOCK 注同灭（finally 复位）；④ 上一火线目标已死的被迫换线不记账；
+    # ⑤ 战斗实例更替连带清空翻线计数与打出火线记忆。
+    fdl_enemies_flip = [
+        sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
+        sl_str_enemy(7, hp=80, layers=None, index=1, intent=5, name="乙"),
+    ]
+
+    def fdl_state(hand, enemies):
+        return {"screen": "COMBAT",
+                "available_actions": ["play_card", "end_turn"], "turn": 2,
+                "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0,
+                                      "energy": 3},
+                           "hand": hand,
+                           "enemies": [dict(e) for e in enemies]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
+                        "deck": []}}
+
+    sl_pol._focus_index = 0
+    sl_pol._focus_played_index = 0
+    sl_pol._focus_drift_flips = 0
+    d_fdl1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), ctx)
+    assert d_fdl1.action == "play_card" and d_fdl1.params.get("target_index") == 1 \
+            and sl_pol._focus_drift_flips == 1 \
+            and sl_pol._focus_played_index == 1 \
+            and "FOCUS_DRIFT_LOCK" not in d_fdl1.reason, \
+        f"实际打出翻线未记账或首次翻线误挂锁注: {d_fdl1.params}" \
+        f"（{d_fdl1.reason}）flips={sl_pol._focus_drift_flips}"
+    d_fdl1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), ctx)
+    assert d_fdl1b.action == "play_card" \
+            and d_fdl1b.params.get("target_index") == 1 \
+            and sl_pol._focus_drift_flips == 1, \
+        f"火线未变被重复记账: flips={sl_pol._focus_drift_flips}"
+    fdl_card = dict(sl_strike, valid_target_indices=[0, 1])
+    sl_pol._focus_index = 1
+    sl_pol._focus_drift_flips = 1
+    _, fdl_t2, fdl_w2 = sl_pol._score_play(
+        dict(fdl_card), [
+            sl_str_enemy(5, hp=80, layers=None, index=0, intent=5, name="甲"),
+            sl_enemy(hp=80, layers=None, index=1, intent=5, name="乙"),
+        ], 0, 0, 2, sl_pol.know.policy,
+        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert fdl_t2 == 1 and "换线阻尼+6.0" in fdl_w2 \
+            and "FOCUS_DRIFT_LOCK" in fdl_w2 and "已翻线1次" in fdl_w2 \
+            and "阻尼升级+2.0" in fdl_w2 \
+            and "FOCUS_DRIFT_OBS" not in fdl_w2, \
+        f"升级阻尼未按住胜过固定阻尼的拉力: target={fdl_t2} why={fdl_w2}"
+    sl_pol.know.policy["focus_drift_lock_step"] = 0
+    try:
+        sl_pol._focus_index = 1
+        sl_pol._focus_drift_flips = 1
+        _, fdl_t3, fdl_w3 = sl_pol._score_play(
+            dict(fdl_card), [
+                sl_str_enemy(5, hp=80, layers=None, index=0, intent=5, name="甲"),
+                sl_enemy(hp=80, layers=None, index=1, intent=5, name="乙"),
+            ], 0, 0, 2, sl_pol.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+        assert fdl_t3 == 0 and "FOCUS_DRIFT_OBS" in fdl_w3 \
+                and "FOCUS_DRIFT_LOCK" not in fdl_w3 \
+                and "换线阻尼" not in fdl_w3, \
+            f"focus_drift_lock_step=0 未严格回滚: target={fdl_t3} why={fdl_w3}"
+    finally:
+        sl_pol.know.policy["focus_drift_lock_step"] = 2.0
+    sl_pol._focus_index = None
+    sl_pol._focus_played_index = 0
+    sl_pol._focus_drift_flips = 0
+    d_fdl4 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], [
+        sl_enemy(hp=80, layers=None, index=1, intent=30, name="乙"),
+        sl_enemy(hp=80, layers=None, index=2, intent=5, name="丙"),
+    ]), ctx)
+    assert d_fdl4.action == "play_card" and sl_pol._focus_drift_flips == 0 \
+            and sl_pol._focus_played_index == 1, \
+        f"上一火线目标已死的被迫换线被误记: {d_fdl4.params}" \
+        f" flips={sl_pol._focus_drift_flips}"
+    sl_pol._focus_combat = object()
+    sl_pol._focus_played_index = 1
+    sl_pol._focus_drift_flips = 2
+    d_fdl5 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], [
+        sl_enemy(hp=80, layers=None, index=1, intent=30, name="乙"),
+        sl_enemy(hp=80, layers=None, index=2, intent=5, name="丙"),
+    ]), ctx)
+    assert d_fdl5.action == "play_card" and sl_pol._focus_combat is None \
+            and sl_pol._focus_drift_flips == 0 \
+            and sl_pol._focus_played_index == 1, \
+        f"战斗实例更替未清空翻线锁账: flips={sl_pol._focus_drift_flips}" \
+        f" played={sl_pol._focus_played_index}"
+    sl_pol._focus_index = None
+    sl_pol._focus_played_index = None
+    sl_pol._focus_drift_flips = 0
 
     # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出

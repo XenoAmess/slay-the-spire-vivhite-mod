@@ -678,6 +678,8 @@ class Policy:
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
         self._focus_drift_pending = []  # 评分侧静默换线挂账（FOCUS_DRIFT_FLUSH_OBS，第 852~856 局批复盘）
+        self._focus_played_index = None  # 上一张实际打出定向攻击牌的目标索引（FOCUS_DRIFT_LOCK，第 857~872 局批复盘）
+        self._focus_drift_flips = 0  # 本场实际打出火线的非击杀翻线次数（FOCUS_DRIFT_LOCK，阻尼升级依据）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
         self._race_loss_rate = 0.0  # 回合开始→下一回合开始的净损血 EMA（允许回血为负）
@@ -3890,6 +3892,8 @@ class Policy:
             self._focus_combat = ctx.combat
             self._focus_index = None
             self._focus_drift_pending = []
+            self._focus_played_index = None
+            self._focus_drift_flips = 0
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -4906,6 +4910,19 @@ class Policy:
                             + "、".join(f"{_fa}→{_fb}" for _fa, _fb in _fdf[-3:])
                             + ("等" if len(_fdf) > 3 else "")
                             + "（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）")
+            # 火线翻线计数（FOCUS_DRIFT_LOCK，第857~872局批复盘）：只按「实际
+            # 打出的定向攻击牌」记账——打出目标偏离上一张打出火线、非击杀
+            # （「可击杀」换线合法不记）、且上一火线目标仍在场（目标已死属于
+            # 被迫换线不记）；评分侧静默翻线不记账（避免每 tick 全手牌评分
+            # 副作用虚增）。计数供 _score_play 的阻尼升级读取，本身不改分。
+            if target is not None and len(enemies) > 1:
+                if (self._focus_played_index is not None
+                        and target != self._focus_played_index
+                        and "可击杀" not in why
+                        and any(e.get("index") == self._focus_played_index
+                                for e in enemies)):
+                    self._focus_drift_flips += 1
+                self._focus_played_index = target
             if _hp_gate_stall_break:
                 if self._hp_gate_stall_any_fired:
                     why += (f"｜謦欬门全拦截僵局放行：连续拦截"
@@ -5826,6 +5843,23 @@ class Policy:
             # = support_target_bonus 一半：力量≤3 层的边际互拉不再翻盘，
             # 力量≥4 层/完整辅助体教义仍可换线），0=严格回滚旧口径。
             _drift_damp = float(pol.get("focus_drift_damp", 4.0) or 0.0)
+            # 火线翻线锁（FOCUS_DRIFT_LOCK，第857~872局批复盘）：852~856批预
+            # 登记的行为化闸门已满足——本批 FOCUS_DRIFT_FLUSH_OBS 35 次命中
+            # 10/16 局（≥3 局阈值）、16 局全负，872 局 F33 CRUSHER+ROCKET
+            # T1碾碎爪→T2火箭 非击杀翻线后 4 回合双敌俱存阵亡；固定阻尼 4.0
+            # 268 次在产却对「本场已翻过线」零记忆，翻线成本不递增。有效阻尼
+            # 按实际打出火线的非击杀翻线次数（_combat 收口记账）递增：首次
+            # 翻线仍只需拉力>4.0，之后逐次+focus_drift_lock_step 锁死横跳。
+            # 步长取 2.0 而非整档 4.0：813~829 批设计的「完整辅助体/力量≥4
+            # 层教义（拉力 8.0）仍可合法换线」不变量在首次翻线后保留
+            # （阻尼 6.0<8.0），仅边际互拉（4.0<拉力≤6.0）被按住，三次翻线
+            # 起（≥10.0）才全面锁死；击杀换线/减员成本/旧粘性各口径不动，
+            # 步长 0=严格回滚固定阻尼。升级只在基础阻尼启用时生效——
+            # focus_drift_damp=0 的旧键回滚语义不被本锁旁路。
+            _drift_lock_step = float(pol.get("focus_drift_lock_step", 2.0) or 0.0)
+            _drift_damp_eff = (_drift_damp
+                               + _drift_lock_step * self._focus_drift_flips
+                               if _drift_damp > 0.0 else 0.0)
             _doctrine_present = False
             _sleep_veto = None
             _invuln_veto = None
@@ -5918,10 +5952,10 @@ class Policy:
                     # FOCUS_DRIFT_DAMP 注释）。与减员成本不叠加（同粘性的
                     # 「已有更便宜答案」休眠语义）；与旧粘性互斥（elseif 链
                     # 保证只在教义在场时到达这里）。
-                    if (_drift_damp > 0.0 and _doctrine_present
+                    if (_drift_damp_eff > 0.0 and _doctrine_present
                             and _sticky_t is not None and _rem_cost <= 0.0
                             and e.get("index") == _sticky_t):
-                        _damp_add = _drift_damp
+                        _damp_add = _drift_damp_eff
                         s += _damp_add
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
@@ -6084,6 +6118,13 @@ class Policy:
             if _winner_damp > 0.0 and best_t is not None:
                 why += (f"｜换线阻尼+{_winner_damp:.1f}（教义在场延续集火记忆，"
                         "FOCUS_DRIFT_DAMP）")
+                # 火线翻线锁留痕（FOCUS_DRIFT_LOCK）：升级部分实际参与制胜才
+                # 披露，供后续批次直接 grep 计数杠杆在产频率与翻线基数；
+                # 步长 0 或零翻线时注记零显形（严格回滚旧口径）。
+                if _drift_lock_step > 0.0 and self._focus_drift_flips > 0:
+                    why += (f"｜火线翻线锁：本场已翻线{self._focus_drift_flips}次，"
+                            f"阻尼升级+{_drift_lock_step * self._focus_drift_flips:.1f}"
+                            "（FOCUS_DRIFT_LOCK）")
             # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
             # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
             # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合

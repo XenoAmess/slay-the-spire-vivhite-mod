@@ -2587,3 +2587,93 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 857~872 局批复盘：翻线成本不递增——实际打出火线计数升级阻尼（FOCUS_DRIFT_LOCK）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：813~829 批的换线阻尼是每 tick 固定 4.0 的平闸，对「本场
+  已经翻过线」零记忆——翻过第一次之后，第二、第三次横跳的成本零递增，
+  边际互拉（拉力 4.0~6.0）可无限次翻线。852~856 批预登记的行为化闸门
+  （FOCUS_DRIFT_FLUSH_OBS 高频 ≥3 个独立对局 + 该类战斗继续高死亡 →
+  跨回合换线阻尼/锁火线）本批已客观满足。按「实际打出火线的非击杀翻线
+  次数」递增有效阻尼，可逐次锁死横跳，同时不动首次合法换线与击杀换线。
+- **EVIDENCE**：本批 16 局全负。FOCUS_DRIFT_FLUSH_OBS 35 次命中 10/16 局
+  （863×2、864×3、865×1、866×6、867×2、868×4、869×4、870×3、871×5、
+  872×5——≥3 局阈值翻倍满足），FOCUS_DRIFT_DAMP 268 次在产仍管不住
+  翻线。872 局（6ZSYF39WNPKK，完整链逐条核读 F33 段）CRUSHER+ROCKET
+  Boss 战：T1 打出火线碾碎爪，T2 终止条件+「火线漂移观测：碾碎爪→火箭
+  （非击杀换线，FOCUS_DRIFT_OBS）」翻线，T3/T4 钉火箭，双敌俱存 4 回合
+  hp57→22 阵亡（竞速审计 T2 判死兑现）；866 局 6 次补记为全批最高频。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 决策链出现「火线翻线锁：本场已
+  翻线N次，阻尼升级+M（FOCUS_DRIFT_LOCK）」留痕，杠杆在产频率与翻线基数
+  可直接 grep；② 多敌教义战 FOCUS_DRIFT_FLUSH_OBS+FOCUS_DRIFT_OBS 合计
+  频率较本批基线（43 次/16 局）下降，同对目标 A→B→A 反复横跳消失；
+  ③ 首次翻线仍发生（基线阻尼 4.0 不动）、完整辅助体/力量≥4 层教义
+  （拉力 8.0）在首次翻线后仍可合法换线（阻尼 6.0<8.0）、击杀换线零
+  LOCK 注。证伪/撤回：LOCK 注显形而漂移频率与该类战斗结局无变化，或
+  升级阻尼误挡合法换线（完整教义换线消失且减员时点延后）→ 撤回=
+  focus_drift_lock_step=0（阻尼回落固定 4.0、注记同灭，夹具③护住；
+  翻线计数本身不改分）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`__init__` 与战斗实例复位段新增
+  `_focus_played_index`/`_focus_drift_flips`（与 `_focus_combat` 同生命
+  周期）；`_combat` 打出牌收口按「实际打出的定向攻击牌」记翻线账——打出
+  目标偏离上一张打出火线、非击杀（「可击杀」换线合法不记）、上一火线目标
+  仍在场（已死=被迫换线不记）、多敌战；评分侧静默翻线不记账（避免每 tick
+  全手牌评分副作用虚增）。`_score_play` 有效阻尼=focus_drift_damp+翻线
+  次数×focus_drift_lock_step（新静态键，默认 2.0）：步长取 2.0 而非整档
+  4.0，保住 813~829 批「完整辅助体/力量≥4 层教义（拉力 8.0）仍可合法
+  换线」不变量（首次翻线后阻尼 6.0<8.0），仅边际互拉被按住，三次翻线起
+  （≥10.0）全面锁死；升级只在基础阻尼启用时生效（focus_drift_damp=0 的
+  旧键回滚不被旁路）。胜者吃升级阻尼时追加 LOCK 留痕，步长 0 或零翻线
+  零显形；旧阻尼注文本在零翻线时逐字不变。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增
+  focus_drift_lock_step=2.0，注释登记本批实证、步长取值依据与 0=严格
+  回滚语义。
+- sts2-ascend/brain/selfcheck.py：新增 3fdl 五分支——① 端到端打出翻线
+  计数+1、同状态不重复计数、首次翻线前零 LOCK 注；② 已翻线 1 次（有效
+  阻尼 6.0）按住力量 5 层拉力（≈5.71>固定 4.0）：记忆目标中标、阻尼注
+  +6.0、LOCK 注含翻线次数；③ focus_drift_lock_step=0 严格回滚（同场景
+  对方中标、阻尼/LOCK 注同灭，finally 复位）；④ 上一火线目标已死的
+  被迫换线不记账；⑤ 战斗实例更替连带清空翻线账。另在 3yh 夹具补翻线
+  计数显式复位（全部夹具共享 ctx.combat=None 视为同一战斗实例，与既有
+  `_focus_index` 复位同源卫生，原断言逐字不动）。
+- 不改竞速判决、謦欬门族、荆棘/沙坑/减员成本各收口与任何其他旋钮；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3fdl 五
+  分支；既有 3fdo 火线漂移族、3fdd 换线阻尼族、3fdf 漂移补记族、3tr
+  荆棘族、3fei 沙坑末格族、3yh 辅助体转火族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+47，计数字段+战斗复位+打出侧记账+有效阻尼+LOCK
+  留痕）、brain/knowledge.py（+12，静态键+注释）、brain/selfcheck.py
+  （+110，3fdl 五分支+3yh 复位）；未触碰只读在线状态；克隆残留的
+  assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：FOCUS_DRIFT_LOCK 显形次数与翻线基数分布、
+  FOCUS_DRIFT_FLUSH_OBS+FOCUS_DRIFT_OBS 合计频率（本批基线 43 次/16
+  局）、CRUSHER+ROCKET / KNOWLEDGE_DEMON 类战斗逐回合火线序列、减员
+  时点与结局对照（本批 872 基线：T2 翻线后钉火箭、双敌俱存、T4 阵亡）。
+- 频率下降且该类战斗减员提前 → 闸门有效，维持现值；注显形但频率/结局
+  无变化 → 杠杆无效，撤回=focus_drift_lock_step=0（旧口径零差异，夹具
+  ③护住）；完整教义合法换线被误挡 → 下调至 1.0 再验。
+- 上批 FOCUS_DRIFT_FLUSH_OBS 结算：本批即其「未来 3~10 局」窗口——35
+  次/10 局高频成立、16 局全负继续高死亡成立，预登记的行为化路径本批
+  兑现；该观测注保留在产（不回滚），继续作为漂移频率账。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
