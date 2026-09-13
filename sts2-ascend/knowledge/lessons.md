@@ -11502,3 +11502,14 @@
 - 当前低价值卡牌：BULLY(10分/2.3860577187030785局)，STRIKE_IRONCLAD(12分/6.203750068628009局)，BASH(14分/5.2493269811467735局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1446 胜，当前目标进阶 0
+
+## 第 1447 局复盘（2026-09-13 14:21）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BREAKTHROUGH, IRON_WAVE, BREAKTHROUGH, HEADBUTT, BATTLE_TRANCE, MOLTEN_FIST, ARMAMENTS, RUPTURE, MOLTEN_FIST, STOMP, STONE_ARMOR
+- 本局遗物：POTION_BELT
+- 战斗记录：F5 Unknown战 掉血2｜自损2（可行动段2/非行动段3，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损2（可行动段2/非行动段3，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血5｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血12｜自损2（可行动段2/非行动段16，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损1（可行动段1/非行动段1，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血68｜自损3（可行动段3/非行动段56，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.638020440893568局)，PACTS_END(25分/85.50137684579401局)，OFFERING(24分/21.897823523587657局)，PERFECTED_STRIKE(24分/4.4926098489254525局)，MANGLE(24分/71.32510271853566局)
+- 当前低价值卡牌：BULLY(10分/2.377706516687618局)，STRIKE_IRONCLAD(12分/6.1820369433878115局)，BASH(14分/5.23095433671276局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1447 胜，当前目标进阶 0
