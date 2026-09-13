@@ -10102,3 +10102,182 @@ retry_resolution: none (no replay target; local production behavior fix)
    ④ respawn_adds 原账增量（写侧立项线 ≥3 独立对局）；⑤ 竞速台账
    432/962 走向；⑥ ENEMY_INTANGIBLE_CAP_OBS/SLEEP_GUARD_PASS_OBS/
    BARRICADE_BANK_VALUE 首发续盯；⑦ REMOVAL_COST KIN 原料。
+
+# 2026-09-14｜第 1452~1458 局复盘（异步追及队列 7 局 exact_batch 全败；行为修复 ×1：STEAM_ERUPTION_KILL_VETO 蒸汽喷发拦截击杀——预测击杀不再穿透原生死亡拦截相，同场坐实/名册污染源第二片切断）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，无
+  replay target。
+- 上一批（1441~1446）last_paths 关键标签存在性核读：
+  RESPAWN_ROSTER_NATIVE_GATE（knowledge.py RESPAWN_NATIVE_SPECIES /
+  respawn_native_species() / mark_respawn_native_veto() /
+  respawn_roster_native_gate 键，policy.py `_is_respawn_add` 白名单复核
+  分支，selfcheck 3yr-gate/3rs④）、ENEMY_INTANGIBLE_CAP_OBS
+  （enemy_intangible_dmg_cap、selfcheck 3int）、SLEEP_GUARD_PASS_OBS、
+  BARRICADE_BANK_VALUE、LETHAL_SURVIVABLE_LINE 均在当前 HEAD 在产，
+  无「记录已闭环但代码不在产」分叉。
+- 上批观察点兑现核对：① 普通战「全场重生体」注记绝迹——**未达成但已
+  归因**：1457（03LCGBSJYT8L）F17 idx174~176 仍有三条「全场均为已证实
+  重生体，解除重生压制以终结战斗」——其来源不是名册读侧（上批白名单闸
+  逐字保留的同场坐实检测 `_combat_kills≥2`），驱动它的是蒸汽喷发拦截
+  导致的同场预测击杀落空 ×2（idx172/173），即本批修复对象本身；
+  ② respawn_native_vetoes 读数={} 零增长（本批七局未遭遇名册已激活的
+  非白名单物种，闸门无命中原料，不判失效）；④ respawn_adds 原账：
+  WATERFALL_GIANT **1→2**（1457 F17 同场两条落空「可击杀」喂账的直接
+  量化证据）、SOUL_FYSH 停 2、无其他新条目；⑤ 竞速台账 432/962→
+  437/974≈44.9%（1454 key_reasons 逐字）带内偏上限续记；⑥
+  ENEMY_INTANGIBLE_CAP_OBS 未首发（七局无无实体现场，1458 VANTOM 为
+  滑溜非无实体）、SLEEP_GUARD_PASS_OBS 零沉睡遭遇、BARRICADE_BANK_
+  VALUE 无壁垒，顺延不判失效；⑦ REMOVAL_COST KIN 原料零遭遇，顺延。
+
+retry_resolution: none (no replay target; local production behavior fix)
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_attack_outcome` 的击杀判定对原生「死亡被拦截」机制
+  零感知——WATERFALL_GIANT 的 SteamEruptionPower（zhs「被击杀时，在你
+  的下一回合结束时造成伤害」）原生 ShouldStopCombatFromEnding=true +
+  AfterDeath→TriggerAboutToBlowState（CreatureCmd.SetMaxAndCurrentHp
+  999999999 + HpDisplay.InfiniteWithoutNumbers 进无敌自爆相，ExplodeMove
+  打 SteamEruptionDamage 后 CreatureCmd.Kill 自身）——玩家伤害永远无法
+  兑现击杀，但低血携带者仍按牌面判「可击杀」：kill_bonus/击杀豁免/
+  孤注抢斩杀终局框架全数发放，落空后 commit_kill_id 又把预测击杀喂进
+  `_combat_kills`，同场 ≥2 次即触发「全场重生体」教义并写跨局名册。
+- **EVIDENCE**：① 1457（03LCGBSJYT8L）F17 瀑布巨兽战全链（runs 文件
+  178 决策核读）：idx172/173 连续两条「可击杀瀑布巨兽」（19血0甲连打
+  大奖/怨恨/怨恨/愤怒 4 张攻击零格挡），同场 idx174 起转「敌无敌帧×1
+  （HP=999999999≥100000，不可击杀将自爆）」，下回合吃意图 33 自爆
+  （19血/5甲）阵亡；② stats.json respawn_adds WATERFALL_GIANT
+  confirmations 1→2（1436~1440 批记「在途 1」→本批坐实 2，同场落空
+  喂账的量化证据）；③ 原生机制核读：mechanics/powers.jsonl
+  SteamEruptionPower（AfterDeath→TriggerAboutToBlowState、
+  ShouldStopCombatFromEnding→true）、monsters.jsonl WaterfallGiant
+  （TriggerAboutToBlowState SetMaxAndCurrentHp(999999999)、ExplodeMove
+  DamageCmd.Attack(SteamEruptionDamage)+CreatureCmd.Kill 自身、
+  PressureGun/PressureUp/Stomp 各 PowerCmd.Apply<SteamEruptionPower>(3m)
+  ——战斗中喷发层在账可被 payload 读取）；④ 1436~1440 批撤回条件逐字
+  预注册：「SetMaxAndCurrentHp 型已由 race_invulnerable_hp_floor 覆盖
+  血池侧但击杀预测侧未覆盖……按同教义扩展 `_attack_outcome`」。
+- **EXPECTED_SIGNAL**：未来 3~10 局：① WATERFALL_GIANT 遭遇战「可击杀
+  瀑布巨兽」注记绝迹，中标单体攻击改带「蒸汽喷发×N在账：死亡将被拦截
+  转自爆相，击杀口径撤销（STEAM_ERUPTION_KILL_VETO_OBS）」；②
+  respawn_adds WATERFALL_GIANT 停 2、无新 clamp 解释型条目，喷发携带者
+  战中「全场均为已证实重生体」注记绝迹；③ 喷发相低血段不再出现
+  「19血0甲连打全攻击抢斩杀」型孤注（击杀终局框架撤销后防守线复核接管）；
+  ④ 无喷发敌人战斗评分逐分零差异（selfcheck 3sev③④ 对照锚 + 全部旧锚
+  原样通过为证）。
+
+## 一、样本与部署时序审读
+
+- 队列 requested=[1452..1458]，exact 7/7、missing=0；7 局全败（生涯
+  0/1458）。死亡分布：一幕 Boss F17 两局（1457 WATERFALL_GIANT、1458
+  VANTOM）、二幕 Boss F33 一局（1454）、走廊 F8/F23/F24/F25 四局
+  （1452 精英、1455/1456/1453）。
+- 主样本 1458（N2FSWD66G8GK）packet 内 118 条切片（kept 118/omitted 94，
+  bounded tail+aggregates）+ runs 全文 212 决策核读（F17 滑溜 8 层
+  VANTOM 战逐条：SLIPPERY_TTK_OBS/SLIPPERY_RACE_GUARD 在产、ttk 折算与
+  破层期估计正确，死因=输出速率缺口设计内终态）；1457 runs 全文 178
+  决策核读（见 HYPOTHESIS）；1452 F8 精英「无其他候选，规避门否决后
+  强制进场」为单局证据，未达立项线，登记不立案。
+- 部署时序：STEAM_ERUPTION_KILL_VETO 为本批新落地，不覆盖本批任何对局
+  （1457 的「可击杀瀑布巨兽」与名册 1→2 为 pre-fix 口径，即本批修复
+  对象本身），证据与修复无时序混淆。
+- 主矛盾不变：输出速率缺口。七局 Boss/高位竞速判死全部实战兑现，旋钮
+  代谢链全顶格（kill_bonus 20.00、burst_starve 双旋钮、饥饿带、前夜
+  锻造线、长战加成上限、kill_race_prior_eff 触底、boss_entry_min_hp_
+  pct 0.88）——判死缺口属设计内终态，不重复立案。
+
+## 二、落地动作（最小可逆）
+
+- brain/policy.py：① 新增 `_enemy_steam_eruption_stack` 辅助（与
+  `_enemy_intangible_stack` 同构，`_enemy_power_stack` 三字段拼集，
+  "steam_eruption"/"蒸汽喷发" 双通道）；② 单体评分循环内、荆棘自杀
+  撤销段之后新增蒸汽喷发拦截段——`killed` 且键开且目标喷发层>0 时
+  撤销击杀口径（killed=False，kill_bonus/击杀豁免/「可击杀」终局框架
+  不再发放；commit_kill_id 以 why「可击杀」开场为据，同步停止喂账），
+  攻击面仍按实际移除参选（击倒仍需全额伤害，不致饿死输出）；③ 中标
+  why 追加纯观测留痕「蒸汽喷发×N在账……（STEAM_ERUPTION_KILL_VETO_OBS）」。
+- brain/knowledge.py：DEFAULT_POLICY 新增静态键 steam_eruption_kill_
+  veto: True（含证据与回滚注释；policy.json 零改动，缺键走默认）。
+- brain/selfcheck.py：新增 3sev 夹具（瀑布巨兽 hp=15 + STEAM_ERUPTION_
+  POWER×33）：① 无喷发对照照旧「可击杀」（旧口径锚）；② 喷发×33
+  击杀口径撤销（why 不以「可击杀」开场、注记在产、单体伤害≈32 不变、
+  kill_bonus 撤除分更低）；③ 零层严格保留旧口径；④ 键=False 严格
+  回滚（可击杀复原、注记消失、评分与无喷发对照逐分一致）。
+
+## 三、回滚边界
+
+- steam_eruption_kill_veto=False 即恢复旧牌面判杀口径（评分/击杀/注记
+  零差异，selfcheck 3sev④ 为对照锚）；删除 policy.py 辅助函数/拦截段/
+  留痕段、knowledge.py 键、selfcheck 3sev 段即完全回滚。
+- 行为面严格有界：只改「目标当前持有蒸汽喷发层数>0」的单体候选击杀
+  口径与留痕；无喷发敌人战斗逐分零差异（3sev①③④、3int/3xg/3sg/3bb/
+  3fdo/3fdd 等全部旧锚原样通过为证）；滑溜/无实体/沉睡/无敌帧/荆棘/
+  重生名册读侧闸门等既有通道输入语义逐字不变。
+- AOE 分支本期不动（1457 证据全在单体口径，与 THORNS_REFLECT_PRICING
+  批「AOE 分支本期不动」同先例）；喷发相血池/竞速投影侧已由
+  race_invulnerable_hp_floor（HP=999999999 剔除）覆盖，不重复计价。
+
+## 四、自检
+
+- py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（含 3sev
+  ①~④ 新锚与 3int/3xg/3sg/3bb/3lsl/3br/3htx/3yr-gate/3rs 等全部旧锚
+  原样通过）。
+
+## 五、未来 3~10 局观察指标
+
+1. STEAM_ERUPTION_KILL_VETO_OBS 注记首发局/计数（WATERFALL_GIANT 遭遇
+   战中喷发层在账频率）；注记局的攻击 eff 读数确为牌面全额（击倒进度
+   未被折价）。
+2. 「可击杀瀑布巨兽」复发计数（应=0；若出现，核对该 tick payload 是否
+   带 STEAM_ERUPTION_POWER——载荷缺口按回退口径放行，非失效）。
+3. respawn_adds WATERFALL_GIANT 停 2、无新 clamp 解释型条目；喷发携带
+   者战中「全场均为已证实重生体」注记绝迹（同场坐实污染链切断）。
+4. 喷发相低血段出牌结构：孤注抢斩杀型全攻不再由「可击杀」驱动，防守
+   线复核在自爆意图回合的格挡率变化。
+5. 竞速台账 437/974 走向；ENEMY_INTANGIBLE_CAP_OBS / SLEEP_GUARD_
+   PASS_OBS / BARRICADE_BANK_VALUE 首发续盯；REMOVAL_COST KIN 原料。
+
+## 六、继续调整/撤回条件
+
+- 若 AOE 牌（突破/彼岸咆哮型）对喷发携带者仍按群体斩杀框架计价 ≥2
+  个独立现场，按同教义扩展 AOE 分支 killable 口径，而非回滚本键；
+- 若发现其他「死亡被拦截/转化」原生机制（AfterDeath +
+  ShouldStopCombatFromEnding 族）造成同类落空 ≥1 确认，先核读
+  mechanics 原文，命中则按同口径扩识别词表而非回滚；
+- 若注记长期零首发但 WATERFALL_GIANT 遭遇 ≥2 场且喷发层应在账
+  （PressureGun/PressureUp/Stomp 已打出），先修 payload 载荷（powers
+  字段缺失）再评估，不得直接判假设证伪；
+- 若撤销击杀口径导致「该击倒不击倒」拖死局 ≥2 独立对局（喷发携带者
+  低血时攻击让位过度），评估改为「保留击杀评分但留痕不喂账」而非
+  直接回滚；
+- 若宿主再次以 marker 事务理由安全撤销本批，下批按同一债务第 1 条
+  流程重落地，并把撤销事件记入分叉台账。
+
+## 七、新沉淀的经验知识
+
+1. **「预测击杀落空→同场坐实→名册确认」的污染链有两个独立闸门，缺一
+   不可**：1441~1446 批的名册读侧白名单闸只切跨局生效，同场
+   `_combat_kills≥2` 坐实检测（该批逐字保留）仍会被同场两次落空喂满
+   ——1457 F17 的「全场重生体」注记与名册 1→2 证明：凡死亡可被原生
+   拦截的物种，击杀预测侧必须先与原生修正对齐，读侧闸门才有不被绕过
+   的前提（与 ENEMY_INTANGIBLE_DMG_CAP 批「结算模型与原生修正对齐」
+   同教义的第二片）。
+2. **「该死没死」型推断器的原生修正清单要按机制族维护**：无实体
+   （ModifyDamageCap）、滑溜（逐 hit 限伤掉层）、蒸汽喷发（AfterDeath
+   拦截 + SetMaxAndCurrentHp）已三片；每片都是同一形态——结算/预测
+   模型按牌面兑现，原生在死亡或伤害临界点拦截——新片立项时先核读
+   mechanics 的 ModifyDamageCap / AfterDeath / ShouldStopCombatFrom-
+   Ending / SetMaxAndCurrentHp 四族字段，一句话判定是否同族。
+3. **撤销击杀口径比压低攻击分更小的行为切口**：喷发携带者仍需全额
+   伤害击倒，只撤 killed（kill_bonus/豁免/终局框架/喂账）而保留
+   eff 参选，既不饿死唯一输出，又切断「可击杀」驱动的孤注与污染账
+   ——与 THORNS_REFLECT_PRICING「斩杀即自杀撤销击杀口径」同构复用。
+4. 观察点（下批复盘核对）：① STEAM_ERUPTION_KILL_VETO_OBS 首发与
+   eff 读数；② 「可击杀瀑布巨兽」复发=0 核对；③ respawn_adds
+   WATERFALL_GIANT 停 2 核对；④ 喷发携带者战「全场重生体」注记绝迹
+   核对；⑤ 竞速台账 437/974 走向；⑥ ENEMY_INTANGIBLE_CAP_OBS/
+   SLEEP_GUARD_PASS_OBS/BARRICADE_BANK_VALUE 首发续盯；⑦ AOE 对喷发
+   携带者的斩杀框架现场。

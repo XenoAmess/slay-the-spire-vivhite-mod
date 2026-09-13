@@ -509,6 +509,25 @@ DEFAULT_POLICY = {
                                        # 中标单体攻击附带 ENEMY_INTANGIBLE_CAP_OBS
                                        # 纯观测注记；False=严格回滚旧牌面全额口径
                                        # （评分/击杀/注记零差异）。
+    "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
+                                       # 第1452~1458局批复盘）：WATERFALL_GIANT 的
+                                       # SteamEruptionPower（zhs「被击杀时，在你的
+                                       # 下一回合结束时造成伤害」）原生拦截死亡——
+                                       # ShouldStopCombatFromEnding=true +
+                                       # AfterDeath→TriggerAboutToBlowState
+                                       # （HP=999999999 无敌自爆相），玩家伤害永远
+                                       # 无法兑现击杀。1457 局 F17 连续两条「可击杀
+                                       # 瀑布巨兽」打出后同场转「敌无敌帧×1
+                                       # （HP=999999999…）」，19血0甲连打 4 攻击零
+                                       # 格挡，下回合吃 33 自爆阵亡；同机制即
+                                       # 1436~1440 批名册 WATERFALL_GIANT=1 污染源
+                                       # （该批预注册「按同教义扩展击杀预测侧」）。
+                                       # 键=True 时携带者单体候选撤销击杀口径
+                                       # （kill_bonus/击杀豁免/「可击杀」终局框架
+                                       # 不再发放，commit_kill_id 同步停止喂账），
+                                       # 中标留痕 STEAM_ERUPTION_KILL_VETO_OBS；
+                                       # False=严格回滚旧口径（按牌面判击杀，
+                                       # 注记消失）。
     "knowledge_demon_curse_tax": 1.0,  # 知识恶魔诅咒四选机制税（第481~488局
                                         # 批复盘）：瓦解/心灵腐化/懒惰/衰朽在
                                         # eval_reward_card 同价并列，点击恒落

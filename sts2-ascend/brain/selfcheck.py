@@ -5909,6 +5909,75 @@ def main() -> int:
     assert math.isclose(s_int_hp15, 1.0) and not why_int_hp15.startswith("可击杀"), \
         f"无实体窗口可击杀穿透未修复: score={s_int_hp15} why={why_int_hp15}"
 
+    # 3sev（第1452~1458局批复盘）：蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO）
+    # ——WATERFALL_GIANT 的 SteamEruptionPower 原生拦截死亡转 HP=999999999
+    # 无敌自爆相，玩家伤害永远无法兑现击杀；1457 局 F17 连续两条「可击杀瀑布
+    # 巨兽」落空后 19血0甲吃 33 自爆阵亡（同机制即 1436~1440 批名册
+    # WATERFALL_GIANT=1 污染源，该批预注册扩展击杀预测侧）。携带者单体候选
+    # 撤销击杀口径（kill_bonus/「可击杀」框架不发放），攻击面按实际移除参选；
+    # 键=False 严格回滚。
+    sev_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-eruption-"))
+    sev_pol = policy.Policy(knowledge.Knowledge(sev_dir), random.Random(5))
+
+    def sev_enemy(hp=15, block=0, stacks=None, *, index=0, intent=0, name="瀑布巨兽"):
+        powers = [] if stacks is None else [{
+            "power_id": "STEAM_ERUPTION_POWER", "name": "蒸汽喷发", "amount": stacks,
+            "is_debuff": False,
+        }]
+        return {
+            "index": index, "enemy_id": f"WATERFALL_GIANT_{index}", "name": name,
+            "current_hp": hp, "max_hp": 211, "block": block,
+            "is_alive": True, "is_hittable": True,
+            "intents": [{"total_damage": intent}], "powers": powers,
+        }
+
+    def sev_score(card, enemy, incoming=0, pol=None):
+        use = pol or sev_pol
+        return use._score_play(
+            dict(card), [enemy], incoming, 0, 2, use.know.policy,
+            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
+
+    # 身份三字段合并识别（与无实体同口径：id 通道与中文名通道）。
+    assert sev_pol._enemy_steam_eruption_stack(sev_enemy(stacks=33)) == 33, \
+        f"蒸汽喷发层数读取失效: {sev_enemy(stacks=33)['powers']}"
+    assert sev_pol._enemy_steam_eruption_stack(sev_enemy(stacks=None)) == 0, \
+        "无喷发目标误读层数"
+
+    # ① 无喷发对照：低血目标照旧判「可击杀」（旧口径锚）。
+    s_sev_plain, _, why_sev_plain = sev_score(sl_bludgeon, sev_enemy(hp=15, stacks=None))
+    assert why_sev_plain.startswith("可击杀"), \
+        f"无喷发低血目标击杀口径回归: {why_sev_plain}"
+
+    # ② 喷发×33 在账：击杀口径撤销——why 不以「可击杀」开场、纯观测注记在产、
+    #    攻击面仍按牌面移除参选（单体伤害≈32）、kill_bonus 不再发放（分更低）。
+    s_sev_veto, _, why_sev_veto = sev_score(sl_bludgeon, sev_enemy(hp=15, stacks=33))
+    assert not why_sev_veto.startswith("可击杀") \
+            and "单体伤害≈32" in why_sev_veto \
+            and "STEAM_ERUPTION_KILL_VETO_OBS" in why_sev_veto, \
+        f"喷发携带者击杀口径未撤销或注记缺失: {why_sev_veto}"
+    assert s_sev_veto < s_sev_plain, \
+        f"喷发携带者 kill_bonus 未撤除: veto={s_sev_veto} plain={s_sev_plain}"
+
+    # ③ 零层严格保留旧口径（可击杀、无注记）。
+    s_sev_zero, _, why_sev_zero = sev_score(sl_bludgeon, sev_enemy(hp=15, stacks=0))
+    assert why_sev_zero.startswith("可击杀") \
+            and "STEAM_ERUPTION_KILL_VETO_OBS" not in why_sev_zero \
+            and math.isclose(s_sev_zero, s_sev_plain), \
+        f"零层喷发误伤旧口径: score={s_sev_zero} why={why_sev_zero}"
+
+    # ④ steam_eruption_kill_veto=False 严格回滚：可击杀复原、注记消失、评分
+    #    与无喷发对照逐分一致。
+    sev_pol.know.policy["steam_eruption_kill_veto"] = False
+    try:
+        s_sev_off, _, why_sev_off = sev_score(sl_bludgeon, sev_enemy(hp=15, stacks=33))
+        assert why_sev_off.startswith("可击杀") \
+                and "STEAM_ERUPTION_KILL_VETO_OBS" not in why_sev_off \
+                and math.isclose(s_sev_off, s_sev_plain), \
+            f"steam_eruption_kill_veto=False 未严格回滚: score={s_sev_off} why={why_sev_off}"
+    finally:
+        sev_pol.know.policy["steam_eruption_kill_veto"] = True
+
+
     # 3fdo) FOCUS_DRIFT_OBS 火线漂移观测注（第772~783局批复盘）：783-F35
     # CRUSHER+ROCKET 双强化体战逐张火线 0→1→0→0→1 横跳、无一减员阵亡。纯观测
     # 不改分——① 非击杀换线（集火记忆=甲，乙威胁更高中标）：注记显形且含新旧

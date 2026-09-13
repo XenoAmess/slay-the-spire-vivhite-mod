@@ -5894,6 +5894,7 @@ class Policy:
                 _damp_add = 0.0
                 _thorns_reflect = 0.0
                 _thorns_suicide = False
+                _eruption_veto = False
                 if _thorns_pricing:
                     _thorns_reflect = (self._enemy_power_stack(
                         e, "thorns", "荆棘") * max(1, int(hits)))
@@ -5904,6 +5905,25 @@ class Policy:
                         # 随之失效），攻击面仍按实际移除参选
                         killed = False
                         _thorns_suicide = True
+                # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，第1452~1458局批
+                # 复盘）：WATERFALL_GIANT 的 SteamEruptionPower（zhs「被击杀时，
+                # 在你的下一回合结束时造成伤害」）原生 ShouldStopCombatFromEnding
+                # =true + AfterDeath→TriggerAboutToBlowState：HP=999999999 进无敌
+                # 自爆相，玩家伤害永远无法兑现击杀（ExplodeMove 自爆后
+                # CreatureCmd.Kill 自身）。旧口径对低血携带者照常判「可击杀」——
+                # 1457 局 F17 连续两条「可击杀瀑布巨兽」打出后同场转为「敌无敌帧
+                # ×1（HP=999999999…）」，19血0甲连打 4 张攻击零格挡，下回合吃 33
+                # 自爆阵亡；同机制即 1436~1440 批名册 WATERFALL_GIANT=1 污染源
+                # （该批撤回条件预注册「按同教义扩展击杀预测侧」）。携带者撤销
+                # 击杀口径：kill_bonus/击杀豁免/「可击杀」终局框架不再发放
+                # （commit_kill_id 以 why「可击杀」开场为据，同步停止喂账），
+                # 攻击面仍按实际移除参选（击倒仍需全额伤害，不致饿死输出）。
+                # 键=False 严格回滚旧口径（携带者按牌面判击杀）。
+                if (killed and not _thorns_suicide
+                        and bool(pol.get("steam_eruption_kill_veto", True))
+                        and self._enemy_steam_eruption_stack(e) > 0):
+                    killed = False
+                    _eruption_veto = True
                 if _sg_min > 0 and not killed \
                         and self._enemy_asleep_stack(e) >= _sg_min \
                         and float(total) > max(0.0, float(e.get("block") or 0)):
@@ -6062,6 +6082,14 @@ class Policy:
                     elif _thorns_reflect > 0.0:
                         why += (f"｜荆棘反伤≈{_thorns_reflect:g}未计价"
                                 "（THORNS_REFLECT_OBS）")
+                    # 蒸汽喷发拦截击杀留痕（STEAM_ERUPTION_KILL_VETO_OBS）：
+                    # 中标侧披露一次供复盘直接计数「击杀口径被喷发撤销」在产
+                    # 频率，并核对「可击杀」不再穿透携带者（1457 局 F17 型
+                    # 预测击杀落空→无敌自爆相）；键=False 或无喷发层均不留痕。
+                    if _eruption_veto:
+                        why += (f"｜蒸汽喷发×{self._enemy_steam_eruption_stack(e):g}"
+                                "在账：死亡将被拦截转自爆相，击杀口径撤销"
+                                "（STEAM_ERUPTION_KILL_VETO_OBS）")
             # 减员成本翻案对账收口（REMOVAL_COST_FLIP_AUDIT）：Winner 定论后
             # 对账一次——去分口径的胜者与本口径胜者不同则记翻案（杠杆独立
             # 改写了火线），相同则记随附（加分只放大既有选择）。
@@ -6645,6 +6673,16 @@ class Policy:
     def _enemy_intangible_stack(self, enemy: dict) -> float:
         """读取敌人的无实体层数（INTANGIBLE_POWER），兼容 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "intangible", "无实体")
+
+    def _enemy_steam_eruption_stack(self, enemy: dict) -> float:
+        """读取敌人的蒸汽喷发层数（STEAM_ERUPTION_POWER），兼容 id/power_id/name 载荷。
+
+        zhs 原文「被击杀时，在你的下一回合结束时造成伤害」——携带者死亡被原生
+        拦截（ShouldStopCombatFromEnding=true → TriggerAboutToBlowState：
+        HP=999999999 进无敌自爆相，ExplodeMove 自爆后 CreatureCmd.Kill 自身），
+        玩家伤害永远无法兑现击杀。
+        """
+        return self._enemy_power_stack(enemy, "steam_eruption", "蒸汽喷发")
 
     def _enemy_asleep_stack(self, enemy: dict) -> float:
         """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""
