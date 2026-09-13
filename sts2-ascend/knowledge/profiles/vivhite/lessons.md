@@ -10039,3 +10039,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/4.199917308215071局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.480537014652356局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/12.937632843107822局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：1/909 胜，当前目标进阶 1
+
+## 第 910 局复盘（2026-09-14 00:04）
+- 结果：💀 失败｜进阶 1｜到达层数 11｜当局评分 11
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RECURRENT_STARLIGHT, STRATAGEM, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE
+- 本局遗物：BEATING_REMNANT, BOOK_OF_FIVE_RINGS
+- 战斗记录：F2 Monster战 掉血22｜自损14（可行动段14/非行动段22，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损16（可行动段16/非行动段5，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血25｜自损17（可行动段17/非行动段16，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血53｜自损20（可行动段20/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PREDATOR(37分/2.207788124497732局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/6.829660145353729局)，CINDER(35分/2.178568805670808局)，PROWESS(33分/13.423673201080774局)，HAND_OF_GREED(33分/8.981319646823222局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/4.185217597636319局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.471855135101073局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/12.892351128156946局)
+- 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：1/910 胜，当前目标进阶 1
