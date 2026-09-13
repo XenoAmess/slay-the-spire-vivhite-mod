@@ -674,7 +674,6 @@ class Policy:
         self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
         self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
         self._respawn_veto_reported: set = set()  # 本场已登记过原生白名单否决观测的敌键（防重复计数）
-        self._respawn_veto_note_names: list = []  # 本场被白名单否决的敌名（RESPAWN_ROSTER_VETO_OBS 注记用，随战斗身份重置）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -3783,15 +3782,6 @@ class Policy:
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
-        # RESPAWN_ROSTER_VETO_OBS（第 1447~1451 局批复盘）：名册条目被原生白名单
-        # 否决时在 reason 侧留痕（本场被否决敌名，每场每敌至多一次，与
-        # respawn_native_vetoes 台账同闸登记），使「否决面」可从 run 文件逐局
-        # 核对——1449~1451 部署后 15 条全场重生体注记全部命中白名单物种证明
-        # 读侧行为面生效，但 vetoes 恒空无法区分「无现场」与「闸门未装载」。
-        if self._respawn_veto_note_names:
-            danger_note += ("；名册重生条目被原生白名单否决："
-                            + "/".join(self._respawn_veto_note_names)
-                            + "（RESPAWN_ROSTER_VETO_OBS）")
         return kill_race, all_respawn, stance, danger_note
 
 
@@ -3858,7 +3848,6 @@ class Policy:
             self._combat_kills = {}
             self._respawn_reported = set()
             self._respawn_veto_reported = set()
-            self._respawn_veto_note_names = []
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -6618,15 +6607,6 @@ class Policy:
                     self.know.mark_respawn_native_veto(kid)
                 except Exception:
                     pass
-                # RESPAWN_ROSTER_VETO_OBS（第 1447~1451 局批复盘新增）：否决面在
-                # run 文件零留痕——respawn_native_vetoes 恒空无法区分「无非白名单
-                # 名册敌被评估」与「闸门未装载/静默吞异常」。把被否决敌名同步进
-                # 竞速段 danger_note（每场每敌至多一次，与 veto 台账同闸去重），
-                # 让否决路径可从决策 reason 逐局核对；键=False 时本分支不执行，
-                # 注记与台账同灭（严格回滚）。
-                _veto_label = str(enemy.get("name") or kid)
-                if _veto_label not in self._respawn_veto_note_names:
-                    self._respawn_veto_note_names.append(_veto_label)
             return False
         return True
 
