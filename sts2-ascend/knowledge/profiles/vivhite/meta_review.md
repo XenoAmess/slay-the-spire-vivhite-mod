@@ -2677,3 +2677,83 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 857~872 局批复盘（异步追及·第二闭环）：竞速判死入锁投影快照入账（RACE_PROJ_OBS）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判死入锁后的行为链（全攻换挡、长战复利撤账、Boss 前夜
+  弃疗/豁免否决）全部建立在入锁 tick 的投影「击杀需 ttk 回合＞可存活 tsurv
+  回合」上，但战斗记录只留「T2判死→实战7回合阵亡」——入锁时的投影值不入账，
+  若投影 tsurv 系统性低于「入锁后实战存活回合数（实战回合-入锁回合）」，则
+  判死后的弃疗与全攻建立在过度悲观的生存投影上，而现有证据无法逐场对账。
+  把入锁投影快照进账，后续批次即可直接量化悲观校准率，再决定行为化收紧
+  或放宽。
+- **EVIDENCE**：本批 16 局全负，15/16 局终局战发生实测口径判死入锁
+  （857/858/859/860/862/864/865/866/867/868/869/870/871/872，仅 861/863
+  死于普通/精英战无入锁），全部兑现阵亡；但入锁后实战存活 2~12 回合不等
+  （862 局 T3 判死→实战 15 回合、859 局 T5→8、860 局 T5→7、865 局 T4→9），
+  「判死即短期必死」与实战存活跨度之间的差距无法从现有留痕判断是投影
+  悲观还是换挡后真实提速。872 局 F32 篝火「必败弃疗改锻造」（当前 68%，
+  竞速预演击杀需 13 回合＞满血可存活 5 回合）正是消费该投影的决策点。
+- **EXPECTED_SIGNAL**：未来 3~10 局——① 判死入锁战斗记录出现
+  「（投影击杀X/存活Y，RACE_PROJ_OBS）」段，可直接 grep；② 逐场对账
+  「投影存活Y」vs「实战回合-入锁回合」：若实战存活普遍 ≥Y+2，证明生存
+  投影系统性悲观→下一批行为化（前夜弃疗闸/入锁阈值收紧）；若实战存活
+  ≤Y 占多数，则判死口径可信，前夜弃疗维持。证伪/撤回：快照段显形但
+  对账口径含糊（ttk/tsurv 口径在留痕中无法辨认）或留痕零显形（入锁路径
+  未覆盖）→ 撤回=race_audit_proj_obs=False（旧记录格式零差异，selfcheck
+  3rap ③护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：实测口径判死首次入锁时把当 tick 的
+  ttk/tsurv 快照进 _race_audit（proj_ttk/proj_tsurv，仅 latch_round 首次
+  赋值分支内记录，后续 tick 投影漂移不改写判死原始依据）；纯观测，不进
+  任何评分/阈值分支。
+- sts2-ascend/brain/agent.py：战斗记录竞速审计段结局后追加
+  「（投影击杀X/存活Y，RACE_PROJ_OBS）」；旧审计子串「判死→实战N回合」
+  逐字不动、（阵亡）后缀位置不变；观测键关闭或快照缺失（旧账/夹具）时
+  段落严格省略，旧格式零差异。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增
+  race_audit_proj_obs=True（静态键，False=严格回滚），注释登记本批
+  15/15 入锁全负与存活跨度证据。
+- sts2-ascend/brain/selfcheck.py：新增 3rap 四分支——① 端到端驱动
+  滚雪球竞速入锁，快照为正整数且 ttk>tsurv、第 4 tick 投影漂移不改写；
+  ② agent 战斗记录追加投影段；③ race_audit_proj_obs=False 严格回落
+  旧格式（回滚锚）；④ 快照缺失的旧账时段落省略、旧格式逐字不变
+  （兼容锚）。不改竞速判决、前夜弃疗闸族、謦欬门族、火线族与任何其他
+  旋钮；不动 runs/stats/policy.json/lessons.md/review_queue 等只读
+  在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3rap 四
+  分支；既有 3y 审计并表族、3fdl 翻线锁族、3slph 自损相位族等全部既有
+  夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+11，入锁快照）、brain/agent.py（+11，记录披露段）、
+  brain/knowledge.py（+10，静态键+注释）、brain/selfcheck.py（+92，
+  3rap 四分支）；未触碰只读在线状态；克隆残留的 assets 超长路径删除
+  告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：RACE_PROJ_OBS 显形战斗逐场对账「投影存活Y」vs
+  「实战回合-入锁回合」的偏差分布（本批基线：入锁后实战存活 2~12 回合，
+  投影值缺失）；系统性 ≥+2 → 下一批收紧前夜弃疗/入锁阈值；多数 ≤Y →
+  判死口径可信，观测保留继续累计。
+- 快照段显形异常（口径无法辨认或零显形）→ 撤回=race_audit_proj_obs=False
+  （旧格式零差异，3rap ③护住）。
+- 与同批已落地的 FOCUS_DRIFT_LOCK 互不耦合：本改动只读 race_audit 账，
+  不触碰火线族任何字段。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

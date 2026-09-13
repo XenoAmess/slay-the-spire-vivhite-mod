@@ -3760,6 +3760,17 @@ class Policy:
                                 _ra_audit["latched"] = True
                                 if _ra_audit.get("latch_round") is None:
                                     _ra_audit["latch_round"] = int(round_no)
+                                    # 入锁时投影快照（RACE_PROJ_OBS，第857~872局批
+                                    # 复盘异步追及新增）：旧审计账只记入锁回合与
+                                    # 实战结局，「T2判死→实战7回合阵亡」无法对账
+                                    # 判死依据——本批 15/15 入锁战全负、存活超出
+                                    # 入锁回合 2~12 回合不等，却看不到入锁时投影
+                                    # 击杀/存活回合数，悲观率无从逐场量化。只在
+                                    # 首次入锁记一次（后续 tick 的投影漂移不改写
+                                    # 判死决策的原始依据）；纯观测，不参与任何
+                                    # 评分/阈值分支。
+                                    _ra_audit["proj_ttk"] = int(round(ttk))
+                                    _ra_audit["proj_tsurv"] = int(round(tsurv))
                                 _ra_audit["esc"] = bool(esc_gate)
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
