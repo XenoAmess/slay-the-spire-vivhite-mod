@@ -11568,3 +11568,14 @@
 - 当前低价值卡牌：BULLY(10分/2.3363869040349847局)，STRIKE_IRONCLAD(12分/6.074605950490965局)，BASH(14分/5.140051188876967局)
 - 策略进化：elite_grey_safety_mult: 1.80 → 2.00（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1452 胜，当前目标进阶 0
+
+## 第 1453 局复盘（2026-09-13 19:47）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：ULTIMATE_STRIKE, CINDER, BREAKTHROUGH, VICIOUS, SHRUG_IT_OFF, HEADBUTT, TAUNT, DISMANTLE, SHRUG_IT_OFF, MOLTEN_FIST, MOLTEN_FIST, UPPERCUT, BLUDGEON, HEADBUTT
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F15 Monster战 掉血0｜自损1（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血38｜竞速审计：T2判死→实战5回合获胜; F19 Monster战 掉血27; F22 Monster战 掉血10; F23 Unknown战 掉血6; F25 Monster战 掉血38｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.5622873864657896局)，PACTS_END(25分/84.7110223919111局)，OFFERING(24分/21.44197422650278局)，PERFECTED_STRIKE(24分/4.399086716843249局)，MANGLE(24分/70.83333279811909局)
+- 当前低价值卡牌：BULLY(10分/2.3282095498708624局)，STRIKE_IRONCLAD(12分/6.053344829664247局)，BASH(14分/5.122061009715898局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.40（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1453 胜，当前目标进阶 0
