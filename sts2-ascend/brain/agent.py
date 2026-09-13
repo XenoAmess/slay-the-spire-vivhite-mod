@@ -3677,17 +3677,6 @@ class Agent:
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
-            # 入锁投影快照披露（RACE_PROJ_OBS，第857~872局批复盘异步追及新增）：
-            # 把判死入锁时的投影击杀/存活回合数拼在结局后，复盘可直接对账
-            # 「投影可存活N」vs「入锁后实战存活（实战回合-入锁回合）」——本批
-            # 15/15 入锁战全负但存活超出入锁点 2~12 回合，悲观校准无法量化。
-            # 审计段与（阵亡）后缀位置不变；观测键关闭或快照缺失（旧账/夹具）
-            # 时段落严格回落旧口径。纯观测，不参与任何评分/阈值分支。
-            if (bool(self.know.policy.get("race_audit_proj_obs", True))
-                    and _ra.get("proj_ttk") is not None
-                    and _ra.get("proj_tsurv") is not None):
-                note += (f"（投影击杀{int(_ra['proj_ttk'])}"
-                         f"/存活{int(_ra['proj_tsurv'])}，RACE_PROJ_OBS）")
             # 审计账本并表落库（RACE_AUDIT_STATS_AGGREGATION，第813~822局批复盘
             # 闭环实验）：战斗记录字符串只活在单局日志里，每批复盘都要重新
             # grep 原始日志才能数出「判死→获胜」占比，且 813~827 全窗口落在
