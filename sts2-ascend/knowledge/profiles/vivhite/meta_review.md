@@ -2677,3 +2677,87 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 873~899 局批复盘：Boss 阵亡只差掉血/自损两笔账——阵亡残血池观测（RACE_DEATH_POOL_OBS）
+
+日期：2026-09-13
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 阵亡战的战斗记录只有掉血/自损两笔账，缺「阵亡瞬间
+  敌方残血池」——27 连负无法分流成「差一口气」（残池占比小 → 下一批
+  行为化方向=斩杀端加码）与「结构性竞速不可能」（残池占比大 → 方向=
+  判死后停止无效自付/路径端更早弃疗换战力）。补上残血池观测后，两个
+  方向都变成可证伪命题。
+- **EVIDENCE**：本批 27 局全负（873~899，exact_batch 全覆盖）。Boss 阵亡
+  21 局（F17×12、F33×9），竞速审计判死全部实战兑现（T2/T3 判死→4~13
+  回合阵亡），但记录只留「掉血60~114｜自损14~47」。899 局
+  （3K6VMSNLYANE，F17 VANTOM，完整链逐条核读）T7 起败局全攻连打
+  hp-cost=4~6 牌自付 22+，全场自损 31 占掉血 71 的 44%，阵亡时 Boss
+  还剩多少血完全无账——若残池 5 点，全攻是对的、该加码斩杀；若残池
+  120 点，自付只是加速死亡、该判死停付。lessons 侧生命支付三级旋钮
+  已全尽（life_cost_weight -3.00 触底/余量门 2.75 顶格/血税软顶 17.50
+  触底），输出饥饿旋钮全顶格，参数学习停止吸收，缺的正是这笔分流账。
+  race_audit 生涯台账 latched=1211、判死后获胜 474（39%），同样没有
+  残池维度。
+- **EXPECTED_SIGNAL**：未来 3~10 局战斗记录出现
+  「｜阵亡残血池≈N/池M（RACE_DEATH_POOL_OBS）」段，可直接 grep 统计
+  Boss 阵亡残池占比分布：① 中位残池/池 ≤15%（≥3 个独立对局）→
+  差一口气，下一批行为化=斩杀窗口/竞速提速加码；② 中位残池/池 ≥40%
+  → 结构性不可能，下一批行为化=竞速判死后謦欬自付熔断（保留血量
+  不再换注定打不出的伤害）或路径端必败预演更早弃疗换战力；③ 段
+  罕见（非 Boss 阵亡不披露属正常）→ 观测口径修正。证伪/撤回：
+  `race_death_pool_obs=False` 只关披露段落（采样照留，selfcheck
+  3rdp 回滚锚护住）；纯观测注不改任何评分、阻尼、记忆更新与判定路径。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`__init__` 新增 `_vit_pool_last`（与
+  `_vit_pool_max` 同战斗实例生命周期，`_vit_combat` 复位段连带清零）；
+  血池/火力写入侧每 tick 采存活敌人 current_hp 合计写入
+  `ctx.combat["obs_hp_left"]`。只追加观测键，火力/血池采样逐字不动。
+- sts2-ascend/brain/agent.py：`_settle_combat` 读取 `obs_hp_left` 并入
+  聚合账（多段战斗取最后一段读数=阵亡瞬间残留量）；`died_in_combat`
+  新增 `enemy_hp_left` 落账（消费端全为 .get 口径，旧记录缺字段安全）；
+  `_flush_combat_agg` 在自损段之后、竞速审计段之前，仅「阵亡且残池>0」
+  时披露「｜阵亡残血池≈N/池M（RACE_DEATH_POOL_OBS）」，（阵亡）后缀
+  与既有段落位置不变，观测键关闭时段落严格省略。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  `race_death_pool_obs=True`，注释登记本批实证与回滚语义（False 只关
+  披露，采样与落账照留）。
+- sts2-ascend/brain/selfcheck.py：新增 3rdp 五分支——① 写入侧逐 tick
+  刷新（173→140，血池口径不变）；② 阵亡结算披露段落+（阵亡）后缀
+  位置+`died_in_combat.enemy_hp_left` 落账；③ 获胜战斗不披露；④
+  `race_death_pool_obs=False` 严格回滚（段落省略、后缀不变、
+  died_in_combat 落账不丢）。
+- 不加新评分旋钮、不改任何判定/学习路径；不动 runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3rdp 五
+  分支；既有 3slph 相位分账族、3fdf 漂移补记族、3fdl 翻线锁族等全部
+  既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：
+  57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：
+  10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+13：字段+复位+逐 tick 采样+obs 键）、
+  brain/agent.py（+28：聚合账+落账+披露段）、brain/knowledge.py（+9：
+  静态键+注释）、brain/selfcheck.py（+87：3rdp 五分支）。未触碰只读
+  在线状态。（git status 另有 assets 长路径删除告警为克隆固有，与
+  本批无关，不进入 commit。）
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：Boss 阵亡战「阵亡残血池≈N/池M」段的残池/池占比
+  分布（分 F17/F33 两档）；对照竞速审计入锁回合，判死后自付血量
+  （可行动段自损）与残池的相杀关系。
+- 残池占比中位 ≤15% → 下一批斩杀端加码；≥40% → 判死后謦欬自付熔断
+  或路径端更早弃疗换战力；段落罕见 → 口径修正。回滚=
+  `race_death_pool_obs=False`（只关披露，selfcheck 3rdp 锚护住）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

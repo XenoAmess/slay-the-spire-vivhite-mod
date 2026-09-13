@@ -4109,6 +4109,93 @@ def main() -> int:
     assert "｜自损8" in slph_note_rb and "SELF_LOSS_PHASE_OBS" not in slph_note_rb, \
         f"回滚键关闭后战斗记录未回落旧口径: {slph_note_rb}"
 
+    # 3rdp) 阵亡残血池观测位（RACE_DEATH_POOL_OBS，第 873~899 局批复盘）：
+    #      873~899 批 27 连负 Boss 战竞速审计判死全部实战兑现（T2/T3 判死→
+    #      4~13 回合阵亡），但战斗记录只留掉血/自损——「差一口气」（残池占比
+    #      小 → 斩杀端加码）与「结构性竞速不可能」（残池占比大 → 判死后停付/
+    #      路径端更早换战力）无从区分。policy 逐 tick 采存活敌人 current_hp
+    #      合计写入 ctx.combat["obs_hp_left"]；agent 阵亡结算披露
+    #      「阵亡残血池≈N/池M（RACE_DEATH_POOL_OBS）」并随 died_in_combat
+    #      .enemy_hp_left 落账；race_death_pool_obs=False 只关披露。
+    def _rdp_state(turn_no, hp_now, foe_hp):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {
+                "player": {"current_hp": hp_now, "max_hp": 91, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": [{
+                    "index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                    "card_type": "Attack", "playable": True, "energy_cost": 1,
+                    "requires_target": True, "valid_target_indices": [0],
+                    "dynamic_values": [{"name": "Damage", "current_value": 6}],
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "VANTOM", "name": "墨影幻灵",
+                    "current_hp": foe_hp, "max_hp": 173, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 7}],
+                }],
+            },
+            "run": {"current_hp": hp_now, "max_hp": 91, "gold": 0, "floor": 17,
+                    "deck": [{"card_id": "STRIKE_IRONCLAD", "card_type": "Attack",
+                              "energy_cost": 1,
+                              "dynamic_values": [
+                                  {"name": "Damage", "current_value": 6}]}]},
+        }
+
+    rdp_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rdp-")))
+    rdp_pol = policy.Policy(rdp_know, random.Random(7))
+    rdp_ctx = _slph_ctx()
+    rdp_pol.decide(_rdp_state(1, 61, 173), rdp_ctx)
+    assert rdp_ctx.combat.get("obs_hp_left") == 173.0, \
+        f"残血池写入侧断裂: {rdp_ctx.combat}"
+    rdp_pol.decide(_rdp_state(2, 53, 140), rdp_ctx)
+    assert rdp_ctx.combat.get("obs_hp_left") == 140.0 \
+        and rdp_ctx.combat.get("obs_hp_pool") == 173.0, \
+        f"残血池应逐 tick 刷新（取最后观测帧）: {rdp_ctx.combat}"
+    # 阵亡结算披露：残池>0 时记录自带观测段，died_in_combat 同步落账，
+    # （阵亡）后缀位置不变
+    rdp_ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    rdp_ag._start_combat({"max_hp": 91, "floor": 17}, "VANTOM", "Boss", 61)
+    rdp_ag.ctx.combat["rounds"] = 9
+    rdp_ag.ctx.combat["obs_hp_pool"] = 173.0
+    rdp_ag.ctx.combat["obs_hp_left"] = 41.0
+    rdp_ag._settle_combat(0, won=False, died=True)
+    rdp_note = rdp_ag.ctx.combat_notes[-1]
+    assert "｜阵亡残血池≈41/池173（RACE_DEATH_POOL_OBS）" in rdp_note, \
+        f"战斗记录缺阵亡残血池披露: {rdp_note}"
+    assert rdp_note.endswith("（阵亡）"), f"（阵亡）后缀位置漂移: {rdp_note}"
+    assert float(rdp_ag.ctx.died_in_combat.get("enemy_hp_left") or 0.0) == 41.0, \
+        f"died_in_combat.enemy_hp_left 未落账: {rdp_ag.ctx.died_in_combat}"
+    # 获胜战斗不披露（残池语义只对阵亡成立）
+    rdp_ag_w = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    rdp_ag_w._start_combat({"max_hp": 91, "floor": 17}, "VANTOM", "Boss", 61)
+    rdp_ag_w.ctx.combat["rounds"] = 9
+    rdp_ag_w.ctx.combat["obs_hp_pool"] = 173.0
+    rdp_ag_w.ctx.combat["obs_hp_left"] = 5.0
+    rdp_ag_w._settle_combat(50, won=True, died=False)
+    rdp_ag_w._flush_combat_agg()  # 存活结算的挂账由下一次 flush 落记录（终局/换层口径）
+    rdp_note_w = rdp_ag_w.ctx.combat_notes[-1]
+    assert "RACE_DEATH_POOL_OBS" not in rdp_note_w, \
+        f"获胜战斗不应披露残血池: {rdp_note_w}"
+    # 回滚锚：观测键关闭后段落严格省略，died_in_combat 字段保留（账不丢）
+    rdp_ag_rb = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    rdp_ag_rb.know.policy["race_death_pool_obs"] = False
+    rdp_ag_rb._start_combat({"max_hp": 91, "floor": 17}, "VANTOM", "Boss", 61)
+    rdp_ag_rb.ctx.combat["rounds"] = 9
+    rdp_ag_rb.ctx.combat["obs_hp_pool"] = 173.0
+    rdp_ag_rb.ctx.combat["obs_hp_left"] = 41.0
+    rdp_ag_rb._settle_combat(0, won=False, died=True)
+    rdp_note_rb = rdp_ag_rb.ctx.combat_notes[-1]
+    assert "RACE_DEATH_POOL_OBS" not in rdp_note_rb \
+        and rdp_note_rb.endswith("（阵亡）"), \
+        f"回滚键关闭后战斗记录未省略残血池段: {rdp_note_rb}"
+    assert float(rdp_ag_rb.ctx.died_in_combat.get("enemy_hp_left") or 0.0) == 41.0, \
+        "回滚键只关披露，died_in_combat 落账不应丢失"
+
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
     #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
     #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、

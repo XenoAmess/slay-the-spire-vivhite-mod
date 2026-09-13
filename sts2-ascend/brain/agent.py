@@ -3536,6 +3536,11 @@ class Agent:
         # 写在 ctx.combat 上（obs_* 键），结算时并入聚合账——多阶段战斗按
         # 「血池取最大段、火力求和」口径合并，flush 时一次性入统计库
         obs_pool = float(c.get("obs_hp_pool") or 0.0)
+        # RACE_DEATH_POOL_OBS（第 873~899 局批复盘）：policy 端逐 tick 写入的
+        # 存活敌人 current_hp 合计——阵亡战斗的「残血池」，供复盘区分
+        # 「差一口气」与「结构性竞速不可能」。多段战斗取最后一段读数
+        # （阵亡瞬间的残留量），纯观测不参与任何评分/学习分支
+        obs_hp_left = float(c.get("obs_hp_left") or 0.0)
         obs_fire = float(c.get("obs_fire_sum") or 0.0)
         obs_fr = int(c.get("obs_fire_rounds") or 0)
         # 謦欬实付观测（第 7~20 局批复盘新增）：policy 端按战斗实例累计的同回合
@@ -3570,6 +3575,7 @@ class Agent:
             agg["won"] = bool(won) and not agg["died"]
             agg["died"] = agg["died"] or bool(died)
             agg["obs_hp_pool"] = max(float(agg.get("obs_hp_pool", 0.0) or 0.0), obs_pool)
+            agg["obs_hp_left"] = obs_hp_left
             agg["obs_fire_sum"] = float(agg.get("obs_fire_sum", 0.0) or 0.0) + obs_fire
             agg["obs_fire_rounds"] = int(agg.get("obs_fire_rounds", 0) or 0) + obs_fr
             agg["self_hp_loss_sum"] = (float(agg.get("self_hp_loss_sum", 0.0) or 0.0)
@@ -3586,7 +3592,8 @@ class Agent:
                    "rounds": int(c.get("rounds", 0) or 0), "won": bool(won),
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
                    "open": bool(split), "from_event": bool(c.get("from_event")),
-                   "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
+                   "obs_hp_pool": obs_pool, "obs_hp_left": obs_hp_left,
+                   "obs_fire_sum": obs_fire,
                    "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss,
                    "self_hp_loss_own_sum": _seg_loss_own,
                    "self_hp_loss_foe_sum": _seg_loss_foe}
@@ -3604,6 +3611,11 @@ class Agent:
                                        # 净扣血（自损/费用口径）全场累计，reflect
                                        # 据此把实测自损占比接入生命支付权重
                                        "self_hp_loss": float(agg.get("self_hp_loss_sum", 0.0) or 0.0),
+                                       # 阵亡残血池（RACE_DEATH_POOL_OBS，第 873~899 局
+                                       # 批复盘）：最后观测帧的存活敌人 current_hp 合计，
+                                       # reflect/复盘据此区分「差一口气」与「结构性
+                                       # 竞速不可能」，纯观测不进任何演化分支
+                                       "enemy_hp_left": float(agg.get("obs_hp_left", 0.0) or 0.0),
                                        # 僵局摆烂死（第 109 局复盘）：600+ 回合零掉血后主动送死，
                                        # 血量损失全发生在「停止防御」之后——与格挡/击杀权重无关，
                                        # 标记随死亡归因传递，reflect 据此隔离攻防旋钮
@@ -3671,6 +3683,21 @@ class Agent:
                 _loss_foe = float(agg.get("self_hp_loss_foe_sum", 0.0) or 0.0)
                 note += (f"（可行动段{int(round(_loss_own))}"
                          f"/非行动段{int(round(_loss_foe))}，SELF_LOSS_PHASE_OBS）")
+        # RACE_DEATH_POOL_OBS 阵亡残血池披露（第 873~899 局批复盘）：873~899 批
+        # 27 连负 Boss 战竞速审计判死全部实战兑现，但记录只留掉血/自损——
+        # 「差一口气」（残池占比小，行为化方向=斩杀端加码）与「结构性竞速
+        # 不可能」（残池占比大，方向=判死后停付/路径端更早换战力）无从区分。
+        # 仅阵亡且确有残池读数时披露；观测键关闭时段落严格省略（selfcheck
+        # 对照锚），（阵亡）后缀与竞速审计段位置不变
+        if (agg.get("died")
+                and bool(self.know.policy.get("race_death_pool_obs", True))):
+            _hp_left = float(agg.get("obs_hp_left", 0.0) or 0.0)
+            _hp_pool = float(agg.get("obs_hp_pool", 0.0) or 0.0)
+            if _hp_left > 0.0:
+                note += f"｜阵亡残血池≈{int(round(_hp_left))}"
+                if _hp_pool > 0.0:
+                    note += f"/池{int(round(_hp_pool))}"
+                note += "（RACE_DEATH_POOL_OBS）"
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):
