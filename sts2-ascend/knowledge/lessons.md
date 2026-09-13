@@ -11458,3 +11458,14 @@
 - 当前低价值卡牌：BULLY(10分/2.419756877482528局)，STRIKE_IRONCLAD(12分/6.291367881454578局)，BASH(14分/5.323465130461563局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1442 胜，当前目标进阶 0
+
+## 第 1443 局复盘（2026-09-13 10:07）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：IRON_WAVE, BREAKTHROUGH, TAUNT, JUGGLING, PYRE, CINDER, VOLLEY, AGGRESSION, STONE_ARMOR, POMMEL_STRIKE, RUPTURE, FLAME_BARRIER
+- 本局遗物：KUSARIGAMA, WHETSTONE
+- 战斗记录：F5 Monster战 掉血25｜自损2（可行动段2/非行动段23，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血10｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血31｜自损2（可行动段2/非行动段29，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战6回合获胜; F13 Monster战 掉血0｜自损1（可行动段1/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血53｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.689401523387747局)，PACTS_END(25分/86.70894380932668局)，OFFERING(24分/22.20709442934213局)，PERFECTED_STRIKE(24分/4.556060607658711局)，MANGLE(24分/72.33245301967544局)
+- 当前低价值卡牌：BULLY(10分/2.4112877284113394局)，STRIKE_IRONCLAD(12分/6.269348093869487局)，BASH(14分/5.304833002504948局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（66%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1443 胜，当前目标进阶 0
