@@ -4595,6 +4595,15 @@ class Policy:
             # 的兜底条件逐字不动，推进正常的战斗不受影响。esc_early=0 一键回滚
             # （旧行为零差异）；本段只在 _hp_play_margin>0 分支内，非白绮角色
             # 零改动。
+            # 投影口径修正（第 974~979 局批复盘）：首个可观测窗口 EARLY 留痕
+            # 0 次（同窗 ESC_OBS 74 次全落原口径）——旧判定要求「原时点前一
+            # 回合」升级账累计已达阈值，但升级账按每回合意图增量累计、放行时点
+            # 中位增速 ≈3~4/回合，前一回合累计仅 ≈8~10<12，结构上不可达。趋势
+            # 全正时升级账望远镜求和（esc_N=本回合意图-首回合意图），本回合
+            # 再空过将计入的 _intent_trend 恰使 投影值=原时点累计值；故阈值
+            # 判定改用投影口径「本回合若再被门拦，升级账即达阈值」，阈值本身、
+            # 减 1 回合幅度与零进展兜底逐字不动，趋势为 0 的平稳战投影不增值、
+            # 行为不变。
             _hp_gate_esc_early_limit = _hp_gate_stall_any_limit
             if _hp_gate_stall_any_limit >= 3:
                 try:
@@ -4605,8 +4614,10 @@ class Policy:
                 except (TypeError, ValueError):
                     _esc_early_on = False
                     _esc_early_intent = 12
+                _esc_projected = self._hp_gate_stall_esc + max(
+                    0, int(getattr(self, "_intent_trend", 0) or 0))
                 if (_esc_early_on
-                        and self._hp_gate_stall_esc >= _esc_early_intent):
+                        and _esc_projected >= _esc_early_intent):
                     _hp_gate_esc_early_limit = max(
                         2, _hp_gate_stall_any_limit - 1)
             if (_hp_gate_stall_any_limit > 0 and not _hp_gate_stall_break

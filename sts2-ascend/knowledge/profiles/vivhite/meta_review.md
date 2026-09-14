@@ -3089,3 +3089,88 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 974~979 局批复盘：提前放行投影口径——升级账阈值判定改接「本回合再空过即达标」（HP_GATE_STALL_ESC_EARLY 结构不可达修正）
+
+日期：2026-09-14
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：上批（953~973）落地的 HP_GATE_STALL_ESC_EARLY 提前放行在生产中
+  结构性不可达——其阈值判定要求「原放行时点前一回合」升级账累计已≥12，但升级账按
+  门拦空过回合的意图增量累计、放行时点中位增速仅 ≈3~4/回合（927~973 基线：21 个
+  放行时点累计中位 12~13 ÷ 4 空过回合），前一回合累计 ≈8~10<12，EARLY 留痕永不
+  显形。趋势全正时升级账望远镜求和（esc_N=本回合意图-首回合意图），本回合再空过
+  将计入的 _intent_trend 恰使「已累计+本回合趋势」等于原时点累计值——阈值判定改
+  用该投影口径后，提前放行按上批设计真实上届，且阈值 12、减 1 回合幅度、零进展≥3
+  兜底与趋势为 0 的平稳战行为逐字不变。
+- **EVIDENCE**：本批 6 局全负（生涯 1/979），4 局死于 F33 一幕 Boss（975 掉血68、
+  977 掉血56、978 掉血78、979 掉血94+自损37 六回合爆毙）。上批预注册观测首个
+  可观测窗口结算：974~979 全部 run 文件 grep，HP_GATE_STALL_ESC_EARLY 留痕 0 次
+  （含 2026-09-14 全部 55 个 run 文件同为 0），同窗 HP_GATE_STALL_ESC_OBS 74 次
+  全落原口径（974:3、975:21、976:2、977:19、978:25、979:4）——放血僵局仍在发生、
+  提前放行杠杆从未启用，证伪「杠杆已生效」、归因「判定口径结构不可达」。上批夹具
+  ①用 7/回合陡增序列（5/12/19）掩盖了该不可达：真实中位增速 ≈3~4/回合下第 3 空过
+  回合末 esc≈8~10<12。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链 grep HP_GATE_STALL_ESC_EARLY——① 浅递增
+  （≈3~4/回合）放血僵局战的闩锁放行时点由第 5 个 decide 提前到第 4 个 decide，留痕
+  带 EARLY 分流与实发时刻累计值；② 这些战斗的总回合数与自损较 927~979 同型战斗
+  （如 973 局 F22 门拦空过后竞速 T3 判死→6 回合阵亡）下降；③ 趋势 0 平稳战与敌血量
+  推进正常的战斗闩锁行为零变化（夹具⑤与零进展兜底护住）。证伪/撤回：EARLY 显形仍
+  为 0，或提前放行战斗自损/掉血反超同型对照 → 撤回=hp_gate_stall_esc_early=0
+  （旧行为零差异，3pese③护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`_combat` 全拦截僵局放行的提前口径判定由
+  `self._hp_gate_stall_esc >= _esc_early_intent` 改为投影口径
+  `self._hp_gate_stall_esc + max(0, _intent_trend) >= _esc_early_intent`
+  （「本回合若再被门拦，升级账即达阈值」），并登记本批不可达证据与望远镜求和
+  算术依据。阈值默认 12、减 1 回合幅度（下限 2，仅原阈值≥3 启用）、零进展≥3
+  兜底、esc_early=0 回滚键、`_hp_play_margin>0` 分支限定全部逐字不动；非白绮
+  角色零改动。
+- sts2-ascend/brain/knowledge.py：hp_gate_stall_esc_early_intent 注释更新为投影
+  口径语义与本批证据（键值 12 不变）。
+- sts2-ascend/brain/selfcheck.py：3pese 新增两分支——④ 浅递增轨迹 7/11/15/19
+  （趋势 0/4/4/4，生产中位形态）：3 空过回合后 esc=8，投影 8+4=12≥12 → 第 4 个
+  decide 提前放行并带 EARLY 留痕与分流标记（旧口径此时仍拦截，直接钉住修正前后
+  差异）；⑤ 平稳轨迹 9/9/9/9/9 零差异对照：投影不增值、闩锁时点维持原口径、
+  无 EARLY 留痕。另按 3pesc 既有先例给 3prv① 钉 hp_gate_stall_esc_early=0
+  （该夹具单独验证全拦截基础口径，其交替 0/10 意图在投影口径下升级账投影达阈值，
+  提前放行属 3pese 族职责）。
+- 不改闩锁阈值/零进展兜底/评分/致死豁免与任何其他判定路径；不动 runs/stats/
+  policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3pese④⑤ 两分支；
+  既有 3pese①②③、3pesc 空过升级账族、3prv 全拦截族、3prm 未覆盖观测族、
+  3krh/3krhm 判死自付族、3fdd/3fdl 换线阻尼/翻线锁族、3ww 竞速投影族等全部既有
+  夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：brain/policy.py
+  （+13/-1，投影口径+证据注释）、brain/knowledge.py（+4/-1，键注释）、
+  brain/selfcheck.py（+48，3pese④⑤ 两分支+3prv① 钉键）；未触碰只读在线状态；
+  克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：HP_GATE_STALL_ESC_EARLY 显形次数与实发时刻升级账投影值分布
+  （本批基线 0 次/74 次 ESC_OBS）、提前放行战斗的总回合数/自损/掉血与 927~979
+  同型战斗对照、趋势 0 平稳战闩锁时点抽查（应零变化）。
+- EARLY 显形且提前放行战斗回合数/自损下降 → 修正有效，维持现值；仍 0 显形 →
+  检查 _intent_trend 采样时点与 stall_any 计数的相对时序再评；提前放行战斗结局
+  恶化 → 撤回=hp_gate_stall_esc_early=0（旧行为零差异，3pese③护住）。
+- 上批 INTANGIBLE_TTK_OBS 结算：本批 974（6 次）、979（3 次）两局显形，均为
+  一幕无实体/减伤类敌人实战观察注记，观测链路在产；其对 ttk 投影校准的行为化
+  评审按上批预注册口径顺延（需 3 个独立局的对照窗）。
+- KILL_RACE_HOPELESS_HP_PAY_MARGIN 续观：本批 6 局 KRH_OBS 合计 135 次
+  （≈22.5 次/局，vs 939~944 基线 15.5 次/局）不降反升，MARGIN 注记显形 8 次
+  （974:1、976:1、977:1、978:5）——压价已在非 Boss 判死战零星启用，但 979 局
+  F33 Boss 判死战全程 margin=0/致死豁免，门带在该场景结构性不生效；维持上批
+  「杠杆未启用非无效」归因，下一批以 MARGIN 显形频率与判死局自损/掉血比续评。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
