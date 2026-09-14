@@ -7521,31 +7521,10 @@ class Policy:
         _slip_per_layer = max(0.0, float(pol.get(
             "boss_race_slippery_tax_per_layer", 0.25)))
         _slip_tax, _slip_detail = self._act_slippery_tax(act_no, _slip_per_layer)
-        _slip_deck_tail = ""
-        if _slip_tax > 1e-9 and bool(pol.get(
-                "slippery_ttk_deck_obs", True)):
-            # The fixed tax is calibrated for roughly four damage hits/turn.
-            # Keep it as the decision input, but expose a deck-level upper-bound
-            # estimate so later runs can compare it with live hand observations.
-            _deck_hits = self._race_hand_hits_per_turn(deck or [], 3.0)
-            if _deck_hits > 0.0 and _slip_per_layer > 1e-9:
-                _deck_tax = max(
-                    _slip_tax,
-                    _slip_tax / (_slip_per_layer * _deck_hits))
-                _slip_deck_tail = (
-                    f";deck_break_tax={_deck_tax:.1f} turns"
-                    f"(hits_per_turn_cap={_deck_hits:.1f};"
-                    "SLIPPERY_TTK_DECK_EST)")
-            else:
-                _slip_deck_tail = (
-                    ";deck_break_tax=unavailable"
-                    "(SLIPPERY_TTK_DECK_EST)")
         _slip_tail = (f"，开局滑溜破层税+{_slip_tax:.1f}回合已计入"
                       f"（{_slip_detail}，BOSS_RACE_SLIPPERY_TAX）"
                       if _slip_tax > 1e-9 else "")
         ttk += _slip_tax
-        if _slip_deck_tail:
-            _slip_tail += _slip_deck_tail
         if ttk <= tsurv_feas + margin:
             # BOSS_RACE_PROJ_AUDIT（第919~987局批复盘）：预演判「可赢」的账面
             # 此前完全不可见——F33 二幕 Boss 0/12 全灭的前夜翻转留痕全部无预演
