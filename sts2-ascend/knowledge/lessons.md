@@ -11766,3 +11766,14 @@
 - 当前低价值卡牌：BULLY(10分/2.1934928238172073局)，STRIKE_IRONCLAD(12分/5.703081341924746局)，BASH(14分/4.82568421239786局)
 - 策略进化：elite_grey_safety_mult: 1.70 → 1.90（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1470 胜，当前目标进阶 0
+
+## 第 1471 局复盘（2026-09-14 11:46）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：UNRELENTING, SHRUG_IT_OFF, ANGER, CINDER, MOLTEN_FIST, HOWL_FROM_BEYOND, SPITE, DEMON_FORM, RUPTURE, BREAKTHROUGH
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F9 Unknown战 掉血0; F11 Monster战 掉血0; F12 Monster战 掉血3; F14 Monster战 掉血2; F15 Monster战 掉血8; F17 Boss战 掉血71｜自损1（可行动段1/非行动段66，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.344416887927508局)，PACTS_END(25分/80.51269450733713局)，OFFERING(24分/20.130577051720685局)，PERFECTED_STRIKE(24分/4.130037335888433局)，MANGLE(24分/66.5011462405474局)
+- 当前低价值卡牌：BULLY(10分/2.1858155989338472局)，STRIKE_IRONCLAD(12分/5.68312055722801局)，BASH(14分/4.808794317654468局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1471 胜，当前目标进阶 0
