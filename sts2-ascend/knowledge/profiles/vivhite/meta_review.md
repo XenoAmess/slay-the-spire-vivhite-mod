@@ -2916,3 +2916,91 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 945~952 局批复盘：竞速投影无实体封顶期盲区——逐卡侧已封顶、投影侧从未留痕（INTANGIBLE_TTK_OBS）
+
+日期：2026-09-14
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速投影 `ttk=enemy_hp_total/dpt` 从未计入敌方无实体
+  （INTANGIBLE_POWER）窗口——窗口内每 hit 伤害封顶 1，实测 dpt 塌缩后又被首窗
+  先验下限（VIVHITE_RACE_DPT_PRIOR_FLOOR，153~157 批）抬回 18~29，ttk 维持
+  「击杀还需 1~3 回合」、全攻提速判决不改；謦欬卡组在封顶窗内继续实付生命买
+  逐 hit≈1.0 的攻击并放弃防御，把可防过的窗口期打成致死回合。逐卡评分侧已于
+  1436~1440 批封顶（enemy_intangible_dmg_cap/ENEMY_INTANGIBLE_CAP_OBS），
+  投影侧是漏网的另一半。
+- **EVIDENCE**：本批 8 局全败（1/952）。945 局（8LV9TGSWJD7U）F17 Boss
+  SOUL_FYSH：FadeMove 自挂无实体×2，逐卡留痕「后继式 单体伤害≈1.0｜敌无实体
+  逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）」hp-cost=2 实付，同 tick 投影仍
+  「斩杀竞速投影：击杀还需2回合>可存活（实测19伤/回合升级桶+换挡上浮校准），
+  全攻提速」；末回合「评估后无值得出的牌（负空间✓），结束回合（敌意图总伤13，
+  我方11血/0甲）；警告：结束回合可能致死！」T5 阵亡（竞速审计：T2判死→实战
+  5回合阵亡）。946 局 F17 T5 拳斗≈1.0 CAP_OBS、950 局 F17 T5 弦光投影≈1.0
+  CAP_OBS——同 Boss 同机制窗口，本批 3 独立对局遇窗（达 evidence_run_threshold），
+  其中 946/950 遇窗时血线健康（57/49 血）竞速未开账故无判决失真，失真只在
+  「窗口期×边际竞速」叠合时咬人，945 正是最小现场。
+- **EXPECTED_SIGNAL**：未来 3~10 局 INTANGIBLE_TTK_OBS 注记在 SOUL_FYSH 及
+  其他自挂无实体敌人战中显形，注记携带「封顶期≈N回合最大输出≈每回合H命中
+  ×1伤」读数；复盘对照披露读数与判决所用 ttk——若按封顶口径修正的反事实 ttk
+  会翻转 ≥3 独立对局的判决/结局，下一批行为化（窗口期竞速 dpt 按命中数×1
+  封顶）；若注记频率为零或与判决失真无关，证伪维持纯观测。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：竞速开账段（SLIPPERY_TTK_OBS 注记之后、
+  `_race_margin` 之前）新增无实体封顶期观测分支——`_race_slippery_layers<=0`
+  且键开启时汇总敌方无实体层数，>0 则追加
+  「无实体N层在账：ttk未扣封顶期（窗口内每hit仅1伤，INTANGIBLE_TTK_OBS），
+  封顶期≈N回合最大输出≈每回合H命中×1伤（当前手牌能量贪心估）」；估计口径
+  抽为新方法 `_race_hand_hits_per_turn`（与滑溜破层期估计同式，既有滑溜
+  内联实现零改动）。ttk/tsurv/判决/评分/姿态零改动（纯观测锚）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增
+  intangible_ttk_obs=True，注释登记本批实证；False 关闭全部留痕
+  （回滚＝无留痕旧版，零行为差异）。
+- sts2-ascend/brain/selfcheck.py：combat_flip_probe 增加
+  intangible/intangible_obs 夹具参数（敌方挂 INTANGIBLE_POWER×2）；新增
+  3br-ttk-intangible-obs 四锚——①无实体在账必须留痕且携带层数/每回合命中
+  读数；②无无实体目标不得误挂；③滑溜在账时不重复挂注（逐 hit 封顶已由
+  SLIPPERY_TTK_OBS 披露）；④键=False 严格回滚无留痕。
+- 未触碰任何评分/判决/演化路径；runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态零改动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增
+  3br-ttk-intangible-obs 四锚；既有 3br-ttk-obs/3br-ttk-break-est 滑溜族、
+  3br-combat-cap/3br-esc-latch-hold、3krh/3krhm 判死自付族、3pesc/3pri 族、
+  3fdd/3fdl、3ww 竞速投影族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+69，观测分支+估计方法+注释）、brain/knowledge.py（+6，
+  静态键+注释）、brain/selfcheck.py（+34/-3，夹具参数+四锚）；未触碰只读
+  在线状态；克隆残留的 assets 超长路径删除告警为宿主挂载遗留，与本批无关、
+  不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：INTANGIBLE_TTK_OBS 显形次数/局数、披露读数（层数、
+  每回合命中）与判决所用 ttk 的失真量级、封顶窗内謦欬实付
+  （KILL_RACE_HOPELESS_HP_PAY_OBS 同 tick 叠合）次数与结局对照（本批基线：
+  945 局窗内实付≥2、T5 阵亡）。
+- 反事实修正会翻转 ≥3 独立对局判决/结局 → 下一批行为化（窗口期竞速 dpt
+  按每回合命中×1 封顶，或窗内撤销全攻提速）；注记零显形或失真与结局无关 →
+  证伪，维持纯观测；回滚=intangible_ttk_obs=False（无留痕旧版，夹具④护住）。
+- 上批 KILL_RACE_HOPELESS_HP_PAY_MARGIN 结算：本批 8 局 reason 全量 grep，
+  MARGIN 注记 0 次显形（全 2026-09-14 run 文件亦为 0——门带需要
+  _hp_play_margin>0 基底，本批死亡战多为 margin=0 的判死竞速）；KRH_OBS
+  合计 133 次/8 局（≈16.6 次/局）与 939~944 基线 93 次/6 局（≈15.5 次/局）
+  基本持平——压价杠杆本批未获出手条件，显形率不升不降，维持现值继续观察，
+  下一窗口复核 MARGIN 显形率与频率走向。
+- HP_GATE_STALL_ESC_OBS 第二窗口结算：放行注记（空过期间意图趋势累计）
+  本批新增 946/949/952 三独立局共 25 次（4/9/12），累计 929/935/946/949/952
+  五局 ≥ evidence_run_threshold=3；升级账放行时点分布已达行为化证据线，
+  登记为下一批头号行为化候选（本批单主假设额度已用于 INTANGIBLE_TTK_OBS，
+  不多开前线）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

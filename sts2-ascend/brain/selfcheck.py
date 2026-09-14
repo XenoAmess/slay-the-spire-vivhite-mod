@@ -9623,7 +9623,8 @@ def main() -> int:
     def combat_flip_probe(cap, slippery=False, slippery_guard=True,
                           node_type="Boss", enemy_hp=185, longfight_cap=None,
                           ttk_obs=True, latched=True, latch_hold=False,
-                          esc_rounds=2, hand_override=None):
+                          esc_rounds=2, hand_override=None,
+                          intangible=False, intangible_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -9652,8 +9653,11 @@ def main() -> int:
                               "max_hp": 341, "block": 0, "is_alive": True,
                               "is_hittable": True,
                               "intents": [{"total_damage": 0}],
-                              "powers": ([{"id": "SLIPPERY_POWER", "amount": 8}]
-                                         if slippery else [])}],
+                              "powers": (([{"id": "SLIPPERY_POWER", "amount": 8}]
+                                          if slippery else [])
+                                         + ([{"id": "INTANGIBLE_POWER",
+                                              "name": "无实体", "amount": 2}]
+                                            if intangible else []))}],
             },
             "run": {"current_hp": 46, "max_hp": 80, "gold": 0,
                     "floor": 33, "deck": []},
@@ -9680,6 +9684,7 @@ def main() -> int:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
         cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
+        cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         return cap_pol.decide(cap_state, cap_ctx)
@@ -9745,6 +9750,29 @@ def main() -> int:
         and "破层期不可估" in d_combat_slippery_noatk.reason \
         and "破层期≈" not in d_combat_slippery_noatk.reason, \
         f"无攻击手牌时破层期量化未走不可估分支: {d_combat_slippery_noatk.reason}"
+
+    # 3br-ttk-intangible-obs（INTANGIBLE_TTK_OBS，第945~952局批复盘）：
+    # 竞速投影 ttk 从未计入敌方无实体窗口（窗口内每 hit 封顶 1 伤）。945 局
+    # F17 SOUL_FYSH FadeMove 自挂无实体×2，逐卡侧 ENEMY_INTANGIBLE_CAP_OBS
+    # 已报 后继式 hp-cost=2 实付≈1.0，投影仍以先验下限/校准 dpt 维持
+    # 「击杀还需2回合」全攻提速、謦欬实付打进封顶窗，末回合「结束回合可能
+    # 致死」T5 阵亡；946/950 同 Boss 窗口各 1 条 CAP_OBS（本批 3 独立对局
+    # 遇窗）。观测只留痕不改 ttk/判决/评分；滑溜在账时逐 hit 封顶已被
+    # SLIPPERY_TTK_OBS 披露，不重复挂注；开关关闭严格回滚无留痕。
+    # 夹具手牌仅 速攻(10伤/1费/1hit)，max_energy 缺省=3 → 每回合1命中。
+    d_combat_intangible = combat_flip_probe(1.5, intangible=True)
+    assert "INTANGIBLE_TTK_OBS" in d_combat_intangible.reason \
+        and "无实体2层在账" in d_combat_intangible.reason \
+        and "每回合1命中" in d_combat_intangible.reason, \
+        f"无实体在账时竞速投影缺少封顶期观测: {d_combat_intangible.reason}"
+    assert "INTANGIBLE_TTK_OBS" not in d_combat_cap.reason, \
+        f"无无实体目标误挂封顶期观测: {d_combat_cap.reason}"
+    assert "INTANGIBLE_TTK_OBS" not in d_combat_slippery.reason, \
+        f"滑溜在账时不应重复挂无实体封顶期观测: {d_combat_slippery.reason}"
+    d_combat_intangible_noobs = combat_flip_probe(
+        1.5, intangible=True, intangible_obs=False)
+    assert "INTANGIBLE_TTK_OBS" not in d_combat_intangible_noobs.reason, \
+        f"无实体观测独立开关未严格回滚: {d_combat_intangible_noobs.reason}"
 
     # 3br-longfight：高血池普通/精英战同样不能用静态联合复核重开已判负的
     # 斩杀竞速；1197-F23 的 LOUSE_PROGENITOR（Normal，134~136 血）是最小现场。

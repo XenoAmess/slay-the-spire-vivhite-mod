@@ -672,6 +672,12 @@ DEFAULT_POLICY = {
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，
                                # 第1349~1355局批复盘）；False 关闭全部留痕
+    "intangible_ttk_obs": True,  # 无实体层在账时给竞速投影留痕 ttk 未扣封顶期（窗口内每hit仅1伤，
+                               # INTANGIBLE_TTK_OBS，第945~952局批复盘：945-F17 SOUL_FYSH 无实体×2
+                               # 窗口内逐卡侧已报≈1.0伤、投影仍按校准dpt维持全攻提速并謦欬实付，T5
+                               # 阵亡；946/950 同 Boss 窗口各 1 条 CAP_OBS，3 独立对局遇窗），
+                               # 并追加封顶期最大输出读数（当前手牌能量贪心每回合命中×1伤）；
+                               # 滑溜>0 时不重复挂注；False 关闭全部留痕（回滚＝无留痕旧版）
     "sandpit_eat_clock_cap": True,  # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘，静态键）：
                                     # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
                                     # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。

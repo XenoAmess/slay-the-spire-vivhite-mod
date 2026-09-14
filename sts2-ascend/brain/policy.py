@@ -3562,6 +3562,46 @@ class Policy:
                             f"ttk{ttk:.0f}未扣破层期"
                             "（每层一次命中仅失1血，SLIPPERY_TTK_OBS）"
                             + _sl_break_est)
+                    # 无实体封顶期观测（INTANGIBLE_TTK_OBS，第945~952局批复盘）：
+                    # ttk=pool/dpt 同样未计入敌方无实体窗口——窗口内每 hit 伤害
+                    # 封顶 1，实测 dpt 塌缩后又被首窗先验下限
+                    # （VIVHITE_RACE_DPT_PRIOR_FLOOR）抬回 18~29，ttk 维持
+                    # 「击杀还需1~3回合」、全攻判决不改。945 局 F17 SOUL_FYSH
+                    # FadeMove 自挂无实体×2：逐卡侧已报 后继式 hp-cost=2
+                    # 实付逐 hit≈1.0（ENEMY_INTANGIBLE_CAP_OBS），投影仍以
+                    # 校准 dpt≈19 维持全攻提速、謦欬实付打进封顶窗，末回合
+                    # 「结束回合可能致死」T5 阵亡；946/950 同 Boss 窗口各 1 条
+                    # CAP_OBS（本批 3 独立对局遇窗）。逐卡评分侧已于
+                    # 1436~1440 批封顶（enemy_intangible_dmg_cap），投影侧
+                    # 从未留痕。与滑溜同约定：滑溜>0 时逐 hit 封顶已由
+                    # SLIPPERY_TTK_OBS 披露，不重复挂注。只留痕不改
+                    # ttk/tsurv/判决/评分，intangible_ttk_obs=False 整体关闭
+                    # （回滚＝无留痕旧版）。
+                    _race_intangible_layers = 0.0
+                    if (_race_slippery_layers <= 0.0
+                            and bool(pol.get("intangible_ttk_obs", True))):
+                        _race_intangible_layers = sum(
+                            self._enemy_intangible_stack(e)
+                            for e in enemies if isinstance(e, dict))
+                    if _race_intangible_layers > 0.0:
+                        _it_hits_turn = self._race_hand_hits_per_turn(
+                            hand, float(
+                                ((state.get("run") or {}).get("max_energy"))
+                                or 3))
+                        if _it_hits_turn > 0.0:
+                            _it_est = (
+                                f"，封顶期≈{_race_intangible_layers:g}回合"
+                                f"最大输出≈每回合{_it_hits_turn:g}命中×1伤"
+                                "（当前手牌能量贪心估）")
+                        else:
+                            _it_est = (
+                                "，封顶期最大输出不可估"
+                                "（当前手牌无可计价攻击命中）")
+                        danger_note += (
+                            f"；无实体{_race_intangible_layers:g}层在账："
+                            f"ttk{ttk:.0f}未扣封顶期"
+                            "（窗口内每hit仅1伤，INTANGIBLE_TTK_OBS）"
+                            + _it_est)
                     _race_margin = float(pol.get("kill_race_margin", 1.5))
                     # 竞速迟滞锁（第632局批复盘新增）：投影逐 tick 重算时，
                     # 实测口径切换、EMA 滞后、小怪阵亡缩池都会让判定在阈值
@@ -6765,6 +6805,35 @@ class Policy:
     def _enemy_intangible_stack(self, enemy: dict) -> float:
         """读取敌人的无实体层数（INTANGIBLE_POWER），兼容 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "intangible", "无实体")
+
+    def _race_hand_hits_per_turn(self, hand, max_energy: float) -> float:
+        """竞速投影的每回合攻击命中数贪心估计：按能量升序填满本回合能量，
+        命中口径与滑溜破层期估计（SLIPPERY_TTK_BREAK_EST）同源的
+        card_numbers hits；无可计价攻击命中时返回 0。新增无实体封顶期
+        观测（INTANGIBLE_TTK_OBS，第945~952局批复盘）的估计口径，不改动
+        既有滑溜留痕的内联实现。"""
+        hits_turn = 0.0
+        fillable = []
+        for card in (hand or []):
+            if not isinstance(card, dict):
+                continue
+            dmg, _blk, hits = card_numbers(card)
+            if not (dmg and float(dmg) > 0):
+                continue
+            try:
+                cost = (max_energy if card.get("costs_x")
+                        else float(card.get("energy_cost") or 0))
+            except (TypeError, ValueError):
+                continue
+            if cost < 0:
+                continue
+            fillable.append((cost, max(1, int(hits))))
+        energy_left = max_energy
+        for cost, hits in sorted(fillable):
+            if cost <= energy_left + 1e-9:
+                hits_turn += hits
+                energy_left -= cost
+        return hits_turn
 
     def _enemy_steam_eruption_stack(self, enemy: dict) -> float:
         """读取敌人的蒸汽喷发层数（STEAM_ERUPTION_POWER），兼容 id/power_id/name 载荷。
