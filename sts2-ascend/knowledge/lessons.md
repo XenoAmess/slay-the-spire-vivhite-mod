@@ -11843,3 +11843,14 @@
 - 当前低价值卡牌：BULLY(10分/2.1403132455489153局)，STRIKE_IRONCLAD(12分/5.564814438427187局)，BASH(14分/4.708689140207618局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.44（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1477 胜，当前目标进阶 0
+
+## 第 1478 局复盘（2026-09-14 19:22）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：DRAMATIC_ENTRANCE, HEADBUTT, STONE_ARMOR, CINDER, TRUE_GRIT, IRON_WAVE, FIGHT_ME, JUGGERNAUT, SHRUG_IT_OFF, UPPERCUT, SECOND_WIND, FEED, HEADBUTT, RAMPAGE, INFLAME, AGGRESSION, MOLTEN_FIST
+- 本局遗物：RIPPLE_BASIN, OLD_COIN, RAINBOW_RING, STRIKE_DUMMY, TUNING_FORK, MEAT_ON_THE_BONE
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血12; F21 Monster战 掉血18; F24 Monster战 掉血36; F27 Monster战 掉血29; F30 Elite战 掉血60｜竞速审计：T8判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.263334024230772局)，PACTS_END(25分/78.56072498518799局)，BRAND(25分/3.2942368077111923局)，OFFERING(24分/19.642526401960694局)，PROWESS(24分/6.822460684258037局)
+- 当前低价值卡牌：BULLY(10分/2.132822149189494局)，STRIKE_IRONCLAD(12分/5.545337587892693局)，BASH(14分/4.692208728216891局)
+- 策略进化：elite_grey_safety_mult: 1.70 → 1.90（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.44 → 0.45（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F30——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1478 胜，当前目标进阶 0
