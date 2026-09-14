@@ -10633,3 +10633,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.475482480866601局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.052674446876022局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/10.706047998172405局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：1/963 胜，当前目标进阶 1
+
+## 第 964 局复盘（2026-09-14 12:24）
+- 结果：💀 失败｜进阶 1｜到达层数 3｜当局评分 3
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血23｜自损20（可行动段20/非行动段17，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血55｜自损34（可行动段34/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/5.651626554413637局)，CINDER(34分/2.690414595297853局)，PACTS_END(33分/2.388809696845904局)，FINESSE(33分/9.482452345774027局)，REND(33分/2.7945009713854847局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.463318292183568局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.0454900863119563局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/10.668576830178802局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：1/964 胜，当前目标进阶 1
