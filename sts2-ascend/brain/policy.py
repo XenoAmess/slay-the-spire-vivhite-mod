@@ -674,6 +674,8 @@ class Policy:
         self._combat_kills: dict = {}  # 坐实键(敌键#实例index，见 _kill_confirm_key) -> 本场已预测击杀次数（≥2 判定重生体）
         self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
         self._respawn_veto_reported: set = set()  # 本场已登记过原生白名单否决观测的敌键（防重复计数）
+        self._respawn_veto_obs: dict = {}  # 本场被原生白名单否决的敌键 -> 留痕写入异常（空串=写入成功；RESPAWN_NATIVE_VETO_OBS）
+        self._respawn_veto_obs_noted: set = set()  # 本场已并入 danger_note 的否决敌键（每敌每场只注记一次）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -3824,6 +3826,7 @@ class Policy:
         # 前提是场上还有本体可打；当存活敌人全是重生体时，压制让「不打」成为
         # 唯一选择——拒绝出牌永远是比「打重生体」更差的答案，必须放开。
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
+        danger_note = self._respawn_veto_obs_flush(danger_note)
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
         return kill_race, all_respawn, stance, danger_note
@@ -3892,6 +3895,8 @@ class Policy:
             self._combat_kills = {}
             self._respawn_reported = set()
             self._respawn_veto_reported = set()
+            self._respawn_veto_obs = {}
+            self._respawn_veto_obs_noted = set()
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -6833,12 +6838,47 @@ class Policy:
                 and not respawn_native_species(kid)):
             if kid and kid not in self._respawn_veto_reported:
                 self._respawn_veto_reported.add(kid)
+                # RESPAWN_NATIVE_VETO_OBS（第 1478~1482 局批复盘）：读侧否决在产
+                # （1478-F14 TOADPOLE、1480-F12 TWO_TAILED_RAT 名册命中 T1 无压制
+                # 注记、同场坐实后才出现）而 stats.respawn_native_vetoes 落地 ~36
+                # 局恒为 {}；同战斗 mark_respawn_add 写侧在同 guard 下成功落盘
+                # （TWO_TAILED_RAT 39→40）。否决事件除计数器外零带内留痕，「分支
+                # 未达 / 写入被 except 静默吞掉 / 计数器口径」不可分辨——把否决
+                # 瞬间（含写入异常类型）记入本场观测缓冲，由竞速投影段并入
+                # danger_note，供逐局对账留痕链路真伪。纯观测：判决/评分/动作
+                # 零改动，respawn_roster_native_gate=False 时本分支整体消失。
+                _veto_err = ""
                 try:
                     self.know.mark_respawn_native_veto(kid)
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    _veto_err = type(_exc).__name__
+                self._respawn_veto_obs[kid] = _veto_err
             return False
         return True
+
+    def _respawn_veto_obs_flush(self, danger_note: str) -> str:
+        """把本场原生白名单否决观测一次性并入 danger_note（每敌每场至多一次）。
+
+        RESPAWN_NATIVE_VETO_OBS（第 1478~1482 局批复盘）：否决读侧在产而
+        stats.respawn_native_vetoes 恒空的矛盾（1478-F14 TOADPOLE / 1480-F12
+        TWO_TAILED_RAT 注记只于同场坐实后出现 vs 台账 {}）从决策链不可分辨
+        根因。注记与 stats 计数同 tick 对账：注记在产且台账同步 +1 → 链路健康；
+        注记带 OBS_ERR → 写侧静默失败（异常类型已披露）；同类遭遇存在而注记
+        绝迹 → 分支未达，转查调用路径。纯观测，不改判决/评分/动作。"""
+        if not self._respawn_veto_obs:
+            return danger_note
+        for _vk in sorted(self._respawn_veto_obs):
+            if _vk in self._respawn_veto_obs_noted:
+                continue
+            self._respawn_veto_obs_noted.add(_vk)
+            _verr = self._respawn_veto_obs.get(_vk) or ""
+            if _verr:
+                danger_note += (f"；名册否决留痕写入失败：{_vk}（{_verr}，"
+                                f"RESPAWN_NATIVE_VETO_OBS_ERR）")
+            else:
+                danger_note += (f"；名册命中被原生白名单否决：{_vk}"
+                                f"（RESPAWN_NATIVE_VETO_OBS）")
+        return danger_note
 
     def _enemy_power_stack(self, enemy: dict, *keywords: str) -> float:
         """读取敌人当前持有的某类增益层数（力量/滑溜同构账本合并，原

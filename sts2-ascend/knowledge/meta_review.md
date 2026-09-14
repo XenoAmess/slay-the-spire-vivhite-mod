@@ -10465,3 +10465,129 @@ espawn_instance_confirm: false 即坐实计数严格回滚种级键旧口径（s
    respawn_native_vetoes 首次非零核对（留痕链路真伪）；④ 真重生
    体战压制存续（1476-F6 墨宝型）；⑤ KIN 再遇战损对 55/65% 基线；
    ⑥ 竞速台账 455/1013 走向；⑦ REMOVAL_COST 翻案/随附比。
+
+# 2026-09-14｜第 1478~1482 局复盘（异步追及队列 5 局 exact_batch 全败；行为修改 ×1：RESPAWN_NATIVE_VETO_OBS 原生白名单否决带内留痕——「读侧否决在产 vs 台账恒空」留痕链路真伪的可证伪对账，上批登记观察点④达线立项）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，
+  无 replay target。
+- 上一批（1473~1477）last_paths 关键标签存在性核读：RESPAWN_INSTANCE_
+  CONFIRM（policy.py _kill_confirm_key/坐实键实例化、knowledge.py
+  respawn_instance_confirm 键、selfcheck 3yr-inst 七断言）在当前 HEAD
+  逐字在产；RESPAWN_ROSTER_NATIVE_GATE 三处（knowledge.py
+  RESPAWN_NATIVE_SPECIES/respawn_native_species()/mark_respawn_native_veto()、
+  policy.py _is_respawn_add 白名单否决分支、selfcheck 3yr-gate 锚）在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 一、本批输入部分对账
+
+- 本批 requested=[1478..1482]，exact 5/5、missing=0，5 局全败（生涯
+  0/1482）：一幕 Boss F17 四连（1479 VANTOM 型 T2判死→实战7回合、1480
+  T2→7、1481 KIN_FOLLOWER+KIN_PRIEST T2→10、1482 CEREMONIAL_BEAST
+  T2→7）+ 1478 二幕 F30 精英（T8判死→实战恰8回合）。最深局 1482
+  packet 108/156 决策切片（bounded tail+aggregates）+ 5 局 runs 全文
+  核读。
+- 关键时间戳：本批 5 局全部运行并终结于 19:10~22:21，早于 1473~1477
+  批复盘修复的发布时间（22:59）——RESPAWN_INSTANCE_CONFIRM 的「注记
+  绝迹/名册零增量」在本批不可验证；1478（9 处）/1480（13 处）「全场
+  均为已证实重生体」注记与 TWO_TAILED_RAT 39→40、CORPSE_SLUG 38→39
+  各 +1 均为 pre-fix 种级键旧口径的预期内产物，不计反证。
+- 决定性直证（本批核心事实）：1480-F12 双尾鼠群（名册 39 场实证、非
+  白名单）T1 三个出牌 tick（20:43:08~10）无任何压制注记，20:43:20
+  同场坐实后注记才出现；1478-F14 异蛙寄生虫（TOADPOLE 名册 4 场）
+  同型（19:12:49 T1 静默 → 19:13:28 坐实后注记）。pre-gate 旧代码
+  名册命中 T1 即压制并出注记——注记时序证明原生白名单闸读侧在两场
+  战斗中真实生效（返回 False）。同战斗 12 秒后同场坐实的
+  mark_respawn_add 写侧在同一 _learning_write_allowed guard 下成功
+  落盘（39→40）。而 stats.respawn_native_vetoes 自闸门落地 ~36 局
+  恒为 {}。
+
+## 二、归因与可改动点（候选）
+
+1. **矛盾不变：旋钮全顶格。** 一幕 Boss 前夜预演四连「击杀需 14~17
+   回合＞满血可存活 7 回合」判死弃疗改锻造（1479/1480/1482）或审计
+   覆盖弃疗（1481），实战全部应验；kill_bonus 20.00、burst_starve
+   双旋钮、饥饿带、前夜锻造线、长战加成上限均顶格，kill_race_prior_
+   eff 续降通道在产——系统性输出缺口非单旋钮可解，本批不重复加码。
+2. **本批落地点：RESPAWN_NATIVE_VETO_OBS 否决留痕带内对账（上批
+   登记观察点④达线）。** 读侧否决在产与台账恒空的矛盾有三种互斥
+   解释（分支未达 / 写入被 except 静默吞掉 / 计数器口径），而否决
+   事件除 stats 计数器外零带内留痕，从决策链不可分辨——纯观测落地
+   使下批可凭 run JSON 直接证伪，见三节。
+3. **KIN 原料再 +1：** 1481-F17 KIN_FOLLOWER+KIN_PRIEST 入场 87%
+   10 回合阵亡（对 65% 败侧基线）；累计 n=3（72 胜/63 败/87 败），
+   生死仍被竞速锁死，55/65% 基线裁决续待；REMOVAL_COST 翻案/随附
+   本批 2 翻 19 随附（累计 11 翻 45 随附），撤回窄动作维持暂缓。
+4. **竞速审计悲观率台账：** 本批 5/5 应验、反向 +0（460/1018≈
+   45.2%，带内偏上限），续记不判失效。
+5. **SELF_LOSS_PHASE_OBS 在产：** 1479/1481/1482 自损注记（可行动
+   段/非行动段 2/36、2/73、1/1）在产；ENEMY_INTANGIBLE_DMG_CAP /
+   STEAM_ERUPTION_KILL_VETO 本批无对应现场（无瀑布巨兽/蒸汽喷发
+   注记），顺延不判失效。
+
+## 三、本批复盘的行为修改 #1：RESPAWN_NATIVE_VETO_OBS 原生白名单否决带内留痕
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_NATIVE_VETO_OBS**：原生白名单闸读侧否决在产（1478-F14 TOADPOLE、1480-F12 TWO_TAILED_RAT 注记只于同场坐实后出现、T1 绝迹直证），而 stats.respawn_native_vetoes 落地 ~36 局恒为 {}；同战斗 mark_respawn_add 写侧在同 guard 下落盘成功（TWO_TAILED_RAT 39→40、CORPSE_SLUG 38→39）。否决事件除计数器外零带内留痕，「分支未达 / 写入静默失败 / 计数器口径」三解释不可分辨——上批（1473~1477）登记观察点④「respawn_native_vetoes 首次非零核对（留痕链路真伪）」本批凭两处注记时序直证达线立项 |
+| 落地动作 | ① brain/policy.py：`_is_respawn_add` 否决分支把留痕写入瞬间（含异常类型名，空串=成功）记入本场观测缓冲 `_respawn_veto_obs`（except 仍吞错保判决，但异常类型不再丢失）；新增 `_respawn_veto_obs_flush()` 在 `_combat_kill_race_projection` 收口处把本场新否决敌键一次性并入 danger_note——「名册命中被原生白名单否决：X（RESPAWN_NATIVE_VETO_OBS）」/「名册否决留痕写入失败：X（Err，RESPAWN_NATIVE_VETO_OBS_ERR）」，每敌每场至多一次（`_respawn_veto_obs_noted`），两缓冲随 `_respawn_veto_reported` 同点重置；② brain/selfcheck.py：3yr-gate-obs 六断言（缓冲记录/注记并入/同场去重/写入异常判决不变+异常披露+台账不虚增/键=False 观测同灭） |
+| 行为边界 | 纯观测零行为：否决判决、stats 计数、评分、动作逐分不变（except 吞错语义保留，仅多记异常类型名）；注记只在否决本就在产的分支内产生；respawn_roster_native_gate=False 时否决分支整体消失，注记同灭（旧行为零差异） |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3yr-gate-obs 新锚与 3yr/3yr-gate/3yr-inst/3rs/3int/3sev 等全部既有锚原样通过） |
+| 未来 3~10 局观测指标 | ① 名册非白名单物种（TWO_TAILED_RAT/NIBBIT/TOADPOLE/CORPSE_SLUG/MYTE/THIEVING_HOPPER/PARAFRIGHT 等）遭遇战首个否决 tick 应见 RESPAWN_NATIVE_VETO_OBS 注记，且同局 finalize 后 stats.respawn_native_vetoes 对应敌键 +1——注记与台账同 tick 对账；② 注记在产而台账不动 → 写侧静默失败坐实（若带 OBS_ERR 则异常类型已披露），下批修写侧；③ 同类遭遇存在而注记绝迹 → 分支未达坐实，下批查 `_is_respawn_add` 调用路径（T1 tick 是否走到出牌段/敌键字段缺口）；④ 1473~1477 批注记绝迹核对（post-fix 首批：非白名单多实例组「全场均为已证实重生体」应绝迹、非白名单名册增量应=0，基线见上批五.3②）；⑤ KIN 战损对 55/65% 基线（n=3）；⑥ 竞速台账 460/1018 走向 |
+| 继续调整条件 | 注记在产且台账同步 ≥2 独立对局 → 留痕链路封账（历史恒空归因于 pre-fix 局不可回溯，不追修）；OBS_ERR 出现 ≥1 → 按披露的异常类型修 mark_respawn_native_veto 写侧；注记绝迹但名册非白名单遭遇 ≥2 场（理由串物种名核对）→ 立项查 T1 调用路径/敌键字段（enemy_id 缺口按载荷修复先例处理，不直接判假设证伪） |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_native_gate: false` 即否决与注记同灭（selfcheck 3yr-gate 回滚锚+3yr-gate-obs 观测同灭锚为对照）；或删除 policy.py 观测缓冲/flush 两处与 selfcheck 3yr-gate-obs 段零残留回滚 |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（上批登记
+   观察点达线即落地带内观测，非登记延后）。
+2. **RESPAWN_INSTANCE_CONFIRM（1473~1477 批行为修复）**：本批 5 局
+   全部早于修复发布运行，注记绝迹/名册零增量不可验证，顺延至
+   post-fix 首批核对（三节观测指标④）；1478/1480 pre-fix 注记与
+   名册各 +1 不判失效。
+3. **respawn_native_vetoes 台账真伪（上批观察点④）**：本批凭
+   1480-F12/1478-F14 注记时序直证读侧在产、台账恒空矛盾达线，
+   落地 RESPAWN_NATIVE_VETO_OBS（见三节），转入三节观测指标①
+   ~③对账。
+4. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：本批 2 翻 19
+   随附（累计 11 翻 45 随附）；KIN 原料 n=3（72 胜/63 败/87 败）
+   生死仍被竞速锁死，55/65% 基线裁决续待；宿主撤回窄动作
+   （removal_cost_bonus_max: 0）维持暂缓（翻案在产，撤回前提不
+   成立）。
+5. **STEAM_ERUPTION_KILL_VETO（1452~1458 批行为修复）**：本批无
+   瀑布巨兽原料，「可击杀瀑布巨兽」复发 0，续记。
+6. **INVULN_TARGET_VETO**：封账保留，本批无无敌帧现场，顺延。
+7. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：注记在产无双拼
+   报告，续记。
+8. **竞速审计悲观率台账**：应验 +5、反向 +0（460/1018≈45.2%
+   带内偏上限），续记。
+9. **ENEMY_INTANGIBLE_DMG_CAP**：本批无对应现场，顺延不判失效。
+10. **SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT / SLIPPERY_TTK_BREAK_EST /
+    ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST 豁免疫价旁观 /
+    BARRICADE_BANK_VALUE**：本批无对应现场，顺延不判失效。
+11. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+    对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **「读侧生效、写侧恒空」的矛盾可用注记时序直证而不靠台账**：
+   凡「静默返回 False」型闸门，其读侧生效证据不在自身留痕，而在
+   下游注记的出现时序（pre-gate 名册命中 T1 即注记 vs gate 后坐实
+   才注记）——复核此类闸门先把上下游注记的触发条件逐字对齐，
+   再论写侧。
+2. **纯计数器留痕的事件必须同批登记带内对账锚**：1441~1446 批的
+   否决计数器落地 36 局无法自证真伪（三类根因不可分辨），直到
+   本批补带内注记才可逐局对账——凡「只进 stats 不进决策链」的
+   观测，验收时即应评估是否需要同 tick 带内锚。
+3. 观察点（下批复盘核对）：① RESPAWN_NATIVE_VETO_OBS 注记与
+   respawn_native_vetoes 台账同 tick 对账（三节①~③）；②
+   RESPAWN_INSTANCE_CONFIRM post-fix 首批：非白名单多实例组
+   「全场均为已证实重生体」注记绝迹、非白名单名册增量=0（基线
+   快照沿用上批五.3②）；③ KIN 战损对 55/65% 基线（n=3）；④
+   竞速台账 460/1018 走向；⑤ REMOVAL_COST 翻案/随附比（累计
+   11 翻 45 随附）。

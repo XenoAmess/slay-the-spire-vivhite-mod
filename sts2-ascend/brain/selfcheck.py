@@ -11145,9 +11145,39 @@ def main() -> int:
     assert knowledge.respawn_native_species("AXEBOT") and knowledge.respawn_native_species("wriggler_x"), \
         "白名单大小写/子串匹配失效"
     assert not knowledge.respawn_native_species("TOADPOLE"), "非重生物种误命中白名单"
+    # 3yr-gate-obs) RESPAWN_NATIVE_VETO_OBS（第 1478~1482 局批复盘）：读侧否决在产
+    #      （1478-F14 TOADPOLE、1480-F12 TWO_TAILED_RAT 名册命中 T1 无压制注记、同场
+    #      坐实后才出现）而 stats.respawn_native_vetoes 恒 {}——否决瞬间并入
+    #      danger_note 的带内留痕与 stats 计数同 tick 对账；写入异常披露 OBS_ERR；
+    #      键=False 整支回滚（判决与观测同灭）。
+    assert ra_pol._respawn_veto_obs.get("NIBBIT") == "", \
+        "否决观测缓冲未记录敌键（写入成功应为空串）"
+    _obs_note = ra_pol._respawn_veto_obs_flush("")
+    assert "NIBBIT" in _obs_note and "RESPAWN_NATIVE_VETO_OBS" in _obs_note, \
+        "否决注记未并入 danger_note"
+    assert ra_pol._respawn_veto_obs_flush("") == "", \
+        "同一敌键同场不得重复注记（每敌每场至多一次）"
+    def _boom_mark(_key):
+        raise RuntimeError("simulated veto write failure")
+    ra_know.mark_respawn_native_veto = _boom_mark
+    try:
+        err_pol = policy.Policy(ra_know)
+        assert not err_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
+            "写入异常不得改变读侧否决判决"
+        assert err_pol._respawn_veto_obs.get("NIBBIT") == "RuntimeError", \
+            "写入异常类型未披露进观测缓冲"
+        assert "RESPAWN_NATIVE_VETO_OBS_ERR" in err_pol._respawn_veto_obs_flush(""), \
+            "写入失败注记未带 OBS_ERR 标记"
+        assert (ra_know.stats.get("respawn_native_vetoes", {}).get("NIBBIT") or {}).get("vetoes") == 1, \
+            "写入失败不得虚增否决台账"
+    finally:
+        del ra_know.mark_respawn_native_veto
     ra_know.policy["respawn_roster_native_gate"] = False
     assert ra_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
         "respawn_roster_native_gate=False 未严格回滚旧口径"
+    rb2_pol = policy.Policy(ra_know)
+    assert rb2_pol._is_respawn_add({"enemy_id": "NIBBIT"}) and not rb2_pol._respawn_veto_obs, \
+        "respawn_roster_native_gate=False 回滚时否决观测应同灭"
     ra_know.policy["respawn_roster_native_gate"] = True
     # 3yr-inst) RESPAWN_INSTANCE_CONFIRM（第1473~1477局批复盘）：同场坐实按敌实例
     #      归键——两个同种不同实例各被真实击杀一次不再互证「重生」（1473-F21 异螨群、
