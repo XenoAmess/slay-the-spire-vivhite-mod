@@ -11855,6 +11855,58 @@ def main() -> int:
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
 
+    # 3y-pyr) 惨胜翻盘影子分账（第1459~1465局批复盘 RACE_FLIP_PYRRHIC_OBS
+    #     回归夹具，宿主安全撤销后由第1466~1472局批重落地）：判死→获胜且
+    #     掉血 ≥ 40%×最大生命（hp_start_abs/hp_start_pct 还原）时
+    #     won_pyrrhic 计数+1 且战斗记录带注记；未达线/阵亡/缺
+    #     hp_start_abs 的旧账零改动（上组精确断言已覆盖缺键不增）；观测键
+    #     关闭严格回滚（无计数无注记）。
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 3, "esc": False}
+    _pyr_agg = _ra_agg(True, False)
+    _pyr_agg["hp_start_abs"] = 50.0
+    _pyr_agg["hp_start_pct"] = 0.625  # 最大生命=80，掉血40 ≥ 0.4×80=32 → 惨胜
+    ra_agent.ctx.combat_agg = _pyr_agg
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats.get("won_pyrrhic") == 1, \
+        f"惨胜翻盘未落影子账: {_ra_stats}"
+    assert "RACE_FLIP_PYRRHIC_OBS" in ra_agent.ctx.combat_notes[-1], \
+        f"惨胜翻盘注记缺失: {ra_agent.ctx.combat_notes[-1]}"
+
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    _pyr_agg2 = _ra_agg(True, False)
+    _pyr_agg2["hp_lost_sum"] = 20.0
+    _pyr_agg2["hp_start_abs"] = 70.0
+    _pyr_agg2["hp_start_pct"] = 0.875  # 最大生命=80，掉血20 < 32 → 非惨胜
+    ra_agent.ctx.combat_agg = _pyr_agg2
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats.get("won_pyrrhic") == 1, \
+        f"非惨胜翻盘误计影子账: {_ra_stats}"
+    assert "RACE_FLIP_PYRRHIC_OBS" not in ra_agent.ctx.combat_notes[-1], \
+        f"非惨胜翻盘误带注记: {ra_agent.ctx.combat_notes[-1]}"
+
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 4, "esc": False}
+    _pyr_agg3 = _ra_agg(False, True)
+    _pyr_agg3["hp_start_abs"] = 40.0
+    _pyr_agg3["hp_start_pct"] = 0.5  # 阵亡场永不计惨胜
+    ra_agent.ctx.combat_agg = _pyr_agg3
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats.get("won_pyrrhic") == 1, \
+        f"阵亡场误计惨胜影子账: {_ra_stats}"
+
+    ra_agent.know.policy["race_flip_pyrrhic_obs"] = False
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 5, "esc": False}
+    ra_agent.ctx.combat_agg = _pyr_agg
+    ra_agent._flush_combat_agg()
+    _ra_stats = ra_agent.know.stats["race_audit"]
+    assert _ra_stats.get("won_pyrrhic") == 1, \
+        f"观测键关闭后惨胜仍计数: {_ra_stats}"
+    assert "RACE_FLIP_PYRRHIC_OBS" not in ra_agent.ctx.combat_notes[-1], \
+        f"观测键关闭后仍带惨胜注记: {ra_agent.ctx.combat_notes[-1]}"
+    ra_agent.know.policy["race_flip_pyrrhic_obs"] = True
+
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
     class LostReceiptClient(client.Sts2Client):
