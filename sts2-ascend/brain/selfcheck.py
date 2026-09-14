@@ -3168,6 +3168,7 @@ def main() -> int:
     vknow_es.policy["vivhite_hp_cost_play_margin"] = 50.0
     vknow_es.policy["vivhite_hp_gate_stall_turns"] = 6
     vknow_es.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3prv：钉住旧门语义
+    vknow_es.policy["hp_gate_stall_esc_early"] = 0  # 钉住旧闩锁时点：本夹具单独验证观测注记，提前放行由 3pese 验证
     vpol_es = policy.Policy(vknow_es, random.Random(11))
     vctx_es = _vgate_ctx()
     for _turn, _inc in ((1, 5), (2, 12), (3, 19)):
@@ -3217,6 +3218,7 @@ def main() -> int:
     vknow_eo.policy["vivhite_hp_gate_stall_turns"] = 6
     vknow_eo.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
     vknow_eo.policy["hp_gate_stall_esc_obs"] = 0
+    vknow_eo.policy["hp_gate_stall_esc_early"] = 0  # 钉住旧闩锁时点：本夹具单独验证 obs 回滚，提前放行由 3pese 验证
     vpol_eo = policy.Policy(vknow_eo, random.Random(11))
     vctx_eo = _vgate_ctx()
     for _turn, _inc in ((1, 5), (2, 12), (3, 19), (4, 26)):
@@ -3231,6 +3233,91 @@ def main() -> int:
     assert "VIVHITE_HP_GATE_STALL_ANY" in d_eo.reason \
         and "HP_GATE_STALL_ESC_OBS" not in d_eo.reason, \
         f"obs=0 回滚键下放行注记不得带升级账: {d_eo.reason}"
+
+    # 3pese) 升级轨迹提前放行（HP_GATE_STALL_ESC_EARLY，第 953~973 局批复盘）：
+    #      927~973 观测窗结算——21 个闩锁放行时点「空过期间意图趋势累计」18/21
+    #      ≥10（中位 12~13）：闩锁按原 4 回合阈值放行时敌意图已净涨约 12 点，
+    #      升级轨迹下每多空过一回合直接把战斗推深（973 局 F22 门拦空过后竞速
+    #      T3 判死→实战 6 回合阵亡）。升级账≥12 时全拦截口径连续拦截要求减 1
+    #      回合（下限 2，原阈值≥3 才启用），敌血量零进展≥3 兜底不动；
+    #      esc_early=0 一键回滚（旧行为零差异）。
+    # ① 递升达阈值：第 3 个空过回合后升级账 5+7+7=19≥12，闩锁提前一回合放行
+    #   （第 4 个 decide 即放行），留痕带 EARLY 分流标记与放行时点累计量
+    vknow_ee = _vivhite_know("sts2-selfcheck-vhgate-escearly-")
+    vknow_ee.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_ee.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_ee.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3prv：钉住旧门语义
+    vpol_ee = policy.Policy(vknow_ee, random.Random(11))
+    vctx_ee = _vgate_ctx()
+    for _turn, _inc in ((1, 5), (2, 12), (3, 19)):
+        d_ee = vpol_ee.decide(_vgate_stall(_turn, _inc), vctx_ee)
+        assert d_ee.action == "end_turn", \
+            f"升级账达阈值前照旧拦截: turn={_turn} {d_ee}"
+    assert vpol_ee._hp_gate_stall_esc >= 12, \
+        f"递升序列 3 空过回合后升级账应达阈值: {vpol_ee._hp_gate_stall_esc}"
+    d_ee = vpol_ee.decide(_vgate_stall(4, 26), vctx_ee)
+    assert d_ee.action == "play_card", \
+        f"升级账≥阈值且零进展≥3 时闩锁应提前一回合放行: {d_ee}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_ee.reason \
+        and "HP_GATE_STALL_ESC_EARLY" in d_ee.reason, \
+        f"提前放行缺 EARLY 分流留痕: {d_ee.reason}"
+    assert vpol_ee._hp_gate_stall_early_fired \
+        and vpol_ee._hp_gate_stall_any_fired, \
+        "提前放行后闩锁与分流标记必须置位"
+    d_ee2 = vpol_ee.decide(_vgate_stall(5, 33), vctx_ee)
+    assert d_ee2.action == "play_card", \
+        f"闩锁后余量门不得回归: {d_ee2}"
+    # 新战斗（combat 身份变化）必须重置分流标记
+    vpol_ee.decide(_vgate_stall(1, 5), _vgate_ctx())
+    assert not vpol_ee._hp_gate_stall_early_fired, \
+        "新战斗提前放行分流标记必须重置"
+    # ② 递升低于阈值：升级账 3+2+2=7<12 不提前，闩锁维持原第 5 个 decide 放行，
+    #    且正常放行不带 EARLY 分流标记
+    vknow_eb = _vivhite_know("sts2-selfcheck-vhgate-escearly-below-")
+    vknow_eb.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_eb.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_eb.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vpol_eb = policy.Policy(vknow_eb, random.Random(11))
+    vctx_eb = _vgate_ctx()
+    for _turn, _inc in ((1, 3), (2, 5), (3, 7)):
+        d_eb = vpol_eb.decide(_vgate_stall(_turn, _inc), vctx_eb)
+        assert d_eb.action == "end_turn", \
+            f"低于阈值序列照旧拦截: turn={_turn} {d_eb}"
+    assert 0 < vpol_eb._hp_gate_stall_esc < 12, \
+        f"低于阈值序列升级账应未达阈值: {vpol_eb._hp_gate_stall_esc}"
+    d_eb = vpol_eb.decide(_vgate_stall(4, 9), vctx_eb)
+    assert d_eb.action == "end_turn", \
+        f"升级账未达阈值不得提前放行: {d_eb}"
+    d_eb = vpol_eb.decide(_vgate_stall(5, 11), vctx_eb)
+    assert d_eb.action == "play_card", \
+        f"连续拦截≥4 且零进展≥3 后照旧放行: {d_eb}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_eb.reason \
+        and "HP_GATE_STALL_ESC_EARLY" not in d_eb.reason, \
+        f"原时点放行不得带 EARLY 分流留痕: {d_eb.reason}"
+    assert not vpol_eb._hp_gate_stall_early_fired, \
+        "原时点放行不得置位提前放行分流标记"
+    # ③ esc_early=0 一键回滚：同一递升序列闩锁时点逐字回到旧口径、无 EARLY 留痕
+    vknow_ef = _vivhite_know("sts2-selfcheck-vhgate-escearly-off-")
+    vknow_ef.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_ef.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_ef.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_ef.policy["hp_gate_stall_esc_early"] = 0
+    vpol_ef = policy.Policy(vknow_ef, random.Random(11))
+    vctx_ef = _vgate_ctx()
+    for _turn, _inc in ((1, 5), (2, 12), (3, 19), (4, 26)):
+        d_ef = vpol_ef.decide(_vgate_stall(_turn, _inc), vctx_ef)
+        assert d_ef.action == "end_turn", \
+            f"esc_early=0 回滚键下闩锁时点不得提前: turn={_turn} {d_ef}"
+        assert "HP_GATE_STALL_ESC_EARLY" not in d_ef.reason, \
+            f"esc_early=0 回滚键下不得出现 EARLY 留痕: turn={_turn} {d_ef.reason}"
+    d_ef = vpol_ef.decide(_vgate_stall(5, 33), vctx_ef)
+    assert d_ef.action == "play_card", \
+        f"esc_early=0 回滚键下闩锁放行不得改变: {d_ef}"
+    assert "VIVHITE_HP_GATE_STALL_ANY" in d_ef.reason \
+        and "HP_GATE_STALL_ESC_EARLY" not in d_ef.reason, \
+        f"esc_early=0 回滚键下放行注记不得带 EARLY 分流: {d_ef.reason}"
+    assert not vpol_ef._hp_gate_stall_early_fired, \
+        "esc_early=0 回滚键下不得置位提前放行分流标记"
 
     # 3krh) 竞速判死自付观测（KILL_RACE_HOPELESS_HP_PAY_OBS，第 900~926 局批复盘）：
     #      斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的 tick 仍实付生命——

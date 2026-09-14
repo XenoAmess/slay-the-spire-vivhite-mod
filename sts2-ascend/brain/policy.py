@@ -721,6 +721,7 @@ class Policy:
         self._hp_gate_stall_any = 0      # 謦欬门连续拦截回合数（不论意图是否覆盖，VIVHITE_HP_GATE_STALL_ANY 账）
         self._hp_gate_stall_any_fired = False  # 本场放行由全拦截口径触发（留痕分流用）
         self._hp_gate_stall_esc = 0      # 门拦空过回合的意图趋势累计（HP_GATE_STALL_ESC_OBS 账）
+        self._hp_gate_stall_early_fired = False  # 本场放行由升级轨迹提前口径触发（HP_GATE_STALL_ESC_EARLY 留痕分流用）
         self._hp_repeat_plays = {}    # 本回合同名謦欬牌已打出次数（VIVHITE_HP_REPEAT_PLAY_TAX 账）
         self._hp_repeat_round = None  # 复打账上次重置的回合号（回合/战斗切换即清零）
         self._unknown_stall = 0     # UNKNOWN 界面滞留计数（解锁/提示屏兜底点击用）
@@ -2883,6 +2884,7 @@ class Policy:
             self._hp_gate_stall_any = 0
             self._hp_gate_stall_any_fired = False
             self._hp_gate_stall_esc = 0
+            self._hp_gate_stall_early_fired = False
             self._hp_repeat_plays = {}
             self._hp_repeat_round = None
         if self._stall_turn_seen != round_no:
@@ -4583,13 +4585,39 @@ class Policy:
                     pol.get("vivhite_hp_gate_stall_any_turns", 0) or 0)))
             except (TypeError, ValueError):
                 _hp_gate_stall_any_limit = 0
+            # 升级轨迹提前放行（HP_GATE_STALL_ESC_EARLY，第 953~973 局批复盘新增，
+            # 静态键）：927~973 观测窗结算——21 个闩锁放行时点的「空过期间意图
+            # 趋势累计」18/21≥10（中位 12~13），即按原 4 回合阈值放行时敌方意图
+            # 已净涨约 12 点，升级轨迹下每多空过一回合直接把战斗推深（973 局 F22
+            # 门拦空过 1 回合后竞速 T3 判死→实战 6 回合阵亡）。升级账达阈值
+            # （默认 12）时全拦截口径的连续拦截要求减 1 回合（下限 2，仅原阈值
+            # ≥3 时启用）——只提前放行已证明的升级放血死循环；敌血量零进展≥3
+            # 的兜底条件逐字不动，推进正常的战斗不受影响。esc_early=0 一键回滚
+            # （旧行为零差异）；本段只在 _hp_play_margin>0 分支内，非白绮角色
+            # 零改动。
+            _hp_gate_esc_early_limit = _hp_gate_stall_any_limit
+            if _hp_gate_stall_any_limit >= 3:
+                try:
+                    _esc_early_on = bool(int(pol.get(
+                        "hp_gate_stall_esc_early", 1) or 0))
+                    _esc_early_intent = max(1, int(float(pol.get(
+                        "hp_gate_stall_esc_early_intent", 12) or 0)))
+                except (TypeError, ValueError):
+                    _esc_early_on = False
+                    _esc_early_intent = 12
+                if (_esc_early_on
+                        and self._hp_gate_stall_esc >= _esc_early_intent):
+                    _hp_gate_esc_early_limit = max(
+                        2, _hp_gate_stall_any_limit - 1)
             if (_hp_gate_stall_any_limit > 0 and not _hp_gate_stall_break
-                    and self._hp_gate_stall_any >= _hp_gate_stall_any_limit
+                    and self._hp_gate_stall_any >= _hp_gate_esc_early_limit
                     and self._stall_no_progress >= 3):
                 _hp_play_margin = 0.0
                 _hp_gate_stall_break = True
                 self._hp_gate_stall_latch = True
                 self._hp_gate_stall_any_fired = True
+                self._hp_gate_stall_early_fired = (
+                    self._hp_gate_stall_any < _hp_gate_stall_any_limit)
         # 謦欬门未覆盖拦截观测（VIVHITE_HP_GATE_STALL_UNCOVERED，第 343~354 局
         # 批复盘新增，静态键）：僵局放行要求「连续 N 回合敌意图被格挡全覆盖」，
         # 但意图高低交替、格挡仅覆盖低峰的战斗（354 局 F3 SHRINKER_BEETLE 意图
@@ -5014,10 +5042,15 @@ class Policy:
                     "（HP_GATE_STALL_ESC_OBS）"
                     if _hp_gate_esc_obs and self._hp_gate_stall_esc > 0 else "")
                 if self._hp_gate_stall_any_fired:
+                    _hp_gate_early_note = (
+                        f"（升级轨迹提前放行：意图趋势累计"
+                        f"+{self._hp_gate_stall_esc}，"
+                        "HP_GATE_STALL_ESC_EARLY）"
+                        if self._hp_gate_stall_early_fired else "")
                     why += (f"｜謦欬门全拦截僵局放行：连续拦截"
                             f"{self._hp_gate_stall_any}回合（含意图未覆盖回合）"
                             f"且敌血量零进展{self._stall_no_progress}回合≥3"
-                            f"{_hp_gate_esc_note}，"
+                            f"{_hp_gate_esc_note}{_hp_gate_early_note}，"
                             f"本场余量门停用（VIVHITE_HP_GATE_STALL_ANY）")
                 else:
                     why += (f"｜謦欬门僵局放行：连续低危拦截{self._hp_gate_stall}回合"
