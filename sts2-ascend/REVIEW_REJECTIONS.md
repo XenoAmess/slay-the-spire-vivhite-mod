@@ -386,4 +386,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260912-171127-1789204287016340700-1cd367b2 -->
 | 2026-09-12 17:11:27 | 第 1420~1424 局 | `1cd367b2` | review_failure | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 复审确认无有效成果并闭环 `0099fcff` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 0099fcff 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260915-040826-1789416506853731100-0b5fe9f5 -->
-| 2026-09-15 04:08:26 | 第 980~1016 局 | `0b5fe9f5` | review_failure | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260915-040826-1789416506853731100-0b5fe9f5` | 隔离复盘异常：Command '['git', '-C', 'G:\\workspace\\slay-the-spire-vivhite-mod\\sts2-ascend\\knowledge\\code_backups\\review_work\\sts2-review-sandbox-mcw_bf7_\\repo', 'add', '--all', '--force', '--', '.']' timed out after 120 seconds |
+| 2026-09-15 04:08:26 | 第 980~1016 局 | `0b5fe9f5` | review_failure | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `a19cb520` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 a19cb520 已推送；远端确认后精确清理对应失败包 |
