@@ -671,7 +671,7 @@ class Policy:
         self._phase_stall = 0       # 转阶段过场（无有效目标）连续等待计数
         self._removal_pending_floor = -1  # 商店删牌握手：remove_card_at_shop 已发出，等待选牌界面
         self._kills_combat = None   # 战斗实例身份（重生召唤物检测用）
-        self._combat_kills: dict = {}  # enemy_id -> 本场已预测击杀次数（≥2 判定重生体）
+        self._combat_kills: dict = {}  # 坐实键(敌键#实例index，见 _kill_confirm_key) -> 本场已预测击杀次数（≥2 判定重生体）
         self._respawn_reported: set = set()  # 本场已向跨局名册登记过的敌键（防重复计数）
         self._respawn_veto_reported: set = set()  # 本场已登记过原生白名单否决观测的敌键（防重复计数）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
@@ -5141,13 +5141,15 @@ class Policy:
                 if "所有敌人" in _text(card) or "all enemies" in _text(card).lower() \
                         or (card.get("target_type") or "") == "AllEnemies":
                     _est *= max(1, len(enemies))
-            # 记录"预测击杀"：同一敌人本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
-            # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）
+            # 记录"预测击杀"：同一敌人实例本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
+            # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）；坐实键实例化口径见
+            # _kill_confirm_key（RESPAWN_INSTANCE_CONFIRM，第1473~1477局批复盘）
             commit_kill_id = ""
             if target is not None and isinstance(why, str) and why.startswith("可击杀"):
                 tgt = next((e for e in enemies if e.get("index") == target), None)
                 if tgt is not None:
-                    commit_kill_id = tgt.get("enemy_id") or tgt.get("name") or ""
+                    commit_kill_id = self._kill_confirm_key(
+                        tgt.get("enemy_id") or tgt.get("name") or "", target)
             params = {"card_index": card["index"]}
             if card.get("requires_target"):
                 if target is None:
@@ -6764,8 +6766,31 @@ class Policy:
                         f"/池{pool:.0f}/承诺+{_commit:.1f}")
         return score, None, why
 
+    def _kill_confirm_key(self, kid, index) -> str:
+        """预测击杀坐实键（RESPAWN_INSTANCE_CONFIRM，第1473~1477局批复盘）。
+
+        旧口径 _combat_kills 以种级敌键计数：同场真实击杀 2 个同种不同实例
+        （异螨群/偷窃草蜢群/咬人卷轴群）与「同一实例两次预测击杀落空仍存活」
+        不可区分——1473-F21 异螨、1475-F19 偷窃草蜢、1475-F36 咬人卷轴三处
+        「全场均为已证实重生体」注记对原生无重生机制的多实例组在产，并各喂
+        名册 +1 confirmations（读侧白名单闸只压生效不压喂账；1441~1446 批
+        预注册「非白名单物种 confirmations ≥+3 独立对局增量即立项写侧实例键
+        修复」本批达线：1457 瀑布巨兽 + 1473 异螨 + 1475 偷窃草蜢/咬人卷轴
+        ≥4 独立对局）。开键后坐实计数按 敌键#实例index 归键：同一实例两次
+        预测击杀落空仍坐实（利齿之眼 13 次追杀同型不变），不同实例各杀一次
+        不再互证；坐实后 _respawn_reported 的种级抑制与名册种级写入口径不变。
+        respawn_instance_confirm=False 严格回滚种级键旧口径。"""
+        if not kid:
+            return ""
+        try:
+            if self.know.policy.get("respawn_instance_confirm", True):
+                return f"{kid}#{index}"
+        except Exception:
+            pass
+        return str(kid)
+
     def _is_respawn_add(self, enemy: dict) -> bool:
-        """同一敌人本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。
+        """同一敌人实例本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。
 
         跨局名册（第 506~508 局批复盘新增）：506 局 F13 精英战对扭动虫
         （重生召唤物）按「零伤害辅助体」优先转火，前两刀斩杀奖励全喂给
@@ -6776,7 +6801,8 @@ class Policy:
         ≥2 场独立战斗的实证：单场误报（预测伤害被格挡吃掉等）不会污染名册。
         """
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
-        if self._combat_kills.get(kid, 0) >= 2:
+        if self._combat_kills.get(
+                self._kill_confirm_key(kid, enemy.get("index")), 0) >= 2:
             if kid and kid not in self._respawn_reported:
                 self._respawn_reported.add(kid)
                 try:
@@ -6917,7 +6943,8 @@ class Policy:
         归零击杀奖励等于禁止终结战斗——此时压制解除，奖励照常计。
         """
         kid = enemy.get("enemy_id") or enemy.get("name") or ""
-        if not ignore_respawn and self._combat_kills.get(kid, 0) >= 2:
+        if (not ignore_respawn and self._combat_kills.get(
+                self._kill_confirm_key(kid, enemy.get("index")), 0) >= 2):
             return 0.0
         share = 1.0 if incoming <= 0 else min(1.0, max(0.0, threat) / incoming)
         return pol["kill_bonus"] * (0.4 + 0.6 * share)

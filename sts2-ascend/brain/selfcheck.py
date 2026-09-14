@@ -1369,13 +1369,13 @@ def main() -> int:
     d_k1 = pol.decide(spike_combat(), ctx)
     assert d_k1.action == "play_card" and d_k1.params.get("target_index") == 0, \
         f"首次可击杀召唤物仍应优先斩杀: {d_k1.reason}"
-    pol._combat_kills["RESPAWN_ADD"] = 2  # 模拟同场已两次预测击杀后它仍在场
+    pol._combat_kills["RESPAWN_ADD#0"] = 2  # 模拟同一实例(index 0)已两次预测击杀后仍存活（RESPAWN_INSTANCE_CONFIRM 实例键口径）
     d_k2 = pol.decide(spike_combat(), ctx)
     assert d_k2.action == "play_card" and d_k2.params.get("target_index") == 1, \
         f"重生召唤物不应再吸引输出（应转火高威胁本体）: {d_k2.reason}"
     # 第 58 局复盘升级：确认重生体后击杀奖励必须归零（×0.25 曾压不住
     # 过量伤害满额 + 威胁分成的虚高，利齿之眼被追杀 13 次磨穿 83 血）
-    assert pol._kill_bonus({"enemy_id": "RESPAWN_ADD"}, 6, 28, know.policy) == 0.0, \
+    assert pol._kill_bonus({"enemy_id": "RESPAWN_ADD", "index": 0}, 6, 28, know.policy) == 0.0, \
         "重生召唤物击杀奖励未归零"
     assert pol._kill_bonus({"enemy_id": "FRESH_MOB"}, 6, 28, know.policy) > 0.0, \
         "正常敌人击杀奖励不应受影响"
@@ -8323,7 +8323,7 @@ def main() -> int:
                                 "is_alive": True, "is_hittable": True,
                                 "intents": [{"total_damage": 3}]}]},
                 "run": {"current_hp": 47, "max_hp": 80, "gold": 0, "floor": 6, "deck": []}}
-    pol._combat_kills["INKLET_T"] = 2   # 模拟同场已两次预测击杀后它仍在场（1 血不死）
+    pol._combat_kills["INKLET_T#0"] = 2   # 模拟同一实例(index 0)已两次预测击杀后仍存活（1 血不死，实例键口径）
     # 906~908 行按战斗实例更替清空击杀计数：手动播种后必须同步认领当前战斗
     # 实例，否则下一次 decide 检测到「战斗变更」先把播种清掉（167~176 批
     # 复盘发现的既有测试脆弱点——断言依赖上一个用例留下的实例身份）
@@ -8356,9 +8356,9 @@ def main() -> int:
     assert d_mix.action == "play_card" and d_mix.params.get("target_index") == 1, \
         f"有本体可打时重生体仍吸引输出（58 局压制被破坏）: {d_mix.reason}"
     # 对照②：_kill_bonus 的 ignore_respawn 通道——解除时奖励恢复、默认调用不受影响
-    assert pol._kill_bonus({"enemy_id": "INKLET_T"}, 3, 3, know.policy) == 0.0, \
+    assert pol._kill_bonus({"enemy_id": "INKLET_T", "index": 0}, 3, 3, know.policy) == 0.0, \
         "默认口径下重生体击杀奖励未归零"
-    assert pol._kill_bonus({"enemy_id": "INKLET_T"}, 3, 3, know.policy, ignore_respawn=True) > 0.0, \
+    assert pol._kill_bonus({"enemy_id": "INKLET_T", "index": 0}, 3, 3, know.policy, ignore_respawn=True) > 0.0, \
         "ignore_respawn 通道未恢复击杀奖励"
 
     # 3zp) 能力牌长战加成（第 223 批复盘）：能力牌价值须随战斗预期长度复利——
@@ -11116,11 +11116,11 @@ def main() -> int:
     assert ra_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
         "跨局名册未在第 1 回合生效"
     # 当场坐实 → 登记名册（同场同敌只记一次）；第二次独立坐实后生效
-    ra_pol._combat_kills["SPRING_ADD"] = 2
-    assert ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD"}), "同场坐实判定丢失"
+    ra_pol._combat_kills["SPRING_ADD#0"] = 2
+    assert ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD", "index": 0}), "同场坐实判定丢失"
     assert (ra_know.stats.get("respawn_adds", {}).get("SPRING_ADD") or {}).get("confirmations") == 1, \
         "当场坐实应向名册登记一次"
-    ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD"})
+    ra_pol._is_respawn_add({"enemy_id": "SPRING_ADD", "index": 0})
     assert (ra_know.stats.get("respawn_adds", {}).get("SPRING_ADD") or {}).get("confirmations") == 1, \
         "同场重复确认不得重复计数（每场每敌至多一次）"
     # 3yr-gate) RESPAWN_ROSTER_NATIVE_GATE（第 1441~1446 局批复盘）：名册 confirmations
@@ -11149,6 +11149,33 @@ def main() -> int:
     assert ra_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
         "respawn_roster_native_gate=False 未严格回滚旧口径"
     ra_know.policy["respawn_roster_native_gate"] = True
+    # 3yr-inst) RESPAWN_INSTANCE_CONFIRM（第1473~1477局批复盘）：同场坐实按敌实例
+    #      归键——两个同种不同实例各被真实击杀一次不再互证「重生」（1473-F21 异螨群、
+    #      1475-F19 偷窃草蜢群、1475-F36 咬人卷轴群的「全场均为已证实重生体」型误判
+    #      与名册喂账应绝迹）；同一实例两次预测落空仍坐实（利齿之眼同型）；坐实后
+    #      种级抑制与名册种级写入口径不变；键=False 严格回滚种级键旧口径。
+    inst_pol = policy.Policy(ra_know)
+    inst_pol._combat_kills["MYTE_T#0"] = 1
+    inst_pol._combat_kills["MYTE_T#1"] = 1
+    assert not inst_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 0}), \
+        "不同实例各一次击杀不得互证重生（1473-F21 异螨群误判型）"
+    assert not inst_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 2}), \
+        "未被击杀过的同种第三实例更不得判重生"
+    assert (ra_know.stats.get("respawn_adds", {}).get("MYTE_T") or {}).get("confirmations", 0) == 0, \
+        "实例级未坐实不得喂跨局名册"
+    inst_pol._combat_kills["MYTE_T#0"] = 2
+    assert inst_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 0}), \
+        "同一实例两次预测落空仍应坐实（利齿之眼 13 次追杀同型）"
+    assert (ra_know.stats.get("respawn_adds", {}).get("MYTE_T") or {}).get("confirmations") == 1, \
+        "同场坐实应向名册登记一次（种级写入口径不变）"
+    assert inst_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 1}), \
+        "坐实后同种兄弟实例的种级抑制不变（_respawn_reported 语义）"
+    ra_know.policy["respawn_instance_confirm"] = False
+    rb_pol = policy.Policy(ra_know)
+    rb_pol._combat_kills["MYTE_T"] = 2
+    assert rb_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 5}), \
+        "respawn_instance_confirm=False 未严格回滚种级键旧口径"
+    ra_know.policy["respawn_instance_confirm"] = True
     # 名册生效后的行为闭环：辅助体不再吸引转火，输出直奔高威胁本体
     def roster_combat():
         st = spike_combat()
@@ -11687,7 +11714,7 @@ def main() -> int:
     d_cm_after_success = cm_pol.decide(cm_state([cm_novel], turn=6), cm_ctx)
     committed_ledger = combat_policy_ledger(cm_pol)
     assert committed_ledger == (
-            frozenset({"CM_NOVEL"}), 1, 30.0, 1, 5, {"CM_ENEMY": 1}), \
+            frozenset({"CM_NOVEL"}), 1, 30.0, 1, 5, {"CM_ENEMY#0": 1}), \
         f"成功 play_card 未完整同步试用/消耗/竞速/预测击杀账: {committed_ledger}"
     assert d_cm_after_success.action == "end_turn", \
         f"同战同卡成功受控试用后仍重复尝试: {d_cm_after_success.action}（{d_cm_after_success.reason}）"
@@ -12815,7 +12842,7 @@ def main() -> int:
     tx_agent.policy.decide(flow_next, tx_agent.ctx)
     flow_ledger = combat_policy_ledger(tx_agent.policy)
     assert flow_ledger == (
-            frozenset({"FLOW_NOVEL"}), 1, 30.0, 1, 1, {"CM_ENEMY": 1}), \
+            frozenset({"FLOW_NOVEL"}), 1, 30.0, 1, 1, {"CM_ENEMY#0": 1}), \
         f"首张成功出牌账被新战斗初始化清空或重复提交: {flow_ledger}"
 
     # 卡死分析结论必须绑定请求它的战斗；新战斗统一清除 verdict/触发位，晚到的
