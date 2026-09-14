@@ -10732,3 +10732,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.3675250190277373局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/10.373490497287076局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/32.10933340475123局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：1/972 胜，当前目标进阶 1
+
+## 第 973 局复盘（2026-09-14 14:48）
+- 结果：💀 失败｜进阶 1｜到达层数 22｜当局评分 22
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_HEURISTIC_SHIELD, RESTLESSNESS
+- 本局遗物：LETTER_OPENER, RIPPLE_BASIN, BAG_OF_PREPARATION
+- 战斗记录：F14 Elite战 掉血0｜自损14（可行动段14/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血3｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血22｜自损40（可行动段40/非行动段28，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血24｜自损13（可行动段13/非行动段11，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血19｜自损35（可行动段35/非行动段21，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血40｜自损17（可行动段17/非行动段21，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/5.476072437414182局)，CINDER(34分/2.6068433695467252局)，PACTS_END(33分/2.3146070981830427局)，FINESSE(33分/9.187902885981474局)，REND(33分/2.7076965539735487局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.3557386814611405局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/10.337183280546572局)，VIVHITE_CARD_CONVERGENCE_VERDICT(24分/31.996950737834606局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.37 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.01 → 2.00（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F22——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F22——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F22——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F22——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：1/973 胜，当前目标进阶 1
