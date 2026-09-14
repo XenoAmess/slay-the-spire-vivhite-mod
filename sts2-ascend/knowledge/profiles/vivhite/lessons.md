@@ -10523,3 +10523,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.599499133094384局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.125920626195448局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.088075022803594局)
 - 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（6回合掉血93，每回合16≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿18张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，致命Boss战实测自损58/掉血93（62%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.39 → 0.42（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）；行至 F33 但致命战自损58/掉血93≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：1/953 胜，当前目标进阶 1
+
+## 第 954 局复盘（2026-09-14 10:26）
+- 结果：💀 失败｜进阶 1｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：GAMBLING_CHIP, BOWLER_HAT
+- 战斗记录：F2 Monster战 掉血14｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血14｜自损18（可行动段18/非行动段12，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血5｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Elite战 掉血33｜自损23（可行动段23/非行动段37，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损18（可行动段18/非行动段7，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血51｜自损22（可行动段22/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/5.853295188561161局)，CINDER(34分/2.7864174418236125局)，FINESSE(34分/8.806694088069465局)，PACTS_END(33分/2.474050288056775局)，PROWESS(33分/13.416269718815736局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.586900886128554局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.118479904003764局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.049266760223782局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：1/954 胜，当前目标进阶 1
