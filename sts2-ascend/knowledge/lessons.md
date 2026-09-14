@@ -11821,3 +11821,14 @@
 - 当前低价值卡牌：BULLY(10分/2.1553744634559293局)，STRIKE_IRONCLAD(12分/5.603973604985423局)，BASH(14分/4.741823819603049局)
 - 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.40 → 0.43（行至 F38（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F38（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F38——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1475 胜，当前目标进阶 0
+
+## 第 1476 局复盘（2026-09-14 17:12）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 MYTE
+- 本局拿牌：SWORD_BOOMERANG, CINDER, COLOSSUS, CINDER, BRAND, HOWL_FROM_BEYOND, UNRELENTING, RAMPAGE, DEMON_FORM, JUGGLING, CINDER, DRUM_OF_BATTLE, PROWESS, ROLLING_BOULDER, SHRUG_IT_OFF, HEADBUTT, ARMAMENTS, HOWL_FROM_BEYOND
+- 本局遗物：ETERNAL_FEATHER, GREMLIN_HORN, GAMBLING_CHIP
+- 战斗记录：F17 Boss战 掉血72｜竞速审计：T2判死→实战10回合获胜; F19 Monster战 掉血21; F20 Monster战 掉血26; F21 Monster战 掉血46｜竞速审计：T4判死→实战5回合获胜; F25 Monster战 掉血18｜竞速审计：T2判死→实战6回合获胜; F27 Monster战 掉血36｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.2862978520464092局)，PACTS_END(25分/79.11355069908552局)，BRAND(25分/3.317418096011597局)，OFFERING(24分/19.780749333113153局)，PROWESS(24分/6.8704698096705625局)
+- 当前低价值卡牌：BULLY(10分/2.1478306528338336局)，STRIKE_IRONCLAD(12分/5.584359697367975局)，BASH(14分/4.725227436234438局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.43 → 0.46（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F27——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1476 胜，当前目标进阶 0
