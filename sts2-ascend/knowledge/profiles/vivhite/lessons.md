@@ -11007,3 +11007,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_CONVERGENCE_VERDICT(24分/34.21008380746454局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/36.37021208676771局)，VIVHITE_CARD_VIVHITE_TRANSFORMATION(24分/4.060672208519776局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（87%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.01 → 2.00（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/997 胜，当前目标进阶 1
+
+## 第 998 局复盘（2026-09-14 21:12）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_SUCCESSOR_FORMULA
+- 本局遗物：JUZU_BRACELET, GORGET, CENTENNIAL_PUZZLE
+- 战斗记录：F8 Monster战 掉血0｜自损7（可行动段7/非行动段5，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血2｜自损6（可行动段6/非行动段8，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损6（可行动段6/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血22｜自损18（可行动段18/非行动段20，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血22｜自损13（可行动段13/非行动段29，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血57｜自损20（可行动段20/非行动段35，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/5.01651090028855局)，CINDER(34分/2.3880725333960697局)，ASSASSINATE(34分/2.468476742491884局)，PACTS_END(33分/2.1203612389399566局)，PROWESS(33分/14.270408685761922局)
+- 当前低价值卡牌：VIVHITE_CARD_CONVERGENCE_VERDICT(24分/34.09034851413842局)，VIVHITE_CARD_RIEMANN_STAR_ARRAY(24分/36.24291634446402局)，VIVHITE_CARD_VIVHITE_TRANSFORMATION(24分/4.046459855789957局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（73%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：1/998 胜，当前目标进阶 1
