@@ -10591,3 +10591,11 @@ retry_resolution: none (no replay target; local production observation)
    快照沿用上批五.3②）；③ KIN 战损对 55/65% 基线（n=3）；④
    竞速台账 460/1018 走向；⑤ REMOVAL_COST 翻案/随附比（累计
    11 翻 45 随附）。
+
+## 六、本批闭环（1483~1487）
+
+- 假设：Boss 前夜的固定滑溜破层税低估了低命中手牌的真实破层期，可能使竞速审计继续放行恢复路线。
+- 证据：1487-F17 的原生 `SLIPPERY_POWER` 每层只保护一次命中；实战 T1 约 2 命中/回合、`SLIPPERY_TTK_BREAK_EST` 约 +4.0 回合，而 F16 预演仍只记录固定 +2.0 回合。
+- 生产落地：`brain/policy.py` 在 `_boss_race_doomed` 增加 `SLIPPERY_TTK_DECK_EST`。它用卡组 3 费命中上限推导破层税并写入 Boss 前夜决策链；原固定税、联合可行性和最终裁决均不变，`slippery_ttk_deck_obs=false` 可撤回观测。
+- 未来 3~10 局：有滑溜 Boss 时，对照 `deck_break_tax` 与战斗 `SLIPPERY_TTK_BREAK_EST`；若连续出现超过 1 回合低估，再调整税模型，否则保留观测不改裁决。
+- 验收：`py -3 -B sts2-ascend/brain/selfcheck.py` 受控运行输出 `SELFCHECK OK`。本批无 replay target；`retry_resolution: none`。
