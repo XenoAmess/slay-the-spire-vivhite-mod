@@ -3364,6 +3364,64 @@ def main() -> int:
     assert "KILL_RACE_HOPELESS_HP_PAY_OBS" not in d_krn.reason, \
         f"未判死时不得显形判死自付注记: {d_krn.reason}"
 
+    # 3krhm) 竞速判死自付压价门（KILL_RACE_HOPELESS_HP_PAY_MARGIN，第 927~944
+    #      局批复盘）：3krh 观测结算——判死投影下同帧自付在首个可观测窗口
+    #      （939~944 局，异步部署时滞后）6/6 局共 93 次/269 血，≈15.5 次/局
+    #      ≥9 次/局离线基线且全落阵亡局，预注册行为化路径兑现。判死 tick
+    #      謦欬实付在余量门带上追加 实付×krh_margin 压价分量：边际付血被拦、
+    #      高分打出照旧放行（软压价）、致死回合豁免同余量门；键=0 一键回滚
+    #      （旧行为零差异），非白绮零改动。
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_margin"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_margin 静态键或默认值被改"
+    # ① 判死竞速+压价生效：同一驱动从出牌翻转为门拦空过，决策链带压价留痕
+    vknow_km = _vivhite_know("sts2-selfcheck-krhmargin-on-")
+    vknow_km.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_km.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+    vpol_km = policy.Policy(vknow_km, random.Random(11))
+    d_km = _krh_drive(vpol_km, _krh_ctx(), _krh_hand_vivhite)
+    assert d_km.action == "end_turn", \
+        f"判死竞速压价门生效后边际謦欬候选应被拦下: {d_km.action}（{d_km.reason}）"
+    assert "謦欬出牌门拦下" in d_km.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_km.reason, \
+        f"判死压价门拦缺决策链留痕: {d_km.reason}"
+    # ② 键=0 一键回滚：同一驱动动作/参数与无压价旧行为逐参一致
+    vknow_km0 = _vivhite_know("sts2-selfcheck-krhmargin-off-")
+    vknow_km0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_km0.policy["kill_race_hopeless_hp_pay_margin"] = 0.0
+    vpol_km0 = policy.Policy(vknow_km0, random.Random(11))
+    d_km0 = _krh_drive(vpol_km0, _krh_ctx(), _krh_hand_vivhite)
+    assert d_km0.action == "play_card", \
+        f"压价键=0 回滚后必须恢复判死竞速出牌（旧行为）: {d_km0.action}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" not in d_km0.reason, \
+        f"压价键=0 回滚后不得出现压价留痕: {d_km0.reason}"
+    # ③ 未判死对照（满血轻意图，防守可行）：压价键在但不启用，出牌照旧
+    vknow_kmc = _vivhite_know("sts2-selfcheck-krhmargin-calm-")
+    vknow_kmc.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_kmc.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+    vpol_kmc = policy.Policy(vknow_kmc, random.Random(11))
+    vctx_kmc = _krh_ctx()
+    for _turn in (1, 2):
+        _d = vpol_kmc.decide(
+            _krh_state(_turn, 80, _krh_hand_vivhite(), 4), vctx_kmc)
+        vctx_kmc.credit_tags.extend(_d.tags)
+    d_kmc = vpol_kmc.decide(
+        _krh_state(3, 80, _krh_hand_vivhite(), 4), vctx_kmc)
+    assert d_kmc.action == "play_card", \
+        f"未判死时压价分量不得启用（出牌照旧）: {d_kmc.action}（{d_kmc.reason}）"
+    assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" not in d_kmc.reason, \
+        f"未判死时不得出现判死压价留痕: {d_kmc.reason}"
+    # ④ 非白绮零改动：文本自残牌判死竞速下不出价门拦（余量门恒 0 不进分支）
+    krh_mictx = type("KRHMCtx", (), {
+        "combat": {"comp_id": "RACE_BOSS", "node_type": "Boss"},
+        "current_combat_is_hard": True, "credit_tags": []})()
+    krh_mipol = policy.Policy(know, random.Random(11))
+    d_km_hemo = _krh_drive(krh_mipol, krh_mictx, _krh_hand_hemo)
+    assert d_km_hemo.action == "play_card", \
+        f"非白绮角色判死竞速出牌不得被压价门拦: {d_km_hemo.action}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" not in d_km_hemo.reason, \
+        f"非白绮角色不得出现判死压价留痕: {d_km_hemo.reason}"
+
     # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
     #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，
     #      余量门拦下弦光投影实付2血/绯色面积+实付4血/终止条件实付4血（合计

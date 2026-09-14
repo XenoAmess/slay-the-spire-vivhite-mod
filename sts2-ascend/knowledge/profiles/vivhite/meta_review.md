@@ -2839,3 +2839,80 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 927~944 局批复盘：判死投影下自付压价——謦欬余量门带追加竞速判死分量（KILL_RACE_HOPELESS_HP_PAY_MARGIN）
+
+日期：2026-09-14
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的 tick，謦欬自付是
+  为必败投影继续放血——上批预注册判据（KILL_RACE_HOPELESS_HP_PAY_OBS 注记集中阵亡场且
+  频率维持 ≈9 次/局 → 行为化压价）本批客观满足，按「判死 tick 实付×压价系数」追加进
+  余量门带可拦下边际付血，同时不动超带顶高分打出（翻盘燃料）与致死回合豁免。
+- **EVIDENCE**：本批 18 局全负（生涯 1/944）。程序化逐局扫描：KILL_RACE_HOPELESS_HP_PAY_OBS
+  在首个可观测窗口 939~944（927~938 为零属异步部署时滞，同 HP_GATE_STALL_ESC_OBS 上批
+  结算口径）6/6 局共 93 次/269 血，≈15.5 次/局 ≥9 次/局离线基线，且 6 局全部阵亡
+  （939-F48 永世沙漏、940-F9、941-F23、942-F17、943-F17、944-F33 CRUSHER+ROCKET）。
+  944 局 F33 Boss 战 T1 起连打绯色面积/切线星光/闭域投影/尺度变换（实付 4/2/3/4…），
+  投影自述击杀还需 18＞可存活 4，自损 22+掉血 78 四回合阵亡——判死自付集中阵亡场
+  成立。旋钮侧：謦欬三级旋钮已全尽封账（lessons 实证），本改动不动旧旋钮，新增独立
+  静态键。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链——① 门拦留痕出现
+  「判死竞速自付压价×1.00（KILL_RACE_HOPELESS_HP_PAY_MARGIN）」与 end_turn 侧
+  「謦欬出牌门拦下【…】（KILL_RACE_HOPELESS_HP_PAY_MARGIN）」，可直接 grep 计数
+  在产频率与拦截血额；② 判死竞速局的 KILL_RACE_HOPELESS_HP_PAY_OBS 合计频率较本批
+  基线（93 次/6 局）下降、判死局自损/掉血比下降；③ 超带顶高分謦欬打出仍存在
+  （软压价非硬禁）、致死回合照样付血买命（豁免不变）。证伪/撤回：压价注显形而判死局
+  自损占比与结局无变化，或压价误挡翻盘燃料（判死后获胜场的高分打出消失、翻盘率跌破
+  30% 预注册线）→ 撤回=kill_race_hopeless_hp_pay_margin=0（旧行为零差异，夹具②护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：`_combat` 余量门体系新增 `_krh_margin`（仅在
+  `_hp_play_margin>0` 且 `kill_race`——判死投影当 tick 含锁持——时读取静态键
+  kill_race_hopeless_hp_pay_margin，默认 1.0）；门带计算追加 `_hp_krh_extra=实付×
+  _krh_margin` 进 `_hp_extra`/`_hp_extra_full`（意图0自由回合减免、复打税分量语义
+  不变）；门拦候选 why 追加压价公式注，`_hp_gate_blocked` 行追加 "KRH_MARGIN" 标记，
+  end_turn 门拦留痕渲染 `（KILL_RACE_HOPELESS_HP_PAY_MARGIN）`。僵局闩锁停用余量门时
+  本分量同步停用；致死回合豁免与余量门一致；非白绮角色 `_hp_play_margin` 恒 0 零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增
+  kill_race_hopeless_hp_pay_margin=1.0，注释登记本批实证、软压价语义与 0=一键回滚。
+- sts2-ascend/brain/selfcheck.py：新增 3krhm 四分支——① 判死竞速+压价 50：同一驱动
+  从出牌翻转为门拦空过且留痕显形；② 键=0 严格回滚（恢复判死竞速出牌、注记全灭）；
+  ③ 未判死对照（满血轻意图）：压价键在但不启用、出牌照旧；④ 非白绮文本自残牌判死
+  竞速零改动。另断言 DEFAULT_POLICY 默认键值=1.0。
+- 不改竞速判决、謦欬三级旋钮、复打税/意图0减免/零压闸各收口与任何其他判定路径；不动
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3krhm 四分支；既有
+  3krh 判死自付观测族、3pesc 空过升级账族、3pri/3prv/3prm/3pru/3prn 謦欬门族、
+  3fdd/3fdl 换线阻尼/翻线锁族、3ww 竞速投影族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check -- sts2-ascend/ 通过；完整 diff 已回读：
+  brain/policy.py（+41/-12，键读取+门带追加+公式注+行标记+end_turn 渲染，其中 12
+  处删除为门拦行构造与缩进同语义改写）、brain/knowledge.py（+11，静态键+注释）、
+  brain/selfcheck.py（+58，3krhm 四分支）；未触碰只读在线状态；克隆残留的 assets
+  超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：KILL_RACE_HOPELESS_HP_PAY_MARGIN 显形次数与拦截血额分布、
+  KILL_RACE_HOPELESS_HP_PAY_OBS 合计频率（本批基线 93 次/6 局）、判死竞速局自损/掉血
+  比与结局对照（本批 944 基线：自损 22/掉血 78 四回合阵亡）。
+- 频率下降且判死局自损占比下降 → 压价有效，维持现值；注显形但自损/结局无变化 →
+  杠杆无效，撤回=kill_race_hopeless_hp_pay_margin=0（旧行为零差异，夹具②护住）；
+  判死后翻盘率跌破 30% 或高分燃料打出消失 → 下调至 0.5 再验。
+- 上批 KILL_RACE_HOPELESS_HP_PAY_OBS 结算：本批即其「未来 3~10 局」窗口——首个可
+  观测段 939~944 共 93 次/6 局（≈15.5 次/局 ≥9 基线）且全落阵亡局，预注册行为化
+  路径本批兑现；观测键保留在产（不回滚），继续作为判死自付频率账。
+- HP_GATE_STALL_ESC_OBS 首个窗口（927~944）观测：门拦空过升级账 70 次/17 局在产；
+  闩锁放行注记仅 929/935 两局 16 次且累计值齐刷刷=13（≥10 门槛侧），样本不足两局
+  不达 evidence_run_threshold=3，本批不行为化，顺延下一批窗口复核放行时点分布。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

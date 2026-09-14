@@ -4413,6 +4413,23 @@ class Policy:
                     pol.get("vivhite_hp_repeat_play_tax", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_repeat_tax = 0.0
+        # 竞速判死自付压价门（KILL_RACE_HOPELESS_HP_PAY_MARGIN，第 927~944 局批
+        # 复盘新增，静态键）：上批 KILL_RACE_HOPELESS_HP_PAY_OBS 观测结算——判死
+        # 投影下同帧自付在首个可观测窗口（939~944 局，异步部署时滞后）6/6 局共
+        # 93 次/269 血，≈15.5 次/局 ≥9 次/局离线基线且全落阵亡局，预注册行为化
+        # 路径兑现。斩杀竞速判死 tick（kill_race，含锁持 tick）謦欬实付在余量
+        # 门带上追加 实付×本键 的压价分量：边际付血被拦（不再为必败投影继续
+        # 放血），超带顶的高分打出照旧放行（软压价非硬禁，39% 判死后翻盘的高分
+        # 燃料不受压），致死回合豁免与余量门一致，僵局闩锁停用余量门时本分量
+        # 同步停用（防放血僵局回潮）。键=0 一键回滚（旧行为零差异），非白绮
+        # 角色零改动（_hp_play_margin 恒 0 不进分支）。
+        _krh_margin = 0.0
+        if _hp_play_margin > 0.0 and kill_race:
+            try:
+                _krh_margin = max(0.0, float(
+                    pol.get("kill_race_hopeless_hp_pay_margin", 1.0) or 0.0))
+            except (TypeError, ValueError):
+                _krh_margin = 0.0
         # 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第 505~511
         # 局批复盘新增，静态键）：门带对战斗语境零感知——敌意图总伤 0 的完全
         # 自由回合仍以静态门带拦下已过普通阈值的謦欬攻击牌（511 局 F11 旧日雕像
@@ -4773,8 +4790,11 @@ class Policy:
                     _hp_margin_eff = _hp_play_margin
                     if _hp_free_relief > 0.0 and incoming <= 0:
                         _hp_margin_eff = _hp_play_margin * (1.0 - _hp_free_relief)
-                    _hp_extra = _hp_pay * _hp_margin_eff + _hp_rep_extra
-                    _hp_extra_full = _hp_pay * _hp_play_margin + _hp_rep_extra
+                    _hp_krh_extra = _hp_pay * _krh_margin
+                    _hp_extra = (_hp_pay * _hp_margin_eff + _hp_rep_extra
+                                 + _hp_krh_extra)
+                    _hp_extra_full = (_hp_pay * _hp_play_margin + _hp_rep_extra
+                                      + _hp_krh_extra)
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
@@ -4784,6 +4804,10 @@ class Policy:
                             _gate_formula += (
                                 f"（意图0自由回合减免，原×{_hp_play_margin:.2f}，"
                                 "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
+                        if _hp_krh_extra > 0.0:
+                            _gate_formula += (
+                                f"+判死竞速自付压价×{_krh_margin:.2f}"
+                                "（KILL_RACE_HOPELESS_HP_PAY_MARGIN）")
                         if _hp_rep_extra > 0.0:
                             _gate_formula += (
                                 f"+同回合第{_hp_rep + 1}次复打税"
@@ -4797,9 +4821,11 @@ class Policy:
                                 "VIVHITE_HP_FREE_TURN_HARD_ONLY）")
                         why += (f"｜謦欬出牌门：{_gate_formula}=+{_hp_extra:.1f}门槛，"
                                 f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
-                        _hp_gate_blocked.append(
-                            (c.get("index"), c.get("name") or cid,
-                             _hp_pay, _hp_extra, score, _hp_rep))
+                        _gate_row = (c.get("index"), c.get("name") or cid,
+                                     _hp_pay, _hp_extra, score, _hp_rep)
+                        if _hp_krh_extra > 0.0:
+                            _gate_row += ("KRH_MARGIN",)
+                        _hp_gate_blocked.append(_gate_row)
                     elif _hp_rep_extra > 0.0:
                         # 复打税已计价但总分仍超带顶放行——供复盘区分「税未接线」
                         # 与「接线但幅度不足」（纯观测，不改放行）
@@ -5342,6 +5368,9 @@ class Policy:
                                   + ("（VIVHITE_HP_ZERO_PRESSURE_GATE）"
                                      if len(row) > 6
                                      and row[6] == "ZERO_PRESSURE" else "")
+                                  + ("（KILL_RACE_HOPELESS_HP_PAY_MARGIN）"
+                                     if len(row) > 6
+                                     and row[6] == "KRH_MARGIN" else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 if _hp_relief_hard_suppressed and incoming <= 0:
