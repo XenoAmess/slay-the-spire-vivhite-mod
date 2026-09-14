@@ -11953,3 +11953,14 @@
 - 当前低价值卡牌：BULLY(10分/2.066571184885167局)，STRIKE_IRONCLAD(12分/5.373085080701441局)，BASH(14分/4.546456606747371局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1487 胜，当前目标进阶 0
+
+## 第 1488 局复盘（2026-09-15 04:22）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 SLITHERING_STRANGLER+TWIG_SLIME_M
+- 本局拿牌：BREAKTHROUGH, CINDER, EVIL_EYE, INFLAME, TAUNT, CINDER, STOMP, CINDER, UNRELENTING, UNRELENTING, BREAKTHROUGH, PROWESS, EVIL_EYE
+- 本局遗物：CENTENNIAL_PUZZLE, TOXIC_EGG
+- 战斗记录：F5 Monster战 掉血6｜自损1（可行动段1/非行动段11，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血19; F9 Monster战 掉血20; F12 Monster战 掉血10; F14 Elite战 掉血12｜自损1（可行动段1/非行动段16，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血27｜竞速审计：T4判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.1508995588171906局)，PACTS_END(25分/77.8330778950008局)，BRAND(25分/3.1807376220101338局)，OFFERING(24分/18.965765476177985局)，FEED(24分/47.443974502271416局)
+- 当前低价值卡牌：BULLY(10分/2.059338185738069局)，STRIKE_IRONCLAD(12分/5.354279282918986局)，BASH(14分/4.530544008623755局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1488 胜，当前目标进阶 0
