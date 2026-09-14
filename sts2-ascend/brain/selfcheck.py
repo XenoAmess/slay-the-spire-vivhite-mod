@@ -1498,6 +1498,72 @@ def main() -> int:
         and "减员成本加分" not in d_rct_sym.reason, \
         f"对称池不得出现减员成本加分与留痕: {d_rct_sym.params}（{d_rct_sym.reason}）"
 
+    # 3mf) 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘）：女王+火炬头
+    #      聚合体两独立对局（983-F50/1016-F48）减员成本+自我强化教义全程集火
+    #      199池聚合体——原生 MinionPower（zhs「爪牙会在他们的领导者死亡时放弃
+    #      战斗」，OwnerIsSecondaryEnemy=true）携带者非胜利条件，其死亡反触发
+    #      女王狂暴相（mechanics 核读 Queen.AfterDeath→EnragedState→
+    #      OFF_WITH_YOUR_HEAD×5/EXECUTION/ENRAGE 循环），983 意图+50、1016
+    #      意图48 相位阵亡。纯观测不改分：① 中标爪牙+非爪牙敌存活 → 留痕且
+    #      目标不变；② 键=False 严格回滚（同场景同目标、注记全灭）；③ 无
+    #      爪牙对照 → 减员留痕照常、爪牙注记不挂；④ 全场皆爪牙（领导者已死）
+    #      → 不挂注记。
+    def minion_focus_state(amal_powers=None, queen_powers=None):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
+            "combat": {"player": {"current_hp": 80, "max_hp": 80, "block": 0, "energy": 3},
+                       "hand": [{"index": 0, "card_id": "MF_STRIKE", "name": "打击",
+                                 "playable": True, "energy_cost": 1, "requires_target": True,
+                                 "valid_target_indices": [0, 1],
+                                 "dynamic_values": [{"name": "Damage", "current_value": 8}]}],
+                       "enemies": [
+                           {"index": 0, "enemy_id": "MF_QUEEN", "name": "女王",
+                            "current_hp": 400, "max_hp": 400, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "powers": queen_powers if queen_powers is not None else [],
+                            "intents": [{"total_damage": 8}]},
+                           {"index": 1, "enemy_id": "MF_AMALGAM", "name": "火炬头聚合体",
+                            "current_hp": 199, "max_hp": 199, "block": 0, "is_alive": True,
+                            "is_hittable": True,
+                            "powers": amal_powers if amal_powers is not None else [],
+                            "intents": [{"total_damage": 18}]}]},
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 48, "deck": []}}
+
+    _mf_minion = [{"id": "MINION_POWER", "amount": 1}]
+    mf_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-")))
+    assert mf_know.policy.get("minion_focus_obs") is True, \
+        "DEFAULT_POLICY 缺少 minion_focus_obs 静态键"
+    mf_pol = policy.Policy(mf_know, random.Random(11))
+    d_mf = mf_pol.decide(minion_focus_state(amal_powers=_mf_minion), ctx)
+    assert d_mf.action == "play_card" and d_mf.params.get("target_index") == 1 \
+        and "MINION_FOCUS_OBS" in d_mf.reason, \
+        f"中标爪牙+领导者存活未留痕: {d_mf.params}（{d_mf.reason}）"
+    mf_rb_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-rb-")))
+    mf_rb_know.policy["minion_focus_obs"] = False
+    mf_rb_pol = policy.Policy(mf_rb_know, random.Random(11))
+    d_mf_rb = mf_rb_pol.decide(minion_focus_state(amal_powers=_mf_minion), ctx)
+    assert d_mf_rb.action == "play_card" and d_mf_rb.params.get("target_index") == 1 \
+        and "MINION_FOCUS_OBS" not in d_mf_rb.reason, \
+        f"minion_focus_obs=False 未严格回滚（目标/评分须零差异）: {d_mf_rb.params}（{d_mf_rb.reason}）"
+    mf_nm_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-nm-")))
+    mf_nm_pol = policy.Policy(mf_nm_know, random.Random(11))
+    d_mf_nm = mf_nm_pol.decide(minion_focus_state(), ctx)
+    assert d_mf_nm.action == "play_card" and d_mf_nm.params.get("target_index") == 1 \
+        and "减员成本加分" in d_mf_nm.reason \
+        and "MINION_FOCUS_OBS" not in d_mf_nm.reason, \
+        f"无爪牙对照不得误挂注记: {d_mf_nm.params}（{d_mf_nm.reason}）"
+    mf_all_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-all-")))
+    mf_all_pol = policy.Policy(mf_all_know, random.Random(11))
+    d_mf_all = mf_all_pol.decide(
+        minion_focus_state(amal_powers=_mf_minion, queen_powers=_mf_minion), ctx)
+    assert d_mf_all.action == "play_card" and d_mf_all.params.get("target_index") == 1 \
+        and "MINION_FOCUS_OBS" not in d_mf_all.reason, \
+        f"全场皆爪牙（领导者已死）不得挂注记: {d_mf_all.params}（{d_mf_all.reason}）"
+
     # 3x') 孤注一掷回合（第 59 局 Boss 战 T6 实证）：16 血/5 甲对 18 意图、
     #      手牌全是攻击无格挡牌——旧逻辑把全部攻击压到禁玩线，3 能量原样结束
     #      回合白吃 13 刀后下回合必死；修复后必须倾泻输出抢斩杀

@@ -6257,6 +6257,24 @@ class Policy:
                             and bool(pol.get("enemy_intangible_dmg_cap", True))
                             and self._enemy_intangible_stack(e) > 0):
                         why += "｜敌无实体逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）"
+                    # 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘新增，
+                    # 纯观测不改分）：MinionPower（zhs「爪牙会在他们的领导者死亡时
+                    # 放弃战斗」，OwnerIsSecondaryEnemy=true）携带者不是胜利条件，
+                    # 女王+火炬头聚合体战其死亡反触发主场敌狂暴相（Queen.AfterDeath
+                    # →EnragedState→OFF_WITH_YOUR_HEAD×5/EXECUTION/ENRAGE 循环，
+                    # mechanics 核读）。本批 983/1016 两独立对局减员成本+自我强化
+                    # 教义全程集火聚合体，击杀后吃意图+50 狂暴相位阵亡。中标目标携
+                    # MINION_POWER 且场上仍有非爪牙敌人存活时披露一次，供复盘直接
+                    # 计数爪牙集火频率并与狂暴阵亡对账；键=False 严格回滚无留痕。
+                    if (bool(pol.get("minion_focus_obs", True))
+                            and self._enemy_power_stack(e, "minion", "爪牙") > 0
+                            and any(_o is not e
+                                    and self._enemy_power_stack(
+                                        _o, "minion", "爪牙") <= 0
+                                    for _o in enemies)):
+                        why += ("｜爪牙集火在账：目标携MINION_POWER且主场敌存活，"
+                                "其死亡可能触发主场敌行为切换/狂暴"
+                                "（MINION_FOCUS_OBS）")
                     if _thorns_suicide:
                         why += (f"｜荆棘反伤≈{_thorns_reflect:g}≥支付后余血"
                                 f"{max(0.0, float(my_hp) - _thorns_hp_pay):g}，"

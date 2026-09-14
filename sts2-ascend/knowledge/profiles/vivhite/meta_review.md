@@ -3174,3 +3174,63 @@ kill_race 判死的语义是「击杀投影回合数 > 可存活回合数」：�
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 980~1016 局批复盘：爪牙集火观测（MINION_FOCUS_OBS）——女王+火炬头聚合体狂暴相位的留痕链路
+
+日期：2026-09-15
+
+## HYPOTHESIS
+
+原生 MinionPower（zhs「爪牙会在他们的领导者死亡时放弃战斗」，OwnerIsSecondaryEnemy=true、
+ShouldOwnerDeathTriggerFatal=false）携带者不是胜利条件；女王+火炬头聚合体战中随从死亡反触发
+主场敌狂暴相（mechanics/monsters.jsonl 核读：Queen.AfterDeath 在 TorchHeadAmalgam 死亡时
+HasAmalgamDied=true→SetMoveImmediate(EnragedState)，移态机切 OFF_WITH_YOUR_HEAD×5→EXECUTION→
+ENRAGE(+2 力量) 循环）。当前「减员成本加分+延续集火」把火力导向 199 池聚合体，但决策留痕里
+没有任何口径能直接统计这种爪牙集火——加入纯观测注记 MINION_FOCUS_OBS（评分/判决零改动）后，
+未来批次可直接对账集火频率与狂暴阵亡的相关性，再议是否行为化。
+
+该假设可证伪：若未来 10 局内该注记零出现（说明爪牙携带者从不在中标目标位），或注记出现但
+与狂暴相位阵亡无相关性，则置 minion_focus_obs=False 撤回，评分与旧版零差异。
+
+## EVIDENCE
+
+- 983 局（YCL9KG3RCEQ7）F50 Boss 战 45 条决策逐条核读：T1~T5 减员成本加分（REMOVAL_COST_TARGET，
+  199池≤峰值一半）+延续集火把火炬头聚合体集火至死；聚合体死后 T7 敌意图总伤 50（ENRAGE 相位），
+  T9 已 2 血，T10 全手牌被謦欬门拦下空过阵亡；竞速投影击杀还需 7 回合。
+- 1016 局（8NY81S7JBY0F）F48 Boss 战 24 条决策：10 次定向出牌全部打火炬头聚合体、女王零承伤，
+  T6 意图 48 一回合击穿阵亡。
+- 原生 mechanics 核读（v0.111.0 powers/monsters.jsonl）：MinionPower OwnerIsSecondaryEnemy=true、
+  ShouldOwnerDeathTriggerFatal=false；Queen.AfterDeath→HasAmalgamDied=true→SetMoveImmediate
+  (EnragedState)，GenerateMoveStateMachine 中 HasAmalgamDied 分支 OFF_WITH_YOUR_HEAD×5→
+  EXECUTION→ENRAGE 循环。
+- 失败包 20260915-040826-1789416506853731100-0b5fe9f5 完整可读：manifest/inventory/report/
+  候选 patch（10474B，SHA-256 a793b6a7…b18f8f）齐备；上次失败原因为终态 git add 超时，
+  候选 patch 本身未进库。本轮基于当前 HEAD 自行重实现：knowledge.py 与 policy.py 逐字节
+  复现候选 blob（0378a42e / 78a06ee2），selfcheck.py 语义等价（尾部空行 1 处差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键 minion_focus_obs=True（含原生
+  依据与本批两局证据注释；False=严格回滚零差异）。
+- sts2-ascend/brain/policy.py：单体中标留痕段新增 MINION_FOCUS_OBS 纯观测注记——中标目标携
+  MINION_POWER 且场上仍有非爪牙敌人存活时披露一次；不改分、不改目标、不改判决。
+- sts2-ascend/brain/selfcheck.py：3mf) 四断言——① 中标爪牙+领导者存活→留痕且 target=1 不变；
+  ② 键=False 严格回滚（同场景同目标、注记全灭）；③ 无爪牙对照→减员留痕照常、注记不挂；
+  ④ 全场皆爪牙（领导者已死）→不挂注记。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局：女王+聚合体等 MinionPower 战斗的决策 reason 出现 MINION_FOCUS_OBS 注记，
+且与回滚态（键=False）逐局对账目标/评分零差异；复盘按注记频率×狂暴相位阵亡相关性决定
+是否升级为行为化（如爪牙目标减员加分豁免）。证伪/撤回：10 局内注记零出现，或显形但与
+狂暴阵亡无相关，或任何对账发现评分/目标差异——置 minion_focus_obs=False 撤回本注记。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3mf 四断言全过）。
+- git diff --check 通过；完整 diff 已回读，仅 3 个生产文件 +102 行，无意外文件；
+  预存在的 assets/ 长路径删除与 .review_evidence/ 未跟踪项与本批无关，未进提交。
+
+## REPLAY
+
+retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated

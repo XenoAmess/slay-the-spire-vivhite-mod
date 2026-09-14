@@ -509,6 +509,24 @@ DEFAULT_POLICY = {
                                        # 中标单体攻击附带 ENEMY_INTANGIBLE_CAP_OBS
                                        # 纯观测注记；False=严格回滚旧牌面全额口径
                                        # （评分/击杀/注记零差异）。
+    "minion_focus_obs": True,  # 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘）：
+                                        # 原生 MinionPower（zhs「爪牙会在他们的领导者
+                                        # 死亡时放弃战斗」，OwnerIsSecondaryEnemy=true）
+                                        # 标记的随从不是胜利条件——击杀领导者即终场；
+                                        # 女王+火炬头聚合体战（mechanics/monsters.jsonl
+                                        # 核读：Queen.AfterDeath 在随从死亡时
+                                        # HasAmalgamDied=true→SetMoveImmediate(EnragedState)，
+                                        # 移态机切换 OFF_WITH_YOUR_HEAD×5→EXECUTION→
+                                        # ENRAGE(+2力量) 循环）随从死亡反而触发主场敌
+                                        # 狂暴相。本批两独立对局：983局 F50 减员成本
+                                        # +自我强化教义把聚合体 199池集火至死，随后
+                                        # 意图升级+18/+50 狂暴相位 2血阵亡（竞速投影
+                                        # 击杀还需7回合）；1016局 F48 九张单体全打
+                                        # 聚合体、女王零承伤，T6 意图48 一回合击穿。
+                                        # 键=True 时中标目标携 MINION_POWER 且场上仍有
+                                        # 非爪牙敌人存活，附纯观测注记（评分/判决零改动），
+                                        # 供后续批次统计爪牙集火频率与狂暴阵亡相关性再议
+                                        # 行为化；False=严格回滚（无留痕旧版，零差异）。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的
