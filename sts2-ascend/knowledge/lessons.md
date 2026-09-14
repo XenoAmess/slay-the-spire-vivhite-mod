@@ -11898,3 +11898,14 @@
 - 当前低价值卡牌：BULLY(10分/2.103119036069865局)，STRIKE_IRONCLAD(12分/5.4681094937816574局)，BASH(14分/4.626861879353707局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1482 胜，当前目标进阶 0
+
+## 第 1483 局复盘（2026-09-14 23:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：CINDER, POMMEL_STRIKE, HOWL_FROM_BEYOND, TAUNT, DRUM_OF_BATTLE, SHRUG_IT_OFF, DISMANTLE, DISMANTLE, HOWL_FROM_BEYOND, IMPATIENCE, TRUE_GRIT
+- 本局遗物：STONE_CALENDAR, GREMLIN_HORN, REPTILE_TRINKET
+- 战斗记录：F6 Monster战 掉血8; F7 Monster战 掉血13; F11 Elite战 掉血22; F13 Monster战 掉血8; F15 Monster战 掉血13; F17 Boss战 掉血48｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.2066240405170463局)，PACTS_END(25分/77.19550236275091局)，BRAND(25分/3.236989797651137局)，OFFERING(24分/19.301179992405146局)，PROWESS(24分/6.703900453702722局)
+- 当前低价值卡牌：BULLY(10分/2.0957581194436203局)，STRIKE_IRONCLAD(12分/5.448971110553422局)，BASH(14分/4.610667862775969局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1483 胜，当前目标进阶 0
