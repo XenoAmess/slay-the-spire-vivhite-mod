@@ -3585,11 +3585,6 @@ class Agent:
                    "node_type": c.get("node_type"), "hp_lost_sum": max(0.0, hp_lost),
                    "rounds": int(c.get("rounds", 0) or 0), "won": bool(won),
                    "died": bool(died), "hp_start_pct": c.get("hp_start_pct"),
-                   # 入场绝对血量（第1459~1465局批复盘 RACE_FLIP_PYRRHIC_OBS，
-                   # 1466~1472批重落地）：与 hp_start_pct 配对可还原最大生命，
-                   # 供惨胜翻盘判线；多段战斗 join 时保留首段入场值
-                   # （hp_lost_sum 逐段累加）
-                   "hp_start_abs": float(c.get("hp_start", 0) or 0),
                    "open": bool(split), "from_event": bool(c.get("from_event")),
                    "obs_hp_pool": obs_pool, "obs_fire_sum": obs_fire,
                    "obs_fire_rounds": obs_fr, "self_hp_loss_sum": _seg_self_loss,
@@ -3701,26 +3696,6 @@ class Agent:
             if _ra.get("esc"):
                 _ra_esc_key = "esc_won" if _ra_won else "esc_died"
                 _ra_stats[_ra_esc_key] = int(_ra_stats.get(_ra_esc_key, 0) or 0) + 1
-            # 惨胜翻盘影子分账（RACE_FLIP_PYRRHIC_OBS，第1459~1465局批复盘新增，
-            # 宿主安全撤销后由第1466~1472局批重落地）：判死后获胜但单场掉血
-            # ≥ race_flip_pyrrhic_hp_frac×最大生命 的「惨胜」单独计数并留痕——
-            # 1461-F6 获胜掉血37/80≈46%（F8 即以 24 血进场阵亡）、1464-F17 获胜
-            # 掉血35/80≈44%、1470-F7 获胜掉血44/80=55%（F8 即以 30 血进场阵亡），
-            # 实质佐证判死却以「误报」身份计入 won，灌水 waiver/heal 双闸消费的
-            # 表观翻盘率。纯观测：不改 won/died/esc 原账、不改任何闸的消费口径；
-            # 入场血/最大生命不可还原（旧聚合账缺 hp_start_abs）时跳过；观测键
-            # 关闭严格回滚（无计数无注记）
-            if _ra_won and bool(self.know.policy.get("race_flip_pyrrhic_obs", True)):
-                _pyr_start_abs = float(agg.get("hp_start_abs", 0.0) or 0.0)
-                _pyr_start_pct = float(agg.get("hp_start_pct", 0.0) or 0.0)
-                _pyr_max_hp = (_pyr_start_abs / _pyr_start_pct
-                               if _pyr_start_pct > 0 else 0.0)
-                _pyr_frac = float(self.know.policy.get("race_flip_pyrrhic_hp_frac", 0.4))
-                _pyr_lost = float(agg.get("hp_lost_sum", 0.0) or 0.0)
-                if _pyr_max_hp > 0 and _pyr_lost >= _pyr_frac * _pyr_max_hp:
-                    _ra_stats["won_pyrrhic"] = int(_ra_stats.get("won_pyrrhic", 0) or 0) + 1
-                    note += (f"（惨胜：掉血{int(round(_pyr_lost))}≥"
-                             f"{_pyr_frac:.0%}最大生命，RACE_FLIP_PYRRHIC_OBS）")
         note += "（阵亡）" if agg.get("died") else ""
         self.ctx.combat_notes.append(note)
         log(f"[agent] 战斗{'失败' if agg.get('died') else '结束'}：{note}")
