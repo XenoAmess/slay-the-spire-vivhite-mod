@@ -10424,3 +10424,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.7148933137179494局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.194074238589755局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.443540959768299局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血78，每回合20≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.35 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：1/944 胜，当前目标进阶 1
+
+## 第 945 局复盘（2026-09-14 08:02）
+- 结果：💀 失败｜进阶 1｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：STRIKE_DUMMY, RIPPLE_BASIN
+- 战斗记录：F6 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血20｜自损13（可行动段13/非行动段18，SELF_LOSS_PHASE_OBS）; F12 Unknown战 掉血0｜自损12（可行动段12/非行动段10，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损20（可行动段20/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血8｜自损15（可行动段15/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血70｜自损31（可行动段31/非行动段28，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_SPECTRAL_INTEGRAL(35分/6.040942463156061局)，CINDER(34分/2.875745524894445局)，FINESSE(34分/9.089022603987603局)，PROWESS(33分/12.832250488298786局)，REND(33分/2.9870019575497064局)
+- 当前低价值卡牌：VIVHITE_CARD_VIVHITE_TRANSFORMATION(22分/3.7018911871199367局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.186394978754691局)，VIVHITE_CARD_PREFETCH_FUTURE(24分/11.403488566409111局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（5回合掉血70，每回合14≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：1/945 胜，当前目标进阶 1
