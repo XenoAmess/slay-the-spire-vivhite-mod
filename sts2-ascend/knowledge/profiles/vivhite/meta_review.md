@@ -3572,3 +3572,96 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1111~1138 局批复盘：判死压价滑溜烧墙豁免（KILL_RACE_HOPELESS_HP_PAY_SLIPPERY_CREDIT）——KRH 门补上破层抵扣口径
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：判死 tick 的 KRH 自付压价分量（KILL_RACE_HOPELESS_HP_PAY_MARGIN
+  及其 DOM_SCALE 缩放）对滑溜烧墙期的低价謦欬攻击定价失真——滑溜层把每次命中
+  压成 1 点实际移除，但破层是解锁后续全额伤害的必经进度；386~391 批
+  PAYBACK_SLIPPERY_CREDIT 已按「实付≤实际移除+破层抵扣」的同一把尺放行烧墙
+  攻击，而 KRH 门（判死 tick 追加 实付×krh 压价）没有破层口径，把同一批
+  2 血烧墙攻击再度拦下：残能空留、滑溜层滞留、ttk 继续膨胀。给 KRH 分量接上
+  同一抵扣尺后，低价烧墙攻击（实付≤逐段命中数+预计破层×键）在判死 tick 不再
+  背判死压价，破层速率恢复；实付≥4 的高价单发维持全量压价，362 局自杀螺旋
+  拦截边界不变。
+- **EVIDENCE**：1138 局（runs/20260916-052711_YWZZZ46226H8.json）F17 VANTOM
+  （滑溜8层开局）全链：T7~T10 謦欬门拦下【终止条件】实付2血（KRH_MARGIN）、
+  【尺度变换+】实付2血（KRH_MARGIN），同帧 IDLE_LEAK_RACE 审计报「竞速态残能2，
+  未打可负担最高伤【尺度变换+】(预估26)」，滑溜3层滞留 3 回合，竞速审计 T3
+  判死→实战 T13 阵亡（非行动段69/掉血89）。本批 28 局全量扫描：「门拦謦欬
+  付血×滑溜层在账」同帧共 7 局 23 处（1123×3、1124×3、1131×3、1132×9、
+  1134×1、1135×1、1138×3），其中 5 局死于 F17 VANTOM；9 局带 SLIPPERY_TTK_OBS
+  留痕共 181 处，8 局落 F17。历史同尺：391 局 F17 PAYBACK 门对破层零计价的
+  行为化批次（T2/T5/T6 同型空过）。已达 evidence_run_threshold≥3，不得再只
+  登记待观察。
+- **EXPECTED_SIGNAL**：未来 3~10 局滑溜战决策链出现「判死压价破层豁免：烧墙期
+  实付N≤逐段命中H+破层B（KILL_RACE_HOPELESS_HP_PAY_SLIPPERY_CREDIT）」留痕；
+  判死滑溜战的门拦注记中 2 血烧墙攻击的 KRH_MARGIN 标签减少、破层节奏加快
+  （滑溜层数逐回合下降不再滞留 3 回合）；F17 VANTOM 战损/结局对照本批
+  1123/1124/1131/1132/1138 同型改善。证伪/回滚：豁免留痕 ≈0（接线排查）；
+  或豁免后判死滑溜战自损占掉血比显著恶化（362 局螺旋复发迹象，DOMINATES 战
+  自付速率反超）→ `kill_race_hopeless_hp_pay_slippery_credit=0` 一键回滚
+  （旧行为零差异，自检②锚住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  - `_combat` KRH 压价读取段新增静态键 `kill_race_hopeless_hp_pay_slippery_credit`
+    （默认 1.0/层，0=关闭一键回滚）求值，只在 `_krh_margin>0`（判死 tick 且
+    余量门在产）时读取。
+  - 謦欬门拦计算段在 `_hp_krh_extra` 求值后新增烧墙豁免：`card_numbers(c)`
+    判为攻击（dmg>0 且 hits>0）且场上存活敌人有滑溜层（`_enemy_slippery_stack`
+    取最大值）时，预计破层=min(hits, 层数)；`_hp_pay ≤ hits + 破层×键` 的
+    候选 `_hp_krh_extra` 归 0——只撤判死压价分量，余量门带/复打税/自由回合
+    减免/致死豁免/僵局闩锁逐字不变；豁免候选追加「判死压价破层豁免」留痕
+    （过门与仍被门带拦下两种结局都显形），`_hp_gate_blocked` 行自然不再带
+    KRH_MARGIN/KRH_DOM_SCALE 标签。非白绮角色 `_krh_margin` 恒 0 不进分支，
+    零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 注册
+  `kill_race_hopeless_hp_pay_slippery_credit=1.0`（含本批证据注释）。
+- sts2-ascend/brain/selfcheck.py：3krsc) 五段——① 判死+滑溜8层+压价50：
+  实付2的1命中烧墙攻击从门拦空过翻转为出牌且带豁免留痕；② 键=0 回滚：
+  同一驱动恢复门拦空过、KRH 留痕显形、豁免全灭；③ 实付4高价单发不豁免
+  （仍门拦、无豁免留痕，362 局螺旋边界锚）；④ 无滑溜对照：同额压价下同一
+  候选维持门拦（豁免严格限定烧墙期）；外加 DEFAULT_POLICY 键存在性断言。
+- 未触碰余量门带公式/KRH 平坦带与 DOM_SCALE 缩放/竞速投影判决/任何在线状态；
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3krsc 五段；既有
+  3krh/3krhm/3krds 判死自付族、3pnm 近失观测、3prv 全拦截族、3slph 相位分账、
+  3br-ttk-break-est 破层期量化全量通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+55，静态键求值+
+  烧墙豁免+留痕）、brain/knowledge.py（+14，静态键+证据注释）、
+  brain/selfcheck.py（+88，3krsc 五段）；未触碰在线状态；工作区 assets/ 长路径
+  删除告警为宿主预置现场，与本批无关、不入 commit。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：SLIPPERY_CREDIT 豁免显形次数/局与落点楼层（预期集中 F17
+  VANTOM）；豁免战滑溜层滞留回合数（本批 1138 同型 3 层滞留 3 回合）与
+  IDLE_LEAK_RACE「残能未打最高伤」注记频率对照；F17 VANTOM 战损与结局按
+  1123/1124/1131/1132/1138 同型对账。
+- 对照指标：判死滑溜战自损占掉血比（1138:17/89≈19%）不得因豁免显著抬升——
+  若 DOMINATES 战自付速率反超敌方净损（KRH_DOM_SCALE 族读数）或自损占比回到
+  362 局螺旋量级，`kill_race_hopeless_hp_pay_slippery_credit=0` 一键撤回
+  （平坦压价旧行为零差异，3krsc② 锚住）。
+- 既有观察结算①（HP_GATE_STALL_ANY_NEAR_MISS_OBS，1104~1110 批预注册）：
+  本批近失注记 2 局（1132×4、1138×3，峰值 2~4），STALL_ANY 闩锁放行 8 局
+  49 处（ESC_EARLY 41 处）——近失≪放行，「闩锁结构性近失」假设按预注册证伪，
+  1105-F4 归为普通断链噪声，闩锁阈值与断链语义不再动；观测键保留供频率对账。
+- 既有观察结算②：RACE_DOOM_POWER_BONUS_AUDIT_GATE 本批 24/28 局显形 122 处
+  （≈4.4 次/局，形态健康）；KRH_DOM_SCALE 显形 4 次/2 局（1132/1134），样本
+  仍薄，继续顺延观察；VIVHITE_HP_LETHAL_CAP_GATE 连续四批零显形，维持上批
+  「闸前提在当前行为下不发生」定案，不新增机制。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

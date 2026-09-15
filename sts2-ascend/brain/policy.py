@@ -4612,6 +4612,27 @@ class Policy:
             if _krh_dom_cap > 1.0 and _krh_dom_ratio > 1.0:
                 _krh_dom_scale = min(_krh_dom_cap, _krh_dom_ratio)
                 _krh_margin *= _krh_dom_scale
+        # 判死压价滑溜烧墙豁免（KILL_RACE_HOPELESS_HP_PAY_SLIPPERY_CREDIT，第
+        # 1111~1138 局批复盘新增，静态键）：判死 tick 的 KRH 压价分量对烧墙期
+        # 低价謦欬攻击定价失真——滑溜层把每次命中压成 1 点实际移除，但破层
+        # 是解锁后续全额伤害的必经进度（386~391 批 PAYBACK_SLIPPERY_CREDIT
+        # 已按同一把尺放行「实付≤实际移除+破层抵扣」的烧墙攻击），KRH 门却
+        # 无破层口径：1138 局 F17 VANTOM（滑溜8层开局）T7~T10 门拦【终止条件】
+        # 实付2血（KRH_MARGIN），同帧 IDLE_LEAK_RACE 审计报残能未打可负担
+        # 最高伤、滑溜3层滞留 3 回合，竞速审计 T3 判死→实战 T13 阵亡；本批
+        # 1123/1124/1131/1132/1138 共 7 局 23 处「门拦謦欬付血×滑溜层在账」
+        # 同帧留痕，5 局死于 F17。烧墙期「实付≤逐段命中数+预计破层×本键」的
+        # 攻击候选不计判死自付压价分量（余量门带/复打税/普通评分/致死豁免
+        # 逐字不变）；实付≥4 的高价单发维持全量压价，362 局自杀螺旋拦截
+        # 边界不变。键=0 一键回滚（旧行为零差异），非白绮角色零改动
+        # （_krh_margin 恒 0 不进分支）。
+        _krh_slip_credit = 0.0
+        if _krh_margin > 0.0:
+            try:
+                _krh_slip_credit = max(0.0, float(pol.get(
+                    "kill_race_hopeless_hp_pay_slippery_credit", 1.0) or 0.0))
+            except (TypeError, ValueError):
+                _krh_slip_credit = 0.0
         # 謦欬致死回合无实体封顶软顶开关（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
         # 局批复盘新增，静态键；语义见下方门拦段注释）。余量门带在致死回合恒 0
         # （致死豁免），本闸独立于余量门体系，只在致死回合接管「中标无实体封顶
@@ -5039,6 +5060,33 @@ class Policy:
                     if _hp_free_relief > 0.0 and incoming <= 0:
                         _hp_margin_eff = _hp_play_margin * (1.0 - _hp_free_relief)
                     _hp_krh_extra = _hp_pay * _krh_margin
+                    # 烧墙期判死压价豁免（KILL_RACE_HOPELESS_HP_PAY_SLIPPERY_CREDIT）：
+                    # 攻击候选且场上有滑溜层时，破层是解锁后续全额伤害的必经进度
+                    # ——与 PAYBACK_SLIPPERY_CREDIT 同一把尺：实付 ≤ 逐段命中数
+                    # +预计破层×键 的低价烧墙攻击不计判死压价分量（余量门带/复打
+                    # 税不变）；高价单发维持全量压价。
+                    _krh_slip_waived = False
+                    _krh_slip_hits = 0
+                    _krh_slip_broken = 0.0
+                    if _hp_krh_extra > 0.0 and _krh_slip_credit > 0.0:
+                        _krh_sdmg, _krh_sblk, _krh_shits = card_numbers(c)
+                        if _krh_sdmg > 0 and _krh_shits > 0:
+                            _krh_slip_layers = 0.0
+                            for _e in (enemies or []):
+                                if (isinstance(_e, dict)
+                                        and _e.get("is_alive", True)):
+                                    _krh_slip_layers = max(
+                                        _krh_slip_layers,
+                                        float(self._enemy_slippery_stack(_e)
+                                              or 0.0))
+                            if _krh_slip_layers > 0.0:
+                                _krh_slip_broken = min(
+                                    float(_krh_shits), _krh_slip_layers)
+                                if (_hp_pay <= float(_krh_shits)
+                                        + _krh_slip_broken * _krh_slip_credit):
+                                    _hp_krh_extra = 0.0
+                                    _krh_slip_waived = True
+                                    _krh_slip_hits = _krh_shits
                     _hp_extra = (_hp_pay * _hp_margin_eff + _hp_rep_extra
                                  + _hp_krh_extra)
                     _hp_extra_full = (_hp_pay * _hp_play_margin + _hp_rep_extra
@@ -5096,6 +5144,13 @@ class Policy:
                         why += (f"｜意图0自由回合减免过门（无减免将拦"
                                 f"+{_hp_extra_full - _hp_extra:.1f}，"
                                 "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
+                    if _krh_slip_waived:
+                        # 烧墙期判死压价豁免留痕——过门/仍被余量门带拦下两种
+                        # 结局都显形，供复盘逐 tick 对账破层进度与门带构成
+                        why += (f"｜判死压价破层豁免：烧墙期实付{_hp_pay:g}≤"
+                                f"逐段命中{_krh_slip_hits}+破层"
+                                f"{_krh_slip_broken:g}，判死自付压价不计"
+                                "（KILL_RACE_HOPELESS_HP_PAY_SLIPPERY_CREDIT）")
                 # 謦欬零压付血闸（VIVHITE_HP_ZERO_PRESSURE_GATE，第 577~589 局批
                 # 复盘新增）：本批战斗记录反复出现「普通战敌方零威胁回合照付血」
                 # ——589 局 F22 T4 敌意图总伤0、我方90血仍打出分治法阵+实付4血
