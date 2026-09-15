@@ -12085,3 +12085,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.151709361866543局)，BASH(14分/4.359138690810151局)，SETUP_STRIKE(14分/3.9628533552819523局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1499 胜，当前目标进阶 0
+
+## 第 1500 局复盘（2026-09-15 15:59）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：SPLASH, VIVHITE_CARD_CONVERGENCE_VERDICT, CINDER, CINDER, VIVHITE_CARD_AXIOM_OF_LIFE, TAUNT, BLUDGEON, INFLAME, CINDER, PILLAGE, ARMAMENTS, GRAND_FINALE
+- 本局遗物：POTION_BELT, TUNING_FORK
+- 战斗记录：F2 Monster战 掉血5; F4 Monster战 掉血0; F5 Monster战 掉血4｜自损10（可行动段10/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Unknown战 掉血27; F13 Monster战 掉血6; F17 Boss战 掉血64｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.0210797915265046局)，PACTS_END(25分/79.50892641719979局)，BRAND(25分/3.049688500895943局)，OFFERING(24分/18.184359653920865局)，FEED(24分/45.48924201579946局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.133678379100011局)，BASH(14分/4.343881705392316局)，SETUP_STRIKE(14分/3.9489833685384657局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1500 胜，当前目标进阶 0
