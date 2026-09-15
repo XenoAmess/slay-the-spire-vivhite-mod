@@ -11766,3 +11766,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.185308992717415局)，SECRET_TECHNIQUE(21分/2.647420155153212局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.849244669884333局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：2/1066 胜，当前目标进阶 2
+
+## 第 1067 局复盘（2026-09-15 14:02）
+- 结果：💀 失败｜进阶 2｜到达层数 22｜当局评分 22
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CHROMATIC_SEQUENCE
+- 本局遗物：FESTIVE_POPPER, FROZEN_EGG, STRAWBERRY, REPTILE_TRINKET, VENERABLE_TEA_SET, MEAT_ON_THE_BONE
+- 战斗记录：F14 Monster战 掉血8｜自损14（可行动段14/非行动段17，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损6（可行动段6/非行动段7，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血48｜自损52（可行动段52/非行动段41，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战14回合获胜; F19 Monster战 掉血36｜自损30（可行动段30/非行动段31，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血0｜自损22（可行动段22/非行动段17，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血51｜自损28（可行动段28/非行动段23，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.396958478906376局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.804646475091397局)，FLASH_OF_STEEL(37分/7.733859997820557局)，ROLLING_BOULDER(35分/11.27710557814957局)，CINDER(35分/2.860987635692351局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.1741604112429043局)，SECRET_TECHNIQUE(21分/2.6381541846101757局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.807772313539738局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损28/掉血51（55%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.42 → 0.42（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.04 → 2.03（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F22 但致命战自损28/掉血51≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：2/1067 胜，当前目标进阶 2
