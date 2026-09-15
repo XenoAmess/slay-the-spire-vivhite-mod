@@ -11810,3 +11810,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.1409482412278398局)，SECRET_TECHNIQUE(21分/2.6105504047271935局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.684224133621859局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：2/1070 胜，当前目标进阶 2
+
+## 第 1071 局复盘（2026-09-15 14:45）
+- 结果：💀 失败｜进阶 2｜到达层数 14｜当局评分 14
+- 死因：敌人组合 CUBEX_CONSTRUCT
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE
+- 本局遗物：REGAL_PILLOW, BLOOD_VIAL
+- 战斗记录：F5 Monster战 掉血0｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血12｜自损10（可行动段10/非行动段10，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血16｜自损17（可行动段17/非行动段13，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血40｜自损30（可行动段30/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F14 Monster战 掉血24｜自损18（可行动段18/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.3635768259312018局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.737733742680165局)，FLASH_OF_STEEL(37分/7.626153071364483局)，ROLLING_BOULDER(35分/11.120053034984137局)，CINDER(35分/2.8211436011538296局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.1299549223835426局)，SECRET_TECHNIQUE(21分/2.6014134783106484局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.643329349154182局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损18/掉血24（75%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：2/1071 胜，当前目标进阶 2
