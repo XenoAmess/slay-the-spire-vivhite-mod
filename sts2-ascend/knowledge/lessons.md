@@ -12118,3 +12118,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.097805518006456局)，BASH(14分/4.313527746005461局)，SETUP_STRIKE(14分/3.9213888600049613局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1502 胜，当前目标进阶 0
+
+## 第 1503 局复盘（2026-09-15 18:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEMOKINESIS, SHRUG_IT_OFF, BLUDGEON, INFLAME, DISMANTLE, PROWESS, FIEND_FIRE, RAMPAGE, CINDER, BREAKTHROUGH, FEEL_NO_PAIN, TRUE_GRIT
+- 本局遗物：GIRYA, BRONZE_SCALES
+- 战斗记录：F4 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血20｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血9; F12 Monster战 掉血5｜自损2（可行动段2/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血37｜自损2（可行动段2/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合获胜; F17 Boss战 掉血57｜自损1（可行动段1/非行动段47，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.9894693488690196局)，PACTS_END(25分/78.67700123391981局)，BRAND(25分/3.0177787169335497局)，OFFERING(24分/17.99409137311756局)，FEED(24分/45.0132747539264局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.0799631986934335局)，BASH(14分/4.298430398894442局)，SETUP_STRIKE(14分/3.907663998994944局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（67%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1503 胜，当前目标进阶 0
