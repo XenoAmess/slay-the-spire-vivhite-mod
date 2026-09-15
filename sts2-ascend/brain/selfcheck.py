@@ -254,6 +254,42 @@ def main() -> int:
     assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
     assert pol.pop_race_audit() == {}, "审计账弹出后应清空"
 
+    # 3rau) 竞速判死锁解观测（RACE_AUDIT_UNLATCH_OBS，第 1065~1086 局批复盘
+    #      新增回归夹具）：stats.race_audit「判死后获胜」593/1490=39.8%
+    #      （非 esc 桶 166/273=60.8%）此前无法区分「锁自修正出口放行后获胜」
+    #      与「sticky 错标仍获胜」——迟滞锁的两个合法出口（flip/invuln）都不
+    #      留痕。夹具钉住：① 入锁后记账+弹出快照附首次锁解回合/原因/终局锁态；
+    #      ② 重复记账不覆盖首次锁解；③ 键关后不记账、弹出严格旧键集（回滚锚）；
+    #      ④ 未入锁战斗记账为 no-op。纯观测，评分/判决零改动。
+    pol._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    pol._krace_latch = True
+    pol._race_audit_note_unlatch(5, "flip")
+    pol._krace_latch = False  # 锁的清除由调用点完成（投影翻回可行）
+    _rau_snap = pol.pop_race_audit()
+    assert _rau_snap == {"latched": True, "latch_round": 2, "esc": False,
+                         "unlatched_round": 5, "unlatch_reason": "flip",
+                         "ended_latched": False}, _rau_snap
+    pol._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    pol._krace_latch = True
+    pol._race_audit_note_unlatch(5, "flip")
+    pol._race_audit_note_unlatch(6, "invuln")  # 再次锁解不覆盖首次
+    _rau_first = pol.pop_race_audit()
+    assert _rau_first.get("unlatched_round") == 5 \
+        and _rau_first.get("unlatch_reason") == "flip" \
+        and _rau_first.get("ended_latched") is True, _rau_first
+    pol.know.policy["race_audit_unlatch_obs"] = False  # 回滚锚：键关零记账
+    pol._race_audit = {"latched": True, "latch_round": 3, "esc": True}
+    pol._krace_latch = True
+    pol._race_audit_note_unlatch(4, "flip")
+    pol._krace_latch = False
+    _rau_off = pol.pop_race_audit()
+    assert _rau_off == {"latched": True, "latch_round": 3, "esc": True}, _rau_off
+    pol.know.policy["race_audit_unlatch_obs"] = True
+    pol._race_audit = {"latched": False, "latch_round": None, "esc": False}
+    pol._race_audit_note_unlatch(2, "flip")
+    assert pol.pop_race_audit() == {}, "未入锁战斗不得附锁解账"
+    pol._krace_latch = False
+
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
                    "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
                    "rules_text": "失去 2 点生命，造成 18 点伤害。",
@@ -12329,6 +12365,36 @@ def main() -> int:
                          "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
+
+    # 3rau-b) 战斗记录锁解披露（RACE_AUDIT_UNLATCH_OBS，第 1065~1086 局批复盘）：
+    #     审计账带锁解键时竞速审计段追加「锁解T<回合>（<原因>，<终局锁态>）」，
+    #     （阵亡）后缀位置不变；无锁解键时段落严格回落旧口径。「判死→获胜」
+    #     从此可按 锁解段有无 区分锁自修正出口放行与 sticky 错标仍获胜。
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2,
+                                   "esc": False, "unlatched_round": 5,
+                                   "unlatch_reason": "flip"}
+    ra_agent.policy._krace_latch = False
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _rau_note = ra_agent.ctx.combat_notes[-1]
+    assert "锁解T5（flip，终局未再武装，RACE_AUDIT_UNLATCH_OBS）" in _rau_note \
+        and _rau_note.endswith("（阵亡）"), f"锁解披露缺失或后缀错位: {_rau_note}"
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2,
+                                   "esc": False, "unlatched_round": 4,
+                                   "unlatch_reason": "invuln"}
+    ra_agent.policy._krace_latch = True  # 终局仍武装（锁解后再入锁边缘形）
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    _rau_note2 = ra_agent.ctx.combat_notes[-1]
+    assert "实战8回合获胜，锁解T4（invuln，终局仍武装，RACE_AUDIT_UNLATCH_OBS）" \
+        in _rau_note2, f"终局锁态披露错位: {_rau_note2}"
+    ra_agent.policy._krace_latch = False
+    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _rau_note3 = ra_agent.ctx.combat_notes[-1]
+    assert "锁解" not in _rau_note3 and "竞速审计：T2判死→实战8回合阵亡" in _rau_note3, \
+        f"无锁解战斗记录未严格回落旧口径: {_rau_note3}"
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。

@@ -3677,6 +3677,21 @@ class Agent:
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
+            # 锁解披露（RACE_AUDIT_UNLATCH_OBS，第 1065~1086 局批复盘新增，
+            # 纯观测）：入锁后锁被解除（投影翻回可行 flip / 全场无敌相
+            # invuln）的战斗，审计段追加「锁解T<回合>（<原因>，<终局锁态>）」。
+            # 「判死→获胜」从此可区分锁自修正出口放行（带锁解段）与 sticky
+            # 错标仍获胜（无锁解段+获胜），供消费 39.8% 混计获胜率的
+            # HEAL_OVERRIDE / 入场线豁免审计闸后续按子集重校准。分账键缺失
+            # （观测键关闭或未锁解）时段落严格回落旧口径；审计段与（阵亡）
+            # 后缀位置不变。
+            _ra_unl = _ra.get("unlatched_round")
+            if _ra_unl is not None:
+                _ra_end = ("终局仍武装" if _ra.get("ended_latched")
+                           else "终局未再武装")
+                note += (f"，锁解T{int(_ra_unl)}"
+                         f"（{_ra.get('unlatch_reason', '?')}，{_ra_end}，"
+                         "RACE_AUDIT_UNLATCH_OBS）")
             # 审计账本并表落库（RACE_AUDIT_STATS_AGGREGATION，第813~822局批复盘
             # 闭环实验）：战斗记录字符串只活在单局日志里，每批复盘都要重新
             # grep 原始日志才能数出「判死→获胜」占比，且 813~827 全窗口落在
