@@ -11755,3 +11755,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.1964967312768837局)，SECRET_TECHNIQUE(21分/2.6567186704999615局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(23分/8.289646658456853局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：2/1065 胜，当前目标进阶 2
+
+## 第 1066 局复盘（2026-09-15 13:50）
+- 结果：💀 失败｜进阶 2｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_CHROMATIC_SEQUENCE, SALVO, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_PREFETCH_FUTURE, SEEKER_STRIKE, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：REGAL_PILLOW, BOOK_OF_FIVE_RINGS, GORGET
+- 战斗记录：F8 Elite战 掉血28｜自损21（可行动段21/非行动段13，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损6（可行动段6/非行动段7，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血8｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血8｜自损6（可行动段6/非行动段10，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损16（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血80｜自损36（可行动段36/非行动段29，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.4053772994544667局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.821521801396284局)，FLASH_OF_STEEL(37分/7.761023580351788局)，ROLLING_BOULDER(35分/11.31671407742054局)，CINDER(35分/2.871036262611491局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.185308992717415局)，SECRET_TECHNIQUE(21分/2.647420155153212局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.849244669884333局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：2/1066 胜，当前目标进阶 2
