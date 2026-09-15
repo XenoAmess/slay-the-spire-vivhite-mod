@@ -12129,3 +12129,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8372824249444553局)，SECRET_TECHNIQUE(21分/2.3581632723335337局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.554597286352543局)
 - 策略进化：elite_grey_safety_mult: 1.75 → 1.95（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：2/1099 胜，当前目标进阶 2
+
+## 第 1100 局复盘（2026-09-15 21:09）
+- 结果：💀 失败｜进阶 2｜到达层数 19｜当局评分 19
+- 死因：敌人组合 TUNNELER
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TERMINATION_CONDITION, PANIC_BUTTON, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHROMATIC_TRANSITION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL
+- 本局遗物：MEAL_TICKET, ORNAMENTAL_FAN
+- 战斗记录：F9 Monster战 掉血0｜自损7（可行动段7/非行动段3，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损11（可行动段11/非行动段3，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血15｜自损26（可行动段26/非行动段9，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损13（可行动段13/非行动段3，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血46｜自损23（可行动段23/非行动段35，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血68｜自损32（可行动段32/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.1350670158127376局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.279691242832441局)，FLASH_OF_STEEL(37分/6.888859165301049局)，CINDER(35分/2.548396389578596局)，ROLLING_BOULDER(34分/11.939672283047686局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8273519364571498局)，SECRET_TECHNIQUE(21分/2.3499097008803664局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.517656195850309局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.40 → 0.43（行至 F19（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F19（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F19——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F19——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F19——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F19——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：2/1100 胜，当前目标进阶 2
