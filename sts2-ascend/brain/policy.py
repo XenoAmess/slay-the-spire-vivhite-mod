@@ -3220,9 +3220,6 @@ class Policy:
                     "（RACE_INVULNERABLE_POOL_OBS）")
                 if (enemy_hp_total <= 0
                         and bool(getattr(self, "_krace_latch", False))):
-                    # 锁解记账（RACE_AUDIT_UNLATCH_OBS，纯观测）：锁的实际
-                    # 清除语义不变，仅留下首次锁解的回合与原因。
-                    self._race_audit_note_unlatch(round_no, "invuln")
                     self._krace_latch = False
                     self._krace_latch_round = None
                     danger_note += (
@@ -3794,12 +3791,6 @@ class Policy:
                                     f"实测入锁不翻案（RACE_ESC_LATCH_HOLD）")
                             else:
                                 race_lost = False
-                                # 锁解记账（RACE_AUDIT_UNLATCH_OBS，纯观测）：
-                                # 联合复核翻回可行是迟滞锁的主出口，清除语义
-                                # 不变，仅留下首次锁解的回合与原因。
-                                if self._krace_latch:
-                                    self._race_audit_note_unlatch(
-                                        round_no, "flip")
                                 self._krace_latch = False
                                 self._krace_latch_round = None
                                 _esc_mark = "（滚雪球零余量）" if esc_gate else ""
@@ -7610,31 +7601,6 @@ class Policy:
         return (float(getattr(self, "_race_same_round_loss_own", 0.0) or 0.0),
                 float(getattr(self, "_race_same_round_loss_enemy", 0.0) or 0.0))
 
-    def _race_audit_note_unlatch(self, round_no, reason: str) -> None:
-        """竞速判死锁解记账（RACE_AUDIT_UNLATCH_OBS，第 1065~1086 局批复盘
-        新增，纯观测）：迟滞锁的两个合法出口（联合复核翻回可行 flip、全场
-        无敌相 invuln）此前都不留痕，stats.race_audit 台账「判死后获胜」
-        593/1490=39.8%（非 esc 桶 166/273=60.8%）因此无法区分「锁自修正
-        出口放行后获胜」与「sticky 错标下仍获胜」——前者是机制正常工作、
-        后者才是标签错误，而 RACE_AUDIT_HEAL_OVERRIDE / 入场线豁免审计闸
-        消费的正是这个混计口径。此处只记首次锁解（回合+原因），锁的实际
-        清除由调用点完成；未入锁或已记过锁解的战斗为 no-op。评分/判决/
-        动作零改动；race_audit_unlatch_obs=False 停止记账与披露（旧行为
-        零差异）。
-        """
-        if not bool(self.know.policy.get("race_audit_unlatch_obs", True)):
-            return
-        _a = getattr(self, "_race_audit", None)
-        if not isinstance(_a, dict) or not _a.get("latched"):
-            return
-        if _a.get("unlatched_round") is not None:
-            return
-        try:
-            _a["unlatched_round"] = int(round_no)
-        except (TypeError, ValueError, OverflowError):
-            return
-        _a["unlatch_reason"] = str(reason)
-
     def pop_race_audit(self) -> dict:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。
 
@@ -7645,14 +7611,7 @@ class Policy:
         _a = getattr(self, "_race_audit", None)
         self._race_audit = None
         if isinstance(_a, dict) and _a.get("latched"):
-            _snap = dict(_a)
-            # RACE_AUDIT_UNLATCH_OBS：仅当本场记过锁解才附终局锁态
-            # （unlatched_round 的存在本身即代表观测键在记账时开启）；
-            # 普通入锁战斗快照严格保持旧键集（既有精确相等夹具锚不动）。
-            if _snap.get("unlatched_round") is not None:
-                _snap["ended_latched"] = bool(
-                    getattr(self, "_krace_latch", False))
-            return _snap
+            return dict(_a)
         return {}
 
     def _boss_eve_race_audit_heal(self, current_hp: float,

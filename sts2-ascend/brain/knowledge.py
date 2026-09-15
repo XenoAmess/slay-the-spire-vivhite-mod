@@ -470,19 +470,8 @@ DEFAULT_POLICY = {
                                   # 置 0/False 严格回滚旧口径（税只进观测留痕，
                                   # 判决零改动，selfcheck 3htx④ 为对照锚）
     "race_same_round_hp_loss_obs": True,  # 竞速判死时同回合 HP 损失观测位：
-                                            # 仅披露已经发生的逐 tick 扣血，供复盘核对
-                                            # 自损/费用与敌方伤害，不改变竞速判定；置 False 关闭
-    "race_audit_unlatch_obs": True,  # 竞速判死锁解观测位（RACE_AUDIT_UNLATCH_OBS，
-                                            # 第 1065~1086 局批复盘新增，静态键）：stats.race_audit
-                                            # 台账「判死后获胜」593/1490=39.8%（非 esc 桶
-                                            # 166/273=60.8%），但迟滞锁的两个合法出口（联合
-                                            # 复核翻回可行、全场无敌相）都不留痕，无法区分
-                                            # 「锁自修正后获胜」与「sticky 错标仍获胜」——
-                                            # RACE_AUDIT_HEAL_OVERRIDE / 入场线豁免审计闸
-                                            # 消费的正是这个混计口径。开启时 policy 记首次
-                                            # 锁解（回合+原因）并在战斗记录竞速审计段披露；
-                                            # 纯观测不改判定；False=停止记账与披露（旧行为
-                                            # 零差异）。
+                                           # 仅披露已经发生的逐 tick 扣血，供复盘核对
+                                           # 自损/费用与敌方伤害，不改变竞速判定；置 False 关闭
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否
