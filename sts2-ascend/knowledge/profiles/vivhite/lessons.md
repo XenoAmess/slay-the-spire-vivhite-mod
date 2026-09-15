@@ -12118,3 +12118,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8472477922172152局)，SECRET_TECHNIQUE(21分/2.3664458327481523局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.591668124789305局)
 - 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Elite战实测自损26/掉血47（55%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：2/1098 胜，当前目标进阶 2
+
+## 第 1099 局复盘（2026-09-15 20:59）
+- 结果：💀 失败｜进阶 2｜到达层数 7｜当局评分 7
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血21｜自损16（可行动段16/非行动段19，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血10｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战7回合获胜; F7 Elite战 掉血31｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.142565996801543局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.294722772536318局)，FLASH_OF_STEEL(37分/6.913054857301605局)，CINDER(35分/2.5573471044441503局)，ROLLING_BOULDER(34分/11.98160791073526局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8372824249444553局)，SECRET_TECHNIQUE(21分/2.3581632723335337局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.554597286352543局)
+- 策略进化：elite_grey_safety_mult: 1.75 → 1.95（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：2/1099 胜，当前目标进阶 2
