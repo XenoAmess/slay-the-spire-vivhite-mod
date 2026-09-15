@@ -12030,3 +12030,14 @@
 - 当前低价值卡牌：BULLY(10分/2.016468725975661局)，STRIKE_IRONCLAD(12分/5.242818687536725局)，BASH(14分/4.436231197146458局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1494 胜，当前目标进阶 0
+
+## 第 1495 局复盘（2026-09-15 11:39）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：ANGER, TWIN_STRIKE, FIGHT_ME, FORGOTTEN_RITUAL, CINDER, EXPECT_A_FIGHT, AGGRESSION, STONE_ARMOR, STOMP, SHRUG_IT_OFF, JUGGLING, HEADBUTT, MANGLE, CINDER, CRUELTY, TAUNT, CRUELTY
+- 本局遗物：JOSS_PAPER
+- 战斗记录：F12 Unknown战 掉血23; F14 Monster战 掉血1; F17 Boss战 掉血33｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血11; F22 Monster战 掉血21; F25 Monster战 掉血72｜竞速审计：T4判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.0745083767334282局)，PACTS_END(25分/78.8974516950313局)，BRAND(25分/3.103623038600544局)，OFFERING(24分/18.505954804081377局)，FEED(24分/46.29373114245423局)
+- 当前低价值卡牌：BULLY(10分/2.0094110854347464局)，STRIKE_IRONCLAD(12分/5.224468822130347局)，BASH(14分/4.420704387956445局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.36（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.02 → 2.01（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1495 胜，当前目标进阶 0
