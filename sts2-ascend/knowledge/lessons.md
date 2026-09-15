@@ -12140,3 +12140,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.062183327498007局)，BASH(14分/4.283385892498312局)，SETUP_STRIKE(14分/3.893987174998462局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1504 胜，当前目标进阶 0
+
+## 第 1505 局复盘（2026-09-15 20:33）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：BREAKTHROUGH, EVIL_EYE, MOLTEN_FIST, BLUDGEON, SPITE, TAUNT, UNMOVABLE, UNRELENTING, DISMANTLE, SPITE, PACTS_END, DISMANTLE, VICIOUS, MOLTEN_FIST, STOMP, INFLAME
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F15 Monster战 掉血4｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血53｜竞速审计：T4判死→实战9回合获胜; F19 Monster战 掉血25; F21 Monster战 掉血11; F22 Unknown战 掉血32｜竞速审计：T3判死→实战6回合获胜; F23 Monster战 掉血12｜自损1（可行动段1/非行动段4，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.9685796844264605局)，PACTS_END(25分/79.12722601854749局)，BRAND(25分/2.9966912337042975局)，OFFERING(24分/17.868353161125057局)，FEED(24分/44.69873324326466局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.044465685851764局)，BASH(14分/4.268394041874568局)，SETUP_STRIKE(14分/3.8803582198859674局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.36 → 0.36（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1505 胜，当前目标进阶 0
