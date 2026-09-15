@@ -9959,6 +9959,71 @@ def main() -> int:
     br_know.stats["race_audit"] = {"latched": 10, "won": 4, "died": 6}
     br_ctx.rest_before_boss = False
 
+    # 3br-tilt-gate（RACE_DOOM_POWER_BONUS_AUDIT_GATE，第1087~1103局批复盘）：
+    # 竞速必败战力节点倾斜（race_doom_power_bonus）是判死标签唯一未经审计把关
+    # 的消费者——台账判死后获胜 40%≥30%（判死已被历史证伪）时，篝火端与入场线
+    # 豁免端都已停止执行判死结论，路径倾斜也不得再给 Shop/Treasure/Event 加
+    # 必败战力分；开关关闭或台账低于门槛时必须严格回落旧倾斜口径。夹具复用
+    # br_weak_deck（floor=16 时 eve_doomed=True，已由 3br-waiver-gate 锚定）。
+    def br_tilt_map_reason(pknow):
+        pmap = policy.Policy(pknow, random.Random(13))
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [
+                  {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
+                   "children": [{"row": 17, "col": 0}]},
+                  {"index": 1, "row": 16, "col": 1, "node_type": "Shop",
+                   "children": [{"row": 17, "col": 0}]}],
+                  "nodes": [
+                      {"row": 16, "col": 0, "node_type": "RestSite",
+                       "children": [{"row": 17, "col": 0}]},
+                      {"row": 16, "col": 1, "node_type": "Shop",
+                       "children": [{"row": 17, "col": 0}]},
+                      {"row": 17, "col": 0, "node_type": "Boss"}]},
+              "run": {"current_hp": 48, "max_hp": 80, "gold": 120,
+                      "floor": 16, "deck": br_weak_deck}}
+        return pmap.decide(st, br_ctx).reason
+    # ① 台账判死后获胜 4/10=40%≥30%：倾斜被否决，注记留痕且不加战力分
+    _tg_reason = br_tilt_map_reason(br_know)
+    assert "RACE_DOOM_POWER_BONUS_AUDIT_GATE" in _tg_reason \
+        and "竞速必败预演：优先Shop换战力" not in _tg_reason, \
+        f"审计闸未否决必败战力倾斜: {_tg_reason}"
+    # ② 回滚锚ⓐ：开关关闭后严格恢复旧倾斜（加分注记显形、否决注记消失）
+    br_pol.know.policy["race_doom_power_bonus_audit_gate"] = False
+    _tg_rb = br_tilt_map_reason(br_know)
+    assert "竞速必败预演：优先Shop换战力" in _tg_rb \
+        and "RACE_DOOM_POWER_BONUS_AUDIT_GATE" not in _tg_rb, \
+        f"审计闸关闭后未严格回滚旧必败战力倾斜: {_tg_rb}"
+    br_pol.know.policy["race_doom_power_bonus_audit_gate"] = True
+    # ③ 回滚锚ⓑ：台账判死胜率低于门槛（2/10）时判死仍可靠，倾斜照旧
+    br_know.stats["race_audit"] = {"latched": 10, "won": 2, "died": 8}
+    _tg_low = br_tilt_map_reason(br_know)
+    assert "竞速必败预演：优先Shop换战力" in _tg_low \
+        and "RACE_DOOM_POWER_BONUS_AUDIT_GATE" not in _tg_low, \
+        f"台账判死胜率低于门槛时战力倾斜被误否决: {_tg_low}"
+    br_know.stats["race_audit"] = {"latched": 10, "won": 4, "died": 6}
+    # ④ 非判死图（br_near_deck 贴线翻盘不判死）：两侧都不显形，常规计价不变
+    def br_tilt_near_map_reason(pknow):
+        pmap = policy.Policy(pknow, random.Random(13))
+        st = {"screen": "MAP", "available_actions": ["choose_map_node"],
+              "map": {"available_nodes": [
+                  {"index": 0, "row": 16, "col": 0, "node_type": "RestSite",
+                   "children": [{"row": 17, "col": 0}]},
+                  {"index": 1, "row": 16, "col": 1, "node_type": "Shop",
+                   "children": [{"row": 17, "col": 0}]}],
+                  "nodes": [
+                      {"row": 16, "col": 0, "node_type": "RestSite",
+                       "children": [{"row": 17, "col": 0}]},
+                      {"row": 16, "col": 1, "node_type": "Shop",
+                       "children": [{"row": 17, "col": 0}]},
+                      {"row": 17, "col": 0, "node_type": "Boss"}]},
+              "run": {"current_hp": 48, "max_hp": 80, "gold": 120,
+                      "floor": 16, "deck": br_near_deck}}
+        return pmap.decide(st, br_ctx).reason
+    _tg_near = br_tilt_near_map_reason(br_know)
+    assert "RACE_DOOM_POWER_BONUS_AUDIT_GATE" not in _tg_near \
+        and "竞速必败预演：优先Shop换战力" not in _tg_near, \
+        f"非判死图出现必败战力倾斜/否决留痕: {_tg_near}"
+
     # 3br-combat-cap：Boss 战斗端不能重新打开同一场已超过翻盘比上限的
     # 联合防守复核。1168-F33 的 T3→T4 现场是该门的最小行为假设：竞速已判负，
     # 静态联合分配仍可能返回可行；上限开启时必须保持竞速，关闭时严格回滚。

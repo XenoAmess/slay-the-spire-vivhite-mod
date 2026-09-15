@@ -676,6 +676,13 @@ DEFAULT_POLICY = {
                                      # boss_eve_race_audit_heal_min_latched/_win_rate 同阈时，「必败」
                                      # 标签已被历史证伪，路径投影不得再免掉 Boss 入场血量线续航罚分；
                                      # False 立即回滚到判死即豁免的旧口径
+    "race_doom_power_bonus_audit_gate": True,  # 竞速必败战力倾斜的审计否决闸（第 1087~1103 局批复盘
+                                     # 新增，RACE_DOOM_POWER_BONUS_AUDIT_GATE）：race_doom_power_bonus
+                                     # 是判死标签唯一未经审计把关的消费者——本批 17 局倾斜留痕 188 次
+                                     # （≈11 次/局，1102 局 F3 起整幕倾斜，F16 预演翻回可行仍 95% 进场
+                                     # -81 阵亡），而台账判死后获胜 593/1490≈40%（本批 5/17≈29%）。
+                                     # 与入场线豁免闸同账同阈：判死被证伪期间 Shop/Treasure/Event
+                                     # 不再吃必败加成（候选注记留痕）；False 立即回滚到判死即倾斜
     # --- Boss 攻坚（第 82~83 批复盘） ---
     "boss_atk_mult": 1.15,  # Boss 战攻击评分全局乘区：死亡榜前三均为 Boss、意图逐轮升级，缩短战斗即减伤
     # --- 输出饥饿感知（第 88~89 批复盘） ---

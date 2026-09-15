@@ -2727,14 +2727,50 @@ class Policy:
         # 节点加成；触发条件与 path_doomed_value_bonus（投影死亡）独立，二者
         # 可叠加（判死 + 投影死亡的商店是双重杠杆）。精英不参与：灰区闸门仍是
         # 即死风险的守门人，不能被必败加成重新放行
+        # 审计闸（RACE_DOOM_POWER_BONUS_AUDIT_GATE，第1087~1103局批复盘新增）：
+        # 本倾斜是竞速判死标签唯一未经审计把关的消费者——篝火端
+        # （RACE_AUDIT_HEAL_OVERRIDE）与入场线豁免端（RACE_AUDIT_DOOM_WAIVER_GATE）
+        # 早已按同账同阈在「判死后获胜率≥30%」时停止执行判死结论，而本批 17 局
+        # 「竞速必败预演：优先…换战力(+10)」留痕 188 次（≈11 次/局，1102 局 F3
+        # 起即判必败并倾斜整幕，F16 预演又翻为可行回血 26、95% 进场仍 -81 阵亡），
+        # 台账判死后获胜 593/1490≈40%（本批 5/17≈29%）——判死被证伪期间仍整幕
+        # 给价值节点加分，会把选路从休整/战斗链拉向商店宝箱、自证必败。台账达阈
+        # 时倾斜不计分（候选注记留痕对账）；台账不足、判死可靠或开关关闭时
+        # 旧倾斜严格不变。
         _race_bonus = float(pol.get("race_doom_power_bonus", 10.0))
         if eve_doomed and _race_bonus > 0.0:
+            _tilt_vetoed = False
+            _tilt_won = 0
+            _tilt_lat = 0
+            if bool(pol.get("race_doom_power_bonus_audit_gate", True)):
+                _audit = self.know.stats.get("race_audit")
+                if isinstance(_audit, dict):
+                    try:
+                        _tilt_lat = max(0, int(_audit.get("latched", 0) or 0))
+                        _tilt_won = max(0, int(_audit.get("won", 0) or 0))
+                        _min_lat = max(1, int(pol.get(
+                            "boss_eve_race_audit_heal_min_latched", 6)))
+                        _min_rate = clamp(float(pol.get(
+                            "boss_eve_race_audit_heal_win_rate", 0.30)),
+                                          0.0, 1.0)
+                        if (_tilt_lat >= _min_lat
+                                and _tilt_won / max(1, _tilt_lat) >= _min_rate):
+                            _tilt_vetoed = True
+                    except (TypeError, ValueError, OverflowError):
+                        pass
             for c in cand:
                 if c["nt"] in ("Shop", "Treasure", "Event"):
-                    c["ps"] += _race_bonus
-                    c["notes"].append(
-                        f"竞速必败预演：优先{c['nt']}换战力(+{_race_bonus:.0f}，"
-                        f"入场血量已非生死变量)")
+                    if _tilt_vetoed:
+                        c["notes"].append(
+                            f"竞速判死后获胜{_tilt_won}/{_tilt_lat}，"
+                            "必败战力倾斜被审计闸否决"
+                            "（RACE_DOOM_POWER_BONUS_AUDIT_GATE），"
+                            "战力节点加成不计")
+                    else:
+                        c["ps"] += _race_bonus
+                        c["notes"].append(
+                            f"竞速必败预演：优先{c['nt']}换战力(+{_race_bonus:.0f}，"
+                            f"入场血量已非生死变量)")
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
         best_path = []
         details = []

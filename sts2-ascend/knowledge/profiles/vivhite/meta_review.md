@@ -3403,3 +3403,90 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1087~1103 局批复盘：竞速必败战力倾斜审计闸（RACE_DOOM_POWER_BONUS_AUDIT_GATE）——判死标签最后一个未把关消费者收口
+
+日期：2026-09-15
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：地图端「竞速必败战力节点倾斜」（race_doom_power_bonus 给
+  Shop/Treasure/Event +10）是竞速判死标签唯一未经审计闸把关的消费者。台账已证
+  该标签 ≈40% 误判（判死后获胜 593/1490≥30% 证伪线）：篝火端
+  （RACE_AUDIT_HEAL_OVERRIDE）与入场线豁免端（RACE_AUDIT_DOOM_WAIVER_GATE）早已
+  按同账同阈在判死被证伪时停止执行判死结论，唯独路径倾斜仍整幕按「必败」给价值
+  节点加分。判死误判期间（成长中卡组早期判死信息量不足），+10 倾斜把选路从
+  休整/战斗链拉向商店宝箱，正是自证必败的地图端通路。接上同一审计闸后，判死
+  被证伪期间倾斜停止计分，选路回归常规计价；判死可靠（胜率<30%）时旧倾斜严格
+  不变。
+- **EVIDENCE**：本批 17 局（1 胜 16 负，进阶 2）决策链「竞速必败预演：优先…
+  换战力(+10)」留痕 188 次（≈11 次/局）；1102 局（runs/20260915-212731_
+  1E43P4QW6VQV.json）F3 起即判必败并整幕倾斜（F3/F4 连进两店、F9 宝箱、F12
+  商店），F16 前夜预演却翻为「组合全称门放行」回血 26、95% 进场仍 -81 阵亡——
+  同一幕内判死结论自相矛盾，早期倾斜非信息。本批判死后实战获胜 5/17≈29%
+  （1092-F22/1093-F33/1093-F44/1101-F17/1103-F48 五场判死后获胜），累计台账
+  39.8%≥30% 证伪线；倾斜留痕高频显形已达 evidence_run_threshold≥3 与
+  evidence_batch_threshold，不得再只登记待观察。
+- **EXPECTED_SIGNAL**：未来 3~10 局地图决策 grep RACE_DOOM_POWER_BONUS_AUDIT_GATE
+  显形（预期 ≈11 次/局替代原倾斜注记）；「竞速必败预演：优先…换战力」注记在
+  台账胜率≥30% 期间基本消失；RestSite/Monster 候选相对 Shop/Treasure 的评分差
+  回到倾斜前口径。对照指标：F17/F33 Boss 入场血量与一幕 Boss 战绩（本批 F17
+  阵亡 4 局、F33 阵亡 5 局）、输出饥饿缺口读数是否恶化（倾斜原本补偿战力）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：地图评分 race_doom_power_bonus 倾斜段新增审计闸
+  ——与 RACE_AUDIT_DOOM_WAIVER_GATE 同账同阈（race_audit 台账、
+  boss_eve_race_audit_heal_min_latched/_win_rate 键）：eve_doomed 且台账
+  won/latched≥30% 时，Shop/Treasure/Event 候选不再加必败战力分，改为追加
+  「竞速判死后获胜X/Y，必败战力倾斜被审计闸否决
+  （RACE_DOOM_POWER_BONUS_AUDIT_GATE），战力节点加成不计」注记（候选注记随
+  决策链留痕，供复盘逐点对账）；台账不足、判死可靠或键关闭时旧倾斜逐字不变。
+  路径模拟、续航罚分、豁免闸、篝火端、竞速判决、评分零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  `race_doom_power_bonus_audit_gate=True`（含本批证据注释；False 一键回滚到
+  判死即倾斜旧行为，零差异）。
+- sts2-ascend/brain/selfcheck.py：3br-tilt-gate 四段——① 台账 4/10≥30% 且
+  eve_doomed（br_weak_deck floor16，3br-waiver-gate 同景锚定）：倾斜被否决、
+  注记显形、战力分不加；② 回滚锚ⓐ 键=False 严格恢复旧倾斜（加分注记显形、
+  否决注记消失）；③ 回滚锚ⓑ 台账 2/10<30%（判死仍可靠）倾斜照旧；
+  ④ 非判死图（br_near_deck 贴线翻盘）两侧注记均不显形、常规计价不变。
+- 未触碰 _race_audit 快照/pop_race_audit/agent.py 审计段（前两批安全撤销形状
+  一律避开）；runs/stats/policy.json/lessons.md/review_queue 等只读在线状态
+  未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3br-tilt-gate 四段；
+  既有 3br-audit-heal/3br-waiver-gate/3br-combat-cap、3krh/3krhm/3krds 判死
+  自付族、3pese/3pesc 提前放行族、3slph 相位分账全量通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+44/-7，审计闸+
+  否决注记）、brain/knowledge.py（+7，静态键+证据注释）、brain/selfcheck.py
+  （+65，3br-tilt-gate 四段）；未触碰在线状态；工作区 assets/ 长路径删除告警
+  为宿主预置现场，与本批无关、不入 commit。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：RACE_DOOM_POWER_BONUS_AUDIT_GATE 显形次数/局（预期 ≈11，
+  与原倾斜注记同量级）；「竞速必败预演：优先…换战力」注记应在台账胜率≥30%
+  期间归零——若仍出现，说明闸未接线（排查 eve_doomed 口径）而非假设证伪。
+- 对照本批基线复核：F17 一幕 Boss 战绩（本批 4/17 阵亡）、Boss 入场血量分布、
+  输出饥饿缺口（burst_starve 读数）。若判死可靠期（台账胜率<30%）倾斜完全不
+  显形属正常；若饥饿缺口显著恶化（商店/宝箱减少导致战力不足、缺口>55%），
+  说明倾斜在误判期也有净战力价值，下一步改为按误判率比例缩放加成而非全闸。
+- 撤回条件：地图选路出现任何评分偏移异常、注记解析报错，或对照期一幕 Boss
+  战绩明显劣化（如 F17 阵亡率反超本批且伴随休整链囤积迹象）——
+  `race_doom_power_bonus_audit_gate=False` 一键撤回，判死即倾斜旧行为零差异
+  （3br-tilt-gate② 锚住）。
+- 既有观察结算：KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE 本批显形 4 次/2 局
+  （1087/1103），门带缩放已在产但样本薄；VIVHITE_HP_LETHAL_CAP_GATE 连续三批
+  零显形——本批 7 次无实体封顶窗出牌全部 hp-cost=0（余裕覆盖实付）且非致死
+  回合，闸前提「致死回合謦欬付血打进封顶窗」在当前行为下不发生，现有留痕
+  （ENEMY_INTANGIBLE_CAP_OBS 同行 LIVE_ESTIMATE hp-cost 可读）已足够对账，
+  维持原样不新增机制。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
