@@ -11744,3 +11744,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.207723764452467局)，SECRET_TECHNIQUE(21分/2.666049844957312局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(23分/8.318762326599952局)
 - 策略进化：block_safety: 2.00 → 2.05（高速失血爆毙（7回合掉血105，每回合15≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.41 → 0.42（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：2/1064 胜，当前目标进阶 2
+
+## 第 1065 局复盘（2026-09-15 13:42）
+- 结果：💀 失败｜进阶 2｜到达层数 3｜当局评分 3
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血3｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血59｜自损36（可行动段36/非行动段22，SELF_LOSS_PHASE_OBS）｜竞速审计：T13判死→实战15回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.413825689367252局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.838456398792056局)，FLASH_OF_STEEL(37分/7.788282569344493局)，ROLLING_BOULDER(35分/11.356461693347255局)，CINDER(35分/2.8811201832528757局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.1964967312768837局)，SECRET_TECHNIQUE(21分/2.6567186704999615局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(23分/8.289646658456853局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：2/1065 胜，当前目标进阶 2
