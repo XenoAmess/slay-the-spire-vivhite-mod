@@ -12437,3 +12437,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.5719768362568836局)，SECRET_TECHNIQUE(21分/2.1376586480185593局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/9.567669223852446局)
 - 策略进化：block_safety: 2.00 → 2.05（高速失血爆毙（4回合掉血60，每回合15≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.38 → 0.41（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1127 胜，当前目标进阶 3
+
+## 第 1128 局复盘（2026-09-16 03:13）
+- 结果：💀 失败｜进阶 3｜到达层数 35｜当局评分 35
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_SCALE_TRANSFORMATION, EQUILIBRIUM, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_MOBIUS_LOOP, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TANGENT_STARLIGHT, DRAMATIC_ENTRANCE, VIVHITE_CARD_EVENT_LOOP
+- 本局遗物：JOSS_PAPER, VAJRA, CANDELABRA, RED_MASK, REGAL_PILLOW, LASTING_CANDY
+- 战斗记录：F19 Monster战 掉血0｜自损20（可行动段20/非行动段8，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血3｜自损34（可行动段34/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速审计：T8判死→实战8回合获胜; F31 Elite战 掉血0｜自损16（可行动段16/非行动段28，SELF_LOSS_PHASE_OBS）; F33 Elite战 掉血52｜自损30（可行动段30/非行动段21，SELF_LOSS_PHASE_OBS）; F35 Boss战 掉血89｜自损31（可行动段31/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/5.239480319238569局)，REND(43分/5.469842190961963局)，BOLAS(41分/2.8611882455918756局)，STRATAGEM(40分/5.936175948689653局)，AUTOMATION(39分/5.85520709352815局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.5629749173299845局)，SECRET_TECHNIQUE(21分/2.1301768427504943局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/9.534182381568963局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（5回合掉血89，每回合18≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.41 → 0.44（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F35——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F35——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F35——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：3/1128 胜，当前目标进阶 3
