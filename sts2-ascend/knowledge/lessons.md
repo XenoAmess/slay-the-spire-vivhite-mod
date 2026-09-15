@@ -11997,3 +11997,14 @@
 - 当前低价值卡牌：BULLY(10分/2.037790727172021局)，STRIKE_IRONCLAD(12分/5.29825589064726局)，BASH(14分/4.483139599778449局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1491 胜，当前目标进阶 0
+
+## 第 1492 局复盘（2026-09-15 08:41）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：HEADBUTT, ARMAMENTS, CINDER, INFLAME, UNRELENTING, FLAME_BARRIER, JUGGLING, UNRELENTING, ROLLING_BOULDER, BREAKTHROUGH, ARMAMENTS, DARK_EMBRACE, STOMP, IMPERVIOUS, HOWL_FROM_BEYOND, SHRUG_IT_OFF, IRON_WAVE
+- 本局遗物：PANTOGRAPH
+- 战斗记录：F14 Monster战 掉血0; F17 Boss战 掉血67｜自损1（可行动段1/非行动段65，SELF_LOSS_PHASE_OBS）｜竞速审计：T8判死→实战11回合获胜; F19 Monster战 掉血14｜自损1（可行动段1/非行动段1，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血10｜自损1（可行动段1/非行动段10，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血3; F25 Elite战 掉血77｜竞速审计：T4判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/3.107018016204881局)，PACTS_END(25分/78.72819561325305局)，BRAND(25分/3.1364405344980177局)，OFFERING(24分/18.701635493491267局)，FEED(24分/46.78323786184348局)
+- 当前低价值卡牌：BULLY(10分/2.030658459626919局)，STRIKE_IRONCLAD(12分/5.279711995029995局)，BASH(14分/4.467448611179225局)
+- 策略进化：精英战阵亡但满血线进场（96%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.36 → 0.36（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.03 → 2.02（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1492 胜，当前目标进阶 0
