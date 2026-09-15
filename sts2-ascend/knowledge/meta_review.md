@@ -10838,3 +10838,106 @@ retry_resolution: none (no replay target; local production observation)
    立项）；② 竞速台账 470/1047 带缘走向（≥46% 达线立项）；③ KIN
    战损对 55/65% 基线（n=4）；④ REMOVAL_COST 翻案/随附比（累计
    12 翻 46 随附）。
+
+# 2026-09-15｜第 1500~1504 局复盘（异步追及队列 5 局 exact_batch 全败；观测落地 ×1：RACE_ALLIN_LETHAL_COVER_OBS 败局竞速致死回合生还覆盖旁观——1504-F17-T9「覆盖成立仍全攻阵亡」首例带内留痕，单批 1 例暂不推翻三批全攻定案）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，
+  无 replay target。
+- 上批（1493~1499）last_paths 关键标签存在性核读：RESPAWN_ROSTER_READ_OBS
+  （policy.py `_is_respawn_add_core`/`_respawn_read_obs`/`_respawn_read_obs_flush`、
+  knowledge.py `respawn_roster_read_obs`、selfcheck 3yr-read-obs）与
+  LETHAL_SURVIVABLE_LINE（policy.py race_lethal_cover 段、knowledge.py
+  `lethal_survivable_line`、selfcheck 3lsl 四断言）均在当前 HEAD 逐字在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 一、本批输入与证据对账
+
+- 本批 requested=[1500..1504]，exact 5/5、missing=0，5 局全败（生涯
+  0/1504）：全部死于 F17 一幕 Boss——1500 仪式兽 T2判死→实战 8 回合
+  阵亡（掉血 64）、1501 灵魂异鱼 T7判死→8 回合阵亡（掉血 61）、1502
+  （F17 无 COMBAT 决策切片，combat_notes 载 Boss 战阵亡）、1503 仪式兽
+  T2判死→7 回合阵亡（掉血 57）、1504 墨影幻灵 T3判死→9 回合阵亡
+  （掉血 50）。最深局 1504 packet 123/285 决策切片（bounded tail+
+  aggregates）+ 5 局 runs 全文 F17 终局逐条核读。
+- **终局全攻正确性逐局裁决**（本批核心新事实）：1504-F17-T9
+  （19:07:44~48）3 血对 11 意图，手牌防御（1 费 5）+坚毅（1 费 7）
+  2 费 12 甲可覆盖缺口 8——「败局竞速全攻」连打怨恨/痛击/打击 24 伤
+  （Boss 血池余量仍 ≥6 回合输出，斩杀当场不可能），硬吃 11 阵亡，
+  **覆盖成立仍全攻白死首例**；同回合 LETHAL_SURVIVABLE_LINE 因
+  `not race_allin` 排除未生效。对照：1500 终局 5 血对 17 意图、双
+  防御 10 甲不够 12 缺口；1501 终局 6 血对 12、单防御 5<6 缺口；
+  1503 终局 9 血对 15、空手零格挡——三局覆盖均不成立，全攻属正确
+  执行。同型本批仅 1 例（<evidence_run_threshold=3）。
+- 1504-F17-T7 正面锚：同一局 T7（16 血对 28 意图）kill_race 致死回合
+  LETHAL_SURVIVABLE_LINE 正常生效（跃跃欲试 15 甲买活），生还线本体
+  在产无疑；缺口只在 race_allin 排除域。
+
+## 二、观察点对账（上批注册，本批核对）
+
+1. **RESPAWN_ROSTER_READ_OBS（1493~1499 批三节①~④）**：本批 5 局
+   run JSON 全文 K=id 注记 0 处、respawn_native_vetoes 仍={}，且
+   1504-F17-T1 决策理由内嵌「重生名册读侧：VANTOM=id:未知」——读侧
+   留痕在产，但仍无名册非白名单遭遇现场，「分支未达」与「静默缺口」
+   依旧不可分辨，顺延不判失效，亦不新增健康证成。
+2. **竞速审计悲观率台账**：本批应验 +4（1500/1501/1503/1504）、反向
+   +0（470/1048≈44.9%，带内 ≤46%），续记；1502 无切片不计入。
+3. **KIN 战损 55/65% 基线 / REMOVAL_COST 翻案随附比**：本批无 KIN
+   遭遇、无删牌现场，顺延不判失效。
+
+## 三、本批落地行为修改 #1（RACE_ALLIN_LETHAL_COVER_OBS 纯观测）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RACE_ALLIN_LETHAL_COVER_OBS**（1504-F17-T9 首例）：LETHAL_SURVIVABLE_LINE 以 `not race_allin` 排除败局竞速——514~517 批「败局竞速吞并孤注一掷」、546 批「非致死回合奢侈格挡 0.45 贬值」、1414~1419 批生还线自身三份定案均明确维持 race_allin 全攻；但三份定案的证据全部落在「覆盖不成立/非致死」语境，1504-F17-T9 首见「致死回合覆盖成立仍全攻阵亡」（3 血对 11 意图，2 费 12 甲可覆盖缺口 8，全攻 24 伤后硬吃 11 阵亡，买活回合自带 5 张新牌+整管能量的生还线原生论证对该 tick 同样成立）。单批 1 例 <3 局阈值，不足推翻定案——先落带内观测 | |
+| 假设 | HYPOTHESIS：race_allin 致死回合中「可负担格挡组合覆盖缺口-生命」的买活机会被全攻压制存在且可复发；EVIDENCE：1504-F17-T9（覆盖成立阵亡）+ 1500/1501/1503（覆盖不成立，全攻正确）逐局裁决；EXPECTED_SIGNAL：未来 3~10 局决策链出现「败局竞速致死回合生还覆盖旁观…（RACE_ALLIN_LETHAL_COVER_OBS）」注记 | |
+| 落地动作 | ① brain/policy.py：race_lethal_cover 注记段后新增旁观分支——`race_allin_lethal_cover_obs`（默认 True）且 race_allin、kill_race、reserve_lethal、gap_now>0、存在合格挡牌时，按与生还线同一贪心口径（大挡优先、费序次优）核算可负担覆盖组合，覆盖成立即把缺口/生命/组合（如「1费5甲+1费7甲」）记入 danger_note；② brain/knowledge.py：DEFAULT_POLICY 新增静态键 `race_allin_lethal_cover_obs: True`；③ brain/selfcheck.py：3rallc 三断言（复用 3lsl 夹具，首 tick 绑定战斗身份后注入 `_race_rounds=2/_race_loss_rate=15.0` 武装 race_allin） | |
+| 行为边界 | **纯观测、零行为改动**：评分、判决、动作、race_allin/kill_race/生还线语义全部不变——3rallc① 直接断言「覆盖成立的 race_allin 致死回合攻击仍中标、无 LETHAL_SURVIVABLE_LINE、观测注记在产」；无覆盖组合（手牌零格挡）无注记；键=False 观测同灭 | |
+| 自检 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3rallc 三断言+既有 3lsl/3ra/3yr 族全部锚原样通过） | |
+| 未来 3~10 局观测指标 | ① RACE_ALLIN_LETHAL_COVER_OBS 注记 ≥3 独立对局且对应回合均阵亡 → 立项评估把生还线扩展到 race_allin（推翻/修订 514~517 定案需该阈值）；② 注记绝迹 → 首例判孤立，维持旧口径，观测转低频积案；③ 注记在产但事后核实「买活回合仍必败」（Boss 血池缺口远超一回合输出）→ 全攻定案获反向证成 | |
+| 继续调整条件 | ① 达线即立项改行为（生还线覆盖 race_allin 致死回合，3rallc① 翻转为格挡中标锚）；② 注记语义偏差（缺口/组合与实战不符）→ 修贪心口径 | |
+| 撤回条件 | knowledge/policy.json 写 `race_allin_lethal_cover_obs: false` 观测即灭（selfcheck 3rallc③ 为对照锚）；或删除 policy.py 旁观分支、knowledge.py 静态键与 selfcheck 3rallc 段零残留回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（首例未达行为
+   阈值即落带内观测，非登记延后）。
+2. **RESPAWN_ROSTER_READ_OBS / 读侧对账（1493~1499 批观察）**：1504
+   -F17-T1 内嵌「VANTOM=id:未知」证留痕在产；名册非白名单遭遇本批
+   仍无现场，顺延不判失效。
+3. **RESPAWN_CONFIRM_OBS / RESPAWN_NATIVE_VETO_OBS**：本批无重生体
+   遭遇现场，顺延不判失效。
+4. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：本批无删牌
+   现场（累计 12 翻 46 随附沿用），宿主撤回窄动作维持暂缓，续记。
+5. **竞速审计悲观率台账**：470/1048≈44.9%（带内偏上限），续记。
+6. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE**：本批无对应现场，顺延不判
+   失效。
+7. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：1501-F17 终局
+   HAND_TAX_PLAY_AUDIT 旁观注记在产无双拼，续记。
+8. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+   对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **「定案排除域」要用终局逐局裁决喂养**：514~517/546/1414~1419 三批
+   定案都把 race_allin 排除在生还线外，但证据全部来自「覆盖不成立」
+   语境——1504-F17-T9 证明排除域内存在反例形态。复核任何「排除域
+   定案」时，先把本批全部终局按「覆盖是否成立」二分裁决，再谈推翻
+   或证成；单例不达阈值时落带内观测而非直接改行为。
+2. **生还线正反锚同局出现是最佳对照**：1504 同一局 T7 生还线正常买
+   活（kill_race 域）、T9 排除域全攻阵亡（race_allin 域）——同一
+   Boss 同一血线语境下的正反锚，比跨局对比更能隔离「生还线本体
+   失效」与「排除域过宽」两种归因。
+3. 观察点（下批复盘核对）：① RACE_ALLIN_LETHAL_COVER_OBS 注记产出
+   与逐局裁决（三节指标①~③）；② 竞速台账 470/1048 走向（≥46%
+   预警）；③ RESPAWN_ROSTER_READ_OBS K=id 注记与名册遭遇现场；
+   ④ KIN 战损 55/65% 基线；⑤ REMOVAL_COST 翻案/随附比（累计
+   12 翻 46 随附）。

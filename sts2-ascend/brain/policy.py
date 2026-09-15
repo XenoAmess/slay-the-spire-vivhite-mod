@@ -4392,6 +4392,43 @@ class Policy:
                 f"；致死生还线：可负担格挡组合覆盖缺口{gap_now}-生命{my_hp}"
                 "，本回合买命可生还，非斩杀攻击让位格挡"
                 "（LETHAL_SURVIVABLE_LINE）")
+        # 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
+        # 第 1500~1504 局批复盘新增，纯观测）：LETHAL_SURVIVABLE_LINE 以
+        # not race_allin 排除败局竞速（514~517/546/1414~1419 三批定案维持
+        # 全攻），但 1504-F17-T9 首见「覆盖成立仍全攻阵亡」——3 血对 11
+        # 意图，手握防御5+坚毅7（2 费 12 甲）可覆盖缺口 8，全攻连打
+        # 怨恨/痛击/打击 24 伤（Boss 血池余量仍 ≥6 回合输出），硬吃 11
+        # 阵亡。同批 1500（5 血对 17，双防御 10 甲不够 12 缺口）、1501
+        # （6 血对 12，单防御 5<6 缺口）、1503（9 血对 15，空手）终局
+        # 覆盖均不成立，全攻属正确执行——单批仅 1 例 <3 局阈值，不足
+        # 推翻既有定案。先落带内观测：race_allin 致死回合且可负担格挡
+        # 组合覆盖缺口-生命时，把缺口/生命/覆盖组合记入 danger_note，
+        # 评分、判决、动作零改动；≥3 独立对局同型再立项评估是否把
+        # 生还线扩展到 race_allin。race_allin_lethal_cover_obs=False
+        # 观测同灭（旧行为零差异）。
+        if (bool(pol.get("race_allin_lethal_cover_obs", True))
+                and race_allin and bool(kill_race)
+                and reserve_lethal and gap_now > 0 and _worthwhile_blks):
+            _ralc_need = gap_now - my_hp
+            if _ralc_need > 0:
+                _ralc_sum = 0.0
+                _ralc_energy = energy
+                _ralc_parts = []
+                for _cst, _blk in sorted(_worthwhile_blks,
+                                         key=lambda cb: (-cb[1], cb[0])):
+                    if _cst > _ralc_energy:
+                        continue
+                    _ralc_sum += _blk
+                    _ralc_energy -= _cst
+                    _ralc_parts.append(f"{_cst}费{_blk}甲")
+                    if _ralc_sum > _ralc_need:
+                        break
+                if _ralc_sum > _ralc_need:
+                    _ralc_combo = "+".join(_ralc_parts)
+                    danger_note += (
+                        f"；败局竞速致死回合生还覆盖旁观：缺口{gap_now}"
+                        f"-生命{my_hp}可由格挡组合[{_ralc_combo}]覆盖"
+                        "，仍维持全攻（RACE_ALLIN_LETHAL_COVER_OBS）")
         # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
         # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4

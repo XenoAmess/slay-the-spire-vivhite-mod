@@ -14817,6 +14817,46 @@ def main() -> int:
         and "LETHAL_SURVIVABLE_LINE" in d_lsl4.reason, \
         f"组合生还覆盖致死回合未让位最大挡: {d_lsl4.action}（{d_lsl4.reason}）"
 
+    # 3rallc) 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
+    #      第1500~1504局批复盘）：LETHAL_SURVIVABLE_LINE 以 not race_allin
+    #      排除败局竞速（514~517/546/1414~1419 三批定案），1504-F17-T9 首见
+    #      「覆盖成立仍全攻阵亡」（3 血对 11 意图，防御5+坚毅7 可覆盖缺口
+    #      8，全攻 24 伤后硬吃 11 阵亡）——单批 1 例 <3 局阈值，纯观测不改
+    #      行为。夹具复用 lsl：首个 decide 绑定战斗身份后注入已采样净损
+    #      EMA 武装 race_allin。① 致死覆盖成立：攻击仍中标（行为零差异）、
+    #      无 LETHAL_SURVIVABLE_LINE、观测注记在产；② 无覆盖（手牌零格挡）
+    #      ：无注记；③ 键=False：观测同灭。
+    def rallc_policy():
+        return policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rallc-"))),
+            random.Random(13))
+
+    def rallc_decide(pol_r, hp_now, incoming, energy_now, hand):
+        # 首 tick 绑定 _race_combat（同回合无回合边界采样，注入值不被覆盖）
+        pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
+        pol_r._race_rounds = 2
+        pol_r._race_loss_rate = 15.0
+        return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
+                            lsl_ctx)
+
+    d_rallc1 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld])
+    assert d_rallc1.action == "play_card" \
+        and d_rallc1.params.get("card_index") == 0 \
+        and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason, \
+        f"败局竞速致死覆盖旁观缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
+    d_rallc2 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_hit2])
+    assert d_rallc2.action == "play_card" \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason, \
+        f"无覆盖组合的败局竞速致死回合误落旁观: {d_rallc2.action}（{d_rallc2.reason}）"
+    pol_rallc3 = rallc_policy()
+    pol_rallc3.know.policy["race_allin_lethal_cover_obs"] = False
+    d_rallc3 = rallc_decide(pol_rallc3, 25, 27, 1, [lsl_hit, lsl_shld])
+    assert d_rallc3.action == "play_card" \
+        and d_rallc3.params.get("card_index") == 0 \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc3.reason, \
+        f"键=False 观测未同灭: {d_rallc3.action}（{d_rallc3.reason}）"
+
 
     print("SELFCHECK OK")
     return 0
