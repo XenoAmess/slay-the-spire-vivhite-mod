@@ -12206,3 +12206,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.956803324363489局)，BASH(14分/4.194218197538335局)，SETUP_STRIKE(14分/3.8129256341257562局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1510 胜，当前目标进阶 0
+
+## 第 1511 局复盘（2026-09-16 01:39）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：RAMPAGE, JUGGLING, TRUE_GRIT, MOLTEN_FIST, HAND_OF_GREED, MANGLE, HEADBUTT, HEADBUTT, AGGRESSION, UNMOVABLE, HOWL_FROM_BEYOND, BLUDGEON, UNRELENTING, BREAKTHROUGH, JUGGLING, TRUE_GRIT, DRUM_OF_BATTLE, COLOSSUS, TWIN_STRIKE, STOMP, ARMAMENTS, VICIOUS, MASTER_OF_STRATEGY, HEADBUTT, CINDER, MOLTEN_FIST
+- 本局遗物：AMETHYST_AUBERGINE, BOWLER_HAT, RAINBOW_RING, FESTIVE_POPPER, POTION_BELT, MERCURY_HOURGLASS, RED_MASK
+- 战斗记录：F17 Boss战 掉血54｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血28; F20 Monster战 掉血21; F23 Unknown战 掉血15; F25 Monster战 掉血33｜自损1（可行动段1/非行动段33，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血55｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.9067824486861773局)，PACTS_END(25分/77.48002622620385局)，BRAND(25分/2.934308796883895局)，BARRICADE(25分/2.8858635258532206局)，FEED(24分/43.76823500869909局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.939454512728217局)，BASH(14分/4.179538433846951局)，SETUP_STRIKE(14分/3.7995803944063162局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1511 胜，当前目标进阶 0
