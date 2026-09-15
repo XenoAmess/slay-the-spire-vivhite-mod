@@ -12173,3 +12173,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.009216220755453局)，BASH(14分/4.238567571408459局)，SETUP_STRIKE(14分/3.8532432467349595局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F29——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F29——药水交药线部分胜利回收）
 - 生涯战绩：0/1507 胜，当前目标进阶 0
+
+## 第 1508 局复盘（2026-09-15 23:25）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：STONE_ARMOR, BREAKTHROUGH, BREAKTHROUGH, COLOSSUS, HOWL_FROM_BEYOND, FEEL_NO_PAIN, FEEL_NO_PAIN, TAUNT, SPITE, RUPTURE, OFFERING
+- 本局遗物：BAG_OF_PREPARATION, CANDELABRA
+- 战斗记录：F7 Monster战 掉血1｜自损2（可行动段2/非行动段5，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血2; F12 Monster战 掉血40｜自损2（可行动段2/非行动段44，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血10｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血4｜自损1（可行动段1/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战6回合获胜; F15 Monster战 掉血20（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.9375185657655316局)，PACTS_END(25分/78.29929467832912局)，BRAND(25分/2.9653359756701048局)，BARRICADE(25分/2.9163784476856938局)，FEED(24分/44.23103730619889局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.991683963982809局)，BASH(14分/4.22373258490853局)，SETUP_STRIKE(14分/3.839756895371387局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1508 胜，当前目标进阶 0
