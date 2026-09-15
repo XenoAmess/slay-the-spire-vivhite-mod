@@ -11386,6 +11386,47 @@ def main() -> int:
     assert rb2_pol._is_respawn_add({"enemy_id": "NIBBIT"}) and not rb2_pol._respawn_veto_obs, \
         "respawn_roster_native_gate=False 回滚时否决观测应同灭"
     ra_know.policy["respawn_roster_native_gate"] = True
+    # 3yr-read-obs) RESPAWN_ROSTER_READ_OBS（第 1493~1499 局批复盘）：名册读侧
+    #      每敌每场首判带内快照——否决/坐实注记只在各自分支到达后留痕，「分支
+    #      未达」零留痕；1497-F23 MYTE（名册14）/F29 TOUGH_EGG（名册21）非白名单
+    #      名册遭遇 12 份 run JSON 零否决注记、stats.respawn_native_vetoes 恒 {}，
+    #      同代码同生产名册本地复现否决+注记+台账全部正常，「敌键载荷缺口
+    #      （enemy_id 缺失回退中文名）/内存名册缺账/调用路径未达」凭 id|nm 来源
+    #      +坐实/已报/名册/否决/未知五态 verdict 逐局对账；键=False 观测同灭。
+    rd_pol = policy.Policy(ra_know)
+    assert not rd_pol._is_respawn_add({"enemy_id": "NIBBIT", "name": "小啃兽"}), \
+        "读侧快照不得改变否决判决"
+    assert rd_pol._respawn_read_obs.get("NIBBIT") == "id:否决", \
+        "名册命中被白名单否决的首判应记 id:否决"
+    _rd_note = rd_pol._respawn_read_obs_flush("")
+    assert "NIBBIT=id:否决" in _rd_note and "RESPAWN_ROSTER_READ_OBS" in _rd_note, \
+        "读侧首判注记未并入 danger_note"
+    assert rd_pol._respawn_read_obs_flush("") == "", \
+        "同一敌键同场不得重复注记（每敌每场至多一次）"
+    assert rd_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
+        "读侧快照不得改变白名单名册生效判决"
+    assert rd_pol._respawn_read_obs.get("WRIGGLER_ADD") == "id:名册", \
+        "白名单名册命中的首判应记 id:名册"
+    rd2_pol = policy.Policy(ra_know)
+    assert not rd2_pol._is_respawn_add({"name": "异螨"}), \
+        "enemy_id 缺失回退中文名的未知名册判决被快照改变"
+    assert rd2_pol._respawn_read_obs.get("异螨") == "nm:未知", \
+        "name 回退未知名册的首判应记 nm:未知"
+    rd3_pol = policy.Policy(ra_know)
+    rd3_pol._combat_kills["SPRING_ADD#0"] = 2
+    assert rd3_pol._is_respawn_add({"enemy_id": "SPRING_ADD", "index": 0}), \
+        "读侧快照不得改变同场坐实判决"
+    assert rd3_pol._respawn_read_obs.get("SPRING_ADD") == "id:坐实", \
+        "同场坐实的首判应记 id:坐实"
+    ra_know.policy["respawn_roster_read_obs"] = False
+    try:
+        rd4_pol = policy.Policy(ra_know)
+        assert not rd4_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
+            "respawn_roster_read_obs=False 不得改变否决判决"
+        assert not rd4_pol._respawn_read_obs, \
+            "respawn_roster_read_obs=False 时读侧观测应同灭"
+    finally:
+        ra_know.policy["respawn_roster_read_obs"] = True
     # 3yr-inst) RESPAWN_INSTANCE_CONFIRM（第1473~1477局批复盘）：同场坐实按敌实例
     #      归键——两个同种不同实例各被真实击杀一次不再互证「重生」（1473-F21 异螨群、
     #      1475-F19 偷窃草蜢群、1475-F36 咬人卷轴群的「全场均为已证实重生体」型误判

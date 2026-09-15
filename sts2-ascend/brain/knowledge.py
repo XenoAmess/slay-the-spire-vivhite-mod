@@ -1097,6 +1097,17 @@ DEFAULT_POLICY = {
                                      # 另记 stats.respawn_native_vetoes（每场每敌至多一次）；
                                      # 名册原账与同场坐实检测零改动。false 即严格回滚旧口径
                                      # （名册 confirmations≥2 即生效，selfcheck 3yr 回滚锚）
+     # --- 名册读侧首判快照（第1493~1499局批复盘新增，静态键） ---
+    "respawn_roster_read_obs": True,  # 跨局重生名册读侧每敌每场首判带内留痕
+                                     # （RESPAWN_ROSTER_READ_OBS）：否决注记与坐实注记只在
+                                     # 各自分支到达后留痕，「分支未达」零留痕——1497-F23
+                                     # MYTE（名册14）/F29 TOUGH_EGG（名册21）非白名单名册
+                                     # 遭遇 12 份 run JSON 零否决注记、否决台账恒 {}，同
+                                     # 代码同生产名册本地复现全部正常，「敌键载荷缺口/
+                                     # 内存名册缺账/调用路径未达」不可分辨。开键后每敌每场
+                                     # 首个读侧判决（id/nm 来源+坐实/已报/名册/否决/未知）
+                                     # 并入 danger_note 供逐局对账；判决/名册读写/否决计数/
+                                     # 评分零改动。false 即观测同灭（旧行为零差异）
      # --- 同场坐实实例键（第1473~1477局批复盘新增，静态键） ---
     "respawn_instance_confirm": True,  # 同场重生坐实按敌实例归键（RESPAWN_INSTANCE_CONFIRM）：
                                      # 种级键下「真实击杀 2 个同种不同实例」与「同一实例两次

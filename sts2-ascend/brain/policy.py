@@ -678,6 +678,8 @@ class Policy:
         self._respawn_veto_obs_noted: set = set()  # 本场已并入 danger_note 的否决敌键（每敌每场只注记一次）
         self._respawn_confirm_obs: dict = {}  # 本场同场坐实确认的坐实键 -> 名册写入异常（空串=写入成功；RESPAWN_CONFIRM_OBS）
         self._respawn_confirm_obs_noted: set = set()  # 本场已并入 danger_note 的坐实键（每坐实键每场只注记一次）
+        self._respawn_read_obs: dict = {}  # 本场名册读侧首判快照：敌键 -> "id|nm:坐实/已报/名册/否决/未知"（RESPAWN_ROSTER_READ_OBS）
+        self._respawn_read_obs_noted: set = set()  # 本场已并入 danger_note 的读侧敌键（每敌每场只注记一次）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -3842,6 +3844,7 @@ class Policy:
         # 前提是场上还有本体可打；当存活敌人全是重生体时，压制让「不打」成为
         # 唯一选择——拒绝出牌永远是比「打重生体」更差的答案，必须放开。
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
+        danger_note = self._respawn_read_obs_flush(danger_note)
         danger_note = self._respawn_veto_obs_flush(danger_note)
         danger_note = self._respawn_confirm_obs_flush(danger_note)
         if all_respawn:
@@ -3916,6 +3919,8 @@ class Policy:
             self._respawn_veto_obs_noted = set()
             self._respawn_confirm_obs = {}
             self._respawn_confirm_obs_noted = set()
+            self._respawn_read_obs = {}
+            self._respawn_read_obs_noted = set()
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -6916,6 +6921,45 @@ class Policy:
         return str(kid)
 
     def _is_respawn_add(self, enemy: dict) -> bool:
+        """名册读侧判决包装：转发 _is_respawn_add_core 并做首判快照（纯观测）。
+
+        RESPAWN_ROSTER_READ_OBS（第 1493~1499 局批复盘）：1478~1482 批
+        RESPAWN_NATIVE_VETO_OBS 落地后 12 份 run JSON 零否决注记、
+        stats.respawn_native_vetoes 仍恒 {}，而 1497-F23 MYTE（名册 14≥2）、
+        F29 TOUGH_EGG（名册 21≥2）两场非白名单名册遭遇逐字在产——预注册
+        裁决③「同类遭遇存在而注记绝迹 → 分支未达」达线。同代码同生产名册
+        本地复现（真实 stats 注入）否决+注记+台账全部正常，判决/评分/动作
+        零改动的前提下，「敌键载荷缺口（enemy_id 缺失回退中文名）/ 内存
+        名册缺账 / 调用路径未达」三解释仍不可分辨。本包装把每个敌键每场
+        首次读侧判决（来源 id/nm + 坐实/已报/名册/否决/未知）记入观测
+        缓冲，由竞速投影段收口并入 danger_note，供逐局对账。纯观测：
+        返回值、名册读写、否决计数、评分零改动；policy 键
+        respawn_roster_read_obs=False 即观测同灭（旧行为零差异）。
+        """
+        result = self._is_respawn_add_core(enemy)
+        try:
+            if self.know.policy.get("respawn_roster_read_obs", True):
+                kid = enemy.get("enemy_id") or enemy.get("name") or ""
+                if kid and kid not in self._respawn_read_obs:
+                    if result:
+                        if self._combat_kills.get(
+                                self._kill_confirm_key(
+                                    kid, enemy.get("index")), 0) >= 2:
+                            _verdict = "坐实"
+                        elif kid in self._respawn_reported:
+                            _verdict = "已报"
+                        else:
+                            _verdict = "名册"
+                    else:
+                        _verdict = ("否决" if kid in self._respawn_veto_reported
+                                    else "未知")
+                    _src = "id" if enemy.get("enemy_id") else "nm"
+                    self._respawn_read_obs[kid] = f"{_src}:{_verdict}"
+        except Exception:
+            pass  # 观测绝不改变判决；任何载荷异常静默放弃本次快照
+        return result
+
+    def _is_respawn_add_core(self, enemy: dict) -> bool:
         """同一敌人实例本场已被预测击杀 ≥2 次仍存活 → 判定为重生召唤物。
 
         跨局名册（第 506~508 局批复盘新增）：506 局 F13 精英战对扭动虫
@@ -6988,6 +7032,32 @@ class Policy:
                 self._respawn_veto_obs[kid] = _veto_err
             return False
         return True
+
+    def _respawn_read_obs_flush(self, danger_note: str) -> str:
+        """把本场名册读侧首判快照一次性并入 danger_note（每敌每场至多一次）。
+
+        RESPAWN_ROSTER_READ_OBS（第 1493~1499 局批复盘）：读侧否决注记
+        （RESPAWN_NATIVE_VETO_OBS）与坐实注记（RESPAWN_CONFIRM_OBS）都只
+        在各自分支真实到达后才留痕，「分支未达」本身零留痕——1497-F23
+        MYTE/F29 TOUGH_EGG 名册命中遭遇 12 份 run JSON 零否决注记、否决
+        台账恒 {}，而白名单 EXOSKELETON（名册 99）同批 T1 亦无名册压制，
+        「敌键载荷缺口 / 内存名册缺账 / 调用路径未达」不可分辨。本注记把
+        每敌每场首个读侧判决（来源+verdict）带内化：id:否决+台账 +1 →
+        链路健康；nm:中文名=未知 → enemy_id 载荷缺口坐实；id:MYTE=未知
+        而磁盘名册 ≥2 → 内存名册缺账坐实；名册物种遭遇战注记整体绝迹 →
+        调用路径缺口坐实。纯观测，不改判决/名册读写/评分/动作。"""
+        if not self._respawn_read_obs:
+            return danger_note
+        _parts = []
+        for _rk in sorted(self._respawn_read_obs):
+            if _rk in self._respawn_read_obs_noted:
+                continue
+            self._respawn_read_obs_noted.add(_rk)
+            _parts.append(f"{_rk}={self._respawn_read_obs[_rk]}")
+        if _parts:
+            danger_note += ("；重生名册读侧：" + "/".join(_parts)
+                            + "（RESPAWN_ROSTER_READ_OBS）")
+        return danger_note
 
     def _respawn_veto_obs_flush(self, danger_note: str) -> str:
         """把本场原生白名单否决观测一次性并入 danger_note（每敌每场至多一次）。

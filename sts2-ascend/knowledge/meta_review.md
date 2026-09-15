@@ -10721,3 +10721,120 @@ retry_resolution: none (no replay target; local production observation)
    立项）；④ KIN 战损对 55/65% 基线（n=4）；⑤ REMOVAL_COST 翻案/
    随附比；⑥ RESPAWN_NATIVE_VETO_OBS 现场（名册非白名单遭遇时
    注记/台账同 tick）。
+
+# 2026-09-15｜第 1493~1499 局复盘（异步追及队列 7 局 exact_batch 全败；行为修改 ×1：RESPAWN_ROSTER_READ_OBS 名册读侧首判带内快照——「分支未达零留痕」结构缺口补锚，1478~1482 批预注册裁决③达线立项）
+
+## 〇、失败包对账（固定首步）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待重放失败包，
+  无 replay target。
+- 上批（1488~1492）last_paths 关键标签存在性核读：RESPAWN_CONFIRM_OBS
+  （policy.py _respawn_confirm_obs/_respawn_confirm_obs_flush、selfcheck
+  锚）、RESPAWN_NATIVE_VETO_OBS（policy.py _respawn_veto_obs/
+  _respawn_veto_obs_flush、selfcheck 3yr-gate-obs 六断言）、
+  RESPAWN_INSTANCE_CONFIRM（policy.py _kill_confirm_key、knowledge.py
+  respawn_instance_confirm 键、selfcheck 3yr-inst）均在当前 HEAD 逐字
+  在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 一、批内证据与部分对账
+
+- 队列 requested=[1493..1499]、exact 7/7、missing=0。7 局全败：5 局
+  一幕 Boss F17 竞速判死应验（1493 T3→9回合、1496 T2→7、1498 T2→7、
+  1499 T2→8 阵亡；1495 T2→7 获胜后 F25 再判死 T4→6 阵亡）、1494 F7
+  低血磨死、1497 F30 磨死。旋钮全顶格/触底不变，不重复加码（沿前两批
+  同判）。
+- **RESPAWN_CONFIRM_OBS post-fix 首批核对（上批观察点①②）**：1497
+  一局三处坐实注记逐字在产——F22-T3 EXOSKELETON#0（白名单）、F23-T5
+  MYTE#0、F29-T5 TOUGH_EGG#0；stats.respawn_adds 同 tick 对账 MYTE
+  14→15、TOUGH_EGG 21→22（1473~1477 基线 14/20，1488~1492 批已记
+  TOUGH_EGG 20→21）。注记在产且台账同步 +1 → 坐实写侧链路健康；
+  TOUGH_EGG +1 归因闭环：坐实键实例归键（TOUGH_EGG#0）在产，系同实例
+  落空合法坐实，非多实例互证残留——1473~1477 批修复 post-fix 首批
+  核对通过。
+- **RESPAWN_NATIVE_VETO_OBS 观察点③（1478~1482 批预注册裁决）达线**：
+  同批 1497-F23 MYTE（名册 14≥2）、F29 TOUGH_EGG（21≥2）两场非白名单
+  名册遭遇逐字在产（T1~T4 无压制注记、坐实后「全场均为已证实重生体」
+  才出现）；12 份 post-OBS run JSON（1488~1499）零否决注记、
+  stats.respawn_native_vetoes 仍恒 {}。「同类遭遇存在而注记绝迹 →
+  分支未达」达线。
+- 本地复现（真实 stats.json 名册注入 + 生产 policy.json）：同代码
+  _is_respawn_add 对 MYTE/TOUGH_EGG 否决+注记+台账全部正常、
+  EXOSKELETON 白名单放行——代码路径完好，剩余「敌键载荷缺口
+  （enemy_id 缺失回退中文名）/ 内存名册缺账 / 调用路径未达」三解释
+  不可分辨。
+
+## 二、归因与可改动点
+
+1. **矛盾不变：旋钮全顶格。** 一幕 Boss 前夜预演判死四连（击杀需
+   14~25 回合＞满血可存活 7 回合），kill_bonus 20.00、burst_starve 双
+   旋钮、饥饿带、前夜锻造线、长战加成上限均顶格、kill_race_prior_eff
+   触底——系统性输出缺口非单旋钮可解，本批不重复加码。
+2. **本批落地点：RESPAWN_ROSTER_READ_OBS。** 否决注记与坐实注记都
+   只在各自分支到达后留痕，「分支未达」本身零留痕——两条对照注记
+   同时沉默与「无遭遇」不可区分。读侧每敌每场首判（id/nm 来源 +
+   五态 verdict）带内化，下批凭 run JSON 直接分辨三解释，见三节。
+3. **KIN 原料：** 本批无 KIN 战损新料（n 停 4），55/65% 基线裁决续待。
+4. **竞速审计悲观率台账：** 应验 +5、反向 +2（470/1047≈44.9%），沿
+   上批注册带缘（≥46% 达线立项）续记。
+5. **REMOVAL_COST 翻案/随附：** 1497-F29 一场 1 翻 1 随附（累计 12 翻
+   46 随附），撤回窄动作维持暂缓。
+
+## 三、本批复盘的行为修改 #1：RESPAWN_ROSTER_READ_OBS 名册读侧首判带内快照
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_READ_OBS**：1478~1482 批否决注记落地后 12 份 run JSON（1488~1499）零否决注记、stats.respawn_native_vetoes 恒 {}，而 1497-F23 MYTE（名册 14≥2）/F29 TOUGH_EGG（名册 21≥2）非白名单名册遭遇逐字在产——预注册裁决③「同类遭遇存在而注记绝迹 → 分支未达」达线；同代码同生产名册本地复现否决+注记+台账全部正常，「敌键载荷缺口（enemy_id 缺失回退中文名）/ 内存名册缺账 / 调用路径未达」三解释不可分辨——否决/坐实注记都只在分支到达后留痕，「分支未达」零留痕是结构缺口 | |
+| 落地动作 | ① brain/policy.py：`_is_respawn_add` 改为纯观测包装（判决逻辑整体迁入 `_is_respawn_add_core` 逐字不动），每个敌键每场首次读侧判决记入 `_respawn_read_obs`（来源 id/nm + 坐实/已报/名册/否决/未知五态）；新增 `_respawn_read_obs_flush()` 在竞速投影收口处（否决/坐实注记同点）把首判快照并入 danger_note——「重生名册读侧：K=id:否决（RESPAWN_ROSTER_READ_OBS）」，每敌每场至多一次，两缓冲随 `_kills_combat` 同点重置；② brain/knowledge.py：policy 默认键 `respawn_roster_read_obs: True`（False 观测同灭）；③ brain/selfcheck.py：3yr-read-obs 八断言（否决/名册/坐实三出口首判、name 回退 nm:未知、注记并入、同场去重、键=False 判决不变+观测同灭） | |
+| 行为边界 | 纯观测零行为：`_is_respawn_add` 返回值、名册读写、否决计数、评分、动作逐分不变（包装层 try/except 静默放弃快照，绝不改变判决）；注记只在 `_is_respawn_add` 本就被调用的分支内产生；`respawn_roster_read_obs=False` 时观测同灭（旧行为零差异） | |
+| 测试 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含 3yr-read-obs 新锚与 3yr/3yr-gate/3yr-gate-obs/3yr-inst 等全部既有锚原样通过）；真实 stats.json 名册注入本地复现三出口 verdict（id:否决 / id:名册 / nm:未知）逐一符合预期 | |
+| 未来 3~10 局观测指标 | ① 名册物种（MYTE/TOUGH_EGG/TWO_TAILED_RAT/NIBBIT/CORPSE_SLUG 等）遭遇战首个出牌段 tick 应见「重生名册读侧：K=id:否决」注记，且同局 finalize 后 respawn_native_vetoes 对应键 +1 → 链路健康封账；② 注记现「nm:中文名=未知」→ enemy_id 载荷缺口坐实，下批按载荷修复先例修敌键归一；③ 注记现「id:MYTE=未知」而磁盘名册 ≥2 → 内存名册缺账坐实，下批查 stats 载入/基线回滚；④ 名册物种遭遇战（坐实注记或理由串物种名核对在产）读侧注记整体绝迹 → 调用路径缺口坐实，下批查 T1 tick 出牌段到达率 | |
+| 继续调整条件 | ①~④ 任一达线即按对应分支立项修复；连续 ≥2 批复盘读侧注记与台账同 tick 健康 → 留痕链路封账（pre-fix 局不可回溯不追修），观测键保留 | |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_read_obs: false` 即观测同灭（selfcheck 3yr-read-obs 同灭锚为对照）；或删除 policy.py 包装/flush 两处、knowledge.py 默认键与 selfcheck 3yr-read-obs 段零残留回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（上批观察点
+   达线即落地带内观测，非登记延后）。
+2. **RESPAWN_CONFIRM_OBS（1488~1492 批观测）**：post-fix 首批 3 注记
+   3 增量同 tick 对账健康（一节），坐实写侧链路封账保留（OBS_ERR
+   沿三节指标续看）。
+3. **RESPAWN_NATIVE_VETO_OBS / 否决台账真伪（1478~1482 批观察点③）**：
+   达线升级为 RESPAWN_ROSTER_READ_OBS（三节），转入读侧首判对账。
+4. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：累计 12 翻 46
+   随附；KIN n=4 生死仍被竞速锁死，55/65% 基线裁决续待；宿主撤回
+   窄动作（removal_cost_bonus_max: 0）维持暂缓。
+5. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE**：本批无对应现场，顺延不判
+   失效。
+6. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：1497 注记在产
+   （HAND_TAX_FIRE_OBS:TOXIC×2、×1）无双拼报告，续记。
+7. **竞速审计悲观率台账**：470/1047≈44.9%（带缘 ≥46% 观察注册沿用
+   上批），续记不判失效。
+8. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+   对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **「分支到达才留痕」的观测链对「分支未达」型故障结构性失明**：
+   否决注记与坐实注记互为对照组，也只能证明「到达后正常」——分支
+   未达时两边同时沉默，与「无遭遇」不可区分（本批 12 局空窗直到
+   名册遭遇逐字核对才达线）。凡条件分支型观测，验收时应同批评估
+   是否需要「首判快照」型前置锚：读到了什么键、走了哪个出口。
+2. **本地复现通过 ≠ 生产路径在产**：同代码同生产名册注入复现全部
+   正常，生产仍零留痕——复现只能排除「逻辑缺口」，载荷缺口/内存
+   状态/调用路径三类必须靠带内首判快照分辨（ENEMY_POWERS_SNAPSHOT_OBS
+   先例的同型应用）。
+3. 观察点（下批复盘核对）：① RESPAWN_ROSTER_READ_OBS 首判注记三
+   解释裁决（id:否决+台账同步 → 链路健康封账；nm:中文名=未知 →
+   enemy_id 载荷缺口立项修敌键归一；id=未知+磁盘名册 ≥2 → 内存名册
+   缺账立项查 stats 载入/回滚；名册物种遭遇注记整体绝迹 → 调用路径
+   立项）；② 竞速台账 470/1047 带缘走向（≥46% 达线立项）；③ KIN
+   战损对 55/65% 基线（n=4）；④ REMOVAL_COST 翻案/随附比（累计
+   12 翻 46 随附）。
