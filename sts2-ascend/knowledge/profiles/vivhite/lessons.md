@@ -12646,3 +12646,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.4062226504855646局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/7.2331986887744435局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/8.951069105385994局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：3/1146 胜，当前目标进阶 3
+
+## 第 1147 局复盘（2026-09-16 07:31）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, ULTIMATE_STRIKE, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CLOSED_PROJECTION, MASTER_OF_STRATEGY, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：ICE_CREAM, KUSARIGAMA, RIPPLE_BASIN
+- 战斗记录：F7 Unknown战 掉血0｜自损4（可行动段4/非行动段1，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血0｜自损10（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血4｜自损12（可行动段12/非行动段8，SELF_LOSS_PHASE_OBS）; F13 Unknown战 掉血0｜自损9（可行动段9/非行动段1，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血19｜自损10（可行动段10/非行动段27，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血59｜自损18（可行动段18/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/4.9018156163774975局)，REND(43分/5.11733153616929局)，BOLAS(41分/2.676795477624046局)，STRATAGEM(40分/5.553611845817592局)，AUTOMATION(39分/5.477861127332492局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.397800871208865局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/7.2078824933637335局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/8.919740363517143局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1147 胜，当前目标进阶 3
