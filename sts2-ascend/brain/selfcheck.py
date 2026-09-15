@@ -11343,6 +11343,41 @@ def main() -> int:
     assert rb_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 5}), \
         "respawn_instance_confirm=False 未严格回滚种级键旧口径"
     ra_know.policy["respawn_instance_confirm"] = True
+    # 3yr-confirm-obs) RESPAWN_CONFIRM_OBS（第 1488~1492 局批复盘）：写侧同场坐实
+    #      确认除 stats.respawn_adds 计数外零带内留痕——TOUGH_EGG 名册 20→21 静默
+    #      +1（1480~1492 全 12 份 run JSON 无任何 respawn 文本）时「同实例落空
+    #      合法坐实 / 种级互证残留 / 写侧异常」不可分辨。坐实瞬间（坐实键+写入
+    #      异常类型）并入 danger_note 与名册增量同 tick 对账；纯观测，判决零改动。
+    assert inst_pol._respawn_confirm_obs.get("MYTE_T#0") == "", \
+        "坐实观测缓冲未记录坐实键（写入成功应为空串）"
+    _cobs_note = inst_pol._respawn_confirm_obs_flush("")
+    assert "MYTE_T#0" in _cobs_note and "RESPAWN_CONFIRM_OBS" in _cobs_note, \
+        "坐实注记未并入 danger_note"
+    assert inst_pol._respawn_confirm_obs_flush("") == "", \
+        "同一坐实键同场不得重复注记（每场至多一次）"
+    def _boom_confirm(_key):
+        raise RuntimeError("simulated confirm write failure")
+    ra_know.mark_respawn_add = _boom_confirm
+    try:
+        cerr_pol = policy.Policy(ra_know)
+        cerr_pol._combat_kills["TOUGH_EGG_T#0"] = 2
+        assert cerr_pol._is_respawn_add({"enemy_id": "TOUGH_EGG_T", "index": 0}), \
+            "名册写入异常不得改变同场坐实判决"
+        assert cerr_pol._respawn_confirm_obs.get("TOUGH_EGG_T#0") == "RuntimeError", \
+            "名册写入异常类型未披露进观测缓冲"
+        assert "RESPAWN_CONFIRM_OBS_ERR" in cerr_pol._respawn_confirm_obs_flush(""), \
+            "写入失败注记未带 OBS_ERR 标记"
+        assert (ra_know.stats.get("respawn_adds", {}).get("TOUGH_EGG_T") or {}).get("confirmations", 0) == 0, \
+            "写入失败不得虚增名册台账"
+    finally:
+        del ra_know.mark_respawn_add
+    ra_know.policy["respawn_instance_confirm"] = False
+    cobs_rb_pol = policy.Policy(ra_know)
+    cobs_rb_pol._combat_kills["MYTE_T"] = 2
+    assert cobs_rb_pol._is_respawn_add({"enemy_id": "MYTE_T", "index": 5}) \
+        and cobs_rb_pol._respawn_confirm_obs.get("MYTE_T") == "", \
+        "respawn_instance_confirm=False 回滚时观测键应同坐实键回滚种级口径"
+    ra_know.policy["respawn_instance_confirm"] = True
     # 名册生效后的行为闭环：辅助体不再吸引转火，输出直奔高威胁本体
     def roster_combat():
         st = spike_combat()

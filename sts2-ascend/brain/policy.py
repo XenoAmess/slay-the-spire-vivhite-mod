@@ -676,6 +676,8 @@ class Policy:
         self._respawn_veto_reported: set = set()  # 本场已登记过原生白名单否决观测的敌键（防重复计数）
         self._respawn_veto_obs: dict = {}  # 本场被原生白名单否决的敌键 -> 留痕写入异常（空串=写入成功；RESPAWN_NATIVE_VETO_OBS）
         self._respawn_veto_obs_noted: set = set()  # 本场已并入 danger_note 的否决敌键（每敌每场只注记一次）
+        self._respawn_confirm_obs: dict = {}  # 本场同场坐实确认的坐实键 -> 名册写入异常（空串=写入成功；RESPAWN_CONFIRM_OBS）
+        self._respawn_confirm_obs_noted: set = set()  # 本场已并入 danger_note 的坐实键（每坐实键每场只注记一次）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -3827,6 +3829,7 @@ class Policy:
         # 唯一选择——拒绝出牌永远是比「打重生体」更差的答案，必须放开。
         # （all_respawn 已在竞速血池段统一计算，RACE_POOL_ALL_RESPAWN_CREDIT）
         danger_note = self._respawn_veto_obs_flush(danger_note)
+        danger_note = self._respawn_confirm_obs_flush(danger_note)
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
         return kill_race, all_respawn, stance, danger_note
@@ -3897,6 +3900,8 @@ class Policy:
             self._respawn_veto_reported = set()
             self._respawn_veto_obs = {}
             self._respawn_veto_obs_noted = set()
+            self._respawn_confirm_obs = {}
+            self._respawn_confirm_obs_noted = set()
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -6873,10 +6878,22 @@ class Policy:
                 self._kill_confirm_key(kid, enemy.get("index")), 0) >= 2:
             if kid and kid not in self._respawn_reported:
                 self._respawn_reported.add(kid)
+                # RESPAWN_CONFIRM_OBS（第 1488~1492 局批复盘）：写侧同场坐实确认
+                # 除 stats.respawn_adds 计数外零带内留痕——本窗口 TOUGH_EGG 名册
+                # 20→21 静默 +1（1480~1492 全 12 份 run JSON 无任何 respawn 文本、
+                # respawn_native_vetoes 仍 {}），「同一实例两次落空合法坐实
+                # （RESPAWN_INSTANCE_CONFIRM 设计保留）/ 种级互证残留泄漏（修复
+                # 未在线生效）/ 写侧异常路径」三解释不可分辨。把坐实瞬间（坐实键
+                # +名册写入异常类型）记入本场观测缓冲，由竞速投影段并入
+                # danger_note，供名册增量逐局对账。纯观测：坐实判决、名册写入、
+                # 评分、动作零改动（except 吞错语义保留，仅多记异常类型名）。
+                _confirm_err = ""
                 try:
                     self.know.mark_respawn_add(kid)
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    _confirm_err = type(_exc).__name__
+                self._respawn_confirm_obs[
+                    self._kill_confirm_key(kid, enemy.get("index"))] = _confirm_err
             return True
         if kid and kid in self._respawn_reported:
             return True
@@ -6941,6 +6958,30 @@ class Policy:
             else:
                 danger_note += (f"；名册命中被原生白名单否决：{_vk}"
                                 f"（RESPAWN_NATIVE_VETO_OBS）")
+        return danger_note
+
+    def _respawn_confirm_obs_flush(self, danger_note: str) -> str:
+        """把本场同场坐实确认观测一次性并入 danger_note（每坐实键每场至多一次）。
+
+        RESPAWN_CONFIRM_OBS（第 1488~1492 局批复盘）：stats.respawn_adds 名册
+        confirmations 增量与决策链注记同 tick 对账——注记在产且台账同步 +1 →
+        坐实链路健康，并可凭坐实键（敌键#实例index）区分「同实例落空坐实 /
+        多实例互证」；注记带 OBS_ERR → 写侧静默失败（异常类型已披露）；
+        台账增量而同类遭遇无注记 → 在线代码未携带本观测或存在另一写路径。
+        纯观测，不改坐实判决/名册写入/评分/动作。"""
+        if not self._respawn_confirm_obs:
+            return danger_note
+        for _ck in sorted(self._respawn_confirm_obs):
+            if _ck in self._respawn_confirm_obs_noted:
+                continue
+            self._respawn_confirm_obs_noted.add(_ck)
+            _cerr = self._respawn_confirm_obs.get(_ck) or ""
+            if _cerr:
+                danger_note += (f"；坐实名册写入失败：{_ck}（{_cerr}，"
+                                f"RESPAWN_CONFIRM_OBS_ERR）")
+            else:
+                danger_note += (f"；同场坐实确认重生体：{_ck}"
+                                f"（RESPAWN_CONFIRM_OBS）")
         return danger_note
 
     def _enemy_power_stack(self, enemy: dict, *keywords: str) -> float:
