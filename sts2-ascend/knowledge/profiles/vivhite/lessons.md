@@ -12107,3 +12107,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8572481607799447局)，SECRET_TECHNIQUE(21分/2.374757483941949局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.628869166873361局)
 - 策略进化：block_safety: 2.00 → 2.05（高速失血爆毙（4回合掉血67，每回合17≥14）——按「没挡住」证据上调防御权重）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.40 → 0.40（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F35——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F35——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F35——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：2/1097 胜，当前目标进阶 2
+
+## 第 1098 局复盘（2026-09-15 20:56）
+- 结果：💀 失败｜进阶 2｜到达层数 12｜当局评分 12
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：JUZU_BRACELET
+- 战斗记录：F2 Monster战 掉血20｜自损32（可行动段32/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血8｜自损9（可行动段9/非行动段14，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血1｜自损11（可行动段11/非行动段3，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血15｜自损31（可行动段31/非行动段10，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血47｜自损26（可行动段26/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.1500913164089743局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.309807097377138局)，FLASH_OF_STEEL(37分/6.937335531662423局)，CINDER(35分/2.566329256843101局)，ROLLING_BOULDER(34分/12.023690828635484局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.8472477922172152局)，SECRET_TECHNIQUE(21分/2.3664458327481523局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.591668124789305局)
+- 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Elite战实测自损26/掉血47（55%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：2/1098 胜，当前目标进阶 2
