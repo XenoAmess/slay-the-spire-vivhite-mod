@@ -3932,6 +3932,8 @@ class Policy:
             self._race_same_round_loss_enemy = 0.0
             self._race_prev_same_round_loss = 0.0
             self._race_prev_same_round_loss_own = 0.0
+            # RACE_AUDIT_POST_LATCH_PAY_OBS 逐回合自付影子分账同步重置（不跨战斗残留）
+            self._race_self_paid_by_round = {}
             self._race_self_paid_rate = 0.0
             self._race_self_loss_dom_ratio = 0.0  # DOM_SCALE 比值锚同步重置（不跨战斗残留）
             self._race_zero_intent_rounds = 0
@@ -4085,6 +4087,26 @@ class Policy:
                 _self_paid_round_obs = max(
                     0.0, self._race_same_round_loss_own
                     - self._race_prev_same_round_loss_own)
+                # 锁后自付逐回合影子分账（RACE_AUDIT_POST_LATCH_PAY_OBS，第
+                # 1052~1064 局批复盘新增，静态键）：1064 局 F33 CRUSHER+ROCKET
+                # 战 T4 竞速判死入锁后 T5~T7 仍六次自付合计 20 血，占全场可行动
+                # 段自损 28 的 71%（1053/1058/1060/1062/1063 同为 T2~T4 入锁、
+                # T7~T8 阵亡的 3~6 回合 doomed window），但「竞速审计」战斗记录
+                # 段只有入锁回合与实战结局，锁后自付无聚合口径，无法跨局验证
+                # 「锁后自付是否集中且烧穿可存活分母」。此处按回合边界把可行动
+                # 段自付记进逐回合影子账（键=刚结束的回合号），战斗收官由
+                # pop_race_audit 按入锁回合切分披露；评分/放行/动作零改动。
+                # 口径：入锁当回合的自付计入「锁后」（上界，含锁前同回合少量
+                # 自付）。键=False 即停止记账与披露（旧行为零差异）。
+                if (_self_paid_round_obs > 0.0
+                        and bool(pol.get("race_audit_post_latch_pay_obs", True))):
+                    _pr = getattr(self, "_race_self_paid_by_round", None)
+                    if not isinstance(_pr, dict):
+                        _pr = {}
+                        self._race_self_paid_by_round = _pr
+                    _pr[int(self._race_round)] = (
+                        _pr.get(int(self._race_round), 0.0)
+                        + _self_paid_round_obs)
                 if self.character_strategy.profile_id == VIVHITE_PROFILE_ID:
                     self._race_self_paid_rate = (
                         _self_paid_round_obs
@@ -7541,7 +7563,31 @@ class Policy:
         _a = getattr(self, "_race_audit", None)
         self._race_audit = None
         if isinstance(_a, dict) and _a.get("latched"):
-            return dict(_a)
+            _snap = dict(_a)
+            # 锁后自付切分（RACE_AUDIT_POST_LATCH_PAY_OBS，第 1052~1064 局批复盘
+            # 新增，纯观测）：逐回合自付影子账按入锁回合切成锁前/锁后两桶。
+            # 未完结的当前回合尚无边界入账，用相位影子分账残差补记（该回合
+            # 在 _race_self_paid_by_round 中必无旧账，不会双计）。观测键关闭
+            # 时不附分账键，消费端（agent 战斗记录）随之严格回落旧口径。
+            if bool(self.know.policy.get("race_audit_post_latch_pay_obs", True)):
+                _by = dict(getattr(self, "_race_self_paid_by_round", None) or {})
+                _cur = getattr(self, "_race_round", None)
+                if _cur is not None:
+                    _resid = max(
+                        0.0,
+                        float(getattr(self, "_race_same_round_loss_own", 0.0)
+                              or 0.0)
+                        - float(getattr(self, "_race_prev_same_round_loss_own",
+                                        0.0) or 0.0))
+                    if _resid > 0.0:
+                        _by[int(_cur)] = _by.get(int(_cur), 0.0) + _resid
+                _lr = _snap.get("latch_round")
+                if isinstance(_lr, int) and _by:
+                    _snap["paid_after_latch"] = round(sum(
+                        v for r, v in _by.items() if r >= _lr), 1)
+                    _snap["paid_before_latch"] = round(sum(
+                        v for r, v in _by.items() if r < _lr), 1)
+            return _snap
         return {}
 
     def _boss_eve_race_audit_heal(self, current_hp: float,

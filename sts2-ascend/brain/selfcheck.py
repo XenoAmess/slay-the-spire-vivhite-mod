@@ -4718,6 +4718,69 @@ def main() -> int:
     assert "｜自损8" in slph_note_rb and "SELF_LOSS_PHASE_OBS" not in slph_note_rb, \
         f"回滚键关闭后战斗记录未回落旧口径: {slph_note_rb}"
 
+    # 3plp) 锁后自付分账观测位（RACE_AUDIT_POST_LATCH_PAY_OBS，第 1052~1064 局
+    #      批复盘新增回归夹具）：1064 局 F33 CRUSHER+ROCKET 战 T4 竞速判死入锁
+    #      后 T5~T7 仍六次自付合计 20 血（占全场可行动段自损 28 的 71%），但
+    #      「竞速审计」战斗记录段只有入锁回合与实战结局——锁后自付无聚合
+    #      口径，「doomed window 自付是否集中」无法跨局对账。夹具复刻三段
+    #      时序：T1 自付 8 → T2 边界入账、T2 自付 6 → T3 边界入账、T3 再付 6
+    #      （未完结回合残差）；入锁 T2 弹出审计账必须切分 锁后=6+6=12、
+    #      锁前=8；观测键关闭时记账与披露同步消失（旧行为零差异）。
+    plp_know = _vivhite_know("sts2-selfcheck-plp-")
+    plp_pol = policy.Policy(plp_know, random.Random(7))
+    plp_ctx = _slph_ctx()
+    plp_pol.decide(_slph_state(1, 61, ["play_card", "end_turn"]), plp_ctx)
+    plp_pol.decide(_slph_state(1, 53, ["play_card", "end_turn"]), plp_ctx)  # T1 自付 8
+    plp_pol.decide(_slph_state(2, 53, ["play_card", "end_turn"]), plp_ctx)  # T2 边界
+    plp_pol.decide(_slph_state(2, 47, ["play_card", "end_turn"]), plp_ctx)  # T2 自付 6
+    plp_pol.decide(_slph_state(3, 47, ["play_card", "end_turn"]), plp_ctx)  # T3 边界
+    plp_pol.decide(_slph_state(3, 41, ["play_card", "end_turn"]), plp_ctx)  # T3 自付 6（残差）
+    assert plp_pol._race_self_paid_by_round == {1: 8.0, 2: 6.0}, \
+        f"逐回合自付影子账错误: {plp_pol._race_self_paid_by_round}"
+    plp_pol._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    _plp_snap = plp_pol.pop_race_audit()
+    assert _plp_snap == {"latched": True, "latch_round": 2, "esc": False,
+                         "paid_after_latch": 12.0, "paid_before_latch": 8.0}, \
+        f"锁后自付切分错误（含 T3 残差 6）: {_plp_snap}"
+    # 回滚锚ⓐ：观测键关闭后逐回合账不记、审计账不附分账键
+    plp_know_rb = _vivhite_know("sts2-selfcheck-plp-rb-")
+    plp_know_rb.policy["race_audit_post_latch_pay_obs"] = False
+    plp_pol_rb = policy.Policy(plp_know_rb, random.Random(7))
+    plp_ctx_rb = _slph_ctx()
+    plp_pol_rb.decide(_slph_state(1, 61, ["play_card", "end_turn"]), plp_ctx_rb)
+    plp_pol_rb.decide(_slph_state(1, 53, ["play_card", "end_turn"]), plp_ctx_rb)
+    plp_pol_rb.decide(_slph_state(2, 53, ["play_card", "end_turn"]), plp_ctx_rb)
+    assert not getattr(plp_pol_rb, "_race_self_paid_by_round", {}), \
+        "观测键关闭后仍在记逐回合自付账"
+    plp_pol_rb._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    assert plp_pol_rb.pop_race_audit() == {"latched": True, "latch_round": 2,
+                                           "esc": False}, \
+        "观测键关闭后审计账仍附分账键"
+    # 战斗记录披露：竞速审计段追加「锁后自付X」；（阵亡）后缀位置不变
+    plp_ag = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    plp_ag._start_combat({"max_hp": 105, "floor": 33}, "CRUSHER+ROCKET", "Boss", 105)
+    plp_ag.ctx.combat["rounds"] = 7
+    plp_ag.policy._race_self_paid_by_round = {2: 8.0, 4: 6.0, 6: 14.0}
+    plp_ag.policy._race_audit = {"latched": True, "latch_round": 4, "esc": False}
+    plp_ag._settle_combat(2, won=False, died=True)
+    plp_note = plp_ag.ctx.combat_notes[-1]
+    assert ("竞速审计：T4判死→实战7回合阵亡，锁后自付20"
+            "（RACE_AUDIT_POST_LATCH_PAY_OBS）") in plp_note, \
+        f"战斗记录缺锁后自付披露: {plp_note}"
+    assert plp_note.endswith("（阵亡）"), f"（阵亡）后缀位置漂移: {plp_note}"
+    # 回滚锚ⓑ：观测键关闭后审计段严格回落旧口径
+    plp_ag_rb = agent_mod.Agent(dict(agent_mod.DEFAULT_CONFIG))
+    plp_ag_rb.know.policy["race_audit_post_latch_pay_obs"] = False
+    plp_ag_rb._start_combat({"max_hp": 105, "floor": 33}, "CRUSHER+ROCKET", "Boss", 105)
+    plp_ag_rb.ctx.combat["rounds"] = 7
+    plp_ag_rb.policy._race_self_paid_by_round = {4: 6.0, 6: 14.0}
+    plp_ag_rb.policy._race_audit = {"latched": True, "latch_round": 4, "esc": False}
+    plp_ag_rb._settle_combat(2, won=False, died=True)
+    plp_note_rb = plp_ag_rb.ctx.combat_notes[-1]
+    assert ("竞速审计：T4判死→实战7回合阵亡" in plp_note_rb
+            and "RACE_AUDIT_POST_LATCH_PAY_OBS" not in plp_note_rb), \
+        f"回滚键关闭后战斗记录未回落旧口径: {plp_note_rb}"
+
     # 3qq) 灰区精英悲观投影复核（第 86~87 批复盘新增；第 122 局复盘重定语义）：
     #      旧复核问法「悲观情形是否仍舒适」（战后 ≥60%）在实测先验下数学不可
     #      满足（放行需入场血量 ≥95%~104% > 90% 硬线），灰区分支沦为死代码、
