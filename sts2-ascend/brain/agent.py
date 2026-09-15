@@ -3677,16 +3677,6 @@ class Agent:
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
-            # 锁后自付披露（RACE_AUDIT_POST_LATCH_PAY_OBS，第 1052~1064 局批复盘
-            # 新增，纯观测）：竞速审计段追加「锁后自付X」——入锁回合起（含）的
-            # 可行动段自付合计，供复盘直接验证「doomed window 自付是否集中且
-            # 烧穿可存活分母」（1064 局 F33 T4 入锁后自付 20/28=71% 的同类形态
-            # 从此无需回放决策链即可跨局对账）。分账键缺失（观测键关闭或全场
-            # 零自付）时段落严格回落旧口径；审计段与（阵亡）后缀位置不变。
-            _ra_pay = _ra.get("paid_after_latch")
-            if _ra_pay is not None:
-                note += (f"，锁后自付{int(round(float(_ra_pay)))}"
-                         "（RACE_AUDIT_POST_LATCH_PAY_OBS）")
             # 审计账本并表落库（RACE_AUDIT_STATS_AGGREGATION，第813~822局批复盘
             # 闭环实验）：战斗记录字符串只活在单局日志里，每批复盘都要重新
             # grep 原始日志才能数出「判死→获胜」占比，且 813~827 全窗口落在
