@@ -3623,6 +3623,76 @@ def main() -> int:
     assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" not in d_km_hemo.reason, \
         f"非白绮角色不得出现判死压价留痕: {d_km_hemo.reason}"
 
+    # 3krds) 判死自付压价 DOMINATES 比值缩放（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，
+    #      第 1037~1051 局批复盘）：判死 tick 上实测自付速率≥敌方净损速率时
+    #      平坦 ×1.0 压价带定价不足——1051 局 F33 知识恶魔战 T4~T7 自付
+    #      8.7→7.0/回合 ≥ 敌方净损 5.0→2.1/回合（比值 1.72→3.32），
+    #      TSURV_INCLUSIVE 报可存活 3.4→1.0、2.4→0.5 回合，实战 T7 阵亡
+    #      （自损50/掉血78=64%）；本批 12/15 局共 167 处 DOMINATES 留痕，
+    #      致命 Boss 战自损占掉血 32%~64%，翻盘胜局（1044/1045）DOMINATES
+    #      仅 2 处。DOMINATES tick 压价倍率按 min(cap, 比值) 放大：边际付血
+    #      被拦、超带顶高分翻盘燃料照旧放行（软压价）；≤1 一键回滚平坦压价
+    #      （旧行为零差异），非白绮角色零改动。
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_dom_cap"]) == 3.0, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_dom_cap 静态键或默认值被改"
+
+    def _krds_drive(krh_margin, paid_rate, dom_cap=None):
+        vk = _vivhite_know("sts2-selfcheck-krhdom-")
+        vk.policy["vivhite_hp_cost_play_margin"] = 1.0
+        vk.policy["kill_race_hopeless_hp_pay_margin"] = krh_margin
+        if dom_cap is not None:
+            vk.policy["kill_race_hopeless_hp_pay_dom_cap"] = dom_cap
+        vp = policy.Policy(vk, random.Random(11))
+        vc = _krh_ctx()
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = vp.decide(
+                _krh_state(_turn, _hp, _krh_hand_vivhite()), vc)
+            vc.credit_tags.extend(_d.tags)
+        if paid_rate:
+            # 模拟自付主导战：T3 回合边界 EMA 后 0.7×25=17.5 ≥ 敌方净损 10
+            vp._race_self_paid_rate = paid_rate
+        return vp.decide(
+            _krh_state(3, 45, _krh_hand_vivhite()), vc), vp
+
+    # ① 平坦对照：自付速率账为零（非 DOMINATES）时中等压价带（实付2×6=12）
+    #    照打出——与缩放前旧行为逐参一致，且无 DOM_SCALE 留痕
+    d_kd0, vpol_kd0 = _krds_drive(6.0, 0.0)
+    assert d_kd0.action == "play_card", \
+        f"非 DOMINATES 判死 tick 中等压价带不得翻转旧行为: " \
+        f"{d_kd0.action}（{d_kd0.reason}）"
+    assert "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE" not in d_kd0.reason, \
+        f"非 DOMINATES tick 不得出现比值缩放留痕: {d_kd0.reason}"
+    # ② DOMINATES tick：同一平坦压价带下自付速率账 25（EMA 后 17.5≥净损 10，
+    #    比值 1.75），压价放大 ×1.75 → 同一边际候选翻转为门拦空过，决策链带
+    #    压价+缩放双留痕
+    d_kd, vpol_kd = _krds_drive(6.0, 25.0)
+    assert 1.7 < vpol_kd._race_self_loss_dom_ratio < 1.8, \
+        f"DOMINATES 比值锚口径异常: {vpol_kd._race_self_loss_dom_ratio}"
+    assert d_kd.action == "end_turn", \
+        f"DOMINATES 判死 tick 缩放后边际謦欬候选应被拦下: " \
+        f"{d_kd.action}（{d_kd.reason}）"
+    assert "謦欬出牌门拦下" in d_kd.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_kd.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE" in d_kd.reason, \
+        f"DOMINATES 缩放门拦缺压价/缩放留痕: {d_kd.reason}"
+    # ③ 键≤1 一键回滚：cap=0 时同一 DOMINATES 驱动恢复平坦压价旧行为
+    #    （照打出），且无 DOM_SCALE 留痕
+    d_kdx, vpol_kdx = _krds_drive(6.0, 25.0, dom_cap=0.0)
+    assert d_kdx.action == "play_card", \
+        f"cap≤1 回滚后必须恢复平坦压价旧行为（出牌）: {d_kdx.action}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE" not in d_kdx.reason, \
+        f"cap≤1 回滚后不得出现比值缩放留痕: {d_kdx.reason}"
+    assert d_kdx.params == d_kd0.params, \
+        f"cap≤1 回滚动作用于非 DOMINATES 平坦对照逐参一致: " \
+        f"flat={d_kd0.params} off={d_kdx.params}"
+    # ④ 翻盘燃料不压：DOMINATES tick 上超带顶高分候选（大压价带仍放行的
+    #    致死买命分）照旧放行——用 3krh 同型默认键驱动验证软压价非硬禁
+    d_kd_soft, _ = _krds_drive(1.0, 25.0)
+    assert d_kd_soft.action == "play_card", \
+        f"DOMINATES tick 超带顶高分翻盘燃料不得被硬禁: " \
+        f"{d_kd_soft.action}（{d_kd_soft.reason}）"
+
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
     #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48

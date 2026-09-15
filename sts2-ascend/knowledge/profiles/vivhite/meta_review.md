@@ -3319,3 +3319,87 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1037~1051 局批复盘：判死自付压价按自付主导比值缩放（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE）——自付比敌人杀得更快时不再平坦压价
+
+日期：2026-09-15
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速判死（kill_race）tick 上，当实测謦欬自付速率 ≥ 敌方净损
+  速率（VIVHITE_RACE_SELF_LOSS_DOMINATES）时，平坦 ×1.0 的判死自付压价带
+  （KILL_RACE_HOPELESS_HP_PAY_MARGIN）定价不足——边际謦欬付血以高于敌人的速率
+  压缩真实存活，是致命 Boss 战自损占比 32%~64% 的直接驱动。压价倍率按
+  min(cap, 自付/净损比值) 放大后，只有自付主导战的边际付血被拦，超带顶的高分
+  翻盘燃料（软压价带之上）照旧放行。
+- **EVIDENCE**：1051 局 F33 知识恶魔战完整链（runs/20260915-100725_TBZQY9SGNZR7.json
+  决策 397~426）：T4~T7 竞速自付 8.7→7.0/回合 ≥ 敌方净损 5.0→2.1/回合（比值
+  1.72→2.40→3.32，VIVHITE_RACE_SELF_LOSS_DOMINATES），同帧 TSURV_INCLUSIVE 报
+  可存活 3.4→1.0、2.4→0.5 回合，实战 T7 阵亡（自损50/掉血78=64%）。本批 15 局
+  全量扫描：12 局带 DOMINATES 留痕共 167 处；判死自付合计 1038-F17 11 次/44 血、
+  1040 20/68、1041-F33 13/39、1043 12/37、1047 19/73、1049 7/31、1050 9/34、
+  1051 6/26；致命 Boss 战自损占掉血 1037:32%、1038:34%、1041:43%、1051:64%。
+  判死后翻盘胜局 1044（T2判死→获胜）/1045（T2判死→获胜）DOMINATES 留痕仅 2 处
+  ——自付/净损比值正是「翻盘燃料 vs 纯放血」的区分器，已达 evidence_run_threshold
+  ≥3（1038/1040/1041/1047/1051 等 11 局），不得再只登记待观察。
+- **EXPECTED_SIGNAL**：未来 3~10 局 grep KRH_DOM_SCALE：自付主导+判死战出现
+  「自付/净损比值X.XX放大×Y.YY」门拦留痕；DOMINATES 战单场判死自付合计从
+  26~100 血区间明显回落；致命 Boss 战自损占掉血跌破 50%（对照 1019:90/94、
+  1036:48/210、1051:50/78 同型）；race_audit 判死后实战获胜率不跌破 30%（软带
+  保燃料，本批 1040/1043/1044/1045/1047/1050 共 6 场判死后获胜）；謦欬门僵局闩锁
+  （STALL_ANY/STALL_BREAK 放行）频率不升（缩放只加带不撤豁免，不制造新死循环）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：
+  - `__init__` 与战斗重置块新增 `_race_self_loss_dom_ratio` 属性锚（跨战斗清零）。
+  - `_combat_kill_race_projection` 在 DOMINATES/TSURV_INCLUSIVE 观测段后刷新比值
+    锚：与 VIVHITE_RACE_SELF_LOSS_DOMINATES 完全同口径（同一精修 loss_rate、同一
+    自付速率 EMA），但不挂观测键开关；DOMINATES tick 记 自付/敌方净损 比值
+    （净损≤0 记 inf），否则归 0；本函数 tsurv/ttk/判决零改动。
+  - `_combat` 謦欬门体系在 `_krh_margin` 读取后新增 DOMINATES 比值缩放：读静态键
+    `kill_race_hopeless_hp_pay_dom_cap`（默认 3.0），cap>1 且比值>1 时压价倍率按
+    min(cap, 比值) 放大——只加门带宽度，致死回合豁免、僵局闩锁同步停用、复打税
+    不减免等语义与 KRH_MARGIN 逐字一致；门拦公式注记追加
+    「自付/净损比值X.XX放大×Y.YY（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE）」，
+    门拦行追加 KRH_DOM_SCALE 标签并在 end_turn 收口 _gate_note 显形。键≤1 一键
+    回滚平坦压价（旧行为零差异），非白绮角色零改动（_krh_margin 恒 0 不进分支，
+    比值锚恒 0）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  `kill_race_hopeless_hp_pay_dom_cap=3.0`（含证据注释；≤1=关闭回滚）。
+- sts2-ascend/brain/selfcheck.py：3krds) 四段——① 平坦对照（非 DOMINATES，中等
+  压价带实付2×6=12 照打出、无 DOM_SCALE 留痕）；② DOMINATES tick（自付速率账
+  25→EMA 17.5≥净损 10、比值锚实测 1.75∈(1.7,1.8)），同一候选翻转为门拦空过且
+  压价+缩放双留痕；③ cap=0 一键回滚（同一驱动恢复出牌、与平坦对照逐参一致、
+  留痕全灭）；④ 软压价非硬禁（krh=1.0 小带下 DOMINATES tick 超带顶高分翻盘燃料
+  照打出）。
+- 未触碰拿牌端/血税软顶/竞速投影判决/余量门带公式/任何在线状态、缓存路径；
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3krds 四段；既有
+  3krh/3krhm 判死自付回归、3pese/3pesc 提前放行回归、3vlc 封顶软顶、3br-ttk、
+  3mf 爪牙聚焦全量通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+61/-1，比值锚+缩放+
+  注记+收口标签）、brain/knowledge.py（+15，静态键+证据注释）、brain/selfcheck.py
+  （+70，3krds 四段）；未触碰在线状态；工作区另有 assets/ 长路径删除警告为宿主
+  预置现场，与本批无关。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：KRH_DOM_SCALE 门拦出现场次/拦截候选实付/score 分布（验证
+  min(cap=3.0, 比值) 是否过松——若带 DOMINATES 的判死战边际付血仍高频过门，下一
+  档把 cap 抬到 4~5；若高分燃料被误拦（判死后获胜率 <30% 且 ≥3 局带 DOM_SCALE
+  拦截），先把 cap 降到 2.0，再不行 cap=0 撤回（平坦压价旧行为，证据保留）。
+- DOMINATES 战判死自付合计与致命 Boss 自损占比按 1038/1041/1051 同型对账；謦欬门
+  闩锁放行频率异常升高（缩放加带制造新空过死循环）同样触发 cap=0 撤回。
+- 既有观察：KILL_RACE_HOPELESS_HP_PAY_MARGIN 平坦带留痕继续累计，DOM_SCALE 占比
+  给出「自付主导战在全部判死自付战中的份额」直接读数，供后续是否把比值锚并入
+  tsurv 判决本身（TSURV_INCLUSIVE 行为化）裁决。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

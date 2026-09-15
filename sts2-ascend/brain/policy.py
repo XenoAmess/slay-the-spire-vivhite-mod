@@ -712,6 +712,7 @@ class Policy:
         self._race_same_round_loss_own = 0.0    # 可行动段（我方回合可出牌 tick）扣血
         self._race_same_round_loss_enemy = 0.0  # 非行动段（不可出牌 tick）扣血
         self._race_prev_same_round_loss = 0.0  # 自损账在上一个回合边界时的累计快照
+        self._race_self_loss_dom_ratio = 0.0  # 自付主导比值锚（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，投影 tick 刷新，非 DOMINATES 归 0）
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
         self._stall_combat = None   # 战斗实例身份（僵局检测用）
         self._stall_min_hp = 99999  # 本场敌人总血量的历史最低值
@@ -3480,6 +3481,19 @@ class Policy:
                                     f"（敌方净损{loss_rate:.1f}+自付"
                                     f"{self._race_self_paid_rate:.1f}/回合，"
                                     "VIVHITE_RACE_TSURV_INCLUSIVE_OBS）")
+                    # 自付主导比值锚（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，第
+                    # 1037~1051 局批复盘新增）：与上方 DOMINATES 观测完全同口径
+                    # （同一精修 loss_rate、同一 _race_self_paid_rate EMA），但不
+                    # 挂观测键开关——行为缩放键需要独立稳定的读取锚。每个投影
+                    # tick 刷新：DOMINATES 触发记 自付/敌方净损 比值（净损≤0 记
+                    # inf），否则归 0；纯属性锚，本函数 tsurv/ttk/判决零改动。
+                    self._race_self_loss_dom_ratio = 0.0
+                    if (self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                            and _vivhite_race_self_loss_dominates(
+                                self._race_self_paid_rate, loss_rate)):
+                        self._race_self_loss_dom_ratio = (
+                            self._race_self_paid_rate / loss_rate
+                            if loss_rate > 0.0 else float("inf"))
                     tsurv = my_hp / max(1.0, loss_rate)
                     # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘）：
                     # 无厌沙虫 Liquify 后给玩家挂上计数沙坑（SANDPIT_POWER，初始
@@ -3919,6 +3933,7 @@ class Policy:
             self._race_prev_same_round_loss = 0.0
             self._race_prev_same_round_loss_own = 0.0
             self._race_self_paid_rate = 0.0
+            self._race_self_loss_dom_ratio = 0.0  # DOM_SCALE 比值锚同步重置（不跨战斗残留）
             self._race_zero_intent_rounds = 0
             self._intent_prev = 0
             self._intent_trend = 0
@@ -4482,6 +4497,34 @@ class Policy:
                     pol.get("kill_race_hopeless_hp_pay_margin", 1.0) or 0.0))
             except (TypeError, ValueError):
                 _krh_margin = 0.0
+        # 判死自付压价 DOMINATES 比值缩放（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，
+        # 第 1037~1051 局批复盘新增，静态键 kill_race_hopeless_hp_pay_dom_cap）：
+        # 平坦 ×1.0 压价带对「自付速率≥敌方净损速率」的判死 tick 定价不足——
+        # 1051 局 F33 知识恶魔战 T4~T7 竞速自付 8.7→7.0/回合 ≥ 敌方净损
+        # 5.0→2.1/回合（比值 1.72→3.32），同帧 TSURV_INCLUSIVE 报可存活
+        # 3.4→1.0、2.4→0.5 回合，实战 T7 阵亡（自损50/掉血78=64%）；本批 15
+        # 局 12 局带 DOMINATES 留痕共 167 处，判死自付合计 1038-F17 11 次/44
+        # 血、1040 20/68、1041-F33 13/39、1043 12/37、1047 19/73、1049 7/31、
+        # 1050 9/34、1051 6/26，致命 Boss 战自损占掉血 32%~64%；而判死后翻盘
+        # 胜局（1044/1045）DOMINATES 留痕仅 2 处——比值正是「翻盘燃料 vs 纯
+        # 放血」的区分器。DOMINATES tick 压价倍率按 min(本键, 自付/净损比值)
+        # 放大：边际付血在自付主导战被拦，超带顶高分翻盘燃料照旧放行（软压价
+        # 非硬禁）；致死回合豁免、僵局闩锁停用同步等语义与 KRH_MARGIN 完全
+        # 一致。键≤1 一键回滚（平坦压价旧行为零差异），非白绮角色零改动
+        # （_krh_margin 恒 0 不进分支，比值锚恒 0）。
+        _krh_dom_scale = 1.0
+        _krh_dom_ratio = 0.0
+        if _krh_margin > 0.0:
+            try:
+                _krh_dom_cap = float(pol.get(
+                    "kill_race_hopeless_hp_pay_dom_cap", 3.0) or 0.0)
+            except (TypeError, ValueError):
+                _krh_dom_cap = 0.0
+            _krh_dom_ratio = float(getattr(
+                self, "_race_self_loss_dom_ratio", 0.0) or 0.0)
+            if _krh_dom_cap > 1.0 and _krh_dom_ratio > 1.0:
+                _krh_dom_scale = min(_krh_dom_cap, _krh_dom_ratio)
+                _krh_margin *= _krh_dom_scale
         # 謦欬致死回合无实体封顶软顶开关（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
         # 局批复盘新增，静态键；语义见下方门拦段注释）。余量门带在致死回合恒 0
         # （致死豁免），本闸独立于余量门体系，只在致死回合接管「中标无实体封顶
@@ -4911,6 +4954,11 @@ class Policy:
                             _gate_formula += (
                                 f"+判死竞速自付压价×{_krh_margin:.2f}"
                                 "（KILL_RACE_HOPELESS_HP_PAY_MARGIN）")
+                            if _krh_dom_scale > 1.0:
+                                _gate_formula += (
+                                    f"（自付/净损比值{_krh_dom_ratio:.2f}放大"
+                                    f"×{_krh_dom_scale:.2f}，"
+                                    "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE）")
                         if _hp_rep_extra > 0.0:
                             _gate_formula += (
                                 f"+同回合第{_hp_rep + 1}次复打税"
@@ -4928,6 +4976,8 @@ class Policy:
                                      _hp_pay, _hp_extra, score, _hp_rep)
                         if _hp_krh_extra > 0.0:
                             _gate_row += ("KRH_MARGIN",)
+                            if _krh_dom_scale > 1.0:
+                                _gate_row += ("KRH_DOM_SCALE",)
                         _hp_gate_blocked.append(_gate_row)
                     elif _hp_rep_extra > 0.0:
                         # 复打税已计价但总分仍超带顶放行——供复盘区分「税未接线」
@@ -5509,6 +5559,9 @@ class Policy:
                                   + ("（KILL_RACE_HOPELESS_HP_PAY_MARGIN）"
                                      if len(row) > 6
                                      and row[6] == "KRH_MARGIN" else "")
+                                  + ("（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE）"
+                                     if len(row) > 7
+                                     and row[7] == "KRH_DOM_SCALE" else "")
                                   + ("（VIVHITE_HP_LETHAL_CAP_GATE）"
                                      if len(row) > 6
                                      and row[6] == "LETHAL_CAP_GATE" else "")
