@@ -12239,3 +12239,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.904938839456901局)，BASH(14分/4.150332864155837局)，SETUP_STRIKE(14分/3.773029876505304局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1513 胜，当前目标进阶 0
+
+## 第 1514 局复盘（2026-09-16 04:22）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：SWORD_BOOMERANG, RAMPAGE, TWIN_STRIKE, SWORD_BOOMERANG, SHRUG_IT_OFF, HEMOKINESIS, BLUDGEON, STOMP, ARMAMENTS, PRIMAL_FORCE, INFLAME, FEEL_NO_PAIN, SECOND_WIND, FEEL_NO_PAIN, BLUDGEON, HEMOKINESIS, HOWL_FROM_BEYOND
+- 本局遗物：AKABEKO, TINY_MAILBOX, AMETHYST_AUBERGINE
+- 战斗记录：F15 Monster战 掉血10; F17 Boss战 掉血28｜自损4（可行动段4/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血0; F21 Monster战 掉血24｜自损2（可行动段2/非行动段28，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血27｜竞速审计：T2判死→实战5回合获胜; F33 Boss战 掉血63｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.876367932601665局)，PACTS_END(25分/76.66933001983642局)，BRAND(25分/2.9036062645564105局)，BARRICADE(25分/2.8556678905849386局)，FEED(24分/43.310275147181244局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.887771553518802局)，BASH(14分/4.135806699131292局)，SETUP_STRIKE(14分/3.7598242719375357局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1514 胜，当前目标进阶 0
