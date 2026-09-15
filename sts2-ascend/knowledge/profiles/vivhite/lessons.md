@@ -12228,3 +12228,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.7491491050951073局)，SECRET_TECHNIQUE(21分/2.284912630765265局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.226744235721752局)
 - 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（7回合掉血106，每回合15≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿22张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.55 → 0.58（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 22.50 → 25.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1108 胜，当前目标进阶 3
+
+## 第 1109 局复盘（2026-09-15 23:32）
+- 结果：💀 失败｜进阶 3｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CHIAROSCURO, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_CONSERVED_RECURRENCE
+- 本局遗物：REGAL_PILLOW, PEN_NIB
+- 战斗记录：F6 Monster战 掉血0｜自损17（可行动段17/非行动段7，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损16（可行动段16/非行动段3，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血0｜自损18（可行动段18/非行动段21，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血24｜自损24（可行动段24/非行动段12，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血74｜自损55（可行动段55/非行动段17，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/5.60040527105256局)，REND(43分/5.846635767598583局)，BOLAS(41分/3.058283027278369局)，STRATAGEM(40分/6.345093224392207局)，AUTOMATION(39分/6.25854677787297局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.7395270832272747局)，SECRET_TECHNIQUE(21分/2.2769154365575868局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.190950630896726局)
+- 策略进化：精英战阵亡但满血线进场（95%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，致命Elite战实测自损55/掉血74（74%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1109 胜，当前目标进阶 3
