@@ -12327,3 +12327,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.663753433778517局)，SECRET_TECHNIQUE(21分/2.2139373433054725局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/9.909075147575908局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.56 → 0.53（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1117 胜，当前目标进阶 3
+
+## 第 1118 局复盘（2026-09-16 01:14）
+- 结果：💀 失败｜进阶 3｜到达层数 9｜当局评分 9
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_RECURRENT_STARLIGHT, PANACHE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血12｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血1｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血12｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损8（可行动段8/非行动段24，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血43｜自损22（可行动段22/非行动段20，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/5.426442219401363局)，REND(43分/5.665024160795468局)，BOLAS(41分/2.963284857951524局)，STRATAGEM(40分/6.14799824163587局)，AUTOMATION(39分/6.0641401512654065局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.6544302967602924局)，SECRET_TECHNIQUE(21分/2.2061885626039035局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/9.874393384559394局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Elite战实测自损22/掉血43（51%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1118 胜，当前目标进阶 3
