@@ -12162,3 +12162,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.026810055951283局)，BASH(14分/4.253454662728007局)，SETUP_STRIKE(14分/3.8667769661163667局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1506 胜，当前目标进阶 0
+
+## 第 1507 局复盘（2026-09-15 22:29）
+- 结果：💀 失败｜进阶 0｜到达层数 29｜当局评分 29
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：SECOND_WIND, STOMP, UPPERCUT, CRUELTY, BREAKTHROUGH, CINDER, TWIN_STRIKE, SHRUG_IT_OFF, BARRICADE, TAUNT, SPITE, SHRUG_IT_OFF, RUPTURE, HEMOKINESIS
+- 本局遗物：STONE_CRACKER, LETTER_OPENER, PEAR, POTION_BELT, RAZOR_TOOTH
+- 战斗记录：F12 Unknown战 掉血0; F17 Boss战 掉血51｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血38; F22 Monster战 掉血17; F25 Unknown战 掉血46; F29 Monster战 掉血41｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.9478359917366097局)，PACTS_END(25分/78.5743047449364局)，BRAND(25分/2.9757511045359806局)，BARRICADE(25分/2.9266216233674798局)，OFFERING(24分/17.743493576323406局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/5.009216220755453局)，BASH(14分/4.238567571408459局)，SETUP_STRIKE(14分/3.8532432467349595局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F29——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F29——药水交药线部分胜利回收）
+- 生涯战绩：0/1507 胜，当前目标进阶 0
