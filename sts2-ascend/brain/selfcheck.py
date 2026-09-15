@@ -3222,6 +3222,129 @@ def main() -> int:
         assert "VIVHITE_HP_GATE_STALL_ANY" not in d_ao.reason, \
             f"any=0 回滚键下不得出现全拦截留痕: {d_ao.reason}"
 
+    # 3pnm) 全拦截链近失观测（HP_GATE_STALL_ANY_NEAR_MISS_OBS，第 1104~1110 局批
+    #      复盘）：1105 局 F4 缩小甲虫 12 回合战「连续拦截2/4」两度重建两度被
+    #      低于阈值/不可用回合断链清零，闩锁全程未放行，9 回合零输出自损31/
+    #      掉血41 阵亡（竞速 T9 判死→T12 阵亡）——跨回合「重建→近失→再重建」
+    #      无法从单帧进度注记聚合。链 ≥2 未闩锁清零记一次近失并记峰值，进度
+    #      留痕旁披露；纯观测不改拦截/放行/评分；obs=0 一键回滚（注记消失，
+    #      旧行为零差异）；新战斗重置。
+    # ① 链 2/4→断链（空手牌回合）→重建：近失计 1、峰值 2，重建回合注记披露
+    vknow_nm = _vivhite_know("sts2-selfcheck-vhgate-nmobs-")
+    vknow_nm.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_nm.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_nm.policy["vivhite_hp_gate_stall_any_turns"] = 4
+    vknow_nm.policy["vivhite_hp_gate_free_turn_relief"] = 0.0  # 同 3prv：钉住旧门语义
+    vknow_nm.policy["hp_gate_stall_esc_early"] = 0  # 钉住原闩锁时点
+    vpol_nm = policy.Policy(vknow_nm, random.Random(11))
+    vctx_nm = _vgate_ctx()
+    for _turn in (1, 2):
+        d_nm = vpol_nm.decide(_vgate_stall(_turn, 10), vctx_nm)
+        assert d_nm.action == "end_turn", \
+            f"近失账建立阶段余量门必须照旧拦截: turn={_turn} {d_nm}"
+    assert vpol_nm._hp_gate_stall_any == 2, \
+        f"连续拦截两回合后链长错误: {vpol_nm._hp_gate_stall_any}"
+    assert vpol_nm._hp_gate_stall_any_peak == 2, \
+        f"链峰值必须同步刷新: {vpol_nm._hp_gate_stall_any_peak}"
+    # 断链回合：空手牌（can_play 仍在）→ 参选为空、非门拦，回合结束无被拦
+    # 候选，全拦截链清零并记一次近失（闩锁未放行）
+    _st_nm3 = _vgate_stall(3, 10)
+    _st_nm3["combat"]["hand"] = []
+    d_nm = vpol_nm.decide(_st_nm3, vctx_nm)
+    assert d_nm.action == "end_turn", \
+        f"空手回合必须照旧收口: {d_nm}"
+    assert vpol_nm._hp_gate_stall_any == 0, \
+        f"无拦截回合全拦截链必须清零: {vpol_nm._hp_gate_stall_any}"
+    assert vpol_nm._hp_gate_stall_any_near_miss == 1, \
+        f"链≥2 未闩锁清零必须记一次近失: {vpol_nm._hp_gate_stall_any_near_miss}"
+    assert vpol_nm._hp_gate_stall_any_peak == 2, \
+        f"断链后峰值必须保留: {vpol_nm._hp_gate_stall_any_peak}"
+    assert "HP_GATE_STALL_ANY_NEAR_MISS_OBS" not in d_nm.reason, \
+        f"断链回合无被拦候选不得显形门注记: {d_nm.reason}"
+    d_nm = vpol_nm.decide(_vgate_stall(4, 10), vctx_nm)
+    assert d_nm.action == "end_turn", \
+        f"重建回合余量门必须照旧拦截: {d_nm}"
+    assert vpol_nm._hp_gate_stall_any == 1, \
+        f"断链后重建链长必须从 1 起计: {vpol_nm._hp_gate_stall_any}"
+    assert "全拦截链近失1次（峰值2/阈值4，HP_GATE_STALL_ANY_NEAR_MISS_OBS）" \
+        in d_nm.reason, \
+        f"重建回合缺近失披露注记: {d_nm.reason}"
+    # ② 链=1 断链是单回合噪声，不计近失
+    vknow_nm1 = _vivhite_know("sts2-selfcheck-vhgate-nmobs-one-")
+    vknow_nm1.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_nm1.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_nm1.policy["vivhite_hp_gate_stall_any_turns"] = 4
+    vknow_nm1.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_nm1.policy["hp_gate_stall_esc_early"] = 0
+    vpol_nm1 = policy.Policy(vknow_nm1, random.Random(11))
+    vctx_nm1 = _vgate_ctx()
+    d_nm1 = vpol_nm1.decide(_vgate_stall(1, 10), vctx_nm1)
+    assert d_nm1.action == "end_turn" and vpol_nm1._hp_gate_stall_any == 1
+    _st_nm1 = _vgate_stall(2, 10)
+    _st_nm1["combat"]["hand"] = []
+    d_nm1 = vpol_nm1.decide(_st_nm1, vctx_nm1)
+    assert d_nm1.action == "end_turn"
+    assert vpol_nm1._hp_gate_stall_any == 0 \
+        and vpol_nm1._hp_gate_stall_any_near_miss == 0, \
+        ("链=1 断链不得计近失: "
+         f"any={vpol_nm1._hp_gate_stall_any} "
+         f"near_miss={vpol_nm1._hp_gate_stall_any_near_miss}")
+    # ③ 闩锁放行后的清零属正常代谢，不计近失（复用 3prv 形态：4 连拦达标闩锁，
+    #    放行后余量门停用、回合结束再无被拦候选——near_miss 必须保持 0）
+    vknow_nm2 = _vivhite_know("sts2-selfcheck-vhgate-nmobs-latch-")
+    vknow_nm2.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_nm2.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_nm2.policy["vivhite_hp_gate_stall_any_turns"] = 4
+    vknow_nm2.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_nm2.policy["hp_gate_stall_esc_early"] = 0
+    vpol_nm2 = policy.Policy(vknow_nm2, random.Random(11))
+    vctx_nm2 = _vgate_ctx()
+    for _turn in (1, 2, 3, 4):
+        vpol_nm2.decide(_vgate_stall(_turn, 10), vctx_nm2)
+    d_nm2 = vpol_nm2.decide(_vgate_stall(5, 10), vctx_nm2)
+    assert d_nm2.action == "play_card" and vpol_nm2._hp_gate_stall_latch, \
+        f"连续拦截达标必须闩锁放行: {d_nm2}"
+    for _turn in (6, 7):
+        vpol_nm2.decide(_vgate_stall(_turn, 10), vctx_nm2)
+    assert vpol_nm2._hp_gate_stall_any_near_miss == 0, \
+        ("闩锁放行后的链清零不得计近失: "
+         f"{vpol_nm2._hp_gate_stall_any_near_miss}")
+    # ④ 新战斗近失账与峰值同步重置
+    d_nm3 = vpol_nm.decide(_vgate_stall(1, 10), _vgate_ctx())
+    assert d_nm3.action == "end_turn"
+    assert vpol_nm._hp_gate_stall_any_near_miss == 0 \
+        and vpol_nm._hp_gate_stall_any_peak == 1, \
+        ("新战斗近失账重置错误: "
+         f"near_miss={vpol_nm._hp_gate_stall_any_near_miss} "
+         f"peak={vpol_nm._hp_gate_stall_any_peak}")
+    assert "HP_GATE_STALL_ANY_NEAR_MISS_OBS" not in d_nm3.reason, \
+        f"近失清零后不得显形近失注记: {d_nm3.reason}"
+    # ⑤ obs=0 一键回滚：同一断链序列行为逐字一致、注记全灭（计数不外显）
+    vknow_no = _vivhite_know("sts2-selfcheck-vhgate-nmobs-off-")
+    vknow_no.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_no.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_no.policy["vivhite_hp_gate_stall_any_turns"] = 4
+    vknow_no.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_no.policy["hp_gate_stall_esc_early"] = 0
+    vknow_no.policy["hp_gate_stall_any_near_miss_obs"] = 0
+    vpol_no = policy.Policy(vknow_no, random.Random(11))
+    vctx_no = _vgate_ctx()
+    for _turn in (1, 2):
+        d_no = vpol_no.decide(_vgate_stall(_turn, 10), vctx_no)
+        assert d_no.action == "end_turn", \
+            f"obs=0 回滚键下拦截行为不得改变: turn={_turn} {d_no}"
+    _st_no3 = _vgate_stall(3, 10)
+    _st_no3["combat"]["hand"] = []
+    d_no = vpol_no.decide(_st_no3, vctx_no)
+    assert d_no.action == "end_turn", \
+        f"obs=0 回滚键下断链回合收口不得改变: {d_no}"
+    d_no = vpol_no.decide(_vgate_stall(4, 10), vctx_no)
+    assert d_no.action == "end_turn", \
+        f"obs=0 回滚键下重建回合行为不得改变: {d_no}"
+    assert "VIVHITE_HP_GATE_STALL_ANY 进度" in d_no.reason \
+        and "HP_GATE_STALL_ANY_NEAR_MISS_OBS" not in d_no.reason, \
+        f"obs=0 回滚键下不得出现近失注记: {d_no.reason}"
+
     # 3pesc) 謦欬门空过升级账观测（HP_GATE_STALL_ESC_OBS，第 873~899 局批复盘）：
     #      门拦空过回合在敌意图升级轨迹（_intent_trend>0）下并非免费——本批 369
     #      次门拦空过中 98 次同帧带意图升级注记、累计 +762 意图增量（27/27 局

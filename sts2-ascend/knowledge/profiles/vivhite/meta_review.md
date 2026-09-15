@@ -3490,3 +3490,85 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1104~1110 局批复盘：謦欬门全拦截链近失观测（HP_GATE_STALL_ANY_NEAR_MISS_OBS）——闩锁结构性近失从单帧进度注记变为可聚合账
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬余量门顶格 3.0 后，放血死循环战的唯一出口
+  VIVHITE_HP_GATE_STALL_ANY 闩锁（连续拦截≥4 且敌血量零进展≥3）在「断链型」
+  战斗里结构性近失——全拦截链反复重建到 ≥2，却被低于普通阈值/空手/能量耗尽
+  回合断链清零，闩锁全程不放行，战斗退化为每回合付 2 血格挡的纯放血。若未来
+  3~10 局近失注记聚集在自损重的升级型普通战阵亡局，闩锁阈值/断链语义需重设
+  （下批行为化）；若近失 ≈0，1105-F4 形态只是普通断链噪声，假设证伪。
+- **EVIDENCE**：1105 局（runs/20260915-223003_ZSZLFGN65VRE.json）F4 缩小甲虫
+  12 回合战逐条核对：T2 留痕「连续低危拦截2/6」「连续拦截2/4含未覆盖（零进展
+  1）」，随后 T3「确认无牌可出（能量耗尽）」与多轮「评估后无值得出的牌」穿插，
+  进度注记消失（链被清零），T10 又见「连续低危拦截2/6」——链两度到 2/4 两度
+  断链，闩锁全程未放行；T3 黄金构图一击后连续 9 回合零输出，自损31/掉血41
+  （76%）阵亡，竞速审计 T9 判死→实战 T12 阵亡。同批 1104-F33（自损15/掉血63，
+  非行动段46）、1108-F33（自损29/掉血106）、1109-F14（自损55/掉血74）、
+  1110-F17（自损36/掉血81）同为高自损形态；三级謦欬旋钮（life_cost_weight
+  -2.975 触底、hp_cost_play_margin 3.0 顶格、life_cost_deck_cap 15.0 触底）
+  已全尽，证据只剩留痕通道，闩锁是否放得太晚从单帧「连续拦截X/4」注记无法
+  跨回合聚裁决，已达 evidence_run_threshold≥3，不得再只登记待观察。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链 grep
+  HP_GATE_STALL_ANY_NEAR_MISS_OBS 显形「全拦截链近失N次（峰值M/阈值K）」。
+  证伪条件：近失注记 ≈0 或只落在无伤长战；证实条件：近失集中在自损≥掉血
+  50% 的升级型（意图趋势持续为正）普通战/硬仗阵亡局，且峰值停在阈值-1。
+  撤回条件：`hp_gate_stall_any_near_miss_obs=0` 注记消失（计数为纯内部账，
+  行为零差异）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：全拦截账（VIVHITE_HP_GATE_STALL_ANY）记账段
+  新增影子分账——`_hp_gate_stall_any_peak`（本场链峰值）与
+  `_hp_gate_stall_any_near_miss`（链≥2 未闩锁清零次数）；链的迁移语义逐字
+  不变（被拦累加、无拦清零），闩锁放行后的清零属正常代谢不计、链=1 断链为
+  单回合噪声不计；新战斗随 `_combat_stall_check` 同步重置。全拦截进度留痕旁
+  新增近失披露注记「；全拦截链近失N次（峰值M/阈值K，
+  HP_GATE_STALL_ANY_NEAR_MISS_OBS）」，由静态键
+  `hp_gate_stall_any_near_miss_obs`（默认 1）门控，0=注记消失旧行为零差异；
+  非白绮角色 `_hp_gate_blocked` 恒空，零改动。拦截/放行/评分/动作零改动
+  （纯观测锚，同 HP_GATE_STALL_ESC_OBS 形态）。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 注册
+  `hp_gate_stall_any_near_miss_obs=1`（含 1105-F4 证据注释）。
+- sts2-ascend/brain/selfcheck.py：3pnm 五段——① 链 2/4→空手断链→重建：
+  近失计 1、峰值 2 保留、断链回合无门注记、重建回合注记逐字显形；② 链=1
+  断链不计近失；③ 闩锁放行后清零不计近失（3prv 同形态 4 连拦达标闩锁）；
+  ④ 新战斗近失账与峰值同步重置、注记消失；⑤ obs=0 一键回滚：同一断链
+  序列行为逐字一致、进度注记照旧、近失注记全灭。
+- 未触碰余量门带/复打税/零压闸/自由回合减免/闩锁条件本体（阈值与断链语义
+  的重设留给观测结算后的下批）；runs/stats/policy.json/lessons.md/
+  review_queue 等只读在线状态未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3pnm 五段；既有
+  3prv 全拦截族、3pesc/3pese 升级账族、3prz 零压闸族、3slph 相位分账全量
+  通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（影子分账+披露
+  注记+静态键求值）、brain/knowledge.py（静态键+证据注释）、
+  brain/selfcheck.py（3pnm 五段）；未触碰在线状态；工作区 assets/ 长路径
+  删除告警为宿主预置现场，与本批无关、不入 commit。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：HP_GATE_STALL_ANY_NEAR_MISS_OBS 显形次数/局与分布楼层/
+  敌组合；对照 VIVHITE_HP_GATE_STALL_ANY 闩锁放行次数——近失≫放行且近失局
+  集中阵亡，则下批评估闩锁阈值（4→3）或断链语义（衰减替代清零）的行为化；
+  近失≈0 则假设证伪，1105-F4 归为普通断链噪声，不再动闩锁。
+- 对照指标：升级型普通战（意图趋势持续为正）自损/掉血占比是否仍 ≥50%、
+  謦欬门拦下留痕的楼层分布；若近失注记出现在闩锁已放行战斗，说明记账
+  接线错误（排查 latch 口径）而非行为证据。
+- 撤回：`hp_gate_stall_any_near_miss_obs=0` 注记即刻消失；影子分账为纯
+  内部账不参与任何评分/放行分支，键关闭即旧行为零差异；如需整体拆除，
+  回退本批 commit 即可（自检 3pnm 同步锚定旧口径）。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
