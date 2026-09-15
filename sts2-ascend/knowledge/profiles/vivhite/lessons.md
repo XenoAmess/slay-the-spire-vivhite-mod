@@ -12030,3 +12030,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.928241157956468局)，SECRET_TECHNIQUE(21分/2.433762212220923局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.892960781004456局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：2/1090 胜，当前目标进阶 2
+
+## 第 1091 局复盘（2026-09-15 18:45）
+- 结果：💀 失败｜进阶 2｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, ROLLING_BOULDER
+- 本局遗物：POMANDER, BOOMING_CONCH, PANTOGRAPH
+- 战斗记录：F5 Monster战 掉血2｜自损14（可行动段14/非行动段11，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血6｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血1｜自损12（可行动段12/非行动段10，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Unknown战 掉血0｜自损12（可行动段12/非行动段5，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损44（可行动段44/非行动段54，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.2035138468178928局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.416891293736175局)，FLASH_OF_STEEL(37分/7.109704963401761局)，CINDER(35分/2.6300938987058364局)，ROLLING_BOULDER(34分/12.322439065055978局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.917992313903621局)，SECRET_TECHNIQUE(21分/2.42524404447815局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/10.854835418270941局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿10张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损44/掉血78（56%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：2/1091 胜，当前目标进阶 2
