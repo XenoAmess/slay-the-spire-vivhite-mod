@@ -5401,6 +5401,54 @@ class Policy:
                 if _krh_pay > 0.0:
                     why += (f"｜竞速判死自付{_krh_pay:g}血"
                             "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
+            # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
+            # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
+            # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，
+            # 成功打出的这张牌即本回合唯一一次出牌，单卡抉择直接决定当回合全部
+            # 输出/格挡。1513 局 F17 仪式兽 T7（hp22/意图15）单卡选耸肩无视
+            # （格挡8/抽1，当回合 0 伤害）、T10 选突破+（13），全程总伤≈237 vs
+            # 血池 252——终局差距恰约一张最高伤攻击牌，而现有留痕（竞速投影/
+            # 致死生还线/自付观测）都无法按「硬上限回合单卡抉择」切片复核
+            # 「本选 vs 手牌最高伤备选」。纯观测锚：披露本选期望伤害与手牌中
+            # 能量可负担的最高期望伤害备选（同 _est 口径，AOE 乘敌数），评分/
+            # 放行/动作零改动；键=0 注记消失（旧行为零差异）。
+            try:
+                _rsp_obs = bool(int(float(pol.get(
+                    "ringing_single_play_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _rsp_obs = False
+            if _rsp_obs and character_power_amount(
+                    player.get("powers") or [], RINGING_POWER_ID) > 0:
+                _rsp_best_name = ""
+                _rsp_best_est = 0.0
+                for _rc in hand:
+                    if _rc is card or not _rc.get("playable"):
+                        continue
+                    if self._card_unavailable(_rc):
+                        continue
+                    _rcost = (energy if _rc.get("costs_x")
+                              else (_rc.get("energy_cost") or 0))
+                    if _rcost > energy:
+                        continue
+                    _rd, _, _rh = card_numbers(_rc)
+                    if _rd <= 0:
+                        continue
+                    _rest = float(_rd * _rh)
+                    if ("所有敌人" in _text(_rc)
+                            or "all enemies" in _text(_rc).lower()
+                            or (_rc.get("target_type") or "") == "AllEnemies"):
+                        _rest *= max(1, len(enemies))
+                    if _rest > _rsp_best_est:
+                        _rsp_best_est = _rest
+                        _rsp_best_name = _rc.get("name") or _rc.get("card_id") or "?"
+                if _rsp_best_name:
+                    _rsp_rel = "<" if _est < _rsp_best_est else "≥"
+                    why += (f"｜昏眩单卡抉择：本选期望伤{_est:.0f}{_rsp_rel}"
+                            f"手牌最高伤备选{_rsp_best_name}({_rsp_best_est:.0f})"
+                            "（RINGING_SINGLE_PLAY_OBS）")
+                else:
+                    why += ("｜昏眩单卡抉择：手牌无其他可出攻击备选"
+                            "（RINGING_SINGLE_PLAY_OBS）")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",

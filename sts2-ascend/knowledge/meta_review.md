@@ -10941,3 +10941,100 @@ retry_resolution: none (no replay target; local production observation)
    预警）；③ RESPAWN_ROSTER_READ_OBS K=id 注记与名册遭遇现场；
    ④ KIN 战损 55/65% 基线；⑤ REMOVAL_COST 翻案/随附比（累计
    12 翻 46 随附）。
+
+# 2026-09-16（第 1505~1513 局复盘，异步追及队列 9 局 exact_batch 全齐；观测锚 #1：RINGING_SINGLE_PLAY_OBS 昏眩单卡抉择留痕——仪式兽限打1张回合的「本选 vs 手牌最高伤」从此可逐局裁决）
+
+## 一、失败包核对（固定动作）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待回放失败包、
+  无 replay target。
+- 上批（1500~1504）last_paths 关键签名已离线核对：RACE_ALLIN_LETHAL_COVER_OBS
+  （policy.py race_lethal_cover 自观分支、knowledge.py
+  `race_allin_lethal_cover_obs`、selfcheck 3rallc）、LETHAL_SURVIVABLE_LINE、
+  RESPAWN_ROSTER_READ_OBS 均在当前 HEAD 且健在可用。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 二、本批证据核对与部分裁决
+
+- 队列 requested=[1505..1513]，exact 9/9、missing=0。9 局全败：4 局
+  一幕 Boss F17 竞速判死后阵亡（1506 T2→3回合、1510 T2→7回合、
+  1512 T2→7回合、1513 T2→10回合），1505 F23 小怪阵亡、1508 F15
+  小怪阵亡、1509/1511 二幕 Boss F33 阵亡。旋钮侧 kill_bonus 20.00、
+  burst_starve 双旋钮、饥饿带、前夜锻造线、长战加成上限全顶格，
+  kill_race_prior_eff 触底——与上批一致，不重复干预。
+- **最新死亡局完整链裁决（1513，YTAQH818DKTD，F17 仪式兽）**：
+  逐条阅读 32 条 F17 决策+全程 203 决策。进场 64/85（75%），
+  T2 判死入锁，实战 10 回合阵亡。关键切片：T7（03:19:02，hp22/
+  意图15）玩家带 RINGING_POWER×1（昏眩，原生 RingingPower.ShouldPlay=
+  回合内首牌打出后全手牌 blocked_by_hook，本回合限打1张，机制
+  已核 mechanics/powers.jsonl），单卡选【耸肩无视】（格挡8/抽1，
+  当回合 0 伤害，余 2 能量全废）；T10 同为昏眩回合选【突破+】13。
+  全程总伤≈237 vs 血池 252——终局差距恰约一张最高伤攻击牌
+  （双重打击+14）。昏眩回合单卡抉择是仪式兽 50% 死亡率（台账
+  77死/155战）中唯一无留痕的决策面：竞速投影/致死生还线/自付观测
+  都无法按「硬上限回合单卡抉择」切片复核。
+- **RACE_ALLIN_LETHAL_COVER_OBS（1500~1504 批部署）首窗**：本批
+  9 局 run JSON 未见该注记样本（1504 同类反例情境未再现），
+  同类样本仍 1 局 <3，继续观察不登记失效。
+- **竞速台账**：480/1068（44.9%），较 470/1048 边际 +10/+20，
+  走向平稳，未触 ≥46% 预警。
+
+## 三、本批最高价值问题行为修改 #1（观测）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RINGING_SINGLE_PLAY_OBS**：RINGING_POWER（昏眩，本回合限打1张）生效回合，成功打出的牌即本回合唯一一次出牌，单卡抉择直接决定当回合全部输出/格挡；1513-F17-T7 单卡选格挡8/抽1（当回合 0 伤害），终局总伤≈237 vs 血池 252，差距恰约一张最高伤攻击牌，而现有留痕无法切片复核「本选 vs 手牌最高伤备选」 | |
+| 假设 | HYPOTHESIS：昏眩回合单卡选择若系统性偏离最高期望伤害（竞速入锁语境下仍选格挡/功能牌），每个昏眩回合损失约一个身位输出，是仪式兽 50% 死亡率的可修复分量；EVIDENCE：1513-F17-T7/T10 两个昏眩回合合计 13 伤害 vs 两回合常态期望≈50，终局差≈15 血；EXPECTED_SIGNAL：未来 3~10 局昏眩回合注记披露「本选期望伤 vs 手牌最高伤备选」，可统计偏离频率与其所在局 Boss 余血差距的相关性 | |
+| 落地动作 | ① brain/policy.py：主评分出牌提交位新增昏眩单卡抉择注记分支（`ringing_single_play_obs`，默认 1）：玩家带 RINGING_POWER 时扫描手牌中可出/可用/能量可负担的最高期望伤害攻击备选（同 _est 口径，AOE 乘敌数），注记披露本选期望伤、比较符（</≥）与备选名/伤害，无备选时如实披露；② brain/knowledge.py：DEFAULT_POLICY 新增静态键 `ringing_single_play_obs: 1`；③ brain/selfcheck.py：3rsp 三对照（复用 3pcap 夹具：昏眩在场注记含备选披露 / 无昏眩无注记 / 键=0 严格回滚） | |
+| 行为边界 | **纯观测、零行为改动**：评分、候选、放行、动作、竞速投影全不变；注记只追加在主评分出牌位 why；键=0 注记消失（旧行为零差异） | |
+| 自检 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3rsp 三对照 + 既有 3pcap/3stale/3rallc/3lsl/3yr 全系列锚原样通过） | |
+| 未来 3~10 局观察指标 | ① 昏眩回合 RINGING_SINGLE_PLAY_OBS 注记出现率（每场仪式兽战 1~3 回合）；② 「本选期望伤<手牌最高伤备选」偏离次数；③ 偏离所在局的 Boss 终局余血是否 ≤ 一张最高伤备选（≤1 身位差）——相关则升级行为改动（硬上限回合单卡排序按当回合冲击重排）；④ 注记有无误报（非昏眩回合出现=缺陷） | |
+| 继续调整/撤回条件 | ①~③ 任一成立且 ≥3 局一致 → 转行为锚（预注册：硬上限回合单卡按纯当回合冲击排序）；注记误报或统计偏差 → 修口径；④ 出现 → 热修 | |
+| 撤回方法 | knowledge/policy.json 写 `ringing_single_play_obs: 0` 观测即隐（selfcheck 3rsp③ 为证）；或删除 policy.py 注记分支、knowledge.py 静态键与 selfcheck 3rsp 段，完全回滚 | |
+
+## 四、历史问题处置
+
+1. **historical_zero_code_debt**：本批无新零代码债务；既有观察债
+   逐项在案（在观察，非登记即后）。
+2. **RACE_ALLIN_LETHAL_COVER_OBS（1500~1504 批观察）**：本批无新
+   样本，继续观察，不登记失效。
+3. **RESPAWN_ROSTER_READ_OBS / RESPAWN_CONFIRM_OBS /
+   RESPAWN_NATIVE_VETO_OBS**：本批注记健在（1513 全程 K=id 读侧
+   注记正常），对应分支顺序不登记失效。
+4. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：1513-F8
+   两连 REMOVAL_COST_TARGET 廉价减员加分+翻案随附注记健在；
+   累计 12 翻 46 随附，KIN n=4 对照未更新，维持数据档观察。
+5. **竞速台账**：480/1068（44.9%），<46% 预警线，继续观察。
+6. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   定价豁免旁观 / BARRICADE_BANK_VALUE**：本批无对应分支现场，顺序不登记失效。
+7. **RACE_HAND_TAX_FIRE / HAND_TAX_NOTE_DEDUP**：本批无重复税注记
+   现场，顺序不登记失效。
+8. 其余在观（stance 双生偏差 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池校准 / 事件侧 least-bad / 无色药水评估 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+   对应分支现场，顺序不登记失效。
+
+## 五、新学到的经验知识
+
+1. **硬出牌上限回合的「单卡抉择」是独立决策面，必须单独留痕**：
+   RingingPower.ShouldPlay=回合内首牌后全部不可打——昏眩回合只有
+   一次出牌机会，任何「防御前置/抽牌/功能」选择都以放弃当回合全部
+   输出为代价。1513-F17 证明该决策面能独立决定胜负（两个昏眩回合
+   少打≈37 伤害，终局差≈15 血）。凡遇「每回合限 N 张」类机制
+   （昏眩/懒惰等），复盘应把单卡选择单独切片对账，不能混在整场
+   dpt 均值里。
+2. **机制级证据先查原生再归因**：T7/T10「能量2全手牌
+   blocked_by_hook」初看像宿主故障，实查 mechanics/powers.jsonl
+   确认是 BeastCry→RingingPower 的原生昏眩——出牌侧异常先核
+   unplayable_preventer_id 与原生 power 机制，再谈策略归责。
+3. 观察点（待后续批次核对）：① RINGING_SINGLE_PLAY_OBS 注记样本
+   与偏离-余血相关性（三节指标①~③）；② 竞速台账 480/1068 走向
+   （≥46% 预警）；③ RACE_ALLIN_LETHAL_COVER_OBS 注记样本
+   （≥3 局兑现指标）；④ RESPAWN_ROSTER_READ_OBS K=id 注记与名册
+   遭遇现场；⑤ KIN 战损 55/65% 基线；⑥ REMOVAL_COST 翻案/随附比
+   （累计 12 翻 46 随附）。
+

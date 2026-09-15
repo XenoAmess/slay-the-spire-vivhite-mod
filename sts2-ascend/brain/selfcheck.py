@@ -14890,6 +14890,33 @@ def main() -> int:
             and "RACE_PLAY_CAP_NO_UPSHIFT" not in d_pcap3.reason), \
         f"键=False 未回滚旧口径: {d_pcap3.action}（{d_pcap3.reason}）"
 
+    # 3rsp) 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第1505~1513局批复盘）：
+    #      RINGING_POWER（本回合限打1张）生效回合，成功打出的牌即本回合唯一
+    #      出牌——1513-F17 仪式兽 T7 单卡选格挡8/抽1（当回合0伤害），终局
+    #      总伤≈237 vs 血池252，差距恰约一张最高伤攻击牌。夹具复用 pcap：
+    #      手牌两张10伤速攻、玩家昏眩×1。① 昏眩在场：主评分出牌注记披露
+    #      本选期望伤与手牌最高伤备选（另一张速攻）；② 无昏眩：同口径出牌
+    #      无注记；③ 键=0：昏眩在场也严格回滚（无注记）。
+    pol_rsp1 = pcap_policy()
+    d_rsp1 = pol_rsp1.decide(pcap_state(2, 1), pcap_ctx)
+    assert (d_rsp1.action == "play_card"
+            and "RINGING_SINGLE_PLAY_OBS" in d_rsp1.reason
+            and "昏眩单卡抉择" in d_rsp1.reason
+            and "最高伤备选" in d_rsp1.reason
+            and "速攻" in d_rsp1.reason), \
+        f"昏眩在场单卡抉择注记缺失: {d_rsp1.action}（{d_rsp1.reason}）"
+    pol_rsp2 = pcap_policy()
+    d_rsp2 = pol_rsp2.decide(pcap_state(2, 0), pcap_ctx)
+    assert (d_rsp2.action == "play_card"
+            and "RINGING_SINGLE_PLAY_OBS" not in d_rsp2.reason), \
+        f"无昏眩时误出单卡抉择注记: {d_rsp2.action}（{d_rsp2.reason}）"
+    pol_rsp3 = pcap_policy()
+    pol_rsp3.know.policy["ringing_single_play_obs"] = 0
+    d_rsp3 = pol_rsp3.decide(pcap_state(2, 1), pcap_ctx)
+    assert (d_rsp3.action == "play_card"
+            and "RINGING_SINGLE_PLAY_OBS" not in d_rsp3.reason), \
+        f"键=0 未回滚单卡抉择注记: {d_rsp3.action}（{d_rsp3.reason}）"
+
     # 3stale) 入锁新鲜窗抑制换挡上浮（RACE_UPSHIFT_STALE，第1409~1413局
     #      批复盘）：1413-F17 瀑布巨兽 T5~T8 入锁后全攻回合已进入实测窗，
     #      投影仍逐 tick 叠加×(1+换挡上浮0.20)（实测24~30→29~35伤/回合
