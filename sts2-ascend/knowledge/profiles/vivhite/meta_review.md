@@ -3234,3 +3234,88 @@ ENRAGE(+2 力量) 循环）。当前「减员成本加分+延续集火」把火�
 ## REPLAY
 
 retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
+
+# 第 1017~1036 局批复盘：謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE）——致死豁免前提在封顶窗坍塌
+
+日期：2026-09-15
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：謦欬余量门带在致死回合整体豁免（_hp_play_margin 恒 0），其设计前提是
+  「付血换输出买命/抢斩杀当场兑现」；但中标目标处于无实体封顶窗（评分侧已把每 hit
+  折成 1、非击杀）时，输出兑现率坍塌为 ≈1/hit，致死豁免的前提不再成立——致死回合
+  謦欬攻击仍在零门带下实付生命换取封顶伤害，直接压缩 tsurv 却几乎不推进 ttk。给该
+  场景追加 实付×键 的软顶门带（只拦边际付血、超带顶高分放行）后，封顶窗致死回合的
+  边际謦欬付血应消失，无实体敌硬仗自损占比回落。
+- **EVIDENCE**：本批 20 局 1 胜 19 负（生涯 2/1036）。1036 局（TNDEC9RUL2UU）F48
+  TEST_SUBJECT 战全链逐条核读：T10~T12 连续 hp-cost=2 攻击（终止条件+/闭域映射/
+  绯色面积+/启发式护盾/弦光投影+）以 ≈1.0 封顶伤害打出，「敌无实体逐hit封顶1
+  （ENEMY_INTANGIBLE_CAP_OBS）」与「无甲孤注抢斩杀/致死竞速抢斩杀/竞速判死自付2血」
+  同帧；全场自损48（非行动段178）。INTANGIBLE_TTK_OBS 已在 974/979/1017/1023/1026/
+  1032/1036 共 7 个独立局显形（本批 45 次/5 局），≥evidence_run_threshold=3——按
+  闭环规则该问题不得再只登记待观察；上批预注册的行为化评审窗口本批兑现。本批 Boss
+  战自损/掉血占比普遍 25~50%（1019 局 F17：自损90 vs 掉血94）。
+- **EXPECTED_SIGNAL**：未来 3~10 局 grep VIVHITE_HP_LETHAL_CAP_GATE：① 致死回合
+  封顶窗謦欬候选被拦显形次数/局数与实付额分布；② TEST_SUBJECT/SOUL_FYSH 等无实体
+  敌硬仗的「自损/掉血」较本批同型（1036:48/210、1017:33/95）回落；③ 超带顶高分
+  放行照旧（软压价非硬禁），非封顶窗致死回合出牌行为零变化（夹具③护住）。
+  证伪/撤回：注记零显形（封顶窗致死回合本无边际付血），或显形但对应战斗自损/结局
+  无改善甚至恶化 → 置 vivhite_hp_lethal_cap_gate_margin=0 撤回（致死豁免旧行为
+  零差异，夹具②护住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：謦欬门体系新增致死回合无实体封顶软顶——lethal_now
+  且白绮 profile 时读取静态键 vivhite_hp_lethal_cap_gate_margin（默认 3.0）；手牌
+  候选循环内（余量门/零压闸之后、eligible_for_best 收口之前），候选 why 带
+  ENEMY_INTANGIBLE_CAP_OBS（评分侧已折算每 hit=1、非击杀，合法击杀天然不挂注记即
+  天然豁免）且实付>0 时，在普通阈值上追加 实付×键 门带，拦下「过普通阈值但未过
+  软顶」的边际付血候选（入 _hp_gate_blocked，退出 marginal/残能救场通道，与
+  KRH_MARGIN 同构软压价）；end_turn 收口 _gate_note 追加 LETHAL_CAP_GATE 标签。
+  非致死回合、非白绮角色、非封顶窗目标、键=0 四种情形逐字回旧口径。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 新增静态键
+  vivhite_hp_lethal_cap_gate_margin=3.0（默认 ≈ 余量门 2.75+判死压价 1.0 在非致死
+  判死 tick 等效门带量级的保守下沿；0=一键回滚致死豁免零差异）。
+- sts2-ascend/brain/selfcheck.py：3vlc) 五断言——① 致死回合+中标封顶窗：边际謦欬
+  攻击翻转为门拦空过且带 VIVHITE_HP_LETHAL_CAP_GATE 留痕；② 键=0 严格回滚（同一
+  驱动恢复致死出牌、留痕全灭）；③ 致死回合无无实体目标：出牌照旧不挂留痕；④
+  封顶窗内合法击杀（hp≤hits）：不挂封顶注记、软顶天然豁免；⑤ DEFAULT_POLICY
+  静态键默认值钉住 3.0。
+- 不改余量门带/复打税/零压闸/KRH 压价/僵局闩锁/竞速投影与任何评分、演化路径；
+  不动 runs/stats/policy.json/lessons.md/review_queue 等只读在线状态。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（新增 3vlc 五断言；既有
+  3krh/3krhm 判死自付族、3pese/3pesc 空过升级账族、3br-ttk-intangible-obs、
+  3mf 爪牙族等全部既有夹具通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+49/+2 行软顶开关+
+  门拦段+收口标签）、brain/knowledge.py（+15，静态键+证据注释）、
+  brain/selfcheck.py（+71，3vlc 五断言）；未触碰只读在线状态；克隆残留的
+  assets 超长路径删除告警为宿主挂载遗留，与本批无关、不入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：VIVHITE_HP_LETHAL_CAP_GATE 显形次数/局数、被拦候选实付额与
+  score 分布（校核默认 3.0 门带是否过松/过紧——全部边际付血仍超带顶放行则下一批
+  抬键，误拦超带顶以下真实高分（如威胁分成抬升）则降键）；无实体敌硬仗自损/掉血
+  与 1017/1036 同型对照；非封顶窗致死回合出牌抽查（应零变化）。
+- 显形且自损回落 → 维持现值；零显形 → 检查封顶窗致死回合是否本就无边际付血
+  （注记频率对账）再评；显形战斗结局恶化（拦下后更快阵亡）→ 撤回=
+  vivhite_hp_lethal_cap_gate_margin=0（旧行为零差异，夹具②护住）。
+- 上批 MINION_FOCUS_OBS 结算：本批 20 局 0 显形——但 1027 局 KIN_FOLLOWER 战
+  （MINION_POWER×2 快照在产）发生于 04:08 复盘提交前（旧代码），键生效后仅
+  1029~1036 约 8 局暴露窗且无女王/爪牙中标场景，预注册 10 局观察窗未满，维持
+  minion_focus_obs=True 顺延至下批结算，不触发撤回。
+- HP_GATE_STALL_ESC_EARLY 首验：投影口径修正后本批 8 局显形 70 次，杠杆已在产；
+  提前放行战斗回合数/自损对照留待下批随 3pese 族一并复核。
+- KILL_RACE_HOPELESS_HP_PAY_MARGIN 续观：本批 12 局显形 45 次（vs 上批 8 次），
+  KRH_OBS 367 次/20 局（≈18.4 次/局，与历史基线持平）——非致死判死 tick 压价
+  启用率上升；致死回合缺口由本批 LETHAL_CAP_GATE 接管封顶窗子集，其余致死付血
+  场景（非封顶窗）维持致死豁免定案。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

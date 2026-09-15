@@ -3623,6 +3623,77 @@ def main() -> int:
     assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" not in d_km_hemo.reason, \
         f"非白绮角色不得出现判死压价留痕: {d_km_hemo.reason}"
 
+    # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
+    #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
+    #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48
+    #      TEST_SUBJECT 战 T10~T12 连续 hp-cost=2 攻击以 ≈1.0 封顶伤害打出
+    #      （ENEMY_INTANGIBLE_CAP_OBS 与致死竞速抢斩杀同帧）；INTANGIBLE_TTK_OBS
+    #      已在 974/979/1017/1023/1026/1032/1036 共 7 个独立局显形（≥3 局阈值）。
+    #      致死回合謦欬攻击中标封顶窗时追加 实付×键 软顶门带：边际付血被拦、
+    #      超带顶高分放行（软压价）；键=0 一键回滚（致死豁免旧行为零差异）。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_lethal_cap_gate_margin"]) == 3.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_lethal_cap_gate_margin 静态键或默认值被改"
+
+    def _vlc_state(turn_no, hp_now, hand, incoming, intangible=False):
+        _st = _krh_state(turn_no, hp_now, hand, incoming)
+        if intangible:
+            _st["combat"]["enemies"][0]["powers"] = [{
+                "id": "INTANGIBLE_POWER", "name": "无实体", "amount": 1}]
+        return _st
+
+    def _vlc_drive(pol_obj, ctx_obj, intangible=True):
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = pol_obj.decide(
+                _vlc_state(_turn, _hp, _krh_hand_vivhite(), 22), ctx_obj)
+            ctx_obj.credit_tags.extend(_d.tags)
+        return pol_obj.decide(
+            _vlc_state(3, 20, _krh_hand_vivhite(), 30, intangible), ctx_obj)
+
+    # ① 致死回合+中标无实体封顶窗：边际謦欬攻击被软顶拦下，决策链带留痕
+    vknow_lc = _vivhite_know("sts2-selfcheck-vlethalcap-on-")
+    vknow_lc.policy["vivhite_hp_lethal_cap_gate_margin"] = 50.0
+    vpol_lc = policy.Policy(vknow_lc, random.Random(11))
+    d_lc = _vlc_drive(vpol_lc, _krh_ctx())
+    assert d_lc.action == "end_turn", \
+        f"致死回合封顶窗謦欬边际付血应被软顶拦下: {d_lc.action}（{d_lc.reason}）"
+    assert "謦欬出牌门拦下" in d_lc.reason \
+        and "VIVHITE_HP_LETHAL_CAP_GATE" in d_lc.reason, \
+        f"致死封顶软顶拦缺决策链留痕: {d_lc.reason}"
+    # ② 键=0 一键回滚：同一驱动恢复致死豁免旧行为，出牌照旧、留痕全灭
+    vknow_lc0 = _vivhite_know("sts2-selfcheck-vlethalcap-off-")
+    vknow_lc0.policy["vivhite_hp_lethal_cap_gate_margin"] = 0.0
+    vpol_lc0 = policy.Policy(vknow_lc0, random.Random(11))
+    d_lc0 = _vlc_drive(vpol_lc0, _krh_ctx())
+    assert d_lc0.action == "play_card", \
+        f"键=0 回滚后必须恢复致死回合出牌（旧行为）: {d_lc0.action}（{d_lc0.reason}）"
+    assert "VIVHITE_HP_LETHAL_CAP_GATE" not in d_lc0.reason, \
+        f"键=0 回滚后不得出现软顶留痕: {d_lc0.reason}"
+    # ③ 致死回合但目标无无实体：致死豁免前提成立，出牌照旧、不挂留痕
+    vknow_lc3 = _vivhite_know("sts2-selfcheck-vlethalcap-plain-")
+    vknow_lc3.policy["vivhite_hp_lethal_cap_gate_margin"] = 50.0
+    vpol_lc3 = policy.Policy(vknow_lc3, random.Random(11))
+    d_lc3 = _vlc_drive(vpol_lc3, _krh_ctx(), intangible=False)
+    assert d_lc3.action == "play_card", \
+        f"无无实体目标时致死回合出牌不得被拦: {d_lc3.action}（{d_lc3.reason}）"
+    assert "VIVHITE_HP_LETHAL_CAP_GATE" not in d_lc3.reason, \
+        f"无无实体目标不得出现软顶留痕: {d_lc3.reason}"
+    # ④ 封顶窗内合法击杀（敌 hp≤hits）：击杀口径不挂封顶注记，天然豁免软顶
+    vknow_lc4 = _vivhite_know("sts2-selfcheck-vlethalcap-kill-")
+    vknow_lc4.policy["vivhite_hp_lethal_cap_gate_margin"] = 50.0
+    vpol_lc4 = policy.Policy(vknow_lc4, random.Random(11))
+    vctx_lc4 = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_lc4.decide(
+            _vlc_state(_turn, _hp, _krh_hand_vivhite(), 22), vctx_lc4)
+        vctx_lc4.credit_tags.extend(_d.tags)
+    _st_lck = _vlc_state(3, 20, _krh_hand_vivhite(), 30, True)
+    _st_lck["combat"]["enemies"][0]["current_hp"] = 1
+    d_lc4 = vpol_lc4.decide(_st_lck, vctx_lc4)
+    assert d_lc4.action == "play_card" \
+        and "VIVHITE_HP_LETHAL_CAP_GATE" not in d_lc4.reason, \
+        f"封顶窗内合法击杀不得被软顶拦下: {d_lc4.action}（{d_lc4.reason}）"
+
     # 3pru) 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第
     #      505~511 局批复盘）：511 局 F11 旧日雕像精英战 T1 意图 0、我方 45 血，
     #      余量门拦下弦光投影实付2血/绯色面积+实付4血/终止条件实付4血（合计

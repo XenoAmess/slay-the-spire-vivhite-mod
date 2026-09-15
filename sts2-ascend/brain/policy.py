@@ -4477,6 +4477,20 @@ class Policy:
                     pol.get("kill_race_hopeless_hp_pay_margin", 1.0) or 0.0))
             except (TypeError, ValueError):
                 _krh_margin = 0.0
+        # 謦欬致死回合无实体封顶软顶开关（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
+        # 局批复盘新增，静态键；语义见下方门拦段注释）。余量门带在致死回合恒 0
+        # （致死豁免），本闸独立于余量门体系，只在致死回合接管「中标无实体封顶
+        # 窗」的謦欬边际付血；键=0 一键回滚（致死豁免旧行为零差异），非白绮
+        # 角色零改动（profile 不符恒 0 不进分支）。
+        _hp_lethal_cap_margin = 0.0
+        if (lethal_now
+                and getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID):
+            try:
+                _hp_lethal_cap_margin = max(0.0, float(
+                    pol.get("vivhite_hp_lethal_cap_gate_margin", 0.0) or 0.0))
+            except (TypeError, ValueError):
+                _hp_lethal_cap_margin = 0.0
         # 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，第 505~511
         # 局批复盘新增，静态键）：门带对战斗语境零感知——敌意图总伤 0 的完全
         # 自由回合仍以静态门带拦下已过普通阈值的謦欬攻击牌（511 局 F11 旧日雕像
@@ -4985,6 +4999,34 @@ class Policy:
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
                              _hp_pay, 0.0, score, 0, "ZERO_PRESSURE"))
+            # 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
+            # 局批复盘新增）：余量门带致死豁免以「付血换输出买命/抢斩杀当场兑现」
+            # 为前提；中标目标处于无实体封顶窗（评分侧 ENEMY_INTANGIBLE_CAP_OBS
+            # 已把每 hit 折成 1 且非击杀）时该前提坍塌——1036 局 F48 TEST_SUBJECT
+            # 战 T10~T12 连续 hp-cost=2 攻击以 ≈1.0 封顶伤害打出（封顶注记与
+            # 「致死竞速抢斩杀」同帧），付血买命兑现率趋零；INTANGIBLE_TTK_OBS
+            # 已在 974/979/1017/1023/1026/1032/1036 共 7 个独立局显形（≥3 局
+            # 阈值），不得再只登记待观察。本闸只拦「过普通阈值但未过软顶」的边际
+            # 付血，超带顶高分打出（威胁分成抬升的真实价值）照旧放行——与
+            # KRH_MARGIN 同构的软压价；拦下候选入 _hp_gate_blocked（退出
+            # marginal/残能救场通道并喂僵局账，闩锁兜底与既有门拦同口径）。
+            # 封顶窗内合法击杀（hp≤hits）评分侧不挂封顶注记，天然豁免本闸。
+            if (not _hp_gate_hit and _hp_lethal_cap_margin > 0.0
+                    and "敌无实体逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）" in why
+                    and "可击杀" not in why):
+                _lc_pay = self._vivhite_hp_pay(c, player.get("powers") or [])
+                if _lc_pay > 0.0:
+                    _lc_band = _lc_pay * _hp_lethal_cap_margin
+                    if (float(pol["play_threshold"]) < score
+                            <= float(pol["play_threshold"]) + _lc_band):
+                        _hp_gate_hit = True
+                        why += (f"｜謦欬出牌门：致死回合中标无实体封顶窗，"
+                                f"实付{_lc_pay:g}血×{_hp_lethal_cap_margin:.2f}"
+                                f"=+{_lc_band:.1f}门槛，{score:.2f}未过"
+                                "（VIVHITE_HP_LETHAL_CAP_GATE）")
+                        _hp_gate_blocked.append(
+                            (c.get("index"), c.get("name") or cid,
+                             _lc_pay, _lc_band, score, 0, "LETHAL_CAP_GATE"))
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             target_enemy = next((enemy for enemy in enemies
@@ -5462,6 +5504,9 @@ class Policy:
                                   + ("（KILL_RACE_HOPELESS_HP_PAY_MARGIN）"
                                      if len(row) > 6
                                      and row[6] == "KRH_MARGIN" else "")
+                                  + ("（VIVHITE_HP_LETHAL_CAP_GATE）"
+                                     if len(row) > 6
+                                     and row[6] == "LETHAL_CAP_GATE" else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 if _hp_relief_hard_suppressed and incoming <= 0:
