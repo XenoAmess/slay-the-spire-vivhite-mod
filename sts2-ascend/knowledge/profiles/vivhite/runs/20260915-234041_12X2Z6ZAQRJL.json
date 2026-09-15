@@ -1,0 +1,495 @@
+{
+ "run_id": "12X2Z6ZAQRJL",
+ "run_number": 1111,
+ "profile_id": "vivhite",
+ "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+ "profile_run_number": 1111,
+ "ascension": 3,
+ "started_at": "2026-09-15 23:40:41",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "23:40:41",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件【涅奥】：选择「新叶」（经验价值 2.5）；新叶=2.5(n=20.22516835823482) / 涅奥的护符=2.5(n=6.886037513583197) / 涅奥的牺牲=0.0(n=0)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 79%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "新叶",
+      "score": 2.5,
+      "status": "chosen",
+      "why": "经验样本 20.22516835823482",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "涅奥的护符",
+      "score": 2.5,
+      "status": "rejected",
+      "why": "经验样本 6.886037513583197",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "涅奥的牺牲",
+      "score": 0.0,
+      "status": "rejected",
+      "why": "经验样本 0",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "新叶",
+     "params": {
+      "option_index": 0
+     },
+     "score": 2.5
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "23:40:43",
+   "screen": "CARD_SELECTION",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 4
+   },
+   "reason": "变化卡牌：【弦光投影】（最无价值）",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F1",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "变化：最大无价值度优先"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 50.0,
+      "status": "chosen",
+      "why": "变化无价值度",
+      "index": 4,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": 50.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 5,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": 50.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 6,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": 50.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 7,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": 40.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": 40.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": 40.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 2,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": 40.0,
+      "status": "rejected",
+      "why": "变化无价值度",
+      "index": 3,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "弦光投影",
+     "params": {
+      "option_index": 4
+     },
+     "score": 50.0
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "23:40:44",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "23:40:47",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "路径规划：Monster(1,6)（路径分 19.30，预计进 Boss 血量 94%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价）；候选：Monster(1,1)=-12.80|前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计66%<75%（饥饿放宽自88%），优先续航路线 / Monster(1,3)=18.61|前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价 / Monster(1,6)=19.30|前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+   "trace": {
+    "observation": {
+     "title": "MAP · F1",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅1张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "3 条候选；最高 19.30"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 94%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(1,6)",
+      "score": 19.297,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "6",
+       "projected_hp": "0.9443698327972433"
+      }
+     },
+     {
+      "label": "Monster(1,3)",
+      "score": 18.614,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "3",
+       "projected_hp": "0.9141278822123983"
+      }
+     },
+     {
+      "label": "Monster(1,1)",
+      "score": -12.797,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.14（缺口40%）；路径中段含未达标精英，投影罚分；竞速判死后获胜612/1528，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计66%<75%（饥饿放宽自88%），优先续航路",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "1",
+       "projected_hp": "0.6614564702497344"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(1,6)",
+     "params": {
+      "option_index": 2
+     },
+     "score": 19.297,
+     "target": {
+      "row": "1",
+      "col": "6",
+      "projected_hp": "0.9443698327972433"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "23:40:49",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 62,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：残能救场[格挡]：剩余能量3打出【闭域映射】，拒绝带能量空过（意图4/甲0/缺口4）原裁决：评估后无值得出的牌(闭域映射✓,弦光投影✓,闭域映射✓,白绮的变身式✓,无限画布✓)；⚠残能空漏审计(IDLE_LEAK_BLK)：能量3空过，受击净缺口4，可负担格挡【闭域映射】可抵4，扣除謦欬2/余裕机会成本0后净保命2；重生名册读侧：FUZZY_WURM_CRAWLER=id:未知（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 3
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ]
+ ],
+ "human_assisted": false,
+ "excluded_from_learning": false,
+ "deck_snapshot": [
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+   "upgraded": false,
+   "name": "白绮的变身式",
+   "card_type": "Power",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_INFINITE_CANVAS",
+   "upgraded": false,
+   "name": "无限画布",
+   "card_type": "Power",
+   "rarity": "Rare"
+  }
+ ],
+ "deck_changes": [
+  {
+   "sequence": 1,
+   "source": "run.deck_diff",
+   "floor": 1,
+   "screen": "EVENT",
+   "observed_at": "2026-09-15 23:40:44",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_INFINITE_CANVAS",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [
+    {
+     "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "upgraded": []
+  }
+ ]
+}
