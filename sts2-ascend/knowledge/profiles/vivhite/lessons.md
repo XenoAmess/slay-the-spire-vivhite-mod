@@ -11876,3 +11876,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.075562791098451局)，SECRET_TECHNIQUE(21分/2.5562063021857835局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.44099241004182局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：2/1076 胜，当前目标进阶 2
+
+## 第 1077 局复盘（2026-09-15 16:05）
+- 结果：💀 失败｜进阶 2｜到达层数 12｜当局评分 12
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：BLOOD_VIAL, NUNCHAKU
+- 战斗记录：F5 Monster战 掉血9｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血40｜自损22（可行动段22/非行动段28，SELF_LOSS_PHASE_OBS）｜竞速审计：T11判死→实战11回合获胜; F8 Elite战 掉血0｜自损16（可行动段16/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损8（可行动段8/非行动段13，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血33｜自损22（可行动段22/非行动段26，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血47｜自损28（可行动段28/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BOLAS(39分/2.314373998374103局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/4.639107840701839局)，FLASH_OF_STEEL(37分/7.467398640208411局)，ROLLING_BOULDER(35分/10.888565720544696局)，CINDER(35分/2.7624155578770067局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/3.0647983213296066局)，SECRET_TECHNIQUE(21分/2.5472595801281335局)，VIVHITE_CARD_PREFETCH_FUTURE(23分/11.400948936606675局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Elite战实测自损28/掉血47（60%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：2/1077 胜，当前目标进阶 2
