@@ -394,7 +394,7 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260916-165653-1789549013441709000-621bc04b -->
 | 2026-09-16 16:56:53 | 第 1520~1524 局 | `621bc04b` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `b42152ae` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 b42152ae 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260916-170945-1789549785109888700-cc6189a1 -->
-| 2026-09-16 17:09:45 | 第 1520~1524 局 | `cc6189a1` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260916-170945-1789549785109888700-cc6189a1` | 复盘进程未成功完成 |
+| 2026-09-16 17:09:45 | 第 1520~1524 局 | `cc6189a1` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `b42152ae` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 b42152ae 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260916-180812-1789553292761044200-16c68fe7 -->
 | 2026-09-16 18:08:12 | 第 1520~1524 局 | `16c68fe7` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260916-180812-1789553292761044200-16c68fe7` | 复盘进程未成功完成 |
 <!-- rejection:20260916-185920-1789556360168015500-50f972c1 -->
