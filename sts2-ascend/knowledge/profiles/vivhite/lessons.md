@@ -13735,3 +13735,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.054049511365829局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.174054411691407局)，FASTEN(23分/2.802571946836856局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（6回合掉血102，每回合17≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，致命Boss战实测自损61/掉血102（60%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.41 → 0.41（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；行至 F33 但致命战自损61/掉血102≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：3/1245 胜，当前目标进阶 3
+
+## 第 1246 局复盘（2026-09-17 06:21）
+- 结果：💀 失败｜进阶 3｜到达层数 7｜当局评分 7
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F2 Monster战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血24｜自损16（可行动段16/非行动段18，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血31｜自损56（可行动段56/非行动段14，SELF_LOSS_PHASE_OBS）｜竞速审计：T12判死→实战19回合获胜; F7 Elite战 掉血23｜自损8（可行动段8/非行动段14，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(40分/5.4341954112458035局)，BOLAS(38分/2.6907705061174263局)，MAYHEM(38分/5.327634207254582局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/2.56506681082918局)，FLASH_OF_STEEL(35分/6.960500268895121局)
+- 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.032860338076048局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.148945221250488局)，FASTEN(23分/2.792762945022927局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1246 胜，当前目标进阶 3
