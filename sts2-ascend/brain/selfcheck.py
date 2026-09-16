@@ -2706,8 +2706,15 @@ def main() -> int:
     #      self_hp_loss 字段（旧记录）维持单档，非白绮库完全不进该通道。
     from character_profiles import CharacterProfile
 
+    vivhite_tmp_root = Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-vivhite-root-"))
+    vivhite_tmp_index = 0
+
     def _vivhite_know(prefix: str):
-        vroot = Path(tempfile.mkdtemp(prefix=prefix))
+        nonlocal vivhite_tmp_index
+        vivhite_tmp_index += 1
+        vroot = vivhite_tmp_root / f"{prefix}{vivhite_tmp_index:03d}"
+        vroot.mkdir()
         vprof = CharacterProfile(
             profile_id="vivhite",
             character_id="VIVHITE_CHARACTER_VIVHITE_CHARACTER",
@@ -10269,7 +10276,8 @@ def main() -> int:
                           node_type="Boss", enemy_hp=185, longfight_cap=None,
                           ttk_obs=True, latched=True, latch_hold=False,
                           esc_rounds=2, hand_override=None,
-                          intangible=False, intangible_obs=True):
+                          intangible=False, intangible_obs=True,
+                          effective_dpt_obs=True, sample_effective_round=False):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10329,10 +10337,17 @@ def main() -> int:
             cap_pol.know.policy["longfight_race_joint_flip_max_ttk_ratio"] = longfight_cap
         cap_pol.know.policy["boss_race_slippery_joint_guard"] = slippery_guard
         cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
+        cap_pol.know.policy[
+            "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
-        return cap_pol.decide(cap_state, cap_ctx)
+        decision = cap_pol.decide(cap_state, cap_ctx)
+        if sample_effective_round:
+            cap_state["turn"] = 2
+            cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            return cap_pol.decide(cap_state, cap_ctx)
+        return decision
 
     d_combat_cap = combat_flip_probe(1.5)
     d_combat_slippery = combat_flip_probe(0.0, slippery=True)
@@ -10368,6 +10383,21 @@ def main() -> int:
     assert "SLIPPERY_TTK_OBS" not in d_combat_slippery_noobs.reason \
         and "SLIPPERY_RACE_GUARD" in d_combat_slippery_noobs.reason, \
         f"滑溜观测独立开关未严格回滚: {d_combat_slippery_noobs.reason}"
+
+    # 3br-effective-dpt：滑溜观测必须在完成一个回合边界后，对账实际敌血净降
+    # 与投影 dpt；只读状态快照，不改变翻盘守卫、动作或评分，开关关闭严格无痕。
+    d_combat_slippery_effective = combat_flip_probe(
+        0.0, slippery=True, sample_effective_round=True)
+    assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" in d_combat_slippery_effective.reason \
+        and "敌血净降10.0/回合" in d_combat_slippery_effective.reason \
+        and "vs 投影" in d_combat_slippery_effective.reason, \
+        f"滑溜跨回合有效火力对账缺失: {d_combat_slippery_effective.reason}"
+    d_combat_slippery_effective_off = combat_flip_probe(
+        0.0, slippery=True, effective_dpt_obs=False,
+        sample_effective_round=True)
+    assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" not in \
+        d_combat_slippery_effective_off.reason, \
+        f"滑溜有效火力对账开关未严格回滚: {d_combat_slippery_effective_off.reason}"
 
     # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
     # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的

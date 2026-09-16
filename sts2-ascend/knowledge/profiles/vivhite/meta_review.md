@@ -285,6 +285,7 @@ race_audit 台账「判死入锁→实战获胜 41/95（43%≥30%）」（本批
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
 
+
 # 第 93~148 局批复盘：换向阻尼与同局对冲的相位错配——F33 型死亡局把竞速先验折算率名降实升推向上限
 
 日期：2026-09-06
@@ -3788,6 +3789,59 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
   一键撤回（3krds⑤ 锚住截顶两侧口径），或 ≤1 整体回滚平坦压价。
 - 既有观察顺延：RACE_DOOM_POWER_BONUS_AUDIT_GATE 与
   LETHAL_RACE_FREE_CARD_EXEMPT 显形继续累计；謦欬相位族留痕对账不变。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1185~1189 局批复盘：滑溜有效火力跨回合对账观测
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1189-F17 墨影幻灵的原生滑溜 8 层使实际敌方总血量净降
+  dpt 低于竞速投影 dpt；现有 SLIPPERY_TTK_OBS 只记录层数和破层估计，
+  没有把真实回合边界血量与当时投影绑定对账，因此竞速路径会继续使用乐观
+  火力口径。
+- **EVIDENCE**：1189 局 F17 决策链完整 197 条；[171]、[178]、[187] 的
+  攻击在滑溜层存在时均约造成 1 点伤害。[181] 已记录竞速 ttk 约 6 回合，
+  但自付并入生存口径由 8.5 降至 4.0 回合；最终 F17 实战 11 回合阵亡，
+  Boss 战自损 34。原生 mechanics 记录确认 VANTOM 会施加滑溜，运行时
+  快照确认本局开局为 8 层。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  SLIPPERY_TTK_EFFECTIVE_DPT_OBS 的敌血净降 dpt、上一回合投影 dpt 和差值。
+  若至少 3 个滑溜战斗样本的中位净降/投影 ≤0.80，且负差集中在 Boss/高层滑溜，
+  假设得到支持；若至少 3 个样本的中位比值 >0.90，则假设证伪。样本不足只记
+  为场景缺失，不提前改竞速行为。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：新增按战斗实例隔离的回合首敌方总血量、滑溜层数
+  和上一回合最后有效投影 dpt 账。跨回合时追加
+  SLIPPERY_TTK_EFFECTIVE_DPT_OBS，输出净降 dpt、投影 dpt 与差值；回血、召唤
+  等可能污染净变化的情况保留原始方向并明确为“敌血净降”。该账不写回 ttk、
+  tsurv、判决、评分或动作。
+- sts2-ascend/brain/knowledge.py：加入
+  slippery_ttk_effective_dpt_obs=True；改为 False 即不推进账且无注记。
+- sts2-ascend/brain/selfcheck.py：新增跨回合正例和开关关闭回滚断言。另将白绮
+  夹具改为一个受控临时父目录下的隔离子目录，避免宿主 256 槽限制超过 258 次
+  历史临时目录分配；生产代码不使用该路径。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK。
+- git diff --check：通过；未修改 runs、stats、policy.json、lessons.md、.runtime
+  或本任务书。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局按独立战斗、Boss/Elite/Monster、滑溜层数分层汇总观测条数、
+  净降/投影比值中位数、负差幅度，并与 F17 实际存活回合和自损对照。
+- 若达到 3 个样本后比值 >0.90，或观测与动作链出现不一致，假设证伪；
+  slippery_ttk_effective_dpt_obs=False 一键撤回观测，既有 SLIPPERY_TTK_OBS
+  与 SLIPPERY_RACE_GUARD 保持不变。若仅无滑溜场景，维持开关等待下一次可验证
+  样本。
 
 ## REPLAY
 

@@ -697,6 +697,8 @@ DEFAULT_POLICY = {
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，
                                # 第1349~1355局批复盘）；False 关闭全部留痕
+    "slippery_ttk_effective_dpt_obs": True,  # 跨回合对账滑溜期间敌血净降 dpt 与竞速投影 dpt 的差值，
+                               # 只读回合首快照，不改 ttk/tsurv/判决/评分；False 严格回滚该观测
     "intangible_ttk_obs": True,  # 无实体层在账时给竞速投影留痕 ttk 未扣封顶期（窗口内每hit仅1伤，
                                # INTANGIBLE_TTK_OBS，第945~952局批复盘：945-F17 SOUL_FYSH 无实体×2
                                # 窗口内逐卡侧已报≈1.0伤、投影仍按校准dpt维持全攻提速并謦欬实付，T5

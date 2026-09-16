@@ -753,6 +753,13 @@ class Policy:
         self._krace_latch_round = None  # 入锁回合号（RACE_UPSHIFT_STALE 新鲜窗账）
         self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
         self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
+        # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
+        # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
+        self._slippery_effective_dpt_combat = None
+        self._slippery_effective_dpt_round = None
+        self._slippery_effective_dpt_start_hp = None
+        self._slippery_effective_dpt_layers = 0.0
+        self._slippery_effective_dpt_projected = 0.0
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
@@ -3582,6 +3589,49 @@ class Policy:
                     _race_slippery_layers = sum(
                         self._enemy_slippery_stack(e)
                         for e in enemies if isinstance(e, dict))
+                    # 滑溜有效火力回合边界对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS，
+                    # 本批新增）：上面的破层期估计只读当前手牌，不能证明实际敌血
+                    # 是否按该速率下降。用已观测的「上一回合首→当前回合首」敌方总
+                    # 血量净变化，绑定上一回合开始时的滑溜层数，直接给出实测净
+                    # dpt 与投影 dpt 的差值。回血/召唤等非伤害因素可能让读数为负，
+                    # 故明确标为“敌血净降”，不冒充逐卡真实伤害。纯观测，不改
+                    # ttk/tsurv/判决/评分；键=False 严格回滚且不推进该账。
+                    _slippery_effective_dpt_pending = None
+                    if bool(pol.get("slippery_ttk_effective_dpt_obs", True)):
+                        if self._slippery_effective_dpt_combat is not cctx:
+                            self._slippery_effective_dpt_combat = cctx
+                            self._slippery_effective_dpt_round = None
+                            self._slippery_effective_dpt_start_hp = None
+                            self._slippery_effective_dpt_layers = 0.0
+                            self._slippery_effective_dpt_projected = 0.0
+                        if (round_no is not None
+                                and self._slippery_effective_dpt_round != round_no):
+                            _sl_prev_round = self._slippery_effective_dpt_round
+                            _sl_prev_start_hp = (
+                                self._slippery_effective_dpt_start_hp)
+                            _sl_span = 0
+                            if _sl_prev_round is not None:
+                                try:
+                                    _sl_span = int(round_no) - int(_sl_prev_round)
+                                except (TypeError, ValueError):
+                                    _sl_span = 0
+                            if (_sl_prev_start_hp is not None
+                                    and self._slippery_effective_dpt_layers > 0.0
+                                    and _sl_span > 0
+                                    and self._slippery_effective_dpt_projected > 0.0):
+                                _slippery_effective_dpt_pending = (
+                                    _sl_prev_round, _sl_span,
+                                    float(_sl_prev_start_hp),
+                                    float(enemy_hp_total),
+                                    float(self._slippery_effective_dpt_layers),
+                                    float(self._slippery_effective_dpt_projected))
+                            self._slippery_effective_dpt_round = round_no
+                            self._slippery_effective_dpt_start_hp = (
+                                float(enemy_hp_total))
+                            self._slippery_effective_dpt_layers = (
+                                float(_race_slippery_layers))
+                        if dpt > 0.0:
+                            self._slippery_effective_dpt_projected = float(dpt)
                     if (bool(pol.get("slippery_ttk_obs", True))
                             and _race_slippery_layers > 0.0):
                         # 破层期量化披露（SLIPPERY_TTK_BREAK_EST，第1349~1355局
@@ -3630,6 +3680,18 @@ class Policy:
                             f"ttk{ttk:.0f}未扣破层期"
                             "（每层一次命中仅失1血，SLIPPERY_TTK_OBS）"
                             + _sl_break_est)
+                    if _slippery_effective_dpt_pending is not None:
+                        (_sl_prev_round, _sl_span, _sl_start_hp,
+                         _sl_end_hp, _sl_layers, _sl_projected) = (
+                            _slippery_effective_dpt_pending)
+                        _sl_net_dpt = (_sl_start_hp - _sl_end_hp) / _sl_span
+                        _sl_gap = _sl_net_dpt - _sl_projected
+                        danger_note += (
+                            f"；滑溜有效火力对账：滑溜{_sl_layers:g}层、采样"
+                            f"{_sl_prev_round}→{round_no}回合，敌血净降"
+                            f"{_sl_net_dpt:.1f}/回合 vs 投影{_sl_projected:.1f}/回合"
+                            f"（差{_sl_gap:+.1f}，"
+                            "SLIPPERY_TTK_EFFECTIVE_DPT_OBS）")
                     # 无实体封顶期观测（INTANGIBLE_TTK_OBS，第945~952局批复盘）：
                     # ttk=pool/dpt 同样未计入敌方无实体窗口——窗口内每 hit 伤害
                     # 封顶 1，实测 dpt 塌缩后又被首窗先验下限
@@ -3995,6 +4057,11 @@ class Policy:
             self._krace_latch_round = None
             self._krace_dmg_sustained = 0.0
             self._krace_potion_rounds = set()
+            self._slippery_effective_dpt_combat = ctx.combat
+            self._slippery_effective_dpt_round = None
+            self._slippery_effective_dpt_start_hp = None
+            self._slippery_effective_dpt_layers = 0.0
+            self._slippery_effective_dpt_projected = 0.0
             self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0
             self._esc_rounds = 0
