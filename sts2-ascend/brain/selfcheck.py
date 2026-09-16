@@ -3755,9 +3755,13 @@ def main() -> int:
     #      致命 Boss 战自损占掉血 32%~64%，翻盘胜局（1044/1045）DOMINATES
     #      仅 2 处。DOMINATES tick 压价倍率按 min(cap, 比值) 放大：边际付血
     #      被拦、超带顶高分翻盘燃料照旧放行（软压价）；≤1 一键回滚平坦压价
-    #      （旧行为零差异），非白绮角色零改动。
+    #      （旧行为零差异），非白绮角色零改动。第 1146~1162 局批截顶证据：
+    #      17 局全负，DOMINATES 181 处/14 局，41 处比值>3 跨 8 个独立局
+    #      （峰值 4.45~inf）被 3.0 截顶、判死自付单局高达 90/93/84/75 血，
+    #      预注册跟进「DOMINATES 战仍高频付血且战绩无改善→cap 抬 4~5」
+    #      兑现，默认 3.0→5.0（比值≤3 tick 行为逐字零差异，⑤ 锚住）。
     assert float(knowledge.DEFAULT_POLICY[
-        "kill_race_hopeless_hp_pay_dom_cap"]) == 3.0, \
+        "kill_race_hopeless_hp_pay_dom_cap"]) == 5.0, \
         "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_dom_cap 静态键或默认值被改"
 
     def _krds_drive(krh_margin, paid_rate, dom_cap=None):
@@ -3815,6 +3819,28 @@ def main() -> int:
     assert d_kd_soft.action == "play_card", \
         f"DOMINATES tick 超带顶高分翻盘燃料不得被硬禁: " \
         f"{d_kd_soft.action}（{d_kd_soft.reason}）"
+    # ⑤ cap 截顶两侧分辨（第 1146~1162 局批 3.0→5.0）：自付速率账 64
+    #    （EMA 44.8/净损 10，比值 4.48>3）同一驱动下——旧 cap=3.0 截顶
+    #    ×3.0（压价带 实付2×2.5×3.0=15）照打出，新 cap=5.0 放到 ×4.48
+    #    （带 22.4）同一边际候选翻转为门拦空过且带压价+缩放双留痕；
+    #    比值≤3 的 tick（①~④ 驱动比值 1.75）两侧行为逐字一致已由 ② 锚住
+    d_kdc3, vpol_kdc3 = _krds_drive(2.5, 64.0, dom_cap=3.0)
+    assert 4.4 < vpol_kdc3._race_self_loss_dom_ratio < 4.6, \
+        f"cap 分辨驱动比值锚口径异常: {vpol_kdc3._race_self_loss_dom_ratio}"
+    assert d_kdc3.action == "play_card", \
+        f"旧 cap=3.0 截顶侧必须保持旧行为（出牌）: " \
+        f"{d_kdc3.action}（{d_kdc3.reason}）"
+    assert d_kdc3.params == d_kd0.params, \
+        f"旧 cap=3.0 截顶侧动作须与非 DOMINATES 平坦对照逐参一致: " \
+        f"flat={d_kd0.params} cap3={d_kdc3.params}"
+    d_kdc5, vpol_kdc5 = _krds_drive(2.5, 64.0, dom_cap=5.0)
+    assert d_kdc5.action == "end_turn", \
+        f"新 cap=5.0 比值 4.48 侧边际謦欬候选应被拦下: " \
+        f"{d_kdc5.action}（{d_kdc5.reason}）"
+    assert "謦欬出牌门拦下" in d_kdc5.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_kdc5.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE" in d_kdc5.reason, \
+        f"cap=5.0 缩放门拦缺压价/缩放留痕: {d_kdc5.reason}"
 
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；

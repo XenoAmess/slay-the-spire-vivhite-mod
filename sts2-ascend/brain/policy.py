@@ -4631,7 +4631,8 @@ class Policy:
             except (TypeError, ValueError):
                 _krh_margin = 0.0
         # 判死自付压价 DOMINATES 比值缩放（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，
-        # 第 1037~1051 局批复盘新增，静态键 kill_race_hopeless_hp_pay_dom_cap）：
+        # 第 1037~1051 局批复盘新增，静态键 kill_race_hopeless_hp_pay_dom_cap；
+        # 第 1146~1162 局批默认 3.0→5.0）：
         # 平坦 ×1.0 压价带对「自付速率≥敌方净损速率」的判死 tick 定价不足——
         # 1051 局 F33 知识恶魔战 T4~T7 竞速自付 8.7→7.0/回合 ≥ 敌方净损
         # 5.0→2.1/回合（比值 1.72→3.32），同帧 TSURV_INCLUSIVE 报可存活
@@ -4645,12 +4646,16 @@ class Policy:
         # 非硬禁）；致死回合豁免、僵局闩锁停用同步等语义与 KRH_MARGIN 完全
         # 一致。键≤1 一键回滚（平坦压价旧行为零差异），非白绮角色零改动
         # （_krh_margin 恒 0 不进分支，比值锚恒 0）。
+        # 1146~1162 批截顶证据（预注册跟进兑现）：17 局全负，DOMINATES 留痕
+        # 181 处/14 局，41 处比值>3 跨 8 个独立局（峰值 4.45~inf）被 3.0
+        # 截顶，判死自付单局高达 90/93/84/75 血——cap 抬 5.0 后仅比值>3
+        # tick 压价分量按比例放大，比值≤3 tick 行为逐字零差异。
         _krh_dom_scale = 1.0
         _krh_dom_ratio = 0.0
         if _krh_margin > 0.0:
             try:
                 _krh_dom_cap = float(pol.get(
-                    "kill_race_hopeless_hp_pay_dom_cap", 3.0) or 0.0)
+                    "kill_race_hopeless_hp_pay_dom_cap", 5.0) or 0.0)
             except (TypeError, ValueError):
                 _krh_dom_cap = 0.0
             _krh_dom_ratio = float(getattr(

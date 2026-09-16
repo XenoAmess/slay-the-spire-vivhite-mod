@@ -3647,3 +3647,80 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+
+# 第 1146~1162 局批复盘：判死自付 DOM 截顶抬升（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE cap 3.0→5.0）——比值>3 的纯放血战压价分量按比例放大
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE 的 cap=3.0 在比值>3 的
+  判死自付主导战截顶——自付速率 3~10 倍于敌方净损的 tick 仍只按 ×3.0 压价，
+  边际付血持续过门。抬 cap 至 5.0 后，比值 3~5 的 tick 压价分量按 min(cap,
+  比值) 比例放大、边际付血被拦次数上升，高比值判死战自损下降；比值≤3 的
+  tick 行为逐字零差异（软压价非硬禁，超带顶高分翻盘燃料照旧放行）。若未来
+  3~10 局高比值战 KRH 自付总量不回落，假设证伪，cap 回 3.0。
+- **EVIDENCE**：第 1037~1051 局批预注册跟进条件「DOMINATES 战仍高频付血且
+  战绩无改善→cap 抬到 4~5」本批完全兑现：17 局全负（F17×8/F33×5/F23/F25/
+  F48），DOMINATES 留痕 181 处/14 局，其中 41 处比值>3 跨 1148/1150/1151/
+  1152/1155/1156/1158/1159 共 8 个独立局（≥evidence_run_threshold=3，峰值
+  4.45~inf）被 3.0 截顶；判死自付（KILL_RACE_HOPELESS_HP_PAY_OBS 同帧）单局
+  高达 1150-90 血/1155-93 血/1156-84 血/1162-75 血，1152 局 F17 瀑布巨兽战
+  T3 即显形「自付速率7.4/回合≥敌方净损5.1/回合（比值1.45）」后 11 回合
+  自损44/掉血67 阵亡。判死后翻盘率台账 628/1575≈39.9% 的高分燃料由软压价
+  上限保留（超带顶照旧放行），不受本改动影响。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链在比值>3 的 DOMINATES tick 上
+  「謦欬出牌门拦下…KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE」显形较本批增加；
+  高比值（>3）判死战的 KRH 自付总量较本批同型基线（75~93 血/局）下降；
+  对照指标：F17/F33 Boss 战绩、竞速审计判死后实战存活回合数不缩短（即
+  被拦的边际付血确为纯放血而非翻盘燃料）。证伪/撤回：显形不增或自损占比
+  不降→cap 回 3.0（一键，selfcheck 3krds⑤ 锚住截顶两侧）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY
+  `kill_race_hopeless_hp_pay_dom_cap` 3.0→5.0，注释登记本批截顶证据与
+  预注册跟进出处；回滚路径不变（≤1 关闭回平坦压价，或改回 3.0 恢复上批
+  口径，均零差异可逆）。
+- sts2-ascend/brain/policy.py：缩放段 `pol.get(..., 3.0)` 回退默认同步
+  3.0→5.0，注释登记本批证据；缩放公式 min(cap, 比值)、DOMINATES 比值锚、
+  KRH_MARGIN/致死豁免/闩锁停用语义全部逐字不变，比值≤3 tick 零差异。
+- sts2-ascend/brain/selfcheck.py：3krds 段头注释登记本批证据；默认值断言
+  3.0→5.0；新增 ⑤ cap 截顶两侧分辨——自付速率账 64（EMA 44.8/净损 10，
+  比值 4.48>3）同一驱动下旧 cap=3.0（带 15）照打出且动作与非 DOMINATES
+  平坦对照逐参一致，新 cap=5.0（带 22.4）同一边际候选翻转为门拦空过并带
+  压价+缩放双留痕；既有 ①~④（比值 1.75<3 两侧行为一致）全量保留。
+- 未触碰竞速投影判决/tsurv/DOMINATES 观测注记/门带其余分量/地图端；
+  runs/stats/policy.json/lessons.md/review_queue 等只读在线状态未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3krds 新⑤；
+  既有 3krh/3krhm/3krds①~④、3pese/3pesc、3slph、3fce、3br-tilt-gate、
+  3pnm 等全量通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/knowledge.py（默认值+证据
+  注释）、brain/policy.py（回退默认+证据注释）、brain/selfcheck.py（断言
+  +3krds⑤）；未触碰在线状态；工作区 assets/ 长路径删除告警为宿主预置现场，
+  与本批无关、不入 commit。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：比值>3 DOMINATES tick 的 DOM_SCALE 门拦显形次数/局
+  （本批基线 41 处/8 局压价不足过门）；高比值战 KRH 自付总量与本批
+  75~93 血/局对账；若门拦显形增加且自付回落，按预注册方向成立。
+- 对照指标：判死后实战存活回合数（本批 T2 判死→实战 5~13 回合）不得因
+  压价加深而显著缩短——若缩短，说明被拦付血中含翻盘燃料，回 cap=3.0 再
+  评估；若 3~10 局内门拦显形≈0（比值>3 场景消失），属场景缺席而非证伪，
+  维持 5.0 待下一高比值窗口结算。
+- 撤回条件：任何评分偏移异常、注记解析报错，或对照期判死战存活回合
+  显著缩短/战绩劣化——`kill_race_hopeless_hp_pay_dom_cap` 改回 3.0
+  一键撤回（3krds⑤ 锚住截顶两侧口径），或 ≤1 整体回滚平坦压价。
+- 既有观察顺延：RACE_DOOM_POWER_BONUS_AUDIT_GATE 与
+  LETHAL_RACE_FREE_CARD_EXEMPT 显形继续累计；謦欬相位族留痕对账不变。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
