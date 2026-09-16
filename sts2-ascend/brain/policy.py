@@ -678,8 +678,9 @@ class Policy:
         self._respawn_veto_obs_noted: set = set()  # 本场已并入 danger_note 的否决敌键（每敌每场只注记一次）
         self._respawn_confirm_obs: dict = {}  # 本场同场坐实确认的坐实键 -> 名册写入异常（空串=写入成功；RESPAWN_CONFIRM_OBS）
         self._respawn_confirm_obs_noted: set = set()  # 本场已并入 danger_note 的坐实键（每坐实键每场只注记一次）
-        self._respawn_read_obs: dict = {}  # 本场名册读侧首判快照：敌键 -> "id|nm:坐实/已报/名册/否决/未知"（RESPAWN_ROSTER_READ_OBS）
+        self._respawn_read_obs: dict = {}  # 本场名册读侧首判快照：敌键 -> "id|nm:坐实/已报/名册/否决/未知(n=..,rs=..[,err=..])"（RESPAWN_ROSTER_READ_OBS）
         self._respawn_read_obs_noted: set = set()  # 本场已并入 danger_note 的读侧敌键（每敌每场只注记一次）
+        self._respawn_lookup_err: dict = {}  # 本场名册读侧 is_known 查询被吞异常：敌键 -> 异常类型名（RESPAWN_ROSTER_READ_OBS 读数增配，第 1520~1524 局批复盘）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
@@ -4113,6 +4114,7 @@ class Policy:
             self._respawn_confirm_obs_noted = set()
             self._respawn_read_obs = {}
             self._respawn_read_obs_noted = set()
+            self._respawn_lookup_err = {}
         # 战斗上下文缺失（None）或对象更替时重置采样：净损速率只在同一场战斗内
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
@@ -7470,6 +7472,16 @@ class Policy:
         缓冲，由竞速投影段收口并入 danger_note，供逐局对账。纯观测：
         返回值、名册读写、否决计数、评分零改动；policy 键
         respawn_roster_read_obs=False 即观测同灭（旧行为零差异）。
+
+        读数增配（第 1520~1524 局批复盘）：生产 5 局名册物种（磁盘
+        confirmations≥2，含白名单 EXOSKELETON/INKLET=99）恒「id:未知」、
+        respawn_native_vetoes 恒 {}，而同 HEAD+同生产 stats.json 本地复现
+        KIN_FOLLOWER→否决+台账、EXOSKELETON→名册——五态 verdict 已无法
+        再压缩分歧。快照增配 n=该键 confirmations / rs=内存名册条数 /
+        err=读侧异常类型三读数：未知(n=0,rs=0)=内存名册缺账坐实；
+        未知(n=0,rs≥2)=键名归一化分歧坐实；未知(n≥2,rs≥2,err=X)=读侧
+        异常被吞坐实；未知(n≥2,rs≥2)无 err=生产代码/逻辑分歧坐实；
+        否决/名册(n≥2,rs≥2)=链路健康。
         """
         result = self._is_respawn_add_core(enemy)
         try:
@@ -7489,7 +7501,17 @@ class Policy:
                         _verdict = ("否决" if kid in self._respawn_veto_reported
                                     else "未知")
                     _src = "id" if enemy.get("enemy_id") else "nm"
-                    self._respawn_read_obs[kid] = f"{_src}:{_verdict}"
+                    try:
+                        _ra = self.know.stats.get("respawn_adds") or {}
+                        _rn = int((_ra.get(str(kid)) or {}).get(
+                            "confirmations", 0) or 0)
+                        _reads = f"n={_rn},rs={len(_ra)}"
+                    except Exception as _r_exc:
+                        _reads = f"n=?,rs=?,err={type(_r_exc).__name__}"
+                    _lk_err = self._respawn_lookup_err.get(str(kid))
+                    if _lk_err and "err=" not in _reads:
+                        _reads += f",err={_lk_err}"
+                    self._respawn_read_obs[kid] = f"{_src}:{_verdict}({_reads})"
         except Exception:
             pass  # 观测绝不改变判决；任何载荷异常静默放弃本次快照
         return result
@@ -7531,7 +7553,16 @@ class Policy:
             return True
         try:
             known = self.know.is_known_respawn_add(kid)
-        except Exception:
+        except Exception as _lk_exc:
+            # RESPAWN_ROSTER_READ_OBS 读数增配（第 1520~1524 局批复盘）：读侧
+            # 查询异常原本被静默吞成 False，与「名册未命中」不可分辨——把异常
+            # 类型按敌键记入本场快照缓冲，由读侧首判注记携带 err= 披露；判决
+            # 安全回落（False）、名册读写、否决计数、评分全部零改动。
+            try:
+                if kid:
+                    self._respawn_lookup_err[str(kid)] = type(_lk_exc).__name__
+            except Exception:
+                pass
             return False
         if not known:
             return False
@@ -7580,7 +7611,11 @@ class Policy:
         每敌每场首个读侧判决（来源+verdict）带内化：id:否决+台账 +1 →
         链路健康；nm:中文名=未知 → enemy_id 载荷缺口坐实；id:MYTE=未知
         而磁盘名册 ≥2 → 内存名册缺账坐实；名册物种遭遇战注记整体绝迹 →
-        调用路径缺口坐实。纯观测，不改判决/名册读写/评分/动作。"""
+        调用路径缺口坐实。第 1520~1524 局批复盘增配 verdict 尾缀
+        (n=confirmations,rs=内存名册条数[,err=读侧异常类型])：未知(n=0,rs=0)
+        坐实内存名册缺账、未知(n≥2,rs≥2,err=X) 坐实读侧异常被吞、
+        未知(n≥2,rs≥2) 无 err 坐实生产代码/逻辑分歧。纯观测，不改判决/名册
+        读写/评分/动作。"""
         if not self._respawn_read_obs:
             return danger_note
         _parts = []

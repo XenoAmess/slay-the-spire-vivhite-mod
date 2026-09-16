@@ -11146,3 +11146,139 @@ retry_resolution: none (no replay target; local production observation)
    ⑤ KIN 战损 55/65% 基线；⑥ REMOVAL_COST 翻案/随附比（累计
    12 翻 46 随附）。
 
+
+# 2026-09-17（第 1520~1524 局复盘，异步追及队列 5 局 exact_batch 全败；失败包回放整合 #1：RESPAWN_ROSTER_READ_OBS 读数增配——五局名册物种恒「未知」而本地同名册复现否决/名册，verdict 快照从此携带 n/rs/err 三读数，缺账、吞异常、代码分歧三真因下次遭遇即机械可判）
+
+## 一、失败包核对（固定动作）
+
+- failed_review_replay.requested_packages=
+  [20260916-145314-1789541594351123500-535a6ee4]（target），
+  attempt_packages=10 个、complete_evidence.required=true——逐包核对
+  index/manifest/inventory/候选 patch：target 候选 patch（policy.py +
+  selfcheck.py + meta_review.md，23025B）为完整版本；后续 attempts 的
+  候选 patch 为同一变更的子集或等价切片（1558/2312 含 policy+selfcheck，
+  1656/1949 仅 policy 全量，1709/2022 仅 policy 头部两 hunk，1808 仅
+  初始化段），lineage 全程收敛于同一改动；各包 report.md/wip.patch 为
+  空或半成品，失败码均为 process_exit/lifecycle_stop（宿主侧中断），
+  非内容被拒。
+- 与当前 HEAD 比对：HEAD 不含 _respawn_lookup_err 与读数尾缀，变更
+  仍全部有效；本批基于当前 HEAD 自行重实现（冲突=行号漂移，内容
+  上下文逐字匹配，无语义冲突），自检锚 3yr-read-obs 五处升级 +
+  新增 3yr-read-obs2 异常锚全部通过。
+
+retry_resolution: 20260916-145314-1789541594351123500-535a6ee4 integrated
+
+## 二、本批证据核对与逐局裁决
+
+- 队列 requested=[1520..1524]，exact 5/5、missing=0，5 局全败（生涯
+  0/1524）：1520 F24（途中 F17 Boss T2 判死后实战 8 回合获胜）、1521
+  F23（途中 F17 Boss T3 判死后实战 9 回合获胜）、1522 F8 小怪、
+  1523 F17 Boss（KIN_FOLLOWER+KIN_PRIEST）、1524 F13 Unknown
+  （FUZZY_WURM_CRAWLER+SHRINKER_BEETLE）。旋钮侧 kill_bonus 20.00 顶格、
+  burst_starve 双旋钮/饥饿带/锻造线/长战加成上限顶格、kill_race_prior_eff
+  触底——与上三批一致，不重复干预。
+- **最新死亡局完整链裁决（1524，CQTJJKT4YBYC，F13，T3 判死→实战 7 回合
+  阵亡）**：逐条阅读保留的 31 条 F13 决策（kept 46/omitted 96，
+  complete_persisted_chain=false，完整链可按需深读
+  runs/20260916-125640_CQTJJKT4YBYC.json）。T1 按「零伤害辅助体优先
+  转火」集火缩小甲虫，T3 起换线毛绒伏地虫（力量+7→+14 滚雪球）；T4 起
+  连续 RACE_UPSHIFT_STALE 投影维持 8~10 伤/回合，终局 3 血打踩踏+ 后
+  硬吃 31 阵亡——竞速判死应验，目标选择有 FOCUS_DRIFT 阻尼/翻线锁在账，
+  无新生系统性偏离。
+- **RALC 买活对账（1514~1519 批部署）首窗**：部署后新 boot 的 3 局中
+  1 例注记（1522-F8-T7），裁决「买活仍必败」与该局阵亡一致——全攻定案
+  滚动反向证成 +1（累计 5 例手工+1 例带内）；「买活可翻盘」仍 0 例，
+  生还线扩展立项线未达。
+- **RESPAWN_CONFIRM_OBS 首两例活捉**：1520 CORPSE_SLUG#0、1523-F17-T6
+  KIN_FOLLOWER#0 同场坐实注记在产（写侧健康，KIN_FOLLOWER 名册 4→5
+  与磁盘一致）；1523 同场 KIN 机制实证——神官 Rally/仪式复活信徒，
+  大脑 T3 击杀信徒、T6 再次击杀同一实例后坐实。
+- **RESPAWN_ROSTER_READ_OBS 五态 verdict 重大异常（本批主假设现场）**：
+  五局 run JSON 名册读侧注记 40+ 条，凡磁盘名册 confirmations≥2 的物种
+  ——NIBBIT(16)、TOADPOLE(4)、SOUL_FYSH(2)、CORPSE_SLUG(41)、GAS_BOMB(6)、
+  TOUGH_EGG(24)、THIEVING_HOPPER(15)、LEAF_SLIME_S(4)、TWIG_SLIME_S(4)、
+  KIN_FOLLOWER(5)，乃至白名单 EXOSKELETON(99)、INKLET(99)——首判恒为
+  「id:未知」，无一例「否决」或「名册」；stats.respawn_native_vetoes
+  恒 {}。而同 HEAD+同生产 stats.json 本地复现（真实名册注入）：
+  KIN_FOLLOWER→id:否决+台账+1、EXOSKELETON→id:名册、NIBBIT→id:否决，
+  与 1493~1499 批复现结论一致。决策链同时证明内存 stats 其余部分丰富
+  在位（战/死账、竞速台账 485/1084、卡牌 n=76.5），写侧 4→5 增量与
+  磁盘一致——五态 verdict 已无法在「内存名册缺账 / 读侧异常被 except
+  静默吞掉（_is_respawn_add_core 的 except Exception: return False）/
+  生产运行代码与 HEAD 读侧逻辑分歧」三间再压缩。
+- **竞速台账**：485/1085≈44.7%（上批 483/1077≈44.85%），带内平稳，
+  未触 ≥46% 预警线。本批应验 +5（1520-F24/1521-F23/1522-F8/1523-F17/
+  1524-F13）、反向 +2（1520-F17/1521-F17 判死后获胜）。
+- **RINGING_SINGLE_PLAY_OBS**：本批 0 例（无昏眩回合现场），顺延不判
+  失效。
+- **KIN 战损基线**：1523-F17 KIN 组合 Boss 战阵亡（掉血 63，63→0 共
+  7 回合），为 KIN 对照新增 1 例负样本；信徒被复活机制首次带内坐实，
+  基线口径顺延。
+
+## 三、本批落地行为修改 #1（RESPAWN_ROSTER_READ_OBS 读数增配，纯观测）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_READ_OBS 读数增配（n/rs/err 三读数）**：名册读侧五态 verdict 部署两批以来，生产 5 局 40+ 条注记对磁盘 confirmations≥2 物种（含白名单 99 封顶）恒判「未知」、否决台账恒 {}，而本地同代码同名册复现全健康——1493~1499 批预注册的「三解释不可分辨」在写侧健康（4→5）+内存 stats 丰富在位两项新证据下仍未收敛；快照不携带任何原始读数，下一批同类遭遇仍需同等人工成本且无法定位 | |
+| 假设 | HYPOTHESIS：生产读侧恒「未知」的真因必居 {内存 respawn_adds 缺账 / is_known 查询异常被 except 吞掉 / 生产运行代码与 HEAD 读侧逻辑分歧} 之一，verdict 尾缀 n=该键 confirmations、rs=内存名册条数、err=读侧异常类型后，下一名册物种遭遇即机械可判；EVIDENCE：1520~1524 五局读侧注记全「未知」清单（二节）+ 磁盘名册 28 条健在 + vetoes 恒 {} + 本地复现否决/名册/台账全健康 + 1523-F17-T6 写侧坐实 4→5；EXPECTED_SIGNAL：未来 3~10 局名册物种遭遇注记变为 否决/名册(n≥2,rs≥2)=链路健康自愈、未知(n=0,rs=0)=内存名册缺账坐实、未知(n=0,rs≥2)=键名归一化分歧、未知(n≥2,rs≥2,err=X)=读侧异常坐实、未知(n≥2,rs≥2)无 err=生产代码/逻辑分歧坐实（核 BOOT_HEAD 部署差） | |
+| 落地动作 | ① brain/policy.py：_is_respawn_add 快照段增配三读数——只读直查 know.stats.respawn_adds 取该键 confirmations(n) 与名册条数(rs)，并读取新增的 _respawn_lookup_err 缓冲拼 err= 尾缀；_is_respawn_add_core 的 is_known 查询 except 分支把被吞异常类型按敌键记入 _respawn_lookup_err（判决安全回落 False 不变）；__init__ 与战斗实例更替复位块同步增配该缓冲；② brain/selfcheck.py：3yr-read-obs 五处锚升级为携带读数的新格式（否决(n=2,rs=3)/名册(n=2,rs=3)/nm:未知(n=0,rs=3)/坐实(n=2,rs=3)——坐实读数含本次落账），新增 3yr-read-obs2 读侧异常锚（monkeypatch is_known 抛 RuntimeError：判决仍 False、快照=id:未知(n=2,rs=3,err=RuntimeError)、否决台账不虚增） | |
+| 行为边界 | **纯观测、零行为改动**：_is_respawn_add 返回值、名册读写、否决计数、门闸、评分、动作全部不变——三读数只在快照字符串内拼接，n/rs 直查为只读，err 记录在被吞 except 分支内（该分支原本就 return False）；respawn_roster_read_obs=False 观测整体同灭（3yr rd4 对照锚原样通过） | |
+| 自检 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3yr-read-obs 升级五锚+新增 3yr-read-obs2 异常锚+既有 3yr/3rallc/3rsp/3lsl/3ra 全系列锚原样通过） | |
+| 未来 3~10 局观测指标 | ① 任一「否决/名册(n≥2,rs≥2)」注记出现 → 读侧链路健康，此前「未知」判历史遗留并复查自愈点；② 「未知(n=0,rs=0)」→ 内存名册缺账坐实，立项查加载/轮换/基线恢复路径；③ 「未知(n=0,rs≥2)」→ 键名归一化分歧，立项查 kid 与名册键口径；④ 「未知(n≥2,rs≥2,err=X)」→ 读侧异常坐实，按异常类型修 is_known 异常面；⑤ 「未知(n≥2,rs≥2)」无 err → 生产代码与 HEAD 分歧坐实，核 BOOT_HEAD/部署差 | |
+| 继续调整条件 | ①~⑤ 任一信号达 1 例即按对应分支立项；读数与磁盘名册事后核对不符（n 读数偏差）→ 修只读直查口径 | |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_read_obs: false` 观测整体即灭（3yr rd4 对照锚）；或删除 policy.py 三读数段/_respawn_lookup_err 缓冲与 selfcheck 3yr-read-obs2 段，完全回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（生产异常达
+   可观测阈值即落地读数增配，非登记延后）。
+2. **RACE_ALLIN_LETHAL_COVER_OBS / RALC_BUYBACK_AUDIT（1500~1504、
+   1514~1519 批观察）**：部署后首窗 1 例「买活仍必败」滚动证成，
+   「买活可翻盘」0 例，续记。
+3. **RINGING_SINGLE_PLAY_OBS（1505~1513 批观察）**：本批 0 例现场，
+   顺延不判失效。
+4. **RESPAWN_ROSTER_READ_OBS / RESPAWN_CONFIRM_OBS /
+   RESPAWN_NATIVE_VETO_OBS**：读侧恒「未知」异常本批落地读数增配
+   （三节）；写侧坐实两例（CORPSE_SLUG#0、KIN_FOLLOWER#0）健康；
+   否决台账恒 {} 的裁决转交增配后读数。
+5. **竞速台账**：485/1085≈44.7%，<46% 预警线，续记。
+6. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：1523-F17、
+   1524-F13 多场廉价减员加分+翻案/随附注记在产（累计 12 翻 46 随附
+   沿用），KIN 对照新增 1523 负样本 1 例，续记。
+7. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE / RACE_HAND_TAX_FIRE /
+   HAND_TAX_NOTE_DEDUP / FOCUS_DRIFT_FLUSH_OBS**：本批无对应分支
+   现场或注记健在（FOCUS_DRIFT 系 11 处在产），顺延不判失效。
+8. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE /
+   MINION_FOCUS_OBS / RACE_UPSHIFT_STALE / SELF_LOSS_PHASE_OBS）：
+   本批注记在产或无对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **观测 verdict 必须携带原始读数，否则「判决异常」与「数据异常」
+   永远不可分辨**：读侧恒「未知」持续两批，写侧健康+磁盘账在+本地
+   复现正常三证齐下仍定位不了真因——因为快照只有结论没有输入。凡
+   「except 吞错后回落」的读路径，观测快照都应同时披露读到的原始值
+   与异常类型，一次部署省去逐批手工对账。
+2. **「本地复现健康+生产恒异常」本身就是证据形态**：同代码同数据
+   结果相反时，分歧只剩运行环境（内存状态/部署代码版本）；观测设计
+   要把这两类也变成带内可读信号（rs= 内存条数、err= 异常类型），
+   而不是反复复现本地。
+3. **失败回放 lineage 收敛即整体重实现，不做切片拼接**：本批 11 个
+   包（1 target+10 attempts）候选 patch 全是同一变更的不同完整度
+   切片；核对当前 HEAD 不含该变更后，以最完整的 target 候选为蓝本
+   自行重实现+升级自检锚，一次闭环，避免多包冲突叠加。
+4. **KIN 神官复活信徒机制首次带内坐实**：1523-F17 信徒 T3 被击杀、
+   T4 满池再现、T6 同实例二次击杀后坐实（名册 4→5）——「减员成本
+   加分」对会被复活的爪牙可能系统性高估，但单局单例 <3 局阈值，
+   凭增配后的读数与名册累计顺延观察，不提前立项。
+5. 观察点（下批复盘核对）：① 增配后读侧注记五信号裁决（三节指标
+   ①~⑤）；② 买活对账「买活可翻盘」0→1 线/「仍必败」滚动证成；
+   ③ 竞速台账 485/1085 走向（≥46% 预警）；④ KIN 复活机制遭遇与
+   减员成本口径（单例顺延）；⑤ RINGING_SINGLE_PLAY_OBS 偏离样本；
+   ⑥ REMOVAL_COST 翻案/随附比（累计 12 翻 46 随附）。
+

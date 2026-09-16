@@ -12007,28 +12007,51 @@ def main() -> int:
     rd_pol = policy.Policy(ra_know)
     assert not rd_pol._is_respawn_add({"enemy_id": "NIBBIT", "name": "小啃兽"}), \
         "读侧快照不得改变否决判决"
-    assert rd_pol._respawn_read_obs.get("NIBBIT") == "id:否决", \
-        "名册命中被白名单否决的首判应记 id:否决"
+    assert rd_pol._respawn_read_obs.get("NIBBIT") == "id:否决(n=2,rs=3)", \
+        "名册命中被白名单否决的首判应记 id:否决 并携带名册读数"
     _rd_note = rd_pol._respawn_read_obs_flush("")
-    assert "NIBBIT=id:否决" in _rd_note and "RESPAWN_ROSTER_READ_OBS" in _rd_note, \
+    assert "NIBBIT=id:否决(n=2,rs=3)" in _rd_note and "RESPAWN_ROSTER_READ_OBS" in _rd_note, \
         "读侧首判注记未并入 danger_note"
     assert rd_pol._respawn_read_obs_flush("") == "", \
         "同一敌键同场不得重复注记（每敌每场至多一次）"
     assert rd_pol._is_respawn_add({"enemy_id": "WRIGGLER_ADD", "name": "扭动虫"}), \
         "读侧快照不得改变白名单名册生效判决"
-    assert rd_pol._respawn_read_obs.get("WRIGGLER_ADD") == "id:名册", \
-        "白名单名册命中的首判应记 id:名册"
+    assert rd_pol._respawn_read_obs.get("WRIGGLER_ADD") == "id:名册(n=2,rs=3)", \
+        "白名单名册命中的首判应记 id:名册 并携带名册读数"
     rd2_pol = policy.Policy(ra_know)
     assert not rd2_pol._is_respawn_add({"name": "异螨"}), \
         "enemy_id 缺失回退中文名的未知名册判决被快照改变"
-    assert rd2_pol._respawn_read_obs.get("异螨") == "nm:未知", \
-        "name 回退未知名册的首判应记 nm:未知"
+    assert rd2_pol._respawn_read_obs.get("异螨") == "nm:未知(n=0,rs=3)", \
+        "name 回退未知名册的首判应记 nm:未知 并携带名册读数"
     rd3_pol = policy.Policy(ra_know)
     rd3_pol._combat_kills["SPRING_ADD#0"] = 2
     assert rd3_pol._is_respawn_add({"enemy_id": "SPRING_ADD", "index": 0}), \
         "读侧快照不得改变同场坐实判决"
-    assert rd3_pol._respawn_read_obs.get("SPRING_ADD") == "id:坐实", \
-        "同场坐实的首判应记 id:坐实"
+    assert rd3_pol._respawn_read_obs.get("SPRING_ADD") == "id:坐实(n=2,rs=3)", \
+        "同场坐实的首判应记 id:坐实 并携带名册读数（含本次坐实落账后的 confirmations）"
+    # 3yr-read-obs2) 读数增配（第 1520~1524 局批复盘）：生产五局名册物种（磁盘
+    #      confirmations≥2，含白名单 EXOSKELETON/INKLET=99）恒「id:未知」、
+    #      respawn_native_vetoes 恒 {}，而同 HEAD+同生产 stats.json 本地复现
+    #      KIN_FOLLOWER→否决+台账 / EXOSKELETON→名册——快照增配 n/rs/err 三读数
+    #      定位真因；读侧异常路径：判决安全回落 False、否决台账不虚增、快照
+    #      携带原始名册读数与异常类型。
+    def _boom_lookup(_key):
+        raise RuntimeError("simulated roster lookup failure")
+    _veto_before_nib = (ra_know.stats.get("respawn_native_vetoes", {})
+                        .get("NIBBIT") or {}).get("vetoes", 0)
+    ra_know.is_known_respawn_add = _boom_lookup
+    try:
+        rd5_pol = policy.Policy(ra_know)
+        assert not rd5_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
+            "读侧异常不得改变安全回落判决"
+        assert rd5_pol._respawn_read_obs.get("NIBBIT") == \
+            "id:未知(n=2,rs=3,err=RuntimeError)", \
+            "读侧异常快照未携带名册读数与异常类型"
+        assert ((ra_know.stats.get("respawn_native_vetoes", {})
+                 .get("NIBBIT") or {}).get("vetoes", 0)) == _veto_before_nib, \
+            "读侧异常不得虚增否决台账（未达否决分支）"
+    finally:
+        del ra_know.is_known_respawn_add
     ra_know.policy["respawn_roster_read_obs"] = False
     try:
         rd4_pol = policy.Policy(ra_know)
