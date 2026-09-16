@@ -12382,3 +12382,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.686391168710205局)，BASH(14分/3.9654079119855576局)，SETUP_STRIKE(14分/3.6049162836232305局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.39 → 0.42（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1526 胜，当前目标进阶 0
+
+## 第 1527 局复盘（2026-09-16 15:58）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 BOWLBUG_NECTAR+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：ANGER, POMMEL_STRIKE, EXPECT_A_FIGHT, RAMPAGE, BLUDGEON, FLAME_BARRIER, EXPECT_A_FIGHT, STONE_ARMOR, UPPERCUT, SHRUG_IT_OFF, FEEL_NO_PAIN, COLOSSUS, PACTS_END, CINDER, UPPERCUT, RICOCHET, BACKSTAB, THE_HUNT, SPITE, SHRUG_IT_OFF, STONE_ARMOR
+- 本局遗物：ORICHALCUM, UNCEASING_TOP, PENDULUM
+- 战斗记录：F20 Monster战 掉血16; F23 Monster战 掉血41｜竞速审计：T3判死→实战10回合获胜; F25 Monster战 掉血24｜竞速审计：T2判死→实战9回合获胜; F28 Monster战 掉血9｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血57｜自损2（可行动段2/非行动段54，SELF_LOSS_PHASE_OBS）; F31 Monster战 掉血9｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.503517103863106局)，ASHEN_STRIKE(26分/2.7482065971689504局)，PACTS_END(25分/78.18057520455513局)，FEED(25分/42.373526382288944局)，BRAND(25分/2.774231280146904局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.66998879961972局)，BASH(14分/3.9515289842936085局)，SETUP_STRIKE(14分/3.592299076630549局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.42 → 0.45（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.01 → 2.00（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1527 胜，当前目标进阶 0
