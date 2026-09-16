@@ -6981,8 +6981,20 @@ class Policy:
         # 判死局的能力复利视界（3+ 回合起步）超出剩余存活视界（~2 回合），
         # 543 局 F5 在「全攻提速」留痕下打出乱战+恶魔形态零伤整回合直接致死——
         # 战略层判死必须穿透到能力牌评分，否则全攻提速只是口号
+        # 0费牌免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT，第1139~1145局批复盘新增，
+        # 静态键）：本禁玩的正当性是「烧费买复利=放弃格挡/输出能量」——0费牌
+        # 不消耗能量、不会挤占任何出牌，禁玩只把当场免费价值白留手里：1139局
+        # F17（2血/意图0，手握公理护环✓与公理护环+✓双跳过）、1140局F35（18血/
+        # 意图28与4血/意图20两跳公理护环✓）、1145局F35（30血/意图19跳公理护环
+        # ✓）三独立对局达证据线，且謦欬卡组每回合实付2~6血、余量全程为0——
+        # 0费+3余量当场即可为同回合謦欬牌抵扣实付。键=False 严格回滚旧禁玩
+        # （零差异）；cost>0 的能力牌禁玩教义逐字不变。
+        _floor_exempt_free = False
         if lethal or race_allin:
-            score = min(score, floor_score)
+            if cost > 0 or not bool(pol.get("lethal_race_free_card_exempt", True)):
+                score = min(score, floor_score)
+            else:
+                _floor_exempt_free = True
         # 能力/增益牌也必须遵守与攻击牌相同的能量预留：当本回合有合格格挡
         # 且最后一点能量正好会被这张非即时牌吃掉时，长战复利不能把买命牌
         # 挤掉。1189-F17-T1 的战栗→杂耍→好勇斗狠连续承诺留下 7 点意图、
@@ -6997,6 +7009,8 @@ class Policy:
         if cost == 0:
             score += pol["free_card_bonus"]
         why = f"能力/增益牌（第{round_no}回合）"
+        if _floor_exempt_free:
+            why += "｜0费免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT）"
         if reserve_setup_for_block:
             why += "｜能量预留给格挡"
         if lf >= 1.5:

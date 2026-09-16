@@ -3572,3 +3572,78 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1139~1145 局批复盘：0费牌免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT）——能力桶禁玩补上「零能耗不挤占」豁免口
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：能力桶 `lethal or race_allin` 禁玩（floor_score）的正当性是
+  「烧费买复利=放弃格挡/输出能量」（546 局教义），但它把 0 费牌一并禁玩——0 费牌
+  不消耗任何能量、不会挤占任何出牌，禁玩只会把当场免费价值白留手里。白绮公理护环
+  （0费+3余量）正是此类：謦欬卡组每回合实付 2~6 血、余量全程为 0 时，0费+3余量
+  当场即可为同回合謦欬牌抵扣实付。给 0 费牌豁免该禁玩后，判死/致死语境下 0 费
+  能力桶牌恢复参选（仍须过出牌阈值、仍参与候选竞争），判死 Boss 战余量不再全程
+  为 0，同回合謦欬实付随之下降；cost>0 能力牌与 546 局「判死局烧费买复利」教义
+  逐字不变。
+- **EVIDENCE**：本批 3 个独立对局（≥evidence_run_threshold=3）同一形态：
+  1139 局 F17（05:44:34，2血/意图0，手握公理护环✓与公理护环+✓双跳过）、
+  1140 局 F35（06:09:14，18血/14甲/意图28 公理护环✓跳过；06:09:24，4血/意图20
+  致死回合再跳）、1145 局 F35（07:15:24，30血/意图19 公理护环✓跳过）。三局均为
+  竞速判死 Boss 战，LIVE_ESTIMATE 余量全程 margin=0/spent=0；公理护环生涯
+  plays=2569（非 never_played_dead 抑制通道），数值复核：豁免后 T6 评分
+  ≈1.5(base)+3.5(lf)+1.5(free)+3.75(estimate)>0.4 可出，豁免前 -48.5 恒死。
+- **EXPECTED_SIGNAL**：未来 3~10 局决策链 grep LETHAL_RACE_FREE_CARD_EXEMPT
+  显形（预期集中 Boss/硬仗判死与致死回合，伴随「打出【公理护环】」）；同语境
+  LIVE_ESTIMATE 出现 margin>0 读数；带豁免出牌的战斗可行动段自损较本批同型
+  下降（上限 ≈3血/张）。证伪/回滚：豁免注记≈0（接线排查而非假设证伪）、或豁免
+  后判死战自损占比无变化且出现异常 0 费牌乱打留痕 →
+  `lethal_race_free_card_exempt=False` 一键回滚（旧行为零差异，3fce③ 锚住）。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：_score_play 能力桶禁玩段——`lethal or race_allin`
+  时仅当 cost>0（或键关闭）才压 floor_score；cost==0 豁免并置
+  `_floor_exempt_free`，why 追加「0费免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT）」
+  留痕供下批计数。base/lf/开局承诺/reserve_setup_for_block/free_card_bonus/
+  付费能力牌禁玩全部逐字不变；非能力桶分支零改动。
+- sts2-ascend/brain/knowledge.py：DEFAULT_POLICY 注册
+  `lethal_race_free_card_exempt=True`（含本批三局证据注释；False 一键回滚）。
+- sts2-ascend/brain/selfcheck.py：3fce 四段——① 判死局（race_allin）0费能力牌
+  过出牌线且带豁免留痕；② 致死局同上；③ 键=False 严格回滚旧禁玩（压回阈值
+  之下、留痕全灭）；④ 豁免键开启下 cost>0 能力牌（ra_pow 3费）仍被禁玩
+  （546 局教义锚）。
+- 未触碰竞速投影判决/謦欬门带/KRH 族/地图端任何闸；runs/stats/policy.json/
+  lessons.md/review_queue 等只读在线状态未动。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK（含 3fce 四段；既有
+  3ra 败局竞速经济族、3xc/3xcr 承诺族、3krh/3krhm/3krds 判死自付族、3pnm
+  近失观测、3prv 全拦截族全量通过）。
+- py -3 -B -m unittest sts2-ascend.tests.test_character_strategy：57 tests OK。
+- py -3 -B -m unittest sts2-ascend.tests.test_review_decision_chain：10 tests OK。
+- git diff --check 通过；完整 diff 已回读：brain/policy.py（+16/-1，禁玩豁免+
+  留痕+证据注释）、brain/knowledge.py（+6，静态键+证据注释）、
+  brain/selfcheck.py（+45，3fce 四段）；未触碰在线状态；工作区 assets/ 长路径
+  删除告警为宿主预置现场，与本批无关、不入 commit。随后本地 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局统计：LETHAL_RACE_FREE_CARD_EXEMPT 显形次数/局与落点（预期集中
+  F17/F33/F35 Boss 判死回合）；豁免战斗的 LIVE_ESTIMATE margin= 读数是否脱离
+  恒 0；带豁免出牌战斗的可行动段自损与本批 1139/1140/1145 同型对账。
+- 对照指标：判死 Boss 战结局（本批 F33 阵亡 1 局、F35 阵亡 2 局）与致死回合
+  空过频率不得恶化；若豁免注记出现在非 0 费牌或键关闭后仍显形，说明接线错误
+  （排查 cost 口径，costs_x 且 0 能量时 cost=0 同属豁免，属预期内）。
+- 撤回条件：判死/致死回合出现异常 0 费牌乱打留痕（打出纯负面 0 费牌）、或
+  对照期 Boss 战绩明显劣化——`lethal_race_free_card_exempt=False` 一键撤回，
+  旧禁玩零差异（3fce③ 锚住）。
+- 既有观察顺延：race_audit 台账本批 628/1574=39.9% 判死后获胜（仍 ≥30% 证伪
+  线），RACE_DOOM_POWER_BONUS_AUDIT_GATE 与謦欬相位族留痕继续累计；
+  HP_GATE_STALL_ANY_NEAR_MISS_OBS 上批已按预注册证伪结案，不再动闩锁。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。

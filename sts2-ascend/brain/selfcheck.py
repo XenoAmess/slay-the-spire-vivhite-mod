@@ -6126,6 +6126,51 @@ def main() -> int:
     assert s_blk_lethal > s_blk_allin, \
         f"致死回合格挡被误贬值（买命窗口应保留原价）: lethal={s_blk_lethal} allin={s_blk_allin}"
 
+    # 3fce（第1139~1145局批复盘）：0费牌免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT）——
+    #           能力桶 lethal/race_allin floor 的正当性是「烧费买复利挤占能量」，
+    #           0费牌不耗能量却被一并禁玩：1139局F17（2血/意图0双跳公理护环✓）、
+    #           1140局F35（18血与4血两跳）、1145局F35（30血一跳）三独立对局把
+    #           免费余量白留手里。① 判死局（race_allin）0费能力牌过出牌线且带
+    #           豁免留痕；② 致死局同上；③ 键=False 严格回滚旧禁玩（压回阈值
+    #           之下、留痕全灭）；④ 豁免键开启下 cost>0 能力牌仍被禁玩（546局
+    #           教义零改动）。
+    fce_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-fce-"))), random.Random(5))
+    fce_enemies = [dict(ra_enemies[0])]
+    fce_free = {"index": 0, "card_id": "FCE_RING", "name": "公理环", "playable": True,
+                "energy_cost": 0, "requires_target": False,
+                "resolved_rules_text": "获得3点余量。"}
+    fce_thr = fce_pol.know.policy["play_threshold"]
+    s_fce_race, _, w_fce_race = fce_pol._score_play(
+        dict(fce_free), fce_enemies, 14, 0, 5, fce_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=0, hopeless_race=True, kill_race=True,
+        run_deck=[])
+    assert s_fce_race > fce_thr \
+        and "LETHAL_RACE_FREE_CARD_EXEMPT" in (w_fce_race or ""), \
+        f"判死局0费能力牌未解禁: score={s_fce_race} why={w_fce_race}"
+    s_fce_lethal, _, w_fce_lethal = fce_pol._score_play(
+        dict(fce_free), fce_enemies, 50, 0, 5, fce_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=0, run_deck=[])
+    assert s_fce_lethal > fce_thr \
+        and "LETHAL_RACE_FREE_CARD_EXEMPT" in (w_fce_lethal or ""), \
+        f"致死局0费能力牌未解禁: score={s_fce_lethal} why={w_fce_lethal}"
+    fce_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-fceoff-"))), random.Random(5))
+    fce_off.know.policy["lethal_race_free_card_exempt"] = False
+    s_fce_rb, _, w_fce_rb = fce_off._score_play(
+        dict(fce_free), fce_enemies, 14, 0, 5, fce_off.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=0, hopeless_race=True, kill_race=True,
+        run_deck=[])
+    assert s_fce_rb < fce_thr \
+        and "LETHAL_RACE_FREE_CARD_EXEMPT" not in (w_fce_rb or ""), \
+        f"键=False 未回滚旧禁玩: score={s_fce_rb} why={w_fce_rb}"
+    s_fce_paid, _, _ = fce_pol._score_play(
+        dict(ra_pow), fce_enemies, 14, 0, 5, fce_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, hopeless_race=True, kill_race=True,
+        run_deck=[])
+    assert s_fce_paid < fce_thr, \
+        f"豁免键开启后付费能力牌被误解禁（546局教义）: score={s_fce_paid}"
+
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
     #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：

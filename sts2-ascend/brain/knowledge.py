@@ -746,6 +746,12 @@ DEFAULT_POLICY = {
                                      # 上砧挤占格挡/输出能量，529~536 局同型 50+ 例。True 时 kill_race 非致死
                                      # 回合撤掉 lf 分量（base/开局承诺/lethal/race_allin floor 不变）；
                                      # False 一键回滚旧口径（零差异）
+    "lethal_race_free_card_exempt": True,  # 0费牌免禁玩（LETHAL_RACE_FREE_CARD_EXEMPT，第1139~1145局批复盘
+                                      # 新增，静态键）：能力桶 lethal/race_allin 禁玩的正当性是「烧费买复利
+                                      # 挤占格挡/输出能量」，0费牌不消耗能量却被一并禁玩——1139局F17（2血/
+                                      # 意图0双跳公理护环✓）、1140局F35（18血与4血两跳）、1145局F35（30血
+                                      # 一跳）三独立对局把免费余量白留手里（謦欬卡组余量全程为0）；
+                                      # False 一键回滚旧禁玩（零差异）
     "kill_race_prior_eff": 0.55,     # 首回合攻坚先验折算率（第 255 批复盘）：实测输出速率不足两回合时，
                                      # 用 deck_burst×此值做悲观 DPS 开账——Boss 战头 1~2 回合不再盲防
                                      # （252 局 F5 劫掠者三连 T1~T3 意图 22→32 还在打坚毅补防）；
