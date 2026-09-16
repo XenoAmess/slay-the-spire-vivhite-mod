@@ -13427,3 +13427,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(22分/7.914075356724659局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.639218346563421局)，FASTEN(23分/3.091663975082697局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1217 胜，当前目标进阶 3
+
+## 第 1218 局复盘（2026-09-17 00:26）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_ASTRAL_MEASURE
+- 本局遗物：GAME_PIECE, RIPPLE_BASIN
+- 战斗记录：F9 Monster战 掉血0｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Unknown战 掉血0｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损2（可行动段2/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血10｜自损18（可行动段18/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血68｜自损28（可行动段28/非行动段32，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(43分/4.8007851684758265局)，REND(41分/4.899301872290822局)，BOLAS(38分/2.9683299471999405局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/2.8296596137956294局)，STRATAGEM(36分/6.198035261531543局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(22分/7.886376092976123局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.6194810823504495局)，FASTEN(23分/3.0808431511699075局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（87%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1218 胜，当前目标进阶 3
