@@ -13768,3 +13768,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.990704218248658局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.098990179280695局)，FASTEN(23分/2.773247815753843局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1248 胜，当前目标进阶 3
+
+## 第 1249 局复盘（2026-09-17 07:00）
+- 结果：💀 失败｜进阶 3｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_OPEN_SET_SHELTER, PROWESS, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHIAROSCURO
+- 本局遗物：SPARKLING_ROUGE, STRAWBERRY, PEAR, RAINBOW_RING, VAJRA, REPTILE_TRINKET
+- 战斗记录：F20 Monster战 掉血6｜自损22（可行动段22/非行动段16，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血0｜自损16（可行动段16/非行动段15，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血0｜自损18（可行动段18/非行动段9，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血8｜自损8（可行动段8/非行动段3，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血38｜自损23（可行动段23/非行动段41，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血81｜自损22（可行动段22/非行动段32，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：REND(40分/5.377335833117958局)，BOLAS(38分/2.662616186252508局)，MAYHEM(38分/5.27188961021321局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/2.538227765543533局)，FLASH_OF_STEEL(35分/6.887670516025157局)
+- 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.9697367534847885局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.074143713653212局)，FASTEN(23分/2.763541448398705局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血81，每回合20≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿15张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.38 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：3/1249 胜，当前目标进阶 3
