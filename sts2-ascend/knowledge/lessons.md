@@ -12437,3 +12437,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.604951400399527局)，BASH(14分/3.8964973387996局)，SETUP_STRIKE(14分/3.5422703079996323局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1531 胜，当前目标进阶 0
+
+## 第 1532 局复盘（2026-09-16 21:16）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：SHOCKWAVE, HOWL_FROM_BEYOND, INFLAME, MOLTEN_FIST, BLUDGEON, THUNDERCLAP, TRUE_GRIT, INFLAME, ARMAMENTS, SHRUG_IT_OFF, UNRELENTING
+- 本局遗物：NUNCHAKU, STRIKE_DUMMY
+- 战斗记录：F5 Monster战 掉血0; F7 Monster战 掉血9; F9 Monster战 掉血17; F14 Monster战 掉血4; F15 Elite战 掉血23; F17 Boss战 掉血51｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.460011163884873局)，ASHEN_STRIKE(26分/2.70044846079364局)，PACTS_END(25分/76.82195879763515局)，FEED(25分/41.63716229170242局)，BRAND(25分/2.726020888704573局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.5888340704981285局)，BASH(14分/3.8828595981138014局)，SETUP_STRIKE(14分/3.5298723619216337局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1532 胜，当前目标进阶 0
