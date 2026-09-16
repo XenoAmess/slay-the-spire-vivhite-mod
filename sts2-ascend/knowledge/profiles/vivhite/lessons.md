@@ -13218,3 +13218,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(22分/8.459241497780653局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.027679507974512局)，FASTEN(23分/3.3046352247569275局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，致命Boss战实测自损43/掉血82（52%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1198 胜，当前目标进阶 3
+
+## 第 1199 局复盘（2026-09-16 19:49）
+- 结果：💀 失败｜进阶 3｜到达层数 11｜当局评分 11
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_ASTRAL_SEARCH
+- 本局遗物：BOOK_OF_FIVE_RINGS
+- 战斗记录：F4 Monster战 掉血0｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损22（可行动段22/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战9回合获胜; F6 Monster战 掉血0｜自损4（可行动段4/非行动段7，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血27｜自损20（可行动段20/非行动段15，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血11｜自损8（可行动段8/非行动段14，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血40｜自损28（可行动段28/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/4.084855789813004局)，REND(41分/5.23679341428324局)，STRATAGEM(39分/5.563574349672793局)，BOLAS(38分/3.172805253506054局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/3.0245825255220353局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(22分/8.429634152538421局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.006582629696601局)，FASTEN(23分/3.2930690014702786局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Elite战实测自损28/掉血40（70%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1199 胜，当前目标进阶 3
