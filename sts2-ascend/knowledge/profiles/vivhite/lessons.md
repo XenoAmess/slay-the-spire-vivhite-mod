@@ -12899,3 +12899,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.219799659589331局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.672803941831163局)，FASTEN(23分/3.658320407529766局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1169 胜，当前目标进阶 3
+
+## 第 1170 局复盘（2026-09-16 12:36）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CHROMATIC_SEQUENCE
+- 本局遗物：BAG_OF_PREPARATION, BOWLER_HAT, STONE_CRACKER
+- 战斗记录：F2 Monster战 掉血16｜自损26（可行动段26/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损6（可行动段6/非行动段0，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血2｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血0｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血0｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血84｜自损40（可行动段40/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(45分/4.522045636304143局)，REND(43分/4.720864380402226局)，BOLAS(41分/2.4694097567492608局)，STRATAGEM(40分/5.123343711501283局)，AUTOMATION(39分/5.0534618079821145局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(20分/2.2120303607807683局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.649449128034755局)，FASTEN(23分/3.6455162861034123局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1170 胜，当前目标进阶 3
