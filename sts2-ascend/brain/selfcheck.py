@@ -9879,6 +9879,28 @@ def main() -> int:
     assert "无其他候选，规避门否决后强制进场" in d_map.reason \
         and "其余候选评分更差" not in d_map.reason, \
         f"单候选精英留痕未按强制进场语义书写: {d_map.reason}"
+    # ③ ELITE_FORCED_ENTRY_OBS（第1525~1537局批复盘新增，纯观测）：强制进场
+    #    分支必须携带「入场血量/选中路径进Boss投影/门内死亡投影」三读数——
+    #    1526×2/1532/1537 四例此前只能靠复盘人工重建链路（1537 入场 10% 血
+    #    当场阵亡）。夹具 hp 40/80=50%，单精英候选无路径投影死亡
+    assert "强制进场读数：入场血量50%，选中路径进Boss投影" in d_map.reason \
+        and "门内死亡投影=否（ELITE_FORCED_ENTRY_OBS）" in d_map.reason, \
+        f"强制进场读数未按三读数口径书写: {d_map.reason}"
+    # ④ 回滚对照：elite_forced_entry_obs=False → 观测注记消失，强制进场语义
+    #    与判决严格不变（纯观测锚）
+    htx_map_know_off = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-htxmapoff-")))
+    htx_map_know_off.policy["elite_min_hp_pct"] = 0.62
+    htx_map_know_off.policy["elite_soft_hp_pct"] = 0.62
+    htx_map_know_off.policy["elite_forced_entry_obs"] = False
+    htx_map_pol_off = policy.Policy(htx_map_know_off, random.Random(11))
+    d_map_off = htx_map_pol_off.decide(htx_map_st, ctx)
+    assert "ELITE_FORCED_ENTRY_OBS" not in d_map_off.reason, \
+        f"观测键关闭后强制进场读数未消失: {d_map_off.reason}"
+    assert "无其他候选，规避门否决后强制进场" in d_map_off.reason \
+        and d_map_off.action == d_map.action \
+        and d_map_off.params == d_map.params, \
+        f"观测键关闭后强制进场语义或判决漂移: {d_map_off.action}（{d_map_off.reason}）"
 
     # 3hts) 税负战斗防守姿态成本观测位（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
     #      812-F9 全链实证——高危组合「转防守节奏」把感染税战斗拖长，每多拖一轮
