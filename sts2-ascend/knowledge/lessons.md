@@ -12415,3 +12415,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.637356085385177局)，BASH(14分/3.9239166876336116局)，SETUP_STRIKE(14分/3.5671969887578245局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（82%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1529 胜，当前目标进阶 0
+
+## 第 1530 局复盘（2026-09-16 19:06）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TRUE_GRIT, BREAKTHROUGH, STAMPEDE, INFLAME, WHIRLWIND, IRON_WAVE, POMMEL_STRIKE, DEMON_FORM, UPPERCUT, TAUNT, SWORD_BOOMERANG, BLUDGEON, IMPERVIOUS
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F7 Unknown战 掉血29｜自损1（可行动段1/非行动段34，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战4回合获胜; F11 Monster战 掉血24｜自损2（可行动段2/非行动段16，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血5｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血9｜自损1（可行动段1/非行动段13，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血35｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战8回合获胜; F17 Boss战 掉血42｜自损1（可行动段1/非行动段35，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4773220711878152局)，ASHEN_STRIKE(26分/2.719451306661765局)，PACTS_END(25分/77.3625489490539局)，FEED(25分/41.93015976560452局)，BRAND(25分/2.7452036857597406局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.621125339086329局)，BASH(14分/3.910182979226894局)，SETUP_STRIKE(14分/3.554711799297172局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1530 胜，当前目标进阶 0
