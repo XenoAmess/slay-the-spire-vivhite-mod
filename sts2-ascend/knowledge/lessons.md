@@ -12360,3 +12360,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.7193689390137985局)，BASH(14分/3.993312179165521局)，SETUP_STRIKE(14分/3.6302837992413792局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1524 胜，当前目标进阶 0
+
+## 第 1525 局复盘（2026-09-16 13:57）
+- 结果：💀 失败｜进阶 0｜到达层数 38｜当局评分 38
+- 死因：敌人组合 FROG_KNIGHT
+- 本局拿牌：SECOND_WIND, MOLTEN_FIST, EQUILIBRIUM, EVIL_EYE, JUGGLING, TRUE_GRIT, SWORD_BOOMERANG, INFLAME, SWORD_BOOMERANG, CONFLAGRATION, THUNDERCLAP, HEADBUTT, MOLTEN_FIST, DEMON_FORM, CINDER, PACTS_END, EVIL_EYE, HEADBUTT, PACTS_END, SHRUG_IT_OFF, POMMEL_STRIKE, SHRUG_IT_OFF, MOLTEN_FIST, UPPERCUT, SHRUG_IT_OFF, FEED, TWIN_STRIKE, MOLTEN_FIST
+- 本局遗物：WHETSTONE, AMETHYST_AUBERGINE, NUNCHAKU
+- 战斗记录：F30 Monster战 掉血8; F33 Boss战 掉血26｜竞速审计：T2判死→实战8回合获胜; F35 Monster战 掉血12; F36 Monster战 掉血0｜竞速审计：T3判死→实战3回合获胜; F37 Monster战 掉血56｜竞速审计：T2判死→实战5回合获胜; F38 Monster战 掉血18｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.7675455133297198局)，PACTS_END(25分/77.72368891174818局)，FEED(25分/42.67170559304675局)，BRAND(25分/2.7937533299784607局)，BARRICADE(25分/2.7476286216971153局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.702851147727251局)，BASH(14分/3.979335586538442局)，SETUP_STRIKE(14分/3.6175778059440344局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.39（行至 F38（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.03 → 2.02（行至 F38（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F38——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1525 胜，当前目标进阶 0
