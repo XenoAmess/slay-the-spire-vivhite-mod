@@ -3613,6 +3613,69 @@ def main() -> int:
         return pol_obj.decide(
             _krh_state(3, 45, hand_fn(), incoming, deck), ctx_obj)
 
+    # 3tll) 生命支付终端锁观测（VIVHITE_HP_TERMINAL_LOCK_OBS，第1202~1204局批
+    #      复盘）：1203-F33 与 1204-F48 收口时，全部非诅咒手牌均被原生
+    #      blocked_by_hook，白绮仍有能量却只能结束回合；现有逐张审计没有稳定
+    #      事件键，无法把终端锁与随后掉血/GAME_OVER 机械对账。仅新增收口观测，
+    #      不改变两次确认、动作或评分；键=0 时严格回滚注记。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_terminal_lock_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_terminal_lock_obs 静态键或默认值被改"
+
+    def _terminal_lock_hand():
+        return [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "name": "弦光投影", "card_type": "Attack", "playable": False,
+            "unplayable_reason": "blocked_by_hook", "energy_cost": 1,
+            "requires_target": True, "valid_target_indices": [0],
+            "dynamic_values": [
+                {"name": "Damage", "current_value": 10},
+                {"name": "LifeCost", "current_value": 2}],
+        }, {
+            "index": 1,
+            "card_id": "VIVHITE_CARD_CLOSED_PROJECTION",
+            "name": "闭域投影", "card_type": "Attack", "playable": False,
+            "unplayable_reason": "blocked_by_hook", "energy_cost": 1,
+            "requires_target": True, "valid_target_indices": [0],
+            "dynamic_values": [
+                {"name": "Damage", "current_value": 20},
+                {"name": "LifeCost", "current_value": 3}],
+        }]
+
+    def _terminal_lock_state():
+        _st = _krh_state(12, 2, _terminal_lock_hand(), incoming=42)
+        _st["available_actions"] = ["end_turn"]
+        _st["combat"]["player"]["energy"] = 2
+        _st["combat"]["end_turn_will_kill_player"] = True
+        return _st
+
+    vknow_tll = _vivhite_know("sts2-selfcheck-vterminal-lock-")
+    vpol_tll = policy.Policy(vknow_tll, random.Random(11))
+    vctx_tll = _krh_ctx()
+    d_tll_wait = vpol_tll.decide(_terminal_lock_state(), vctx_tll)
+    d_tll = vpol_tll.decide(_terminal_lock_state(), vctx_tll)
+    assert d_tll_wait.action is None, \
+        f"终端锁观测不得跳过既有两次确认: {d_tll_wait}"
+    assert d_tll.action == "end_turn" \
+        and "VIVHITE_HP_TERMINAL_LOCK_OBS" in d_tll.reason \
+        and "native_blocked_by_hook=2/2" in d_tll.reason \
+        and "/hp=2/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
+        f"终端生命锁缺稳定观测字段: {d_tll.reason}"
+
+    vknow_tll0 = _vivhite_know("sts2-selfcheck-vterminal-lock-off-")
+    vknow_tll0.policy["vivhite_hp_terminal_lock_obs"] = 0
+    vpol_tll0 = policy.Policy(vknow_tll0, random.Random(11))
+    vctx_tll0 = _krh_ctx()
+    d_tll0_wait = vpol_tll0.decide(_terminal_lock_state(), vctx_tll0)
+    d_tll0 = vpol_tll0.decide(_terminal_lock_state(), vctx_tll0)
+    assert d_tll0_wait.action is None \
+        and d_tll0.action == d_tll.action \
+        and d_tll0.params == d_tll.params, \
+        f"终端锁观测关闭不得改变确认/动作: on={d_tll_wait}/{d_tll} off={d_tll0_wait}/{d_tll0}"
+    assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
+        f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
+
     # ① 白绮判死竞速下实付謦欬攻击：注记显形且带实付额
     vknow_krh = _vivhite_know("sts2-selfcheck-krhopeless-")
     vpol_krh = policy.Policy(vknow_krh, random.Random(11))

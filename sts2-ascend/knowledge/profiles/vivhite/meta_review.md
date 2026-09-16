@@ -4024,3 +4024,60 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1202~1204 局批复盘：终端生命锁与 Boss 收口死亡的可观测性
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：本批白绮失败中有一条可独立证伪的收口瓶颈：当生命支付
+  已把所有非诅咒手牌锁到「支付后生命低于 1」时，Brain 即使仍有能量也只能
+  `end_turn`；这条终端生命锁可能是 Boss 战死亡的直接前置事件，而不只是
+  KRH 高分越门的伴随现象。若为终端生命锁增加稳定事件键并串联下一状态，才
+  能把「生命锁→敌方结算掉血/GAME_OVER」与普通的能量耗尽或接口抖动分开。
+- **EVIDENCE**：精确失败运行 `AS2BVGH1QM7S`（1202，F33）以自损22/敌方
+  掉血78 的 Boss 战失败，作为高生命支付对照；`63ZXHVHDZ5NU`（1203，F33）
+  的终段记录为 1 生命、2 能量，4 张非诅咒牌全部
+  `blocked_by_hook`，随后进入 `GAME_OVER`；`GVU7G67MHYX2`（1204，F48）
+  的终段记录为 2 生命、2 能量，8 张非诅咒牌全部
+  `blocked_by_hook`，下一条即为 `GAME_OVER`。源码中该路径由
+  `character_card_has_terminal_life_cost_lock` 判定，并经过既有两次相同
+  手牌签名确认；旧的逐张 END_TURN 审计没有稳定事件标识。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  `VIVHITE_HP_TERMINAL_LOCK_OBS` 的次数/战斗数、
+  `native_blocked_by_hook=N/N` 覆盖率、`end_turn_lethal=yes` 比例，以及标记
+  后下一条战斗结果的 HP 下降、继续战斗或 `GAME_OVER`。若 1203/1204 型终端
+  记录稳定出现但没有该标记，假设被观测实现证伪；若标记出现而后续 HP 常保持
+  或战斗胜利，则「终端锁是直接死亡前置」的归因被削弱，应转查敌方结算和其他
+  生命支付路径。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增静态键
+  `vivhite_hp_terminal_lock_obs=1`，用于开启终端生命锁观测。
+- `sts2-ascend/brain/policy.py`：在既有终端锁两次确认后的 `end_turn` 收口处，
+  追加 `VIVHITE_HP_TERMINAL_LOCK_OBS`，记录非诅咒锁定张数、原生
+  `blocked_by_hook` 张数、`hp`、`energy`、`incoming` 与
+  `end_turn_lethal`；不改变两次确认、评分、候选资格、闩锁或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入 2 张生命支付牌的终端锁夹具，验证
+  首次确认仍等待、第二次才收口并报告 `2/2`，以及键=0 时动作/参数不变且注记
+  消失。未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标文件 `git diff --check`：退出码 0；完整目标 diff 已回读，变更范围仅为
+  上述 3 个 `sts2-ascend/brain` 静态文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局优先按独立战斗对账终端标记与下一条状态，不把标记本身当作死亡
+  结论；同时保留 `SELF_LOSS_PHASE_OBS` 与 Boss 战最终胜负作交叉证据。
+- 若标记缺失、`N/N` 与原生审计不符、或动作/参数发生变化，将
+  `vivhite_hp_terminal_lock_obs` 设为 `0` 隐藏本次注记；必要时回滚本地提交，
+  原终端锁判定与收口动作保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

@@ -3051,10 +3051,31 @@ class Policy:
                 _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
                 _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
                                 f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+                _terminal_lock_note = ""
+                try:
+                    _terminal_lock_obs = bool(int(float(pol.get(
+                        "vivhite_hp_terminal_lock_obs", 1) or 0)))
+                except (TypeError, ValueError):
+                    _terminal_lock_obs = False
+                if (_terminal_lock_obs
+                        and getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID):
+                    _hook_blocked = sum(
+                        1 for _card in non_curse_cards
+                        if self._native_card_unplayable_reason(
+                            _card).casefold().startswith("blocked_by_hook"))
+                    _terminal_lock_note = (
+                        f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
+                        f"native_blocked_by_hook={_hook_blocked}/"
+                        f"{len(non_curse_cards)}/hp={my_hp}/energy={energy}"
+                        f"/incoming={incoming}/end_turn_lethal="
+                        f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+                        "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},
                     f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
-                    f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                    f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}"
+                    f"{_terminal_lock_note}",
                     wait=1.2)
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
