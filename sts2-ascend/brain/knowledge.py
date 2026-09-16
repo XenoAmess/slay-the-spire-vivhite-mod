@@ -1346,11 +1346,6 @@ DEFAULT_POLICY = {
                                   # 第二次实际换线且两名当前持力量敌人仍在场」的复发窗口，无法与自损/
                                   # 终局对账。开启时每场首次命中在实际出牌 why 追加一次力量体及层数；
                                   # 不参与评分、目标或放行，False=注记消失且动作/评分逐字回滚。
-    "focus_drift_multi_scaler_state_obs": True,  # 多强化体重复换线状态观测（第 1180/1184 局，纯观测不改分）：
-                                  # 仅在上述复发标记首次命中时追加触发现场的累计自付血与当前生命，
-                                  # 让后续 run 能直接把重复换线窗口与自付强度/濒死程度对账；不参与评分、
-                                  # 目标或放行，False=只去掉数值状态字段，既有 FOCUS_DRIFT_MULTI_SCALER_OBS
-                                  # 与动作/评分保持不变。
 
     "hp_pool_native_clamp_factor": 1.5,  # 血池观测写入侧原生上限钳制（第 187~196 局批复盘，HP_POOL_NATIVE_CLAMP）：
                                           # 在线 hp_pool 台账实证虚高 4~20 倍（KNOWLEDGE_DEMON 2254 vs 原生 379），
