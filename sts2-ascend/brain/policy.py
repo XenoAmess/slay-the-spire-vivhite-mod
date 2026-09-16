@@ -5323,6 +5323,15 @@ class Policy:
                         why += (f"｜多强化体火线复发：第{self._focus_drift_flips + 1}次"
                                 f"非击杀换线，力量体{_scaler_text}仍在场"
                                 "（FOCUS_DRIFT_MULTI_SCALER_OBS）")
+                        if bool(pol.get("focus_drift_multi_scaler_state_obs", True)):
+                            _multi_paid = max(
+                                0.0, float(getattr(
+                                    self, "_race_same_round_loss", 0.0) or 0.0))
+                            _multi_hp = max(0.0, float(my_hp))
+                            why += (
+                                f"｜多强化体换线状态：累计自付{_multi_paid:.0f}血、"
+                                f"当前生命{_multi_hp:.0f}"
+                                "（FOCUS_DRIFT_MULTI_SCALER_STATE_OBS）")
                         self._focus_drift_multi_scaler_obs_emitted = True
                 if _actual_focus_flip:
                     self._focus_drift_flips += 1
