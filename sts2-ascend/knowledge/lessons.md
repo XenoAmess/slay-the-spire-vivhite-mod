@@ -12492,3 +12492,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.524926886518906局)，BASH(14分/3.828784288592921局)，SETUP_STRIKE(14分/3.4807129896299243局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1536 胜，当前目标进阶 0
+
+## 第 1537 局复盘（2026-09-17 01:33）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：EXPECT_A_FIGHT, SWORD_BOOMERANG, DISMANTLE, HEMOKINESIS, PILLAGE, TRUE_GRIT, MANGLE, FISTICUFFS, HEMOKINESIS, ARMAMENTS
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F5 Monster战 掉血3; F8 Monster战 掉血0; F12 Monster战 掉血18｜自损2（可行动段2/非行动段15，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血21｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血29｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血8｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4172612669991627局)，ASHEN_STRIKE(26分/2.6535202618736835局)，PACTS_END(25分/76.47996457881456局)，FEED(25分/40.91359468326405局)，BRAND(25分/2.67864829397359局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.5090896424160904局)，BASH(14分/3.815383543582846局)，SETUP_STRIKE(14分/3.46853049416622局)
+- 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1537 胜，当前目标进阶 0
