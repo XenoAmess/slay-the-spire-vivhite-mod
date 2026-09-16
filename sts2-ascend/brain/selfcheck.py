@@ -10430,7 +10430,8 @@ def main() -> int:
                           ttk_obs=True, latched=True, latch_hold=False,
                           esc_rounds=2, hand_override=None,
                           intangible=False, intangible_obs=True,
-                          effective_dpt_obs=True, sample_effective_round=False):
+                          effective_dpt_obs=True, sample_effective_round=False,
+                          boss_effective_dpt_obs=True, vivhite=False):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10468,9 +10469,11 @@ def main() -> int:
             "run": {"current_hp": 46, "max_hp": 80, "gold": 0,
                     "floor": 33, "deck": []},
         }
-        cap_pol = policy.Policy(
-            knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-combat-cap-"))),
-            random.Random(11))
+        cap_know = (_vivhite_know("sts2-selfcheck-combat-cap-vivhite-")
+                    if vivhite else knowledge.Knowledge(
+                        Path(tempfile.mkdtemp(
+                            prefix="sts2-selfcheck-combat-cap-"))))
+        cap_pol = policy.Policy(cap_know, random.Random(11))
         # First tick establishes the combat identity; the following values isolate
         # the already-observed, latched race-loss branch from card ranking details.
         cap_pol.decide(cap_state, cap_ctx)
@@ -10492,6 +10495,8 @@ def main() -> int:
         cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
         cap_pol.know.policy[
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
+        cap_pol.know.policy[
+            "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
@@ -10551,6 +10556,27 @@ def main() -> int:
     assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" not in \
         d_combat_slippery_effective_off.reason, \
         f"滑溜有效火力对账开关未严格回滚: {d_combat_slippery_effective_off.reason}"
+
+    # 3br-boss-effective-dpt：普通 Boss 竞速在判死/入锁后也必须对账实际
+    # 敌血净降与投影 dpt。1205-F33 的 CRUSHER+ROCKET 没有滑溜层，旧的
+    # SLIPPERY_TTK_EFFECTIVE_DPT_OBS 无法覆盖；本观测只读两个回合首快照，
+    # 不改变动作/评分/判决，开关关闭严格回滚。
+    d_combat_boss_effective = combat_flip_probe(
+        1.5, sample_effective_round=True, vivhite=True)
+    assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_effective.reason
+            and "敌血净降10.0/回合" in d_combat_boss_effective.reason
+            and "vs 投影" in d_combat_boss_effective.reason), \
+        f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
+    d_combat_boss_effective_off = combat_flip_probe(
+        1.5, sample_effective_round=True, boss_effective_dpt_obs=False,
+        vivhite=True)
+    assert (d_combat_boss_effective_off.action
+            == d_combat_boss_effective.action
+            and d_combat_boss_effective_off.params
+            == d_combat_boss_effective.params
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS"
+            not in d_combat_boss_effective_off.reason), \
+        f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
 
     # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
     # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的

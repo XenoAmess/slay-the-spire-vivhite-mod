@@ -760,6 +760,12 @@ class Policy:
         self._slippery_effective_dpt_start_hp = None
         self._slippery_effective_dpt_layers = 0.0
         self._slippery_effective_dpt_projected = 0.0
+        # Boss 竞速有效火力对账（BOSS_RACE_EFFECTIVE_DPT_OBS）：只记录
+        # 锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
+        self._boss_effective_dpt_combat = None
+        self._boss_effective_dpt_round = None
+        self._boss_effective_dpt_start_hp = None
+        self._boss_effective_dpt_projected = 0.0
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
@@ -3767,6 +3773,63 @@ class Policy:
                         race_lost = True
                     else:
                         race_lost = ttk > tsurv + _race_margin
+                    # Boss 竞速有效火力回合边界对账（BOSS_RACE_EFFECTIVE_DPT_OBS，
+                    # 第1205局 F33 复盘新增）：RACE_UPSHIFT_STALE 已把锁后换挡上浮
+                    # 置零，但现有有效 dpt 对账只覆盖滑溜层，CRUSHER+ROCKET 这类
+                    # 普通 Boss 组合仍无法逐回合核对「投影 dpt」与实际敌血净降。
+                    # 在已经判死/入锁的白绮 Boss 战中，绑定上一回合首的竞速血池，
+                    # 于下一回合首记录敌血净降/回合与当时投影 dpt；回血、召唤或
+                    # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
+                    # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
+                    _boss_effective_dpt_pending = None
+                    if (bool(pol.get("boss_race_effective_dpt_obs", True))
+                            and self.character_strategy.profile_id
+                            == VIVHITE_PROFILE_ID
+                            and cctx.get("node_type") == "Boss"
+                            and race_lost
+                            and round_no is not None):
+                        if self._boss_effective_dpt_combat is not cctx:
+                            self._boss_effective_dpt_combat = cctx
+                            self._boss_effective_dpt_round = None
+                            self._boss_effective_dpt_start_hp = None
+                            self._boss_effective_dpt_projected = 0.0
+                        if (self._boss_effective_dpt_round != round_no):
+                            _boss_prev_round = self._boss_effective_dpt_round
+                            _boss_prev_start_hp = (
+                                self._boss_effective_dpt_start_hp)
+                            _boss_span = 0
+                            if _boss_prev_round is not None:
+                                try:
+                                    _boss_span = int(round_no) - int(
+                                        _boss_prev_round)
+                                except (TypeError, ValueError):
+                                    _boss_span = 0
+                            if (_boss_prev_start_hp is not None
+                                    and _boss_span > 0
+                                    and self._boss_effective_dpt_projected > 0.0):
+                                _boss_effective_dpt_pending = (
+                                    _boss_prev_round, _boss_span,
+                                    float(_boss_prev_start_hp),
+                                    float(enemy_hp_total),
+                                    float(self._boss_effective_dpt_projected))
+                            self._boss_effective_dpt_round = round_no
+                            self._boss_effective_dpt_start_hp = (
+                                float(enemy_hp_total))
+                        if dpt > 0.0:
+                            self._boss_effective_dpt_projected = float(dpt)
+                    if _boss_effective_dpt_pending is not None:
+                        (_boss_prev_round, _boss_span, _boss_start_hp,
+                         _boss_end_hp, _boss_projected) = (
+                            _boss_effective_dpt_pending)
+                        _boss_net_dpt = (
+                            _boss_start_hp - _boss_end_hp) / _boss_span
+                        _boss_gap = _boss_net_dpt - _boss_projected
+                        danger_note += (
+                            f"；Boss竞速有效火力对账：采样{_boss_prev_round}→"
+                            f"{round_no}回合，敌血净降{_boss_net_dpt:.1f}/回合"
+                            f" vs 投影{_boss_projected:.1f}/回合"
+                            f"（差{_boss_gap:+.1f}，"
+                            "BOSS_RACE_EFFECTIVE_DPT_OBS）")
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
@@ -4083,6 +4146,10 @@ class Policy:
             self._slippery_effective_dpt_start_hp = None
             self._slippery_effective_dpt_layers = 0.0
             self._slippery_effective_dpt_projected = 0.0
+            self._boss_effective_dpt_combat = ctx.combat
+            self._boss_effective_dpt_round = None
+            self._boss_effective_dpt_start_hp = None
+            self._boss_effective_dpt_projected = 0.0
             self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0
             self._esc_rounds = 0

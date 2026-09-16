@@ -4081,3 +4081,56 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1205 局批复盘：普通 Boss 竞速的锁后有效火力对账
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1205 局 F33 的 `RACE_UPSHIFT_STALE` 之后，竞速投影
+  `dpt` 仍可能系统性高于实际 Boss 敌血净降；这会让锁后“击杀还需 N 回合”看起来
+  比真实收口更乐观。若未来前三场独立白绮 Boss 竞速对账中至少两场的
+  `敌血净降/投影 dpt ≤ 0.8`，支持该假设；若三场均 `≥ 0.9`，则证伪。中间结果
+  保持未决，不据此调整竞速行为。
+- **EVIDENCE**：精确失败运行 `17X79BYK9HBA`（第 1205 局，603 条决策）在 F33
+  `CRUSHER+ROCKET` 终段出现 23 次 `RACE_UPSHIFT_STALE`、42 次
+  `RACE_SAME_ROUND_HP_LOSS_OBS`，最终进入 `GAME_OVER`；但现有
+  `SLIPPERY_TTK_EFFECTIVE_DPT_OBS` 只在滑溜层大于 0 时采样，无法覆盖这场普通
+  Boss。该证据表明“投影、敌方实际血量进展、同回合自损”尚未形成同一条可逐回合
+  对账链，不足以单独证明投影高估或死亡因果。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立 Boss 战统计
+  `BOSS_RACE_EFFECTIVE_DPT_OBS` 的采样回合、敌血净降、投影 dpt 和差值；同时核对
+  观测只出现在白绮已判死/入锁的 Boss 战，并与最终胜负、
+  `SELF_LOSS_PHASE_OBS`、`RACE_UPSHIFT_STALE` 交叉。已知竞速战若缺少该标记、
+  回合首快照重复/跨战斗串账，或开关关闭导致动作参数变化，则实现假设被证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `boss_race_effective_dpt_obs`，作为纯观测回滚键。
+- `sts2-ascend/brain/policy.py`：在白绮 Boss 竞速判死/入锁且已有正 dpt 后，按上一
+  回合首到当前回合首的竞速血池净降计算实测 dpt，并在 `Decision.reason` 追加
+  `BOSS_RACE_EFFECTIVE_DPT_OBS`；回血、召唤等变化保留在净值中，不冒充逐卡伤害。
+  不写入评分、ttk/tsurv、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：新增普通 Boss 两回合首快照对账、白绮 profile
+  隔离、开关关闭以及动作/参数零差异断言；既有通用 Ironclad 夹具保持原语义。
+  未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime` 或复盘提示词。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标三份脑文件的 `git diff --check`：退出码 0；报告写入后再次回读最终目标 diff，
+  变更仅为上述观测代码、静态键与 selfcheck。
+
+## FOLLOW-UP / ROLLBACK
+
+- 先收集前三场独立 Boss 对账，再按上述 0.8/0.9 比例门槛判断；期间不把单场负值
+  或 `GAME_OVER` 直接升级为行为结论。
+- 若普通 Boss 出现重复采样、跨战斗串账、非白绮触发、快照与原生状态不符，或关闭
+  `boss_race_effective_dpt_obs` 后动作/参数漂移，将该键置 `0`；必要时回滚本地提交，
+  原竞速判定与收口动作保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
