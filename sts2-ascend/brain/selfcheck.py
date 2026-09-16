@@ -7069,6 +7069,50 @@ def main() -> int:
     sl_pol._focus_played_index = None
     sl_pol._focus_drift_flips = 0
 
+    # 3fdm) FOCUS_DRIFT_MULTI_SCALER_OBS 多强化体重复换线观测（第 1180 局 F35）：
+    #      CRUSHER/ROCKET 型两名当前力量体在同一场第二次非击杀实际换线时，最终
+    #      出牌 why 只追加一次力量体层数；目标、翻线计数与评分路径不变。键=False
+    #      严格回滚注记且动作/目标/翻线计数保持一致。
+    fdm_enemies = [
+        sl_str_enemy(12, hp=80, layers=None, index=0, intent=5, name="甲"),
+        sl_str_enemy(1, hp=80, layers=None, index=1, intent=5, name="乙"),
+    ]
+    sl_pol._focus_index = 1
+    sl_pol._focus_played_index = 1
+    sl_pol._focus_drift_flips = 1
+    sl_pol._focus_drift_multi_scaler_obs_emitted = False
+    d_fdm1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+    assert d_fdm1.action == "play_card" \
+            and d_fdm1.params.get("target_index") == 0 \
+            and sl_pol._focus_drift_flips == 2 \
+            and "FOCUS_DRIFT_MULTI_SCALER_OBS" in d_fdm1.reason \
+            and "甲=12" in d_fdm1.reason and "乙=1" in d_fdm1.reason, \
+        f"第二次多强化体换线未追加窄观测: {d_fdm1.params}（{d_fdm1.reason}）"
+    d_fdm1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+    assert d_fdm1b.action == "play_card" \
+            and d_fdm1b.params.get("target_index") == 0 \
+            and sl_pol._focus_drift_flips == 2 \
+            and "FOCUS_DRIFT_MULTI_SCALER_OBS" not in d_fdm1b.reason, \
+        f"多强化体窄观测未按战斗去重: {d_fdm1b.reason}"
+    sl_pol._focus_index = 1
+    sl_pol._focus_played_index = 1
+    sl_pol._focus_drift_flips = 1
+    sl_pol._focus_drift_multi_scaler_obs_emitted = False
+    sl_pol.know.policy["focus_drift_multi_scaler_obs"] = False
+    try:
+        d_fdm_rb = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+        assert d_fdm_rb.action == "play_card" \
+                and d_fdm_rb.params.get("target_index") == 0 \
+                and sl_pol._focus_drift_flips == 2 \
+                and "FOCUS_DRIFT_MULTI_SCALER_OBS" not in d_fdm_rb.reason, \
+            f"focus_drift_multi_scaler_obs=False 未严格回滚: {d_fdm_rb.params}（{d_fdm_rb.reason}）"
+    finally:
+        sl_pol.know.policy["focus_drift_multi_scaler_obs"] = True
+    sl_pol._focus_index = None
+    sl_pol._focus_played_index = None
+    sl_pol._focus_drift_flips = 0
+    sl_pol._focus_drift_multi_scaler_obs_emitted = False
+
     # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
     # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——

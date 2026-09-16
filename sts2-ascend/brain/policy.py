@@ -686,6 +686,7 @@ class Policy:
         self._focus_drift_pending = []  # 评分侧静默换线挂账（FOCUS_DRIFT_FLUSH_OBS，第 852~856 局批复盘）
         self._focus_played_index = None  # 上一张实际打出定向攻击牌的目标索引（FOCUS_DRIFT_LOCK，第 857~872 局批复盘）
         self._focus_drift_flips = 0  # 本场实际打出火线的非击杀翻线次数（FOCUS_DRIFT_LOCK，阻尼升级依据）
+        self._focus_drift_multi_scaler_obs_emitted = False  # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
         self._race_loss_rate = 0.0  # 回合开始→下一回合开始的净损血 EMA（允许回血为负）
@@ -4013,6 +4014,7 @@ class Policy:
             self._focus_drift_pending = []
             self._focus_played_index = None
             self._focus_drift_flips = 0
+            self._focus_drift_multi_scaler_obs_emitted = False
 
         if not enemies:
             # 无有效目标 ≠ 空回合：Boss/精英蓄力或转阶段过场时敌人暂时不可选中，
@@ -5295,11 +5297,34 @@ class Policy:
             # 被迫换线不记）；评分侧静默翻线不记账（避免每 tick 全手牌评分
             # 副作用虚增）。计数供 _score_play 的阻尼升级读取，本身不改分。
             if target is not None and len(enemies) > 1:
-                if (self._focus_played_index is not None
-                        and target != self._focus_played_index
-                        and "可击杀" not in why
-                        and any(e.get("index") == self._focus_played_index
-                                for e in enemies)):
+                _actual_focus_flip = (
+                    self._focus_played_index is not None
+                    and target != self._focus_played_index
+                    and "可击杀" not in why
+                    and any(e.get("index") == self._focus_played_index
+                            for e in enemies))
+                # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）：第 1180 局
+                # F35 CRUSHER+ROCKET 在 T1→T2→T5→T7 反复换线，现有漂移/翻线锁
+                # 只分别记录换线与阻尼，无法直接切出「至少第二次实际换线、两名当前
+                # 持有力量的敌人仍在场」这一复发形态。只在实际打出牌的收口触发，且
+                # 每场只追加一次；纯观测，不参与评分/目标/放行，键=False 严格零差异。
+                if (_actual_focus_flip
+                        and not self._focus_drift_multi_scaler_obs_emitted
+                        and bool(pol.get("focus_drift_multi_scaler_obs", True))
+                        and self._focus_drift_flips + 1 >= 2):
+                    _multi_scalers = [
+                        _e for _e in enemies
+                        if self._enemy_strength_stack(_e) > 0]
+                    if len(_multi_scalers) >= 2:
+                        _scaler_text = "、".join(
+                            f"{_e.get('name') or _e.get('enemy_id') or '敌人'}="
+                            f"{self._enemy_strength_stack(_e):g}"
+                            for _e in _multi_scalers)
+                        why += (f"｜多强化体火线复发：第{self._focus_drift_flips + 1}次"
+                                f"非击杀换线，力量体{_scaler_text}仍在场"
+                                "（FOCUS_DRIFT_MULTI_SCALER_OBS）")
+                        self._focus_drift_multi_scaler_obs_emitted = True
+                if _actual_focus_flip:
                     self._focus_drift_flips += 1
                 self._focus_played_index = target
             if _hp_gate_stall_break:

@@ -108,6 +108,74 @@ retry_resolution: 20260905-121621-1788581781070312400-70149919 no_valid_change
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
 
+# 第 1180 局复盘：多强化体重复换线窗口的生产观测
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：在两名仍持有力量的敌人同时存活时，同一场战斗第二次及以后
+  的非击杀实际换线，是 CRUSHER+ROCKET 长战与自损复发的一个可切片机制。若
+  假设成立，未来 3~10 局会在重复换线战斗的实际出牌链中出现一次
+  `FOCUS_DRIFT_MULTI_SCALER_OBS`，且其战斗的非击杀换线次数、自付血量、存活
+  回合与终局结果可以和没有该标记的战斗分开对账；若标记始终不出现，或只在
+  单次/非危险换线出现，假设证伪，回滚该观测键。
+- **EVIDENCE**：完整证据为
+  `runs/20260916-142243_YHBB6WM5NMSY.json`（第 1180 局，455 条决策）。F35
+  的实际定向火线为 T1 闭域投影+→碾碎爪（决策 421）、T2 弦光投影→火箭（425，
+  已有 `FOCUS_DRIFT_FLUSH_OBS`）、T5 后继式→碾碎爪（439，已有
+  `FOCUS_DRIFT_OBS`）、T7 闭域投影+→火箭（450，已有补记）；T7 的既有翻线锁
+  已记录本场 2 次翻线。该战 F35 自损 29、掉血 91，T2 已投影判死，实际至 T8
+  才结束，说明现有逐次换线/阻尼注记仍不能直接切出重复复发窗口。
+- **NATIVE_EVIDENCE**：
+  `knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的原生反编译记录显示，
+  `Crusher.AdaptMove` 对自身 `PowerCmd.Apply<StrengthPower>`，DeadlyEnemies
+  增益为 3；`Rocket.ChargeUpMove` 同样对自身施加 `StrengthPower`，增益为 3。
+  因而本批观测使用运行时当前力量层数，而不是仅凭名称把所有多敌战斗归入该类。
+- **EXPECTED_SIGNAL**：未来窗口按 run 文件统计该 marker 的战斗数、首次命中时
+  的力量体名称/层数、当场最终非击杀换线次数，并与现有 `FOCUS_DRIFT_*`、
+  `KILL_RACE_HOPELESS_HP_PAY_OBS`、F35 自损/实际存活回合交叉核对。重复力量体
+  换线场景没有 marker、marker 只落在一次换线、或命中组与对照组没有可重复的
+  自损/拖延差异，均是证伪或场景不足信号，不据此调整评分。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在实际出牌收口复用既有非击杀换线判定；当本场
+  将完成第二次及以后换线、且当前仍有至少两名力量层数大于零的活体敌人时，
+  只在该战斗首次追加 `FOCUS_DRIFT_MULTI_SCALER_OBS`、目标名称和层数。状态随
+  `_focus_combat` 更替复位，未改变评分、目标、放行、翻线计数或决策动作。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `focus_drift_multi_scaler_obs`
+  静态键；关闭时观测字符串与状态标记均不显形，动作/评分严格回滚。
+- `sts2-ascend/brain/selfcheck.py`：新增两力量体第二次换线正例、每场去重和
+  键关闭回滚断言，并核对目标与翻线计数仍保持原路径。
+- 未触碰 runs、stats、progression、policy.json、lessons、review_queue、在线
+  进程或宿主预置 assets/cache 现场。
+
+## VALIDATION
+
+- `py -3 -B .\\sts2-ascend\\brain\\selfcheck.py` 的 host 预置 bootstrap 在执行
+  代码前因固定 256 槽临时池耗尽而退出（`REVIEW_SELFCHECK_BOOTSTRAP_FAILED`）；
+  未改 bootstrap 或缓存。使用等价的无字节码隔离执行器加载同一
+  `sts2-ascend/brain/selfcheck.py`，返回 `SELFCHECK OK`。
+- 在同一临时目录隔离方式下，`test_review_decision_chain`：10 tests OK；
+  `test_character_strategy`：57 个测试中 56 个断言通过，唯一失败为 Python 3.14
+  清理 host 受限临时目录的 WinError 145/5 teardown，不是生产断言失败。
+- `git diff --check`：通过；报告写入前已回读完整生产 diff，改动边界仅为上述
+  三个静态 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局先只统计 marker 是否命中以及命中战的自损/存活回合，不因单局
+  结果直接改变 `focus_drift_damp` 或 `focus_drift_lock_step`。优先对照 F33
+  CRUSHER+ROCKET 与普通多敌战斗，确认两名当前力量体条件没有误报。
+- 若 marker 在已知重复换线场景持续为零，先确认运行时 powers 载荷是否可读；
+  若载荷正常但与结果无关，将 `focus_drift_multi_scaler_obs` 设为 False，或
+  删除本键及收口注记即可一键恢复旧评分/动作。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 retry_resolution 目标。
+
 # 第 362 局复盘：自付主导时滑溜低回报单体生命攻击门
 
 日期：2026-09-08

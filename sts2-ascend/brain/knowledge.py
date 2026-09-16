@@ -1339,6 +1339,13 @@ DEFAULT_POLICY = {
                                   # 翻线起（≥10.0）全面锁死横跳；击杀换线/减员成本/旧粘性各口径不动。胜者
                                   # 吃升级阻尼时追加「火线翻线锁…（FOCUS_DRIFT_LOCK）」留痕；0=严格回滚
                                   # （阻尼回落固定 4.0、留痕同灭，翻线计数本身不改分）。
+    "focus_drift_multi_scaler_obs": True,  # 多强化体重复换线观测（第 1180 局 F35，FOCUS_DRIFT_MULTI_SCALER_OBS，纯观测不改分）：
+                                  # CRUSHER 与 ROCKET 原生均有逐轮自挂力量的强化动作；1180-F35 实战
+                                  # T1→T2→T5→T7 发生多次非击杀换线，既有 FOCUS_DRIFT_OBS/
+                                  # FLUSH/LOCK 能分别看到换线、挂账与阻尼，却不能直接切出「本场至少
+                                  # 第二次实际换线且两名当前持力量敌人仍在场」的复发窗口，无法与自损/
+                                  # 终局对账。开启时每场首次命中在实际出牌 why 追加一次力量体及层数；
+                                  # 不参与评分、目标或放行，False=注记消失且动作/评分逐字回滚。
 
     "hp_pool_native_clamp_factor": 1.5,  # 血池观测写入侧原生上限钳制（第 187~196 局批复盘，HP_POOL_NATIVE_CLAMP）：
                                           # 在线 hp_pool 台账实证虚高 4~20 倍（KNOWLEDGE_DEMON 2254 vs 原生 379），
