@@ -12470,3 +12470,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.556768445222006局)，BASH(14分/3.855727145957082局)，SETUP_STRIKE(14分/3.5052064963246163局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1534 胜，当前目标进阶 0
+
+## 第 1535 局复盘（2026-09-17 00:17）
+- 结果：💀 失败｜进阶 0｜到达层数 13｜当局评分 13
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+BRUTE_RUBY_RAIDER+CROSSBOW_RUBY_RAIDER
+- 本局拿牌：TAUNT, SPITE, TREMBLE, EXPECT_A_FIGHT, TREMBLE, BLUDGEON, SWORD_BOOMERANG, DISMANTLE, PACTS_END, SWORD_BOOMERANG
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F2 Monster战 掉血0; F5 Monster战 掉血2; F6 Monster战 掉血0; F7 Monster战 掉血0｜竞速审计：T3判死→实战6回合获胜; F12 Monster战 掉血12; F13 Monster战 掉血68（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4342713466013763局)，ASHEN_STRIKE(26分/2.6721928776545134局)，PACTS_END(25分/77.01814814350433局)，FEED(25分/41.20150046816043局)，BRAND(25分/2.69749773376269局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.540819755663729局)，BASH(14分/3.8422321009462324局)，SETUP_STRIKE(14分/3.4929382735874803局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1535 胜，当前目标进阶 0
