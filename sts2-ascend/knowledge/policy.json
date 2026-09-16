@@ -1,5 +1,5 @@
 {
- "block_safety": 2.000000000000013,
+ "block_safety": 1.9900000000000129,
  "power_round_bonus": 6.0,
  "kill_bonus": 20.0,
  "free_card_bonus": 1.5,
@@ -115,7 +115,7 @@
  "boss_eve_pess_mult": 1.5,
  "boss_eve_safe_margin_frac": 0.1,
  "shop_potion_gold": 60,
- "kill_race_prior_eff": 0.4041687011718744,
+ "kill_race_prior_eff": 0.41916870117187444,
  "power_starve_bonus_base": 6.0,
  "power_starve_bonus_extra_max": 8.0,
  "path_streak_loss_step": 0.06,
@@ -195,7 +195,7 @@
  "power_commit_lowhp_obs_hp_pct": 0.45,
  "race_latch_dpt_uplift_eff": 0.2,
  "kill_race_osc_damp": true,
- "kill_race_prior_eff_last_step": -0.03,
+ "kill_race_prior_eff_last_step": 0.015,
  "hand_tax_fire_obs": true,
  "hand_tax_stance_obs": true,
  "end_turn_settle_recovery_ticks_boss": 40,
@@ -299,5 +299,7 @@
  "lethal_race_free_card_exempt": true,
  "focus_drift_multi_scaler_obs": true,
  "slippery_ttk_effective_dpt_obs": true,
- "kill_race_hopeless_hp_pay_bypass_obs": 1
+ "kill_race_hopeless_hp_pay_bypass_obs": 1,
+ "boss_race_effective_dpt_obs": true,
+ "vivhite_hp_terminal_lock_obs": 1
 }
