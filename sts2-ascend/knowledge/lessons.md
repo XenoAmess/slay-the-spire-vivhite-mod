@@ -12547,3 +12547,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.4462930328787555局)，BASH(14分/3.7622479508974087局)，SETUP_STRIKE(14分/3.4202254099067315局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1541 胜，当前目标进阶 0
+
+## 第 1542 局复盘（2026-09-17 06:01）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：SHRUG_IT_OFF, HEMOKINESIS, MOLTEN_FIST, FEEL_NO_PAIN, RUPTURE, SPITE, STOMP, DISMANTLE, RUPTURE, PYRE, TRUE_GRIT
+- 本局遗物：WAR_PAINT, POTION_BELT
+- 战斗记录：F5 Monster战 掉血0｜自损2（可行动段2/非行动段3，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血4｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血10｜自损2（可行动段2/非行动段7，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血14｜自损2（可行动段2/非行动段18，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血9｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血54｜自损6（可行动段6/非行动段47，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3752542747435488局)，ASHEN_STRIKE(26分/2.6074075778157377局)，PACTS_END(25分/75.15090126090513局)，FEED(25分/40.20260118062841局)，BRAND(25分/2.6320989367830245局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.43073100726368局)，BASH(14分/3.749080083069268局)，SETUP_STRIKE(14分/3.408254620972058局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1542 胜，当前目标进阶 0
