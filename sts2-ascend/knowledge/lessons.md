@@ -12294,3 +12294,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.8197011654593735局)，BASH(14分/4.078208678465622局)，SETUP_STRIKE(14分/3.7074624349687446局)
 - 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1518 胜，当前目标进阶 0
+
+## 第 1519 局复盘（2026-09-16 08:48）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEADBUTT, HEADBUTT, TAUNT, HOWL_FROM_BEYOND, MOLTEN_FIST, HEMOKINESIS, CRUELTY, TRUE_GRIT
+- 本局遗物：MINIATURE_CANNON, PERMAFROST
+- 战斗记录：F6 Monster战 掉血16; F8 Monster战 掉血17; F12 Monster战 掉血0; F14 Elite战 掉血7｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血2｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血70｜自损2（可行动段2/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.8263826177667926局)，PACTS_END(25分/76.32651263005218局)，BRAND(25分/2.8531476039499832局)，BARRICADE(25分/2.8060422995898353局)，FEED(24分/42.55763230400414局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.802832211380266局)，BASH(14分/4.063934948090993局)，SETUP_STRIKE(14分/3.6944863164463544局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（82%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1519 胜，当前目标进阶 0
