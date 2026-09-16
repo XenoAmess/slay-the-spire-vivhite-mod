@@ -3849,6 +3849,38 @@ def main() -> int:
         and "KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE" in d_kdc5.reason, \
         f"cap=5.0 缩放门拦缺压价/缩放留痕: {d_kdc5.reason}"
 
+    # ⑥ 判死竞速高分自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，
+    #      第1194局 F33）：同一判死夹具中，低分自付可被 KRH 门拦下，而高分
+    #      自付牌越过门带后仍放行；新增注记只披露候选分与门带上限，不改变动作。
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_bypass_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_bypass_obs 静态键或默认值被改"
+    assert d_kd0.action == "play_card" \
+        and "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" in d_kd0.reason, \
+        f"判死高分自付越过软门缺观测注记: {d_kd0.reason}"
+
+    def _krh_bypass_drive(enabled):
+        vk = _vivhite_know("sts2-selfcheck-krhbypass-")
+        vk.policy["vivhite_hp_cost_play_margin"] = 1.0
+        vk.policy["kill_race_hopeless_hp_pay_margin"] = 6.0
+        vk.policy["kill_race_hopeless_hp_pay_bypass_obs"] = enabled
+        vp = policy.Policy(vk, random.Random(11))
+        vc = _krh_ctx()
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = vp.decide(
+                _krh_state(_turn, _hp, _krh_hand_vivhite()), vc)
+            vc.credit_tags.extend(_d.tags)
+        return vp.decide(
+            _krh_state(3, 45, _krh_hand_vivhite()), vc)
+
+    d_khb_off = _krh_bypass_drive(0)
+    assert d_khb_off.action == d_kd0.action \
+        and d_khb_off.params == d_kd0.params, \
+        f"越门观测关闭不得改变动作: on={d_kd0.action}/{d_kd0.params} " \
+        f"off={d_khb_off.action}/{d_khb_off.params}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" not in d_khb_off.reason, \
+        f"越门观测关闭后不得出现注记: {d_khb_off.reason}"
+
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
     #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48

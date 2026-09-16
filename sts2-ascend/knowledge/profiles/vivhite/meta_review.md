@@ -3846,3 +3846,60 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
+
+# 第 1190~1194 局批复盘：判死竞速下高分生命支付越过软门观测
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1194-F33 的连续生命支付不是 KRH 判死竞速标记缺失，而是
+  `_score_play` 的 KRH 仍是软拦：只拦普通出牌阈值到「阈值+付血门带」之间的
+  边际候选，高分生命支付候选可越过门带并继续进入中选。若把高分越门和低分被拦
+  分开记账，才能判断后续是否需要改变生产闸，而不是凭“自付观测出现”误归因。
+- **EVIDENCE**：精确失败运行 `KLMY4L1CYA8Q`（第1194局）共 494 条决策；F33
+  [470]「终止条件+」、[471]「绯色面积+」、[472]「启发式护盾+」分别实付
+  4/4/2 血，击杀投影 14/13/13 回合而满血生存仅 3 回合；[484~491] 仍连续
+  实付 2/2/2/4/2 血，末条 [491] 为 6 血且击杀需 6 回合、生存余量为 0。
+  对照 [479] 的 1 血低分牌已被 `KILL_RACE_HOPELESS_HP_PAY_MARGIN` 拦下，
+  说明竞速投影存在，差异落在软门带与候选分，而非观测缺失。
+- **EXPECTED_SIGNAL**：未来 3~10 局统计选中决策中
+  `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS` 的次数、实付血、候选分与
+  `play_threshold+hp_extra` 的超额，并与同战斗自损/存活回合对账。若判死自付仍
+  发生却没有该标记，假设被证伪（或观测实现失真）；若标记稳定覆盖 [470~472]、
+  [484~491] 型高分越门现场，再决定是否把软门升级为更窄的生产硬约束。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增静态键
+  `kill_race_hopeless_hp_pay_bypass_obs=1`。改为 `0` 即关闭观测。
+- `sts2-ascend/brain/policy.py`：在 KRH 软门判定后，对白绮、判死竞速、生命支付、
+  候选分超过门带且最终仍具备中选资格的候选追加
+  `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS`，携带实付血、候选分和门带上限；不改
+  评分、候选资格、动作或竞速投影。
+- `sts2-ascend/brain/selfcheck.py`：新增开关正反断言；关闭观测时动作与参数逐项
+  相同且不出现标记。未触碰 runs、stats、policy.json、lessons.md、runtime 或
+  review_prompt。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check`：退出码 0；完整目标 diff 已回读，生产改动仅为上述 3 个脑文件。
+- 两组附加 unittest 均未作为通过结论：`test_review_decision_chain` 的 9 项通过、
+  1 项在 setUp 创建隔离临时目录时遭既有 `.review-cache/selfcheck-pool` ACL
+  `WinError 5`；`test_character_strategy` 同样在临时知识目录创建阶段被该 ACL
+  阻断。该环境错误不改变已通过的 selfcheck 门禁，也未修改目标外文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 局按独立战斗汇总该标记次数/局、实付血/局、超出门带分值、判死后
+  实战存活回合及最终自损；与 1194-F33 的 [479] 被拦对照。高分越门持续且自损
+  同型不降时，假设支持下一步收窄闸门；自付持续但标记缺失时，先判假设证伪并
+  修观测，不直接改行为。
+- 若出现评分或动作变化、注记解析异常，或目标场景下观测缺失，先将
+  `kill_race_hopeless_hp_pay_bypass_obs` 改为 `0`；必要时回滚本地提交，生产
+  评分与放行语义恢复原状。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

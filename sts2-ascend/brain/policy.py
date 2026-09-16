@@ -5146,6 +5146,8 @@ class Policy:
             # 謦欬出牌余量门：仅拦「本已过普通阈值、但未过抬升后阈值」的謦欬候选
             # ——普通阈值都过不了的牌维持旧语义（marginal「不空过」通道不受影响）
             _hp_gate_hit = False
+            _hp_pay = 0.0
+            _hp_extra = 0.0
             if _hp_play_margin > 0.0:
                 _hp_pay = self._vivhite_hp_pay(c, player.get("powers") or [])
                 if _hp_pay > 0.0:
@@ -5306,6 +5308,23 @@ class Policy:
                              _lc_pay, _lc_band, score, 0, "LETHAL_CAP_GATE"))
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
+            # 竞速判死自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，
+            # 第1194局 F33）：现有 KRH 门带只拦「普通阈值到阈值+门带」的边际
+            # 候选，高分生命支付牌仍可越带放行。1194-F33 的 [470~472]、
+            # [484~491] 连续出现判死投影下自付，而 [479] 的低分1血牌又被
+            # KRH_MARGIN 拦下；本观测把两类现场分开，供后续按候选分/门带/实付
+            # 对账。纯观测，不改变评分、候选资格、动作或竞速判定；0=关闭。
+            if (eligible_for_best
+                    and _hp_play_margin > 0.0
+                    and _hp_pay > 0.0
+                    and kill_race
+                    and bool(pol.get(
+                        "kill_race_hopeless_hp_pay_bypass_obs", True))
+                    and score > float(pol["play_threshold"]) + _hp_extra):
+                why += (
+                    f"｜竞速判死自付越过软门：实付{_hp_pay:g}血，"
+                    f"候选分{score:.2f}>门槛+{_hp_extra:.1f}"
+                    "（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS）")
             target_enemy = next((enemy for enemy in enemies
                                  if enemy.get("index") == target), None)
             self._trace_candidate(
