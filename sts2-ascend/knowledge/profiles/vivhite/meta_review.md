@@ -4024,3 +4024,67 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1200~1201 局批复盘：Vital Spark 多段受击暴露观测
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：感染棱柱的 Vital Spark 战斗中，若本回合选中 Skill 且敌方是多段攻击，
+  现有出牌评分只扣一次「火花层数×`vital_spark_skill_tax`」，不足以表示原生每一击
+  都会增加的受击暴露；因此应先把「当前评分税」与「原生攻击段数/额外伤害估计」
+  在最终选中动作上并列记录。该假设可被后续带有可识别击数的战斗直接证伪，暂不
+  将观测估计反写为评分行为。
+- **EVIDENCE**：精确批次为 1200（`KNGX3Y9FL3BA`）和 1201（`E6VTPJ27K9B6`），
+  队列无缺失、无 replay 目标，二局均失败。1201 全链 391 条决策在 F28
+  `INFESTED_PRISM` 终盘结束；完整运行文件的 F28 原始决策索引 `[365]~[389]`
+  反复选中闭域映射、局部同胚、公理护环等 Skill，竞速审计为 T6 判死、实战 7 回合
+  后阵亡（掉血 78，自损 20）。现有留痕能显示 `VITAL_SPARK_SKILL_TAX`，却没有
+  把多段受击与一次性评分税放在同一条选中链上。
+- **EVIDENCE**：v0.111.0 原生 mechanics 中，`INFESTED_PRISM` 的
+  `WhirlwindMove` 以 `DamageCmd.Attack(...).WithHitCount(WhirlwindRepeat)`
+  结算，`WhirlwindRepeat=3`；`VITAL_SPARK_POWER` 给 Skill 附 Tainted，
+  `TAINTED_POWER.ModifyDamageAdditive` 对每个 powered attack 增加层数，回合末移除。
+  策略当前只从意图稳定读取 `total_damage`，没有可靠的通用击数键；所以不能把总伤
+  臆测成一次或三次，必须保留 `unknown` 分支。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立 Vital Spark 战斗汇总最终选中 Skill 的
+  `VITAL_SPARK_EXPOSURE_OBS`。若至少 3 个独立样本出现可识别的多段意图，且标记的
+  `attack_segments` 与原生每击层数能解释同意图下一 tick 的增量/实测受击（Whirlwind
+  应为 3 段），则支持「一次性评分税低估多段暴露」；若 3 个以上已知多段样本没有
+  对应增量、或观测出现错误段数/动作参数变化，则证伪并关闭本观测，不调整税值。
+  无击数元数据的样本继续记 `unknown`，只说明载荷缺口，不作为行为证据。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：新增 `_vital_spark_attack_profile`，优先读取显式
+  击数键，对原生 Whirlwind 使用 3 段映射，其余无法确认的攻击保留 `unknown`；在
+  主评分最终选中的、已计入 `VITAL_SPARK_SKILL_TAX` 的 Skill 上追加
+  `VITAL_SPARK_EXPOSURE_OBS`，记录 `stacks`、当前 `score_tax`、`native_per_hit`、
+  `attack_segments`、`native_extra` 和意图剖面。该段只修改 why 文本，不改变评分、
+  候选资格、目标、阈值、放行或动作。
+- `sts2-ascend/brain/knowledge.py`：加入默认键 `vital_spark_exposure_obs=1`；置 0
+  时注记严格消失。
+- `sts2-ascend/brain/selfcheck.py`：覆盖无击数的 `unknown` 回退、Whirlwind 三段及
+  `2 层×3=6` 原生额外伤害估计，并断言关闭观测时动作和参数完全一致。
+- 未修改 runs、stats、policy.json、lessons.md、review_queue、`.runtime` 或任何
+  运行进程；本批无失败复盘重试目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标工作树和暂存区 `git diff --check`：通过；最终暂存 diff 已完整回读。
+- 本地实现 commit：`98adb8d7656bf753e011198b10d3ee1a975a0777`，仅包含上述三个
+  `sts2-ascend/brain/` 静态文件；宿主预置的 assets 长路径删除状态及 `.review-cache/`
+  未入 commit。
+
+## FOLLOW-UP / ROLLBACK
+
+- 保持 `vital_spark_exposure_obs=1`，只收集 3~10 局的 known/unknown、段数、层数、
+  评分税、下一 tick 意图增量与胜负；在证据达到门槛前不修改 `vital_spark_skill_tax`。
+- 若出现段数解析错误、标记缺失或动作/参数差异，将该键置 0 隐藏本批注记；必要时
+  回滚实现 commit，现有评分和放行路径保持原口径。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

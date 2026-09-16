@@ -7789,7 +7789,9 @@ def main() -> int:
     d_vt1 = vt_pol.decide(vt_state([dict(vt_block)],
                                    vt_enemy(stacks=2, intent=10)), vt_ctx())
     assert d_vt1.action == "play_card" and d_vt1.params.get("card_index") == 0 \
-            and "VITAL_SPARK_SKILL_TAX" in (d_vt1.reason or ""), \
+            and "VITAL_SPARK_SKILL_TAX" in (d_vt1.reason or "") \
+            and "VITAL_SPARK_EXPOSURE_OBS" in (d_vt1.reason or "") \
+            and "attack_segments=unknown" in (d_vt1.reason or ""), \
         f"火花战中格挡技能应照打且带税注记: {d_vt1.action}（{d_vt1.reason}）"
     d_vt1b = vt_pol.decide(vt_state([dict(vt_block)],
                                     vt_enemy(stacks=0, intent=10)), vt_ctx())
@@ -7836,6 +7838,27 @@ def main() -> int:
     assert d_vt6.action == "play_card" \
             and "VITAL_SPARK_SKILL_TAX" not in (d_vt6.reason or ""), \
         f"意图0回合技能不得吃火花税: {d_vt6.action}（{d_vt6.reason}）"
+    # ⑦ 原生感染棱柱 Whirlwind 是三段攻击：观测应把已知击数与当前一次性
+    #    评分税分开披露（2 层、tax=2 → score_tax=4；原生额外伤害=2×3=6），
+    #    但开关关闭时动作/参数必须完全一致。
+    vt_whirlwind = dict(vt_enemy(stacks=2, intent=10))
+    vt_whirlwind["intents"] = [{"intent_type": "Whirlwind", "total_damage": 10}]
+    d_vt7 = vt_pol.decide(vt_state([dict(vt_block)], vt_whirlwind), vt_ctx())
+    assert (d_vt7.action == "play_card"
+            and "VITAL_SPARK_EXPOSURE_OBS" in (d_vt7.reason or "")
+            and "score_tax=4.0" in (d_vt7.reason or "")
+            and "attack_segments=3" in (d_vt7.reason or "")
+            and "native_extra=6.0" in (d_vt7.reason or "")), \
+        f"Whirlwind 三段暴露观测缺失或数值错误: {d_vt7.action}（{d_vt7.reason}）"
+    vt_dir_obs_off = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-vsparkobs-off-"))
+    vt_pol_obs_off = policy.Policy(knowledge.Knowledge(vt_dir_obs_off), random.Random(5))
+    vt_pol_obs_off.know.policy["vital_spark_exposure_obs"] = 0
+    d_vt7_off = vt_pol_obs_off.decide(
+        vt_state([dict(vt_block)], dict(vt_whirlwind)), vt_ctx())
+    assert (d_vt7_off.action == d_vt7.action
+            and d_vt7_off.params == d_vt7.params
+            and "VITAL_SPARK_EXPOSURE_OBS" not in (d_vt7_off.reason or "")), \
+        f"暴露观测关闭后改变动作或未回滚注记: on={d_vt7.params} off={d_vt7_off.params}"
 
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。
