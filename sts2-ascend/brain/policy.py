@@ -2826,21 +2826,6 @@ class Policy:
             # 替代候选存在性，该字段必须自证）。
             if len(cand) <= 1:
                 best_notes.append(elite_gate_note + "；无其他候选，规避门否决后强制进场")
-                # ELITE_FORCED_ENTRY_OBS（第1525~1537局批复盘新增，纯观测）：
-                # 强制进场是「走廊漏斗把低血路线逼进无可绕行精英」的终点签名——
-                # 本批 3 局 4 例（1526×2 健康进场、1532 灰区 62%、1537 入场
-                # 10% 血当场阵亡），此前只能靠复盘人工重建链路。追加入场血量、
-                # 选中路径进 Boss 投影与门内死亡投影三读数，供后续局机械计数
-                # 「低血强制进场 × 早层投影乐观」交集频率；达线再立项改早层
-                # 走廊定价。elite_forced_entry_obs=False 观测即隐，强制进场
-                # 语义、闸门与判决零改动（selfcheck 3htx③④ 为锚）
-                if bool(pol.get("elite_forced_entry_obs", True)):
-                    _efe_death_proj = any("投影中途死亡" in x for x in best_notes)
-                    best_notes.append(
-                        f"强制进场读数：入场血量{hp / max(1, max_hp):.0%}，"
-                        f"选中路径进Boss投影{best_proj:.0%}，"
-                        f"门内死亡投影={'是' if _efe_death_proj else '否'}"
-                        "（ELITE_FORCED_ENTRY_OBS）")
             else:
                 best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
             note_txt = f"；{'；'.join(best_notes)}"
