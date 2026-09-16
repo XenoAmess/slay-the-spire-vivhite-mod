@@ -11038,3 +11038,111 @@ retry_resolution: none (no replay target; local production observation)
    遭遇现场；⑤ KIN 战损 55/65% 基线；⑥ REMOVAL_COST 翻案/随附比
    （累计 12 翻 46 随附）。
 
+# 2026-09-16（第 1514~1519 局复盘，异步追及队列 6 局 exact_batch 全败；观测升级 #1：RACE_ALLIN_LETHAL_COVER_OBS 买活对账——五例样本达预注册 3 局线但逐局裁决全部「买活仍必败」，全攻定案获反向证成，裁决口径从手工读局升级为带内机械对账）
+
+## 一、失败包核对（固定动作）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待回放失败包、
+  无 replay target。
+- 上批（1505~1513）last_paths 关键签名离线核对：RINGING_SINGLE_PLAY_OBS
+  （policy.py 昏眩单卡注记分支、knowledge.py `ringing_single_play_obs`、
+  selfcheck 3rsp）、RACE_ALLIN_LETHAL_COVER_OBS（3rallc）、
+  LETHAL_SURVIVABLE_LINE（3lsl）均在当前 HEAD 且在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 二、本批证据核对与逐局裁决
+
+- 队列 requested=[1514..1519]，exact 6/6、missing=0，6 局全败（生涯
+  0/1519）：1514 二幕 Boss F33 阵亡（途中 F17/F23 两场 T2 判死后实战
+  获胜）、1515 F17、1516 F17、1517 F17、1518 F11 精英、1519 F17。
+  旋钮侧 kill_bonus 20.00 顶格、burst_starve 双旋钮/饥饿带/前夜锻造线/
+  长战加成上限顶格、kill_race_prior_eff 触底——与上两批一致，不重复
+  干预。
+- **最新死亡局完整链裁决（1519，3T7H1TPVUZ5J，F17 仪式兽，T2 判死
+  →实战 7 回合阵亡）**：进场 70/85（82%），T1 头槌+/打击 21 伤、T2
+  御血术+/熔融之拳+/头槌 49 伤后投影「击杀还需14回合>可存活4回合」
+  判死入锁，此后全攻提速；T6 昏眩回合单卡选御血术+ 23 伤
+  （RINGING_SINGLE_PLAY_OBS 本选≥备选头槌+15，选择正确）；T7（13 血
+  对 17 意图）RACE_ALLIN_LETHAL_COVER_OBS 注记在产（缺口 4 可由
+  [1费5甲] 覆盖），全攻打彼岸咆哮+ 27 后硬吃 17 阵亡——全场累计
+  ≈181 伤 vs 血池 ≈270，买活 1 回合距击杀仍差 ≈3 回合输出，
+  全攻属正确执行。
+- **RACE_ALLIN_LETHAL_COVER_OBS（1500~1504 批部署）样本达线裁决**：
+  累计 5 例（1504-F17-T9 / 1516-F11-T7 / 1516-F17-T13 / 1518-F11-T7 /
+  1519-F17-T7）≥预注册 3 局线，但逐局事后核实全部落入预注册指标③
+  ——「买活回合仍必败」：1504 血池余量≥6 回合输出；1516-F17-T13
+  买活后击杀仍需 2 回合>可存活 1；1518-F11-T7 买活后击杀仍需 2 回合
+  （3 血对滚雪球意图次回合必死）；1519-F17-T7 买活后击杀仍需 ≈4
+  回合；唯一非死亡样本 1516-F11-T7 是多敌战，全攻当场击杀一名攻击者
+  使实际 incoming 低于 gap 读数而获胜——恰是「全攻压缩意图」机制的
+  正面锚。**514~517/546/1414~1419 三批「race_allin 维持全攻」定案获
+  反向证成，本批不翻转行为**；但五例裁决全靠复盘手工读局，注记本身
+  不携带买活可行性口径，是本次观测升级的直接动机。
+- **RINGING_SINGLE_PLAY_OBS（1505~1513 批部署）首窗**：本批 4 例
+  （1516×3、1519×1）——1516-T6 本选 16≥备选 12（正确）、1516-T9
+  无攻击备选如实披露、1516-T12 本选 0<备选 16 但当 tick
+  LETHAL_SURVIVABLE_LINE 生还线生效（格挡买命成立，偏离有正当归因）、
+  1519-T6 本选 23≥备选 15（正确）。偏离 1/4 且被生还线证成，暂不构成
+  系统性偏离，继续观察。
+- **竞速台账**：483/1077≈44.85%（上批 480/1068=44.9%），带内平稳，
+  未触 ≥46% 预警线。
+
+## 三、本批落地行为修改 #1（RACE_ALLIN_LETHAL_COVER_OBS 买活对账，纯观测升级）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RALC_BUYBACK_AUDIT（RACE_ALLIN_LETHAL_COVER_OBS 注记增配买活对账）**：覆盖旁观注记已达预注册 3 局线，但「买活是否仍必败」的裁决依赖复盘手工逐局读链；注记不携带血池/实测 dpt/买活后可存活回合，下一批同类样本仍需同等人工成本，且「买活可翻盘」这一唯一足以翻转全攻定案的证据形态没有带内信号 | |
+| 假设 | HYPOTHESIS：race_allin 致死覆盖回合的买活可行性可按战斗自身投影口径（血池÷实测 dpt vs 买活后生命÷净损 EMA）机械裁决；若「买活可翻盘」形态真实存在，带内注记会在未来局直接出现该字样，反之「买活仍必败」持续累计即全攻定案的滚动反向证成；EVIDENCE：本批 5 例手工裁决（4 例买活仍必败+1 例多敌全攻压缩意图获胜）+ 1519 完整链 T2~T7 逐 tick 投影读数；EXPECTED_SIGNAL：未来 3~10 局 RACE_ALLIN_LETHAL_COVER_OBS 注记尾部携带「买活对账：击杀约需N回合（实测D伤/回合），买活后约可存活S回合（净损L/回合）→买活可翻盘/买活仍必败」 | |
+| 落地动作 | ① brain/policy.py：RACE_ALLIN_LETHAL_COVER_OBS 注记成立分支内追加买活对账——存活敌血池（剔除无敌帧同口径）÷ 实测 dpt（_krace_dmg_sustained 优先，与投影同尺）得击杀约需回合；买活后生命=当前生命+覆盖格挡-缺口，÷净损 EMA（_race_loss_rate，与 tsurv 同尺）得买活后可存活回合；击杀约需≤买活后可存活+1 判「买活可翻盘」否则「买活仍必败」；无实测样本（_krace_turns=0）如实披露「无实测输出口径→无法对账」；② brain/selfcheck.py：3rallc 夹具注入两回合实测 40 伤（dpt=20），① 断言注记携带「买活对账：击杀约需13回合（实测20伤/回合）…→买活仍必败」（池 253÷20≈13、买活后 3 血÷净损 15≈0.2），行为锚（攻击仍中标、无 LETHAL_SURVIVABLE_LINE）与 ②③ 对照原样 | |
+| 行为边界 | **纯观测、零行为改动**：评分、候选、判决、动作、race_allin/kill_race/生还线语义全部不变——3rallc① 仍断言覆盖成立的 race_allin 致死回合攻击中标；对账字段只读已有实例台账与同口径血池，无新评分路径；键=False 观测整体同灭（3rallc③ 为对照锚） | |
+| 自检 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（3rallc 升级断言+既有 3lsl/3rsp/3stale/3ra/3yr 全系列锚原样通过） | |
+| 未来 3~10 局观测指标 | ① 「买活可翻盘」注记 ≥1 例且对应回合阵亡 → 立项把生还线扩展到 race_allin（推翻 514~517 定案的唯一证据形态，此前靠手工裁决，此后带内直达）；② 「买活仍必败」持续累计且每批可机械核对 → 全攻定案滚动反向证成，观测转低频积案；③ 「无法对账」高频出现 → 说明覆盖回合多发生在首两回合先验期，另行评估是否补先验口径 | |
+| 继续调整条件 | ① 达线即立项改行为（3rallc① 翻转为格挡中标锚）；② 对账读数与事后实战不符（血池/净损口径偏差）→ 修口径；③ 出现 → 补先验 dpt 口径 | |
+| 撤回条件 | knowledge/policy.json 写 `race_allin_lethal_cover_obs: false` 观测整体即灭（selfcheck 3rallc③ 为对照锚）；或删除 policy.py 买活对账段与 selfcheck 升级断言，完全回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（样本达线即
+   落地带内对账口径，非登记延后）。
+2. **RACE_ALLIN_LETHAL_COVER_OBS（1500~1504 批观察）**：样本达
+   ≥3 局线，逐局裁决全部「买活仍必败」——全攻定案获反向证成，
+   本批升级为带内机械对账（三节），不翻转行为。
+3. **RINGING_SINGLE_PLAY_OBS（1505~1513 批观察）**：首窗 4 例，
+   偏离 1/4 且被 LETHAL_SURVIVABLE_LINE 证成，续记。
+4. **RESPAWN_ROSTER_READ_OBS / RESPAWN_CONFIRM_OBS /
+   RESPAWN_NATIVE_VETO_OBS**：1519-F17-T1「CEREMONIAL_BEAST=
+   id:未知」读侧注记在产；名册非白名单遭遇仍无现场，顺延不判失效。
+5. **竞速台账**：483/1077≈44.85%，<46% 预警线，续记。
+6. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：本批无删牌
+   现场（累计 12 翻 46 随附沿用），KIN n=4 对照未更新，续记。
+7. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE / RACE_HAND_TAX_FIRE /
+   HAND_TAX_NOTE_DEDUP**：本批无对应分支现场，顺延不判失效。
+8. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+   per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+   SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE）：本批无
+   对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **「达线」不等于「翻转」：预注册阈值要配逐例事后裁决**。
+   RACE_ALLIN_LETHAL_COVER_OBS 样本数达 3 局线，但逐局核实全部
+   「买活仍必败」——若机械执行「达线即改行为」会把定案改错。阈值
+   只负责触发裁决，裁决必须回答「反例形态是否真的成立」；本批把
+   裁决口径本身沉淀进注记，此后达线与否带内可读。
+2. **多敌战的 gap 读数系统性高估致死性**：1516-F11-T7 gap 31>生命
+   13 仍获胜——全攻当场击杀一名攻击者使实际 incoming 低于静态
+   gap。解读覆盖旁观注记时，多敌战胜出样本是「全攻压缩意图」正面锚
+   而非观测误报。
+3. 观察点（下批复盘核对）：① 买活对账「买活可翻盘」注记 0→1
+   （生还线扩展立项线）/「买活仍必败」滚动证成/「无法对账」频率；
+   ② RINGING_SINGLE_PLAY_OBS 偏离-余血相关性（本批 4 例 1 偏离
+   已证成）；③ 竞速台账 483/1077 走向（≥46% 预警）；
+   ④ RESPAWN_ROSTER_READ_OBS K=id 注记与名册遭遇现场；
+   ⑤ KIN 战损 55/65% 基线；⑥ REMOVAL_COST 翻案/随附比（累计
+   12 翻 46 随附）。
+

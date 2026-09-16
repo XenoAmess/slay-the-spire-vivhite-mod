@@ -4474,6 +4474,52 @@ class Policy:
                         f"；败局竞速致死回合生还覆盖旁观：缺口{gap_now}"
                         f"-生命{my_hp}可由格挡组合[{_ralc_combo}]覆盖"
                         "，仍维持全攻（RACE_ALLIN_LETHAL_COVER_OBS）")
+                    # 买活对账（第1514~1519局批复盘新增，同属纯观测）：
+                    # 本批五例样本（1504-F17-T9、1516-F11-T7、1516-F17-T13、
+                    # 1518-F11-T7、1519-F17-T7）的「买活回合是否仍必败」全部
+                    # 靠复盘手工逐局裁决——把血池/实测 dpt/买活后可存活回合
+                    # 按竞速投影同一把尺（净损 EMA）直接记入注记，后续局可
+                    # 机械对账；「买活可翻盘」注记出现即生还线扩展 race_allin
+                    # 的直接证据信号，「买活仍必败」累计即全攻定案的反向
+                    # 证成台账。评分、判决、动作零改动。
+                    _ralc_pool = 0
+                    _ralc_invuln_floor = float(pol.get(
+                        "race_invulnerable_hp_floor", 100000.0) or 0.0)
+                    for _e in enemies:
+                        if not (isinstance(_e, dict)
+                                and _e.get("is_alive", True)):
+                            continue
+                        try:
+                            _ehp = max(0, int(_e.get("current_hp") or 0))
+                        except (TypeError, ValueError):
+                            continue
+                        if _ralc_invuln_floor > 0.0 and _ehp >= _ralc_invuln_floor:
+                            continue
+                        _ralc_pool += _ehp
+                    _ralc_loss = max(1.0, float(self._race_loss_rate))
+                    _ralc_post_hp = my_hp + _ralc_sum - gap_now
+                    _ralc_surv = _ralc_post_hp / _ralc_loss
+                    if self._krace_turns >= 1:
+                        _ralc_dpt = ((self._krace_dmg_sustained
+                                      if self._krace_dmg_sustained > 0.0
+                                      else self._krace_dmg)
+                                     / max(1, self._krace_turns))
+                    else:
+                        _ralc_dpt = 0.0
+                    if _ralc_dpt > 0.0:
+                        _ralc_ttk = _ralc_pool / _ralc_dpt
+                        _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
+                                         else "买活仍必败")
+                        danger_note += (
+                            f"；买活对账：击杀约需{_ralc_ttk:.0f}回合"
+                            f"（实测{_ralc_dpt:.0f}伤/回合），买活后约可存活"
+                            f"{_ralc_surv:.1f}回合（净损{_ralc_loss:.0f}/回合）"
+                            f"→{_ralc_verdict}")
+                    else:
+                        danger_note += (
+                            "；买活对账：无实测输出口径，买活后约可存活"
+                            f"{_ralc_surv:.1f}回合（净损{_ralc_loss:.0f}/回合）"
+                            "→无法对账")
         # 消耗螺旋治理（第 109 局复盘）：坚毅(True Grit)每打一次随机消耗一张手牌，
         # INKLET 三连波里 66 次坚毅把打击/痛击/上勾拳/熔融之拳全部烧光 → 完美
         # 无限僵局（600+ 回合格挡≥意图、零输出），runner 拖到崩溃。固定上限 4

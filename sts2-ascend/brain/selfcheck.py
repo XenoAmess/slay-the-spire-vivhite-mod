@@ -15083,8 +15083,11 @@ def main() -> int:
     #      「覆盖成立仍全攻阵亡」（3 血对 11 意图，防御5+坚毅7 可覆盖缺口
     #      8，全攻 24 伤后硬吃 11 阵亡）——单批 1 例 <3 局阈值，纯观测不改
     #      行为。夹具复用 lsl：首个 decide 绑定战斗身份后注入已采样净损
-    #      EMA 武装 race_allin。① 致死覆盖成立：攻击仍中标（行为零差异）、
-    #      无 LETHAL_SURVIVABLE_LINE、观测注记在产；② 无覆盖（手牌零格挡）
+    #      EMA 武装 race_allin，并注入两回合实测输出（dpt=20）喂饱买活
+    #      对账口径。① 致死覆盖成立：攻击仍中标（行为零差异）、
+    #      无 LETHAL_SURVIVABLE_LINE、观测注记在产，且买活对账披露击杀
+    #      约需回合/买活后可存活/裁决（池253、dpt20→约13回合；买活后
+    #      3血÷净损15≈0.2回合→买活仍必败）；② 无覆盖（手牌零格挡）
     #      ：无注记；③ 键=False：观测同灭。
     def rallc_policy():
         return policy.Policy(knowledge.Knowledge(
@@ -15096,6 +15099,8 @@ def main() -> int:
         pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
         pol_r._race_rounds = 2
         pol_r._race_loss_rate = 15.0
+        pol_r._krace_turns = 2
+        pol_r._krace_dmg = pol_r._krace_dmg_sustained = 40.0
         return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
                             lsl_ctx)
 
@@ -15103,8 +15108,10 @@ def main() -> int:
     assert d_rallc1.action == "play_card" \
         and d_rallc1.params.get("card_index") == 0 \
         and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
-        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason, \
-        f"败局竞速致死覆盖旁观缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason \
+        and "买活对账：击杀约需13回合（实测20伤/回合）" in d_rallc1.reason \
+        and "买活后约可存活0.2回合（净损15/回合）→买活仍必败" in d_rallc1.reason, \
+        f"败局竞速致死覆盖旁观缺失、买活对账缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
     d_rallc2 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_hit2])
     assert d_rallc2.action == "play_card" \
         and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason, \
