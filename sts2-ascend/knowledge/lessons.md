@@ -12481,3 +12481,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.540819755663729局)，BASH(14分/3.8422321009462324局)，SETUP_STRIKE(14分/3.4929382735874803局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1535 胜，当前目标进阶 0
+
+## 第 1536 局复盘（2026-09-17 00:44）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：BODY_SLAM, TRUE_GRIT, HEMOKINESIS, RUPTURE, MOLTEN_FIST, INFLAME, MOLTEN_FIST, JUGGLING, VICIOUS, DEMON_FORM
+- 本局遗物：LANTERN, PERMAFROST
+- 战斗记录：F3 Monster战 掉血3｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损2（可行动段2/非行动段1，SELF_LOSS_PHASE_OBS）; F7 Elite战 掉血45｜自损4（可行动段4/非行动段47，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血7｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血21｜自损2（可行动段2/非行动段25，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血31｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4257513968882716局)，ASHEN_STRIKE(26分/2.6628402025827227局)，PACTS_END(25分/76.74858462500207局)，FEED(25分/41.05729521652187局)，BRAND(25分/2.6880564916945207局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.524926886518906局)，BASH(14分/3.828784288592921局)，SETUP_STRIKE(14分/3.4807129896299243局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1536 胜，当前目标进阶 0
