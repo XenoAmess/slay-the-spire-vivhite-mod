@@ -6357,6 +6357,105 @@ def main() -> int:
     assert s_fce_paid < fce_thr, \
         f"豁免键开启后付费能力牌被误解禁（546局教义）: score={s_fce_paid}"
 
+    # 3lff（第1211局 F33-T5）：白绮致死竞速中唯一合法的0费抽牌/回能牌，
+    #           不应被猩红仪式的长期生命税估值压过 end_turn。修复只抬
+    #           「当前即时功能底分为正」的0费功能牌；关闭键、非致死和无
+    #           功能收益的0费能力牌都保持原口径。
+    lff_deck = [{
+        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+        "card_type": "Attack", "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 10}],
+    } for _ in range(26)]
+    lff_card = {
+        "index": 0,
+        "card_id": "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+        "name": "白绮的猩红转化仪式",
+        "playable": True,
+        "energy_cost": 0,
+        "requires_target": False,
+        "resolved_rules_text": "抽2张牌并获得1点能量。",
+    }
+    lff_enemy = {
+        "index": 0, "enemy_id": "LFF_BOSS", "name": "攻坚巨兽",
+        "current_hp": 240, "max_hp": 300, "block": 0,
+        "is_alive": True, "is_hittable": True,
+        "intents": [{"total_damage": 14}],
+    }
+    lff_state = {
+        "screen": "COMBAT",
+        "available_actions": ["play_card", "end_turn"],
+        "turn": 5,
+        "combat": {
+            "player": {"current_hp": 8, "max_hp": 91, "block": 0,
+                        "energy": 0, "powers": []},
+            "hand": [dict(lff_card)],
+            "enemies": [dict(lff_enemy)],
+            "end_turn_will_kill_player": True,
+        },
+        "run": {"current_hp": 8, "max_hp": 91, "gold": 0,
+                "floor": 33, "deck": [dict(c) for c in lff_deck]},
+    }
+    lff_ctx = type("LFFCTX", (), {
+        "combat": {"comp_id": "LFF_BOSS", "node_type": "Boss"},
+        "current_combat_is_hard": False,
+        "credit_tags": [],
+    })()
+
+    def _prime_lff(lff_pol):
+        lff_pol.know.policy["vivhite_param_life_cost_weight"] = -2.95
+        lff_pol.decide(lff_state, lff_ctx)
+        lff_pol._krace_turns = 3
+        lff_pol._krace_dmg = 120.0
+        lff_pol._krace_dmg_sustained = 120.0
+        lff_pol._krace_latch = True
+        lff_pol._krace_latch_round = 3
+        lff_pol._race_rounds = 2
+        lff_pol._race_loss_rate = 14.0
+        lff_pol._incoming_ema = 14.0
+        lff_pol._race_joint_feasible = lambda *args, **kwargs: (False, "固定不可行")
+
+    lff_pol = policy.Policy(_vivhite_know("sts2-selfcheck-lff-"), random.Random(5))
+    _prime_lff(lff_pol)
+    d_lff = lff_pol.decide(lff_state, lff_ctx)
+    assert d_lff.action == "play_card" and d_lff.params.get("card_index") == 0 \
+        and "VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT" in d_lff.reason, \
+        f"致死竞速唯一0费功能牌仍被长期估值压成空过: {d_lff.action} {d_lff.params}（{d_lff.reason}）"
+
+    lff_off = policy.Policy(_vivhite_know("sts2-selfcheck-lff-off-"), random.Random(5))
+    lff_off.know.policy["lethal_race_free_function_exempt"] = False
+    _prime_lff(lff_off)
+    d_lff_off = lff_off.decide(lff_state, lff_ctx)
+    assert d_lff_off.action == "end_turn" \
+        and "VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT" not in d_lff_off.reason, \
+        f"0费功能保留行动关闭后未严格回滚: {d_lff_off.action}（{d_lff_off.reason}）"
+
+    lff_nonlethal_state = {
+        **lff_state,
+        "combat": {
+            **lff_state["combat"],
+            "player": {**lff_state["combat"]["player"], "current_hp": 70},
+            "end_turn_will_kill_player": False,
+        },
+        "run": {**lff_state["run"], "current_hp": 70},
+    }
+    lff_nonlethal = policy.Policy(
+        _vivhite_know("sts2-selfcheck-lff-nonlethal-"), random.Random(5))
+    lff_nonlethal.know.policy["vivhite_param_life_cost_weight"] = -2.95
+    lff_nonlethal.decide(lff_nonlethal_state, lff_ctx)
+    lff_nonlethal._krace_turns = 3
+    lff_nonlethal._krace_dmg = 120.0
+    lff_nonlethal._krace_dmg_sustained = 120.0
+    lff_nonlethal._krace_latch = True
+    lff_nonlethal._krace_latch_round = 3
+    lff_nonlethal._race_rounds = 2
+    lff_nonlethal._race_loss_rate = 14.0
+    lff_nonlethal._incoming_ema = 14.0
+    lff_nonlethal._race_joint_feasible = lambda *args, **kwargs: (False, "固定不可行")
+    d_lff_nonlethal = lff_nonlethal.decide(lff_nonlethal_state, lff_ctx)
+    assert "VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT" not in d_lff_nonlethal.reason, \
+        f"非致死0费功能牌误触发致死保留行动: {d_lff_nonlethal.reason}"
+    del d_lff, d_lff_off, d_lff_nonlethal, lff_pol, lff_off, lff_nonlethal
+
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
     #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：

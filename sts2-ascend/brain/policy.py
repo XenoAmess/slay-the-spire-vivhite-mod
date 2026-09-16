@@ -5136,6 +5136,12 @@ class Policy:
                                                    player_powers=player.get("powers") or [],
                                                    observed_hand_count=len(hand),
                                                    race_lethal_cover=race_lethal_cover)
+            _free_function_base_score = score
+            _free_function_candidate = (
+                cost == 0
+                and isinstance(why, str)
+                and why.startswith("功能牌（")
+                and ("抽牌" in why or "回能" in why))
             character_estimate, character_note = self._character_static_card_estimate(
                 c,
                 current_hp=my_hp,
@@ -5394,6 +5400,40 @@ class Policy:
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
                              _lc_pay, _lc_band, score, 0, "LETHAL_CAP_GATE"))
+            # 致死竞速0费功能牌保留行动（VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT）：
+            # 第1211局 F33-T5 的猩红转化仪式是唯一仍可出的牌（抽牌2/回能），
+            # 但 ritual-longline 把未来多回合生命税折成 -239.08，最终让一个
+            # 不消耗能量的续攻入口输给 end_turn。这里仅恢复「当前可执行的
+            # 抽牌/回能」这一个即时出口的最低选择分；长期估值仍原样留在
+            # why/原始分里，付费牌、非致死牌、没有即时功能收益的0费牌和
+            # 已被零出牌死牌闸锁住的牌均不放行。新键关闭时严格回滚。
+            if (
+                    not _hp_gate_hit
+                    and _free_function_candidate
+                    and _free_function_base_score > 0.0
+                    and kill_race
+                    and lethal_now
+                    and not race_lethal_cover
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and bool(pol.get("lethal_race_free_function_exempt", True))
+                    and not never_played_dead
+                    and not any(
+                        _other is not c
+                        and _other.get("playable")
+                        and not self._card_unavailable(_other)
+                        and (energy if _other.get("costs_x")
+                             else (_other.get("energy_cost") or 0)) <= energy
+                        for _other in hand)
+                    and score <= float(pol["play_threshold"])
+            ):
+                _free_function_raw_score = score
+                score = float(pol["play_threshold"]) + 0.01
+                why += (
+                    f"｜致死竞速0费功能牌保留行动：即时底分"
+                    f"{_free_function_base_score:.2f}，原候选分"
+                    f"{_free_function_raw_score:.2f}不阻止当前出牌"
+                    "（VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             # 竞速判死自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，

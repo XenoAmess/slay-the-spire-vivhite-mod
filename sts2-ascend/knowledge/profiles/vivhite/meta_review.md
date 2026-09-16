@@ -4134,3 +4134,59 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1211 局批复盘：致死竞速唯一 0 费功能牌不应空过
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮 Boss 致死 kill-race 中，长期生命代价估值会把合法的
+  0 费抽牌/回能牌压到 `end_turn` 阈值下，即使它是手牌中唯一仍可继续行动的
+  入口；这会丢失一次不消耗能量的续攻机会。若未来 3~10 局匹配场景中该牌
+  的选择比例上升、且不在有其他合法牌或非致死场景触发，则支持假设；若
+  `VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT` 在匹配状态缺失、误在非致死/有其他
+  合法牌场景出现，或触发后连续产生无效动作，则假设被证伪。
+- **EVIDENCE**：完整失败链
+  `sts2-ascend/knowledge/profiles/vivhite/runs/20260916-224810_PNSGVMC4Z0QH.json`
+  （第 1211 局）已从 packet 指定位置回读。F33-T5 的 `decisions[665]` 中，
+  白绮 8 血、敌方意图 14、能量 0；猩红转化仪式原生
+  `playable=true`，是手牌唯一仍可出的牌，功能为抽牌 2/回能，但候选分为
+  `-229.156`，其中 `VIVHITE_LIVE_ESTIMATE=-239.08`，策略仍选择
+  `end_turn`，下一条为 `GAME_OVER`。packet 的聚合和 70 条切片不足以证明
+  完整链，故已按 `full_chain_available_in` 深读原始运行文件。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `lethal_race_free_function_exempt`，作为本行为的独立回滚键。
+- `sts2-ascend/brain/policy.py`：候选选择阶段记录功能牌即时底分；仅当角色为
+  白绮、当前 `kill_race` 且本地致死、没有生还格挡覆盖、牌为 0 费抽牌/回能、
+  即时底分为正、手牌没有其他当前合法牌且未命中零出牌死牌闸时，把低于阈值
+  的候选抬到阈值上方最小值，并追加
+  `VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT`。长期估值仍原样进入理由，付费牌、
+  非致死牌、无即时功能收益牌与多合法牌场景不变。
+- `sts2-ascend/brain/selfcheck.py`：新增第 1211 局形态的真实选择夹具，验证
+  开启时选择唯一 0 费功能牌并留痕，关闭键回滚为 `end_turn`，非致死场景不
+  触发。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标文件 `git diff --check`：退出码 0；报告写入前已回读完整目标 diff，
+  生产改动未涉及在线 runs、stats、policy.json、lessons、`.runtime` 或
+  `.review-cache` 取证现场。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局按独立 Boss 战统计：匹配状态数、唯一合法 0 费功能牌数、
+  `VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT` 触发/实际出牌数、触发后下一条状态
+  是否仍在战斗，以及最终胜负和自损；不把触发本身当作胜利证据。
+- 若标记出现在非白绮、非致死、存在其他合法牌或功能底分非正场景，或触发后
+  API 拒绝/状态无进展，则将
+  `lethal_race_free_function_exempt` 设为 `False`；必要时回滚本地提交，
+  原选择器和长期生命估值保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
