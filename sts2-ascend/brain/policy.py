@@ -5578,9 +5578,18 @@ class Policy:
                         except (TypeError, ValueError):
                             _krh_gate_obs = False
                         if _krh_gate_obs:
+                            # _hp_play_margin=0 has one runtime cause besides
+                            # lethal/config: the combat-local stall latch has
+                            # deliberately disabled the margin gate. Keep that
+                            # cause explicit so a selected self-pay cannot be
+                            # misread as a deployment/configuration disable.
                             _krh_gate_state = "disabled"
                             _krh_gate_cause = (
-                                "lethal" if lethal_now else "profile_or_config")
+                                "lethal" if lethal_now
+                                else "stall_latch"
+                                if bool(getattr(
+                                    self, "_hp_gate_stall_latch", False))
+                                else "profile_or_config")
                             _krh_gate_upper = None
                             if _hp_play_margin > 0.0:
                                 _krh_gate_rep = self._hp_repeat_plays.get(

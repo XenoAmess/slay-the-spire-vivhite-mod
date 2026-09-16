@@ -3903,6 +3903,42 @@ def main() -> int:
     assert "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" not in d_khb_lethal.reason, \
         f"致死关闭余量门不得伪报越门: {d_khb_lethal.reason}"
 
+    # ⑧ 余量门被本场僵局闩锁主动停用时，选中自付状态必须标为
+    # stall_latch，而不是把运行时闩锁误报为 profile_or_config；该观测
+    # 只改原因分类，动作/参数仍与未闩锁驱动一致。
+    vknow_khb_stall = _vivhite_know("sts2-selfcheck-krhbypass-stall-")
+    vknow_khb_stall.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_khb_stall = policy.Policy(vknow_khb_stall, random.Random(11))
+    vctx_khb_stall = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_khb_stall.decide(
+            _krh_state(_turn, _hp, _krh_hand_vivhite()), vctx_khb_stall)
+        vctx_khb_stall.credit_tags.extend(_d.tags)
+    vpol_khb_stall._hp_gate_stall_latch = True
+    d_khb_stall = vpol_khb_stall.decide(
+        _krh_state(3, 45, _krh_hand_vivhite()), vctx_khb_stall)
+    assert d_khb_stall.action == d_khb_lethal.action \
+        and d_khb_stall.params == d_khb_lethal.params, \
+        f"僵局闩锁观测不得改变动作: normal={d_khb_lethal.action}/" \
+        f"{d_khb_lethal.params} stall={d_khb_stall.action}/" \
+        f"{d_khb_stall.params}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS" in d_khb_stall.reason \
+        and "state=disabled" in d_khb_stall.reason \
+        and "cause=stall_latch" in d_khb_stall.reason \
+        and "cause=profile_or_config" not in d_khb_stall.reason, \
+        f"僵局闩锁关闭门带缺 stall_latch 分类: {d_khb_stall.reason}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" not in d_khb_stall.reason, \
+        f"僵局闩锁关闭门带不得伪报越门: {d_khb_stall.reason}"
+
+    vknow_khb_profile = _vivhite_know("sts2-selfcheck-krhbypass-profile-")
+    vknow_khb_profile.policy["vivhite_hp_cost_play_margin"] = 0.0
+    vpol_khb_profile = policy.Policy(vknow_khb_profile, random.Random(11))
+    d_khb_profile = _krh_drive(
+        vpol_khb_profile, _krh_ctx(), _krh_hand_vivhite)
+    assert "state=disabled" in d_khb_profile.reason \
+        and "cause=profile_or_config" in d_khb_profile.reason, \
+        f"配置关闭余量门的既有原因分类被改变: {d_khb_profile.reason}"
+
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
     #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48

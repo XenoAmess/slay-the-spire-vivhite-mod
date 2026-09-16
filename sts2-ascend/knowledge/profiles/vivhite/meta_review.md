@@ -3974,3 +3974,53 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1197~1199 局批复盘：区分判死自付门带的僵局闩锁原因
+
+日期：2026-09-16
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：选中判死自付牌的 `state=disabled,cause=profile_or_config` 在余量门
+  已被本场 `VIVHITE_HP_GATE_STALL_ANY` 闩锁主动停用时是误归因；若把该运行时原因
+  单独标为 `cause=stall_latch`，即可提高后续门带审计的可证伪性，同时不改变评分、
+  候选资格、放行、目标或动作。
+- **EVIDENCE**：已逐条核对精确失败运行 `0SQ5PRQDETQZ` 的 173 条决策。F5 的
+  选中链在连续 `VIVHITE_HP_GATE_STALL_ANY` 放行后仍出现 9 次
+  `state=disabled,cause=profile_or_config`；同局 F11 又在 [150~152] 出现真实
+  `state=bypass`，并在 [168]/[170] 出现 `state=disabled,cause=lethal`。源码中
+  `stall_latch` 会把 `_hp_play_margin` 压为 0，旧分类因此把战斗内闩锁误报成配置
+  关闭。1197~1199 均为失败批次，且自损/判死自付留痕持续存在，不能把该观测缺陷
+  留作纯报告事项。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  `KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS` 的 `state` 与 `cause`，并核对每个
+  `stall_latch` 是否紧邻已触发的 `VIVHITE_HP_GATE_STALL_ANY`；选中动作和参数应与
+  修补前逐项一致。若闩锁场景仍报 `profile_or_config`、状态缺失、观测解析异常，或
+  动作/参数发生变化，则假设被证伪并回滚本次原因分类。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：选中判死自付的门带状态在非致死且
+  `_hp_gate_stall_latch=True` 时报告 `cause=stall_latch`；真正的 `lethal` 和
+  `profile_or_config` 分支保持不变。该改动只写观测原因，不参与评分或选牌。
+- `sts2-ascend/brain/selfcheck.py`：新增闩锁原因正例、配置关闭对照，以及动作/参数
+  零差异断言；已有 `cause=lethal` 与观测开关回滚断言保留。
+- 未修改 `runs`、`stats`、`policy.json`、`lessons.md`、`.runtime` 或任务书；宿主
+  预置的 `assets/` 删除状态和 `.review-cache/` 未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标文件 `git diff --check`：退出码 0；完整目标 diff 已回读，只有上述两个脑文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续窗口记录 `stall_latch/profile_or_config/lethal/gate_active` 分布、对应
+  `VIVHITE_HP_GATE_STALL_ANY` 链长和 `SELF_LOSS_PHASE_OBS`，并与本批 F5/F11 的
+  选中动作逐项对账。
+- 任一原因错分、状态缺失、解析异常或动作/参数变化，回滚本地提交即可恢复旧的
+  `profile_or_config` 分类；不修改判死竞速软门行为。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
