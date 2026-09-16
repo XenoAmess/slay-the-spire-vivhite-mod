@@ -143,71 +143,6 @@ def card_numbers(card: dict) -> tuple[int, int, int]:
     return dmg, block, hits
 
 
-def _vital_spark_attack_profile(
-        enemies: list[dict]) -> tuple[int | None, str]:
-    """Report incoming attack segments without treating total damage as hits.
-
-    The combat API exposes ``total_damage`` reliably, but that value is not a
-    hit count.  Prefer an explicit hit field when present, use the native
-    Infested Prism Whirlwind mapping (three hits), and otherwise preserve the
-    uncertainty for the production observation.
-    """
-    segments = 0
-    unknown = False
-    saw_damage = False
-    labels: list[str] = []
-    count_keys = (
-        "hit_count", "hits", "attack_count", "num_hits", "number_of_hits",
-        "repeat_count", "repeat", "repetitions", "times",
-    )
-    for enemy in enemies or []:
-        if not isinstance(enemy, dict) or not enemy.get("is_alive", True):
-            continue
-        for intent in enemy.get("intents") or []:
-            if not isinstance(intent, dict):
-                continue
-            try:
-                total_damage = float(intent.get("total_damage") or 0)
-            except (TypeError, ValueError):
-                continue
-            if not math.isfinite(total_damage) or total_damage <= 0:
-                continue
-            saw_damage = True
-            raw_label = (intent.get("intent_type") or intent.get("move_id")
-                         or intent.get("id") or "")
-            label = str(raw_label).strip()
-            normalized = re.sub(r"[^A-Za-z0-9]+", "_", label).strip("_").upper()
-            label_key = normalized or "UNKNOWN"
-            if label_key not in labels:
-                labels.append(label_key)
-            hit_count = None
-            for key in count_keys:
-                raw_count = intent.get(key)
-                if raw_count is None or isinstance(raw_count, bool):
-                    continue
-                try:
-                    numeric_count = float(raw_count)
-                except (TypeError, ValueError):
-                    continue
-                if (math.isfinite(numeric_count) and numeric_count >= 1
-                        and numeric_count.is_integer()):
-                    hit_count = int(numeric_count)
-                    break
-            if hit_count is None and (
-                    "WHIRLWIND" in normalized or "旋风" in label):
-                hit_count = 3
-            if hit_count is None:
-                unknown = True
-            else:
-                segments += hit_count
-    if not saw_damage:
-        return 0, "none"
-    profile = ",".join(labels[:4]) or "UNKNOWN"
-    if len(labels) > 4:
-        profile += ",..."
-    return (None if unknown else segments), profile
-
-
 # 幕边界常量（生涯 320 场一幕 Boss 全部 F17、24 场二幕 Boss 全部 F33 实证；
 # 三幕按 51 估算）——_floor_act/_floors_to_boss 的唯一口径，不再各写一份
 _ACT_BOSS_FLOORS = (17, 33, 51)
@@ -5745,34 +5680,6 @@ class Policy:
                 else:
                     why += ("｜昏眩单卡抉择：手牌无其他可出攻击备选"
                             "（RINGING_SINGLE_PLAY_OBS）")
-            # 活力火花暴露观测（VITAL_SPARK_EXPOSURE_OBS，本批最小生产改动）：
-            # 1201-F28 的感染棱柱终盘连续打出技能牌，现有评分只扣一次「层数×
-            # skill_tax」，但原版 Whirlwind 是 3 段攻击；API 未稳定暴露击数时，
-            # 不把 total_damage 臆测成 hits，保留 unknown 供后续实战证伪。只在
-            # 主评分实际选中已计入 VITAL_SPARK_SKILL_TAX 的技能牌时追加文本，
-            # 不改评分、候选、阈值、目标或动作；键=0 时严格消失。
-            try:
-                _vs_exposure_obs = bool(int(float(pol.get(
-                    "vital_spark_exposure_obs", 1) or 0)))
-            except (TypeError, ValueError):
-                _vs_exposure_obs = False
-            if (_vs_exposure_obs
-                    and "VITAL_SPARK_SKILL_TAX" in why):
-                _vs_segments, _vs_intent_profile = _vital_spark_attack_profile(
-                    enemies)
-                _vs_score_tax = _vspark_stacks * _vspark_skill_tax
-                _vs_native_extra = (
-                    "unknown" if _vs_segments is None
-                    else f"{_vspark_stacks * _vs_segments:.1f}")
-                why += (
-                    f"｜VITAL_SPARK_EXPOSURE_OBS card="
-                    f"{card.get('card_id') or card.get('name') or '?'}"
-                    f",stacks={_vspark_stacks:g}"
-                    f",score_tax={_vs_score_tax:.1f}"
-                    f",native_per_hit={_vspark_stacks:g}"
-                    f",attack_segments={_vs_segments if _vs_segments is not None else 'unknown'}"
-                    f",native_extra={_vs_native_extra}"
-                    f",intents={_vs_intent_profile}")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",

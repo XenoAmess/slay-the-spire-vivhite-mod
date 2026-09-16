@@ -150,12 +150,6 @@ DEFAULT_POLICY = {
                               # 意图（incoming>0）时技能牌按「层数×本键」扣分；意图 0 回合
                               # 无可放大对象、技能零税；攻击/能力不附污染严格零差异；
                               # 0 = 关闭（严格回滚旧口径）
-    "vital_spark_exposure_obs": 1,  # 活力火花暴露观测（VITAL_SPARK_EXPOSURE_OBS，1201-F28）：
-                                     # 评分当前按每张技能牌扣一次层数×skill_tax，但原版
-                                     # 感染棱柱 Whirlwind 为三段攻击；主评分选中技能牌时同时
-                                     # 披露 score_tax、原生每击层数与攻击段数。击数缺失明确记
-                                     # unknown，不把 total_damage 当 hits；纯观测不改动作/评分。
-                                     # 0=关闭（严格回滚旧口径）
     "hp_cost_utility_pricing": 1,  # 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
                                    # 「失去X点生命」换抽牌/回能的功能牌（祭品/放血族）此前在
                                    # 功能牌分支满分计价、自付血量零扣减——1289-F17 Boss 战
