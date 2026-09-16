@@ -389,3 +389,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-15 04:08:26 | 第 980~1016 局 | `0b5fe9f5` | review_failure | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `a19cb520` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 a19cb520 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260916-145314-1789541594351123500-535a6ee4 -->
 | 2026-09-16 14:53:14 | 第 1520~1524 局 | `535a6ee4` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260916-145314-1789541594351123500-535a6ee4` | 复盘进程未成功完成 |
+<!-- rejection:20260916-155806-1789545486532333700-b4777bc3 -->
+| 2026-09-16 15:58:06 | 第 1520~1524 局 | `b4777bc3` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20260916-155806-1789545486532333700-b4777bc3` | 复盘进程未成功完成 |
