@@ -3903,3 +3903,74 @@ retry_resolution: 20260915-040826-1789416506853731100-0b5fe9f5 integrated
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1195~1196 局批复盘：判死自付越门结果不可判——补齐选中动作门带状态观测
+
+## HYPOTHESIS
+
+1195/1196 的 `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS=0` 不能证明没有高分越门：
+当前观测只在候选扫描阶段标记越门，最终选中的自付牌没有记录门带是否关闭、
+选中分是否低于阈值、是否落在软门内或确实越过上限。1196 的 33 次判死竞速
+同帧自付因此存在观测分辨率缺口，而不是足够的反证。该假设可证伪：后续
+3~10 局若所有选中自付牌都报告 `state=disabled` 或 `state=below_threshold`，
+则「高分越门」解释被否定；若出现 `state=bypass`，则说明此前 0 次只是选中
+动作链未落最终状态，原软门差异仍在产。
+
+## EVIDENCE
+
+- 精确批次 1195（`AC58GBKPLLAT`）与 1196（`4ZRWC07R1BCA`）均 F48 阵亡；
+  1196 全链 848 条决策中，`KILL_RACE_HOPELESS_HP_PAY_OBS` 33 次，
+  `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS` 0 次。此前已落地的 1190~1194
+  预期信号要求对每次自付给出候选分与门带上限，但本批选中动作没有该分类。
+- 1196-F48 逐条核对：T1 终止条件实付4、切线星光2、闭域投影2；T2 尺度变换1、
+  弦光投影2；T4 负空间2、尺度变换1、切线星光2、绯色面积2；T6 绯色面积3、
+  开集庇护2、闭域映射1；T7 终止条件1、绯色面积4；末尾以 22/6 结束回合，
+  下一条 GAME_OVER HP=0。上述选中自付均只有 `...HP_PAY_OBS`，没有
+  `BYPASS_OBS` 或可解释其缺失原因的门带状态。
+- 本批原生知识快照为游戏 v0.111.0（commit `41cef1ea`），但 vanilla corpus
+  没有匹配的 Vivhite 自定义卡 ID；自付额对账因此采用本地 Vivhite 策略目录、
+  卡牌设计表和运行链上的 `hp-cost`/`KILL_RACE...OBS`，不把 vanilla 缺项误报
+  为机制缺失。当前 profile 快照的余量门为 2.75、KRH 压价为 1.0，足以要求
+  产出门带状态，但不单独回溯运行时当帧配置。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：最终选中分保存为 `chosen_score`；在已有
+  `KILL_RACE_HOPELESS_HP_PAY_OBS` 的白绮选中动作上，按同一余量门、自由回合
+  减免、复打税和 KRH 压价公式重算选中门带上限，追加
+  `KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS`，报告 `state=disabled`、
+  `below_threshold`、`within_band` 或 `bypass` 及 `cause`。若最终分确实越门
+  且候选侧尚未写入旧标记，则在选中动作补写 `BYPASS_OBS`。全段只写 why
+  观测，不改变分数、候选资格、放行、目标、动作或竞速投影。
+- `sts2-ascend/brain/selfcheck.py`：增加选中高分越门状态断言、观测开关关闭时
+  状态与旧 BYPASS 标记均消失且动作/参数不变，以及服务端致死闸关闭余量门时
+  `state=disabled,cause=lethal` 且不伪报越门。
+- 代码与测试已先行本地提交：`cbbcc70d`（`Add KRH selected gate-state observation`）。
+
+## EXPECTED_SIGNAL
+
+未来 3~10 局按独立战斗汇总选中 `KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS`
+次数、`state` 分布、实付血、选中分、门带上限和 `score-upper` 超额，并与同战斗
+`SELF_LOSS_PHASE_OBS`、判死后实战存活回合及最终胜负对账。`state=bypass` 应
+同时带 `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS`；`state=disabled,cause=lethal`
+则说明 0 次 BYPASS 是致死路径关闭门带，不应推动收紧软门；持续只有 active-but-
+below/band 则否定 1190~1194 的高分越门解释。若状态缺失，优先检查选中动作
+收口和 `kill_race_hopeless_hp_pay_obs` 开关，不修改行为。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标 diff `git diff --check` 通过；首个本地提交只包含两个静态脑文件，未触碰
+  `runs`、`stats`、`policy.json`、`lessons.md`、`review_queue`、`.runtime` 或
+  其他工作区。宿主遗留的 assets 长路径删除状态与本批无关，未入提交。
+
+## FOLLOW-UP / ROLLBACK
+
+保持 `kill_race_hopeless_hp_pay_bypass_obs=1` 观察 3~10 局；若状态稳定覆盖
+`bypass`，再按独立战斗的自损/胜负决定是否收窄 KRH 软门；若全部为 disabled 或
+below，撤销“高分越门”归因。任何观测格式或动作异常可把该键置 `0` 隐藏本批
+两个观测，评分与放行不变；必要时回滚本地提交 `cbbcc70d`。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

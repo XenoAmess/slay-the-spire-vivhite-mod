@@ -5361,7 +5361,7 @@ class Policy:
             immediate_score, card, target, why, choice_mode = marginal_best
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
-            _, card, target, why = chosen
+            chosen_score, card, target, why = chosen
             # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，
             # 纯观测不改分）：本 tick 评分侧静默翻线的挂账在此挂到实际打出牌
             # 的 why 上——只有打出牌的 why 会入决策链，跨回合火线横跳从此可
@@ -5563,6 +5563,66 @@ class Policy:
                 if _krh_pay > 0.0:
                     why += (f"｜竞速判死自付{_krh_pay:g}血"
                             "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
+                    # 1195~1196 follow-up observation: a selected self-paying
+                    # card must expose why BYPASS_OBS is absent.  The existing
+                    # candidate-side note is not enough to distinguish a
+                    # disabled gate from a score below the active soft band.
+                    # This is audit-only: use the final selected score and do
+                    # not feed the classification back into selection.
+                    if (getattr(self.character_strategy, "profile_id", None)
+                            == VIVHITE_PROFILE_ID):
+                        try:
+                            _krh_gate_obs = bool(int(float(pol.get(
+                                "kill_race_hopeless_hp_pay_bypass_obs", 1)
+                                or 0)))
+                        except (TypeError, ValueError):
+                            _krh_gate_obs = False
+                        if _krh_gate_obs:
+                            _krh_gate_state = "disabled"
+                            _krh_gate_cause = (
+                                "lethal" if lethal_now else "profile_or_config")
+                            _krh_gate_upper = None
+                            if _hp_play_margin > 0.0:
+                                _krh_gate_rep = self._hp_repeat_plays.get(
+                                    (card.get("card_id") or "").upper().rstrip("+"), 0)
+                                _krh_gate_rep_extra = (
+                                    _krh_pay * _krh_gate_rep * _hp_repeat_tax
+                                    if _hp_repeat_tax > 0.0 else 0.0)
+                                _krh_gate_margin_eff = _hp_play_margin
+                                if _hp_free_relief > 0.0 and incoming <= 0:
+                                    _krh_gate_margin_eff *= (1.0 - _hp_free_relief)
+                                _krh_gate_extra = (
+                                    _krh_pay * _krh_gate_margin_eff
+                                    + _krh_gate_rep_extra
+                                    + _krh_pay * _krh_margin)
+                                _krh_gate_upper = (
+                                    float(pol["play_threshold"])
+                                    + _krh_gate_extra)
+                                if float(chosen_score) > _krh_gate_upper:
+                                    _krh_gate_state = "bypass"
+                                elif float(chosen_score) > float(
+                                        pol["play_threshold"]):
+                                    _krh_gate_state = "within_band"
+                                else:
+                                    _krh_gate_state = "below_threshold"
+                                _krh_gate_cause = "gate_active"
+                            _krh_gate_upper_text = (
+                                f"{_krh_gate_upper:.2f}"
+                                if _krh_gate_upper is not None else "关闭")
+                            why += (
+                                f"｜竞速判死自付门带状态：实付{_krh_pay:g}血，"
+                                f"选中分{float(chosen_score):.2f}，"
+                                f"门带上限{_krh_gate_upper_text}，"
+                                f"state={_krh_gate_state}，cause={_krh_gate_cause}"
+                                "（KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS）")
+                            if (_krh_gate_state == "bypass"
+                                    and "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS"
+                                    not in why):
+                                why += (
+                                    f"｜竞速判死自付越过软门：实付{_krh_pay:g}血，"
+                                    f"候选分{float(chosen_score):.2f}>门槛+"
+                                    f"{_krh_gate_extra:.1f}"
+                                    "（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS）")
             # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
             # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
             # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，

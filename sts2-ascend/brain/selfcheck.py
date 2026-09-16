@@ -3858,8 +3858,12 @@ def main() -> int:
     assert d_kd0.action == "play_card" \
         and "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" in d_kd0.reason, \
         f"判死高分自付越过软门缺观测注记: {d_kd0.reason}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS" in d_kd0.reason \
+        and "state=bypass" in d_kd0.reason \
+        and "cause=gate_active" in d_kd0.reason, \
+        f"选中自付门带状态观测缺越门分类: {d_kd0.reason}"
 
-    def _krh_bypass_drive(enabled):
+    def _krh_bypass_drive(enabled, forced_kill=False):
         vk = _vivhite_know("sts2-selfcheck-krhbypass-")
         vk.policy["vivhite_hp_cost_play_margin"] = 1.0
         vk.policy["kill_race_hopeless_hp_pay_margin"] = 6.0
@@ -3867,11 +3871,16 @@ def main() -> int:
         vp = policy.Policy(vk, random.Random(11))
         vc = _krh_ctx()
         for _turn, _hp in ((1, 65), (2, 55)):
+            _st = _krh_state(_turn, _hp, _krh_hand_vivhite())
+            if forced_kill:
+                _st["combat"]["end_turn_will_kill_player"] = True
             _d = vp.decide(
-                _krh_state(_turn, _hp, _krh_hand_vivhite()), vc)
+                _st, vc)
             vc.credit_tags.extend(_d.tags)
-        return vp.decide(
-            _krh_state(3, 45, _krh_hand_vivhite()), vc)
+        _st = _krh_state(3, 45, _krh_hand_vivhite())
+        if forced_kill:
+            _st["combat"]["end_turn_will_kill_player"] = True
+        return vp.decide(_st, vc)
 
     d_khb_off = _krh_bypass_drive(0)
     assert d_khb_off.action == d_kd0.action \
@@ -3880,6 +3889,19 @@ def main() -> int:
         f"off={d_khb_off.action}/{d_khb_off.params}"
     assert "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" not in d_khb_off.reason, \
         f"越门观测关闭后不得出现注记: {d_khb_off.reason}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS" not in d_khb_off.reason, \
+        f"越门观测关闭后不得出现门带状态注记: {d_khb_off.reason}"
+
+    # ⑦ 服务端致死闸关闭余量门时仍应披露 disabled/lethal，而不是把
+    # “无 BYPASS”误报成“低分未越门”。评分与动作保持同一条竞速路径。
+    d_khb_lethal = _krh_bypass_drive(1, forced_kill=True)
+    assert d_khb_lethal.action == "play_card" \
+        and "KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS" in d_khb_lethal.reason \
+        and "state=disabled" in d_khb_lethal.reason \
+        and "cause=lethal" in d_khb_lethal.reason, \
+        f"致死关闭余量门缺 disabled/lethal 状态观测: {d_khb_lethal.reason}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS" not in d_khb_lethal.reason, \
+        f"致死关闭余量门不得伪报越门: {d_khb_lethal.reason}"
 
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
