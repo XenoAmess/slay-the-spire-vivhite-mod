@@ -12305,3 +12305,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.802832211380266局)，BASH(14分/4.063934948090993局)，SETUP_STRIKE(14分/3.6944863164463544局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（82%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1519 胜，当前目标进阶 0
+
+## 第 1520 局复盘（2026-09-16 09:48）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：BREAKTHROUGH, BREAKTHROUGH, COLOSSUS, UNRELENTING, CINDER, RUPTURE, CINDER, EXPECT_A_FIGHT, HEADBUTT, MANGLE, EXPECT_A_FIGHT, CINDER, SWORD_BOOMERANG
+- 本局遗物：ODDLY_SMOOTH_STONE, BOWLER_HAT, GORGET
+- 战斗记录：F13 Elite战 掉血36｜自损1（可行动段1/非行动段38，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血8; F17 Boss战 掉血51｜自损1（可行动段1/非行动段45，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血20; F23 Unknown战 掉血43｜自损1（可行动段1/非行动段17，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血21｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.816490278604609局)，PACTS_END(25分/76.059369835847局)，BRAND(25分/2.8431615873361586局)，BARRICADE(25分/2.796221151541271局)，FEED(24分/42.40868059094012局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.786022298640435局)，BASH(14分/4.049711175772675局)，SETUP_STRIKE(14分/3.681555614338792局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.05 → 2.04（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1520 胜，当前目标进阶 0
