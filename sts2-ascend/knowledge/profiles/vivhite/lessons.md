@@ -13636,3 +13636,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.248132648209922局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.404043112890045局)，FASTEN(23分/2.892417917480502局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1236 胜，当前目标进阶 3
+
+## 第 1237 局复盘（2026-09-17 04:26）
+- 结果：💀 失败｜进阶 3｜到达层数 13｜当局评分 13
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：PANTOGRAPH
+- 战斗记录：F3 Monster战 掉血1｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血8｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血16｜自损10（可行动段10/非行动段22，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血12｜自损20（可行动段20/非行动段4，SELF_LOSS_PHASE_OBS）; F12 Unknown战 掉血2｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血34｜自损20（可行动段20/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：MAYHEM(43分/4.49139270994116局)，REND(41分/4.583560384559805局)，BOLAS(38分/2.7770323015279854局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/2.6472987469779956局)，STRATAGEM(36分/5.798595315698972局)
+- 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/6.226264183941188局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/7.37812896199493局)，FASTEN(23分/2.8822944547693203局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损20/掉血34（59%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1237 胜，当前目标进阶 3
