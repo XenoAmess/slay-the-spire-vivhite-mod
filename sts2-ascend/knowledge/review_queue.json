@@ -13,8 +13,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "GKY5UZMADFWU"
+   "source": "preferred",
+   "run_id": "GKY5UZMADFWU",
+   "queue_id": "75176-1789663548371294800-0",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1553,
@@ -29,8 +33,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "UPMLFKQW1HBP"
+   "source": "preferred",
+   "run_id": "UPMLFKQW1HBP",
+   "queue_id": "75176-1789663548371294800-1",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1554,
@@ -45,8 +53,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "AJ8S2699HWN2"
+   "source": "preferred",
+   "run_id": "AJ8S2699HWN2",
+   "queue_id": "75176-1789663548371294800-2",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1555,
@@ -61,122 +73,13 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "JG6TAHJ4Y21S"
+   "source": "preferred",
+   "run_id": "JG6TAHJ4Y21S",
+   "queue_id": "75176-1789663548371294800-3",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   }
  ],
- "reviewing": {
-  "runs": [
-   1547,
-   1548,
-   1549,
-   1550,
-   1551
-  ],
-  "items": [
-   {
-    "run": 1547,
-    "time": "2026-09-17 10:33",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "run_id": "M7NDE3E5S03V",
-    "queue_id": "70380-1789621610698343600-0",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   },
-   {
-    "run": 1548,
-    "time": "2026-09-17 11:26",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "run_id": "Y7UW2XY4SAVV",
-    "queue_id": "70380-1789621610698343600-1",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   },
-   {
-    "run": 1549,
-    "time": "2026-09-17 12:23",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "run_id": "A8376XW3J98E",
-    "queue_id": "70380-1789621610698343600-2",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   },
-   {
-    "run": 1550,
-    "time": "2026-09-17 13:31",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "run_id": "P36FL76R7XEJ",
-    "queue_id": "70472-1789629429537894100-3",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   },
-   {
-    "run": 1551,
-    "time": "2026-09-17 14:49",
-    "profile_id": "ironclad",
-    "backend_key": "kimi-k3",
-    "priority": 1,
-    "runner": "opencode",
-    "model": "kimi-for-coding/k3",
-    "variant": "",
-    "reasoning_effort": "",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 5,
-    "source": "preferred",
-    "run_id": "GH1SNHN8ZVL1",
-    "queue_id": "70472-1789629429537894100-4",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   }
-  ],
-  "profile_id": "ironclad",
-  "retry_group": "",
-  "started": "2026-09-17 15:17:09"
- }
+ "reviewing": null
 }
