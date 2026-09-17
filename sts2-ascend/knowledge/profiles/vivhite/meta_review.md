@@ -4327,3 +4327,76 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+# 第 1276~1296 局批复盘：判死压价未接线意图0自由回合减免
+
+日期：2026-09-18
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：505~511 批的意图0自由回合减免只折余量门分量，927~944 批新增
+  的判死压价分量（KILL_RACE_HOPELESS_HP_PAY_MARGIN，含 DOM_SCALE 放大）从未接线
+  减免——硬仗（Elite/Boss）判死竞速的意图0回合，余量门已撤而判死压价仍拦下
+  边际謦欬牌，把零风险自由回合打成 0 输出空过。该假设可证伪：若未来 3~10 局
+  `KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF` 留痕只出现在硬仗判死锁持的意图≤0 回合、
+  过门后后续回合确实兑现抽牌/输出，支持假设；若留痕出现在普通战/高危回合/
+  非判死 tick，或键=0 后动作参数漂移，则实现被证伪并回滚。
+- **EVIDENCE**：本批 21 局全负（进阶 3）。精确失败运行
+  `runs/20260917-183532_XQ52AM0F11PH.json`（第 1296 局，F33 知识恶魔）已按
+  `full_chain_available_in` 深读全部 478 条决策：T5（18:49:34）22/84 血、
+  敌意图 0、锁持判死（入锁已2回合），星图检索（抽牌4/回能、实付2血，候选分
+  1.19>阈值0.40）被判死压价拦下空过 0 输出，T7 以 hp=2 终端锁、T8 阵亡
+  （掉血71｜自损11）。同批 1294 局 `DGPLPDJ4JK1M` F21（40 血、意图0、判死锁持）
+  拦下负空间（实付2）+综合色序（抽牌4/回能、实付4）空过。生涯 runs 账扫描：
+  「謦欬出牌门拦下…KILL_RACE_HOPELESS_HP_PAY_MARGIN + 敌意图总伤0」共 42 处
+  跨 34 个独立局（965~1296），远超 3 局/2 批证据线，不得再只登记待观察。
+  意图0回合自付绝无当回合致死可能（原生 hook 禁自付致死，511 局 F11 终段
+  1 血全 blocked_by_hook 实证），505~511 批已判定此类回合门带是纯输出压制；
+  且 race_audit 判死后获胜 713/1784（40%），判死投影本身高频失真，压价拦下的
+  恰是低分引擎牌（抽牌/回能永远不可能是「超带顶高分翻盘燃料」）。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  `KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF` 减免过门注记的次数、所在回合意图/
+  节点类型/锁持状态，过门后下一回合出牌兑现情况，以及同战斗
+  `SELF_LOSS_PHASE_OBS` 与最终胜负；判死竞速意图0回合的 0 输出空过应减少。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的静态键
+  `kill_race_hopeless_hp_pay_free_relief`（=1 判死压价随意图0减免同步折算；
+  0=判死压价不减免，旧行为零差异；非白绮角色零改动）。
+- `sts2-ascend/brain/policy.py`：门带计算处把判死压价分量拆出未减免口径
+  `_hp_krh_extra_full`；键开启且 `_hp_free_relief>0` 且 `incoming<=0` 时按
+  `(1-relief)` 折算判死压价分量（与余量门分量同一条减免语义；hard_only 普通战
+  压回、僵局闩锁停用、致死豁免等既有语义不变——普通战 `_hp_free_relief` 已被
+  压 0、闩锁停用余量门时 `_krh_margin` 同步停用、致死回合门带恒 0）。
+  `_hp_extra_full` 保持未减免口径，「意图0自由回合减免过门」观测注记在判死压价
+  参与差额时追加 `KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF` 留痕；门拦公式在压价
+  被部分折抵时如实披露折抵额。评分、候选资格、判决、目标与动作在减免口径之外
+  零改动。
+- `sts2-ascend/brain/selfcheck.py`：新增 3krfr 夹具——① 判死锁持+Boss 意图0
+  回合默认键下压价折抵、恢复出牌且带双留痕；② 键=0 恢复压价拦门空过旧行为
+  且无减免注记；③ 意图22 高危回合键=1 照旧拦门；④ 普通 Monster 战意图0
+  （hard_only 压回）照旧拦门。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或
+  任务书；宿主预置的 `assets/` 长路径删除状态与 `.review_evidence/` 未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`（既有 prh、krhm、
+  krds、bypass、终端锁、仪式窗等全部夹具保持）。
+- `git diff --check -- sts2-ascend`：退出码 0；报告写入前已回读完整目标 diff，
+  变更仅为上述三个脑文件与本报告/口播短评。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局按 EXPECTED_SIGNAL 对账：减免过门只应落在硬仗判死锁持的意图≤0
+  回合；若触发后自损占比显著恶化或判死后翻盘率跌破既有 40% 台账，评估把减免
+  限定到功能牌或调低折算。
+- 若留痕错分（普通战/高危回合/非判死 tick 出现）、观测解析异常或键=0 后动作/
+  参数漂移，将 `kill_race_hopeless_hp_pay_free_relief` 置 0（旧行为零差异）；
+  必要时回滚本地提交，原判死压价门语义恢复。
+
+## REPLAY
+
+retry_resolution: 20260918-005804-1789664284472436700-c8af6c7c integrated
+（失败包为 lifecycle_stop 维护停机保全，candidate_patch 为空、无模型成果可重
+实现；本批 1276~1296 已在当前 HEAD 由本次复盘完整闭环覆盖。）

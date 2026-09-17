@@ -4854,6 +4854,17 @@ class Policy:
                     pol.get("kill_race_hopeless_hp_pay_margin", 1.0) or 0.0))
             except (TypeError, ValueError):
                 _krh_margin = 0.0
+        # 判死压价意图0自由回合同步减免开关（KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF，
+        # 第 1276~1296 局批复盘新增，静态键；语义见下方门拦段注释）。1=判死压价
+        # 分量随意图0自由回合减免同步折算；0=判死压价不减免（旧行为零差异）。
+        # 随判死压价启停（_krh_margin 恒 0 即不进分支），非白绮角色零改动。
+        _hp_krh_free_relief = False
+        if _krh_margin > 0.0:
+            try:
+                _hp_krh_free_relief = bool(int(pol.get(
+                    "kill_race_hopeless_hp_pay_free_relief", 1) or 0))
+            except (TypeError, ValueError):
+                _hp_krh_free_relief = False
         # 判死自付压价 DOMINATES 比值缩放（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，
         # 第 1037~1051 局批复盘新增，静态键 kill_race_hopeless_hp_pay_dom_cap；
         # 第 1146~1162 局批默认 3.0→5.0）：
@@ -5321,11 +5332,23 @@ class Policy:
                     _hp_margin_eff = _hp_play_margin
                     if _hp_free_relief > 0.0 and incoming <= 0:
                         _hp_margin_eff = _hp_play_margin * (1.0 - _hp_free_relief)
-                    _hp_krh_extra = _hp_pay * _krh_margin
+                    # 判死压价分量随意图0自由回合减免同步折算（KILL_RACE_HOPELESS_
+                    # HP_PAY_FREE_RELIEF，第 1276~1296 局批复盘新增）：505~511 批
+                    # 减免只折余量门分量，判死压价从未接线——硬仗判死竞速意图0回合
+                    # 余量门已撤而压价仍拦边际謦欬牌（1296-F33-T5 拦下星图检索实付
+                    # 2血空过 0 输出后阵亡；生涯 42 处跨 34 独立局）。意图0回合自付
+                    # 绝无当回合致死可能，压价在此类回合是纯输出压制；_hp_extra_full
+                    # 保留未减免口径供「减免过门」观测对账。键=0 不减免（旧行为零
+                    # 差异）。
+                    _hp_krh_extra_full = _hp_pay * _krh_margin
+                    _hp_krh_extra = _hp_krh_extra_full
+                    if (_hp_krh_free_relief and _hp_free_relief > 0.0
+                            and incoming <= 0):
+                        _hp_krh_extra *= (1.0 - _hp_free_relief)
                     _hp_extra = (_hp_pay * _hp_margin_eff + _hp_rep_extra
                                  + _hp_krh_extra)
                     _hp_extra_full = (_hp_pay * _hp_play_margin + _hp_rep_extra
-                                      + _hp_krh_extra)
+                                      + _hp_krh_extra_full)
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
@@ -5339,6 +5362,10 @@ class Policy:
                             _gate_formula += (
                                 f"+判死竞速自付压价×{_krh_margin:.2f}"
                                 "（KILL_RACE_HOPELESS_HP_PAY_MARGIN）")
+                            if _hp_krh_extra < _hp_krh_extra_full:
+                                _gate_formula += (
+                                    f"（已随意图0减免折抵{_hp_krh_extra_full - _hp_krh_extra:.1f}，"
+                                    "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF）")
                             if _krh_dom_scale > 1.0:
                                 _gate_formula += (
                                     f"（自付/净损比值{_krh_dom_ratio:.2f}放大"
@@ -5379,6 +5406,11 @@ class Policy:
                         why += (f"｜意图0自由回合减免过门（无减免将拦"
                                 f"+{_hp_extra_full - _hp_extra:.1f}，"
                                 "VIVHITE_HP_GATE_FREE_TURN_RELIEF）")
+                        if _hp_krh_extra_full > _hp_krh_extra:
+                            # 判死压价分量参与了「无减免必被拦」的差额——单独
+                            # 留痕供复盘区分减免来源（纯观测，不改评分/放行）
+                            why += ("（判死压价同获减免，"
+                                    "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF）")
                 # 謦欬零压付血闸（VIVHITE_HP_ZERO_PRESSURE_GATE，第 577~589 局批
                 # 复盘新增）：本批战斗记录反复出现「普通战敌方零威胁回合照付血」
                 # ——589 局 F22 T4 敌意图总伤0、我方90血仍打出分治法阵+实付4血

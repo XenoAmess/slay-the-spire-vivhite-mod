@@ -4002,6 +4002,64 @@ def main() -> int:
         and "cause=profile_or_config" in d_khb_profile.reason, \
         f"配置关闭余量门的既有原因分类被改变: {d_khb_profile.reason}"
 
+    # 3krfr) 判死压价意图0自由回合同步减免（KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF，
+    #      第 1276~1296 局批复盘）：505~511 批减免只折余量门分量，判死压价分量
+    #      从未接线——1296 局 F33 T5（22/84 血、意图0、锁持判死）拦下星图检索
+    #      （抽牌4/回能、实付2血）空过 0 输出后阵亡；1294 局 F21（40 血、意图0）
+    #      拦下负空间+综合色序空过；生涯 42 处「判死压价拦下+意图总伤0」跨 34
+    #      个独立局。意图0回合自付绝无当回合致死可能（原生 hook 禁自付致死），
+    #      压价在此类回合是纯输出压制。键=1 判死压价随减免同步折算；键=0 一键
+    #      回滚（判死压价不减免，旧行为零差异）。
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_free_relief"]) == 1, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_free_relief 静态键或默认值被改"
+
+    def _krfr_drive(relief_key, incoming_t3=0, node_type="Boss"):
+        vk = _vivhite_know("sts2-selfcheck-krhfr-")
+        vk.policy["vivhite_hp_cost_play_margin"] = 1.0
+        vk.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+        vk.policy["kill_race_hopeless_hp_pay_free_relief"] = relief_key
+        vp = policy.Policy(vk, random.Random(11))
+        vc = _krh_ctx()
+        vc.combat = {"comp_id": "RITUAL_BEAST", "node_type": node_type}
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = vp.decide(
+                _krh_state(_turn, _hp, _krh_hand_vivhite()), vc)
+            vc.credit_tags.extend(_d.tags)
+        return vp.decide(
+            _krh_state(3, 45, _krh_hand_vivhite(), incoming=incoming_t3), vc)
+
+    # ① 判死锁持+硬仗意图0回合：默认键下判死压价随减免折抵，边际謦欬攻击
+    #    恢复出牌，且决策链带「减免过门」与判死压价减免双留痕
+    d_krfr = _krfr_drive(1)
+    assert d_krfr.action == "play_card", \
+        f"判死锁持意图0回合判死压价应随减免折抵（出牌）: " \
+        f"{d_krfr.action}（{d_krfr.reason}）"
+    assert "VIVHITE_HP_GATE_FREE_TURN_RELIEF" in d_krfr.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF" in d_krfr.reason, \
+        f"判死压价减免过门缺观测留痕: {d_krfr.reason}"
+    # ② 键=0 一键回滚：同一驱动恢复判死压价拦门旧行为（空过+压价留痕、
+    #    无减免注记）
+    d_krfr0 = _krfr_drive(0)
+    assert d_krfr0.action == "end_turn", \
+        f"键=0 回滚后必须恢复判死压价拦门（旧行为）: {d_krfr0.action}（{d_krfr0.reason}）"
+    assert "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_krfr0.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF" not in d_krfr0.reason, \
+        f"键=0 回滚后压价留痕口径异常: {d_krfr0.reason}"
+    # ③ 高危回合对照：意图 22 时即使键=1 判死压价也不减免，照旧拦门
+    d_krfr_hot = _krfr_drive(1, incoming_t3=22)
+    assert d_krfr_hot.action == "end_turn" \
+        and "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_krfr_hot.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF" not in d_krfr_hot.reason, \
+        f"高危回合判死压价不得被减免: {d_krfr_hot.action}（{d_krfr_hot.reason}）"
+    # ④ 普通战对照：hard_only 压回减免，普通 Monster 战意图0回合照旧拦门
+    d_krfr_mob = _krfr_drive(1, node_type="Monster")
+    assert d_krfr_mob.action == "end_turn" \
+        and "KILL_RACE_HOPELESS_HP_PAY_MARGIN" in d_krfr_mob.reason \
+        and "KILL_RACE_HOPELESS_HP_PAY_FREE_RELIEF" not in d_krfr_mob.reason, \
+        f"普通战意图0回合判死压价不得被减免: {d_krfr_mob.action}（{d_krfr_mob.reason}）"
+
+
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
     #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48
