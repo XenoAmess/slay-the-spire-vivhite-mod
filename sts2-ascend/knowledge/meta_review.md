@@ -11282,3 +11282,150 @@ retry_resolution: 20260916-145314-1789541594351123500-535a6ee4 integrated
    减员成本口径（单例顺延）；⑤ RINGING_SINGLE_PLAY_OBS 偏离样本；
    ⑥ REMOVAL_COST 翻案/随附比（累计 12 翻 46 随附）。
 
+# 2026-09-17（第 1538~1546 局复盘，异步追及队列 9 局 exact_batch 全败；观测增配 #1：RESPAWN_ROSTER_READ_OBS 分歧指纹——读数增配首个有效窗口 48 条注记全为新格式仍恒「未知」，未知(n≥2,rs=29) 无 err 在 HEAD 下不可能（含白名单 EXOSKELETON n=99），预注册信号⑤达线，verdict 从此携带 probe/line/boot 三指纹定位分歧点）
+
+## 一、失败包核对（固定动作）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待回放失败包、
+  无 replay target。
+- git 史登记：1525~1537 批 LLM 复盘（e5a88656，ELITE_FORCED_ENTRY_OBS
+  强制精英进场三读数）于 05:13 提交、05:26 被宿主「安全撤销复盘」
+  （ec356f64，新代码启动失败回滚）整体回滚，内容不在 HEAD；
+  failed_review_replay 未将其列入 requested_packages，本批不重放、
+  仅登记。时序核对：e5a88656 存活窗 05:13~05:26，本批 9 局
+  （02:23~09:18 开局）均在该窗之外——1538~1541 早于提交、1542~1546
+  晚于回滚，9 局强制进场注记均无三读数尾缀，与 HEAD 一致。
+- 上批（1520~1524）last_paths 关键签名离线核对：RESPAWN 读数增配
+  （policy.py _respawn_lookup_err/三读数尾缀、selfcheck 3yr-read-obs2）、
+  RALC 买活对账（3rallc）、RINGING_SINGLE_PLAY_OBS（3rsp）、
+  LETHAL_SURVIVABLE_LINE（3lsl）均在当前 HEAD 逐字在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 二、本批证据核对与逐局裁决
+
+- 队列 requested=[1538..1546]，exact 9/9、missing=0，9 局全败（生涯
+  0/1546）：六局一幕 Boss F17 竞速判死后阵亡（1538 T2→9回合、1540
+  T2→11、1541 T2→9、1542 T5→11、1543 T2→9、1544 T2→9），1539 F14
+  小怪、1545 F30 小怪（途中 F17 T2 判死后 8 回合获胜）、1546 F21
+  BOWLBUG 组合（途中 F17 T2 判死后 6 回合获胜）。旋钮侧 kill_bonus
+  20.00 顶格、burst_starve 双旋钮/饥饿带/锻造线/长战加成上限顶格、
+  kill_race_prior_eff 触底后部分胜利释放中——与前四批一致，不重复
+  干预。
+- **RESPAWN 读数增配（1520~1524 批部署）首个有效窗口裁决——预注册
+  信号⑤达线（本批主假设现场）**：部署提交 b42152ae（09-17 01:44:44）
+  早于本批全部 9 局（02:23 起），9 局 48 条读侧注记全部携带
+  (n=..,rs=..) 新格式（裸格式 0 条）——有效窗口成立。rs 恒=29，与
+  磁盘名册 29 条逐键一致（CORPSE_SLUG=41、NIBBIT=16、KIN_FOLLOWER=5、
+  TWO_TAILED_RAT=42 等读数全对）——内存名册缺账（信号②）与键名
+  归一化分歧（信号③，n=0 例均为磁盘真 0 或 1 的物种）双双排除；
+  全程无 err= 尾缀——读侧异常被吞（信号④）排除。但 verdict 仍全为
+  「未知」：白名单 EXOSKELETON(n=99)/INKLET(n=99)/WRIGGLER(n=99) 与
+  CORPSE_SLUG(n=41)/NIBBIT(n=16)/THIEVING_HOPPER(n=15) 等 15 个
+  n≥2 键无一例「名册」或「否决」，stats.respawn_native_vetoes 恒 {}。
+  同 HEAD+同生产 stats.json 本地复现（本批重跑）：EXOSKELETON→
+  名册(n=99)、CORPSE_SLUG→否决(n=41)+台账+1，逐字相反。静态推演
+  坐实不可能性：verdict「未知」要求同调用内 is_known 返回 False 且
+  无 veto 无异常，而 n 直读与 is_known 读同一 dict 同一键同一字段
+  （confirmations≥2 必 True）——HEAD 代码无法产生该签名。信号⑤
+  「生产代码与 HEAD 读侧逻辑分歧」正式达线，按预注册核 BOOT_HEAD/
+  部署差（run JSON 不携带 boot 戳，需带内指纹，见三节）。
+- **最新死亡局完整链裁决（1546，TKFB2R2EE5E8，F21 BOWLBUG_ROCK+
+  BOWLBUG_SILK+SLUMBERING_BEETLE，kept 146/omitted 119，
+  complete_persisted_chain=false）**：F21 终段逐条核读——33 血起
+  连打无情猛攻+斩杀丝虫、转火熟睡甲虫，竞速锁后投影维持 25~32 伤/
+  回合（RACE_UPSHIFT_STALE 在账），终局 4 血拆卸+/防御/打击后硬吃
+  20 阵亡——成长型组合斜率反转解除攻击压制+败局竞速全攻执行与既往
+  定案一致，无新生动作级偏离；同场 SLUMBERING_BEETLE 读侧注记
+  「id:未知(n=0,rs=29)」为该物种磁盘真 0 的合法未知（对照锚）。
+- **RALC 买活对账（1514~1519 批部署）第二窗 9 例**：8 例「买活仍
+  必败」全部对应阵亡战（1540-F17、1541-F17×3、1544-F17、1545-F30×2、
+  1546-F21），与结局逐字一致——全攻定案滚动反向证成 +8；1 例「买活
+  可翻盘」（1545-F17，击杀约需 1 回合）对应获胜战（T2 判死→实战
+  8 回合获胜）——属「可翻盘且胜」稀释证据（沿 1525~1537 批教训），
+  升级线①「可翻盘+阵亡 ≥1 例」仍未达。
+- **竞速台账**：505/1122≈45.0%（1525~1537 批读数 500/1110≈45.05%，
+  本批应验 +6、反向 +5），带内平稳，未触 ≥46% 预警线。
+- **RINGING_SINGLE_PLAY_OBS**：本批 6 例（1538×2、1540×2、1543×2），
+  偏离 1/6（1540-F17 本选 0<备选余烬 18，该局 F17 Boss 阵亡）——
+  偏离率与上批（1/4）同量级，未达系统性偏离线，继续观察。
+- **强制精英进场（e5a88656 被撤观测的底层现象）**：本批 5 例
+  （1538-F13 入场 85%、1540-F10 85%、1541-F11 55%、1542-F13 66%、
+  1545-F24 100%），全部健康/灰区进场且均非当场阵亡——低血强制
+  进场死亡签名本批 0 例，与该观测预注册指标④的证伪方向同向；
+  观测本体随 e5a88656 回滚灭失，是否重投交由后续批次按重启失败
+  根因另行评估。
+
+## 三、本批落地行为修改 #1（RESPAWN_ROSTER_READ_OBS 分歧指纹，纯观测）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_READ_OBS 分歧指纹（probe/line/boot 三指纹）**：读数增配部署后的首个有效窗口（1538~1546，48 条全新格式、rs 恒 29 与磁盘逐键一致）仍恒判「未知」，含白名单 EXOSKELETON(n=99) 等 15 个 n≥2 键、全部无 err——预注册信号⑤「生产代码与 HEAD 读侧逻辑分歧」达线；但 run JSON 不携带 boot 戳、快照不携带代码身份，「部署分歧 / 同代码状态矛盾 / 单次调用内不一致」三细分仍不可分辨，下一批同类遭遇仍需同等人工成本 | |
+| 假设 | HYPOTHESIS：生产读侧恒「未知」的细分真因必居 {运行中 is_known 代码与 HEAD 分歧（部署差/陈旧字节码/错模块）/ Knowledge 实例或 stats 状态在判决路径上被替换 / 单次调用内不一致} 之一，指纹 probe=当场重 probe is_known 返回值、line=is_known_respawn_add 的 co_firstlineno（HEAD=3041）、boot=STS2_ASCEND_BOOT_HEAD 短戳后，下一名册 n≥2 物种遭遇即机械可判；EVIDENCE：1538~1546 九局 48 条注记全「未知」清单（二节）+ rs 恒 29 与磁盘逐键一致 + 无 err + vetoes 恒 {} + 本地 HEAD 复现名册/否决逐字相反 + HEAD 静态推演不可能性；EXPECTED_SIGNAL：未来 3~10 局 n≥2 物种遭遇注记变为 未知(n≥2,rs=29,probe=0,line=3041,boot=<部署HEAD>）=同代码矛盾坐实转查实例身份、line≠3041 或 boot 与部署时不符=部署分歧坐实转查 runner 部署/字节码、probe=1=同调用内不一致坐实、指纹绝迹且 verdict 恢复否决/名册=部署窗口期残留封账 | |
+| 落地动作 | ① brain/policy.py：`_is_respawn_add` 快照段在「未知且 n≥2 且无 err」的不可能签名分支追加三指纹——probe 当场重调 is_known_respawn_add（只读，0/1/err:X）、line 取运行中函数的 co_firstlineno、boot 读 STS2_ASCEND_BOOT_HEAD 环境变量短戳（runner 对每个 brain 子进程设置）；新增 import os；`_rn` 在读数失败路径补 -1 哨兵；docstring 同步登记；② brain/selfcheck.py：新增 3yr-read-obs3——monkeypatch is_known 静默 False 夹具断言快照携带 probe=0/line=/boot= 且无 err、否决台账不虚增、判决不变；MYTE(n=1) 对照断言 n<2 未知严格不带指纹；既有 rd_pol 否决/rd2_pol nm:未知 逐字相等断言天然锚住正常路径不带指纹 | |
+| 行为边界 | **纯观测、零行为改动**：_is_respawn_add 返回值、名册读写、否决计数、门闸、评分、动作全部不变——指纹只在不可能签名分支的注记字符串内拼接，probe 为只读重调；respawn_roster_read_obs=False 观测整体同灭（3yr rd4 对照锚原样通过） | |
+| 自检 | `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（新增 3yr-read-obs3 两夹具+既有 3yr/3yr-gate-obs/3yr-read-obs/3yr-read-obs2/3rallc/3rsp/3lsl/3ra 全系列锚原样通过）；本地真实 stats.json 复现 EXOSKELETON→名册(n=99,rs=29)/CORPSE_SLUG→否决(n=41,rs=29) 逐字符合 HEAD 预期 | |
+| 未来 3~10 局观测指标 | ① 「未知(n≥2,...,probe=0,line=3041,boot=X)」且 X=部署时 HEAD → 同代码矛盾坐实，立项查 Knowledge 实例/stats 替换路径（id 指纹）；② line≠3041 或 boot 与部署时不符 → 部署分歧坐实，立项查 runner 部署与字节码缓存；③ probe=1 → 单次调用内不一致坐实，立项查并发/替换；④ 指纹绝迹且 verdict 恢复否决/名册 → 此前异常判部署窗口期残留，封账；⑤ probe=err:X 高频 → 重 probe 路径自身异常面立项 | |
+| 继续调整条件 | ①~⑤ 任一信号达 1 例即按对应分支立项；指纹读数与 run JSON/部署记录事后核对不符 → 修指纹口径 | |
+| 撤回条件 | knowledge/policy.json 写 `respawn_roster_read_obs: false` 观测整体即灭（3yr rd4 对照锚）；或删除 policy.py 三指纹段/import os 与 selfcheck 3yr-read-obs3 段，完全回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（预注册信号
+   达线即落地指纹增配，非登记延后）。
+2. **RESPAWN_ROSTER_READ_OBS 读数增配（1520~1524 批观察）**：首个
+   有效窗口信号⑤达线，升级为分歧指纹（三节）；信号②③④正式排除
+   封账。
+3. **ELITE_FORCED_ENTRY_OBS（e5a88656，1525~1537 批）**：被宿主
+   「安全撤销复盘」（ec356f64）整体回滚，内容不在 HEAD、本批无
+   replay 义务（一节登记）；底层现象本批 5 例全健康/灰区进场零死亡
+   （二节），是否重投交后续批次按启动失败根因评估。
+4. **RACE_ALLIN_LETHAL_COVER_OBS / RALC_BUYBACK_AUDIT**：带内 9 例
+   （8 仍必败全对应阵亡+1 可翻盘对应获胜），升级线①未达，全攻定案
+   滚动反向证成，续记。
+5. **RINGING_SINGLE_PLAY_OBS（1505~1513 批观察）**：本批 6 例偏离
+   1/6，未达系统性偏离线，续记。
+6. **竞速台账**：505/1122≈45.0%，<46% 预警线，续记。
+7. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：本批无删牌
+   现场（累计 12 翻 46 随附沿用），KIN 对照未更新，续记。
+8. **RESPAWN_CONFIRM_OBS / RESPAWN_NATIVE_VETO_OBS**：写侧坐实注记
+   本批无新例；否决台账恒 {} 的裁决已由三节指纹接管。
+9. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE / RACE_HAND_TAX_FIRE /
+   HAND_TAX_NOTE_DEDUP / FOCUS_DRIFT_FLUSH_OBS / SELF_LOSS_PHASE_OBS /
+   KILL_RACE_HOPELESS_HP_PAY_OBS**：本批注记在产（1540/1541/1542/
+   1544/1546 相位分账逐场披露）或无对应现场，顺延不判失效。
+10. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE /
+    MINION_FOCUS_OBS / RACE_UPSHIFT_STALE）：本批注记在产（1546-F21
+    RACE_UPSHIFT_STALE 锁后投影维持多例）或无对应现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **读数增配可以把「三解释不可分辨」压成「一个不可能签名」，但
+   不可能签名本身还需要代码身份指纹收尾**：n/rs/err 三读数部署一批
+   即把缺账/吞异常/键分歧三真因全部排除，剩下「同调用内同数据同
+   代码却结果相反」的不可能签名——此时下一层分歧（部署差/实例替换/
+   调用内不一致）只能靠 probe+line+boot 这类身份指纹分辨。凡
+   「except 吞错后回落」读路径的观测链，终极形态=读数+代码身份+
+   部署身份三位一体。
+2. **部署类观测的有效窗口核对要落到「提交戳 vs 对局戳」双时序**：
+   上批曾凭双时序把裸格式判为 boot 时序残留；本批凭同一手法确认
+   48 条新格式注记构成有效首窗。反之，e5a88656 存活窗 05:13~05:26
+   与本批 9 局完全错开——观测回滚后评其底层现象时，先核哪些局真
+   跑过被撤代码，再谈证据方向。
+3. **「买活可翻盘且获胜」再次出现，稀释证据口径封账**：1545-F17
+   可翻盘例由全攻直接打赢（T2 判死→8 回合获胜），与 1525~1537 批
+   4/4 同型——「可翻盘且胜」稳定属维持证据，唯一翻转形态仍是
+   「可翻盘+阵亡」，带内 8 例仍必败全对应阵亡持续反向证成。
+4. 观察点（下批复盘核对）：① 分歧指纹五信号裁决（三节指标①~⑤）；
+   ② 买活对账「可翻盘+阵亡」0→1 线/「仍必败」滚动证成；③ 竞速
+   台账 505/1122 走向（≥46% 预警）；④ RINGING_SINGLE_PLAY_OBS
+   偏离率（本批 1/6）；⑤ REMOVAL_COST 翻案/随附比（累计 12 翻 46
+   随附）；⑥ e5a88656 启动失败根因是否在宿主侧定位（决定
+   ELITE_FORCED_ENTRY_OBS 是否重投）。
+

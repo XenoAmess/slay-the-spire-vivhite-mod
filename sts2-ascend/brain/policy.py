@@ -10,6 +10,7 @@ Every decision carries:
 from __future__ import annotations
 
 import math
+import os
 import random
 import re
 import time
@@ -7544,6 +7545,20 @@ class Policy:
         未知(n=0,rs≥2)=键名归一化分歧坐实；未知(n≥2,rs≥2,err=X)=读侧
         异常被吞坐实；未知(n≥2,rs≥2)无 err=生产代码/逻辑分歧坐实；
         否决/名册(n≥2,rs≥2)=链路健康。
+
+        分歧指纹（第 1538~1546 局批复盘）：读数增配部署后的首个有效窗口
+        （1538~1546 九局 48 条注记全为新格式、rs 恒 29 与磁盘名册逐键一致）
+        仍全判「未知」——含白名单 EXOSKELETON(n=99)/INKLET(99)/WRIGGLER(99)
+        与 CORPSE_SLUG(41)/NIBBIT(16) 等 n≥2 键，全部无 err；而 HEAD 代码+
+        同 stats.json 本地复现为 EXOSKELETON→名册(n=99)/CORPSE_SLUG→否决
+        (n=41)，逐字相反。该签名在 HEAD 下不可能由 is_known_respawn_add
+        产生（同调用内 n 直读与 is_known 读同一 dict 同一键同一字段），
+        预注册信号⑤「生产代码/逻辑分歧」达线。未知(n≥2) 且无 err 时尾缀
+        probe/line/boot 三指纹：probe=当场重 probe is_known 的返回值
+        （0=一致 False/1=同调用内不一致/err:X=重 probe 异常）；line=运行中
+        is_known_respawn_add 的 co_firstlineno（HEAD=3041，不符即部署代码
+        分歧坐实）；boot=STS2_ASCEND_BOOT_HEAD 短戳（与 git ref 对账）。
+        纯观测：重 probe 为只读调用，判决/名册读写/否决计数/评分零改动。
         """
         result = self._is_respawn_add_core(enemy)
         try:
@@ -7569,10 +7584,33 @@ class Policy:
                             "confirmations", 0) or 0)
                         _reads = f"n={_rn},rs={len(_ra)}"
                     except Exception as _r_exc:
+                        _rn = -1
                         _reads = f"n=?,rs=?,err={type(_r_exc).__name__}"
                     _lk_err = self._respawn_lookup_err.get(str(kid))
                     if _lk_err and "err=" not in _reads:
                         _reads += f",err={_lk_err}"
+                    # 分歧指纹（第 1538~1546 局批复盘）：未知(n≥2) 无 err 在
+                    # HEAD 代码下不可能（同调用内 n 直读与 is_known 读同一
+                    # dict 同键同字段）——1538~1546 九局 48 条注记含白名单
+                    # EXOSKELETON(n=99) 恒为该签名，信号⑤达线。追加 probe
+                    # （当场重 probe 判决）/line（is_known 代码行号，HEAD=3041）
+                    # /boot（STS2_ASCEND_BOOT_HEAD 短戳）定位分歧点。只读、
+                    # 不改判决；仅「未知且 n≥2 且无 err」的不可能签名携带。
+                    if _verdict == "未知" and _rn >= 2 and not _lk_err:
+                        try:
+                            _probe = self.know.is_known_respawn_add(str(kid))
+                            _reads += f",probe={'1' if _probe else '0'}"
+                        except Exception as _p_exc:
+                            _reads += f",probe=err:{type(_p_exc).__name__}"
+                        try:
+                            _reads += (",line=" + str(
+                                self.know.is_known_respawn_add
+                                .__code__.co_firstlineno))
+                        except Exception:
+                            _reads += ",line=?"
+                        _boot = os.environ.get(
+                            "STS2_ASCEND_BOOT_HEAD", "").strip()[:8]
+                        _reads += f",boot={_boot or '?'}"
                     self._respawn_read_obs[kid] = f"{_src}:{_verdict}({_reads})"
         except Exception:
             pass  # 观测绝不改变判决；任何载荷异常静默放弃本次快照

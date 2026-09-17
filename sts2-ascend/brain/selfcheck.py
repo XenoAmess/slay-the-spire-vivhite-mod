@@ -12061,6 +12061,43 @@ def main() -> int:
             "respawn_roster_read_obs=False 时读侧观测应同灭"
     finally:
         ra_know.policy["respawn_roster_read_obs"] = True
+    # 3yr-read-obs3) 分歧指纹（第 1538~1546 局批复盘）：读数增配部署后首个有效
+    #      窗口（1538~1546 九局 48 条注记全新格式、rs 恒 29 与磁盘逐键一致）仍
+    #      全判未知，含白名单 EXOSKELETON(n=99) 与 NIBBIT(16)/CORPSE_SLUG(41)
+    #      等 n≥2 键、全部无 err——该签名在 HEAD 下不可能（同调用内 n 直读与
+    #      is_known 读同一 dict 同键同字段），本地复现逐字相反，信号⑤达线。
+    #      未知(n≥2) 无 err 时尾缀 probe/line/boot 三指纹；否决/名册/坐实与
+    #      n<2 的未知严格不带指纹（rd_pol/rd2_pol 的逐字相等断言为对照锚）。
+    def _silent_unknown(_key):
+        return False
+    _veto_before6 = ((ra_know.stats.get("respawn_native_vetoes", {})
+                      .get("NIBBIT") or {}).get("vetoes", 0))
+    ra_know.is_known_respawn_add = _silent_unknown
+    try:
+        rd6_pol = policy.Policy(ra_know)
+        assert not rd6_pol._is_respawn_add({"enemy_id": "NIBBIT"}), \
+            "静默 False 重 probe 夹具的判决被快照改变"
+        _rd6_snap = rd6_pol._respawn_read_obs.get("NIBBIT") or ""
+        assert _rd6_snap.startswith("id:未知(n=2,rs=3,probe=0,line="), \
+            f"不可能签名未携带 probe/line 指纹: {_rd6_snap}"
+        assert ",boot=" in _rd6_snap, \
+            f"不可能签名未携带 boot 指纹: {_rd6_snap}"
+        assert "err=" not in _rd6_snap, \
+            f"无异常路径不得携带 err 读数: {_rd6_snap}"
+        _veto_nib6 = ((ra_know.stats.get("respawn_native_vetoes", {})
+                       .get("NIBBIT") or {}).get("vetoes", 0))
+        assert _veto_nib6 == _veto_before6, \
+            "静默 False（未达否决分支）不得虚增否决台账"
+    finally:
+        del ra_know.is_known_respawn_add
+    rd7_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-read-obs3-")))
+    rd7_know.stats["respawn_adds"] = {"MYTE": {"confirmations": 1}}
+    rd7_pol = policy.Policy(rd7_know)
+    assert not rd7_pol._is_respawn_add({"enemy_id": "MYTE"}), \
+        "n<2 未知名册判决被快照改变"
+    assert rd7_pol._respawn_read_obs.get("MYTE") == "id:未知(n=1,rs=1)", \
+        "n<2 的未知首判不得携带分歧指纹"
     # 3yr-inst) RESPAWN_INSTANCE_CONFIRM（第1473~1477局批复盘）：同场坐实按敌实例
     #      归键——两个同种不同实例各被真实击杀一次不再互证「重生」（1473-F21 异螨群、
     #      1475-F19 偷窃草蜢群、1475-F36 咬人卷轴群的「全场均为已证实重生体」型误判
