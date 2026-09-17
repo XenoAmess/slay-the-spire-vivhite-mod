@@ -4190,3 +4190,75 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1212~1242 局批复盘：覆盖旁观的謦欬锁链执行模拟（幻影覆盖与可执行覆盖分离）
+
+日期：2026-09-17
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：败局竞速致死回合的「生还覆盖旁观/买活对账」审计把白绮生命支付
+  格挡牌当作无条件可执行——低血时组合是幻影（打出第一张后终端锁锁链余牌），导致
+  「买活可翻盘」信号失真，无法作为「生还线是否扩展 race_allin」立项的可信依据。
+  若给覆盖审计加上能量+謦欬锁链（Margin 逐张消耗、hp-实付<1 不可执行）的执行模拟，
+  幻影组合应被单独标记、可执行组合的买活后存活口径应扣除实付血量；评分、判决、
+  动作零改动。
+- **EVIDENCE**：本批 31 局全负（进阶 3）。精确失败运行
+  `20260917-051254_K9YL5HP5R0WT.json`（第 1242 局，F33 CRUSHER+ROCKET）已按
+  `full_chain_available_in` 深读终段。同型三独立对局达到预注册阈值：
+  ① 1223 局 `66MMA8UDA19V` F21 终段 decisions[230]：hp=3、缺口 23，旁观报
+  「组合[1费9甲+1费9甲+1费8甲]覆盖→买活可翻盘」，实际打出启发式护盾
+  （hp-cost=2）后 hp=1，余牌全部 blocked_by_hook（终端锁），end_turn→GAME_OVER
+  ——原始组合是幻影；② 1234 局 `A69DCPJJHMSE` F33 decisions[521]：hp=10、
+  缺口 13，[1费9甲]实付 2 血可执行且判「买活可翻盘」（击杀约需1回合/买活存活
+  0.6回合），仍全攻打 10 伤后硬吃 13 阵亡——可执行覆盖被忽视；③ 1235 局
+  `QLVL3T89L9JK` F17 decisions[186]：hp=1、[1费15甲] hp-cost=0 可执行，
+  买活一次后连续终端锁，三回合后阵亡。全 profile 历史「买活可翻盘」共 7 次
+  横跨 6 局（1176/1184/1209/1223/1234/1235），全部以失败告终、0 次关联胜利。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计：
+  `RACE_ALLIN_COVER_PHANTOM_OBS`（含生命支付格挡牌的低血致死回合，附锁链部件
+  清单）应与同段 `VIVHITE_HP_TERMINAL_LOCK_OBS`/`blocked_by_hook` 链对账一致；
+  可执行覆盖注记携带 `RACE_ALLIN_COVER_EXEC_SIM` 实付扣血披露；非白绮局注记
+  口径与动作/参数逐项不变。若幻影标记在 1223 型场景缺失、可执行组合被误标幻影、
+  非白绮注记口径变化，或任一动作/参数漂移，则假设被证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：
+  ① `_vivhite_hp_pay` 拆出 `_vivhite_life_cost_raw`（原始 LifeCost 含仪式附加、
+  未扣 Margin），`_vivhite_hp_pay` 新增可选 `margin_before` 参数，全部既有调用
+  逐项等价；② RACE_ALLIN 覆盖旁观改为执行模拟：按格挡降序逐张扣 Margin/实付
+  血，`hp-实付<1` 的牌记入锁链部件并跳过；模拟失败但原始组合可覆盖时改发
+  `RACE_ALLIN_COVER_PHANTOM_OBS`（不发 COVER_OBS/买活对账）；可执行覆盖保留原
+  注记并在实付>0 时追加 `RACE_ALLIN_COVER_EXEC_SIM` 披露；买活对账的买活后生命
+  改按 `模拟生命+覆盖-缺口` 计价。非白绮角色实付恒 0，与旧贪心逐项等价。
+  评分、候选资格、判决、动作零改动。
+- `sts2-ascend/brain/knowledge.py`：`race_allin_lethal_cover_obs` 静态键注释同步
+  登记本批执行模拟口径与回滚方式（键=False 两型观测同灭）。
+- `sts2-ascend/brain/selfcheck.py`：新增 3rallc2 夹具——① 3 血对 23 意图、三张
+  LifeCost 2 格挡（9/9/8）的幻影覆盖（1223 型）：PHANTOM_OBS 在产、COVER_OBS 与
+  买活对账消失、动作仍是全攻攻击；② 10 血对 13 缺口、单张 9 甲 LifeCost 2 格挡
+  （1234 型）：COVER_OBS+EXEC_SIM 在产、买活后存活按扣实付口径 0.3 回合、动作
+  不变；③ 键=False 两型观测同灭且动作/参数与开启时一致。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或任务书；
+  宿主预置的 `assets/` 删除状态未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`（含既有 rallc 非白绮
+  三夹具与 3tll 终端锁夹具全部保持）。
+- `git diff --check -- sts2-ascend`：退出码 0；完整目标 diff 已回读，变更仅为
+  上述三个脑文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局：若可执行覆盖的「买活可翻盘」累计 ≥3 独立对局仍全攻阵亡
+  （1234 型），立项评估把 LETHAL_SURVIVABLE_LINE 扩展到 race_allin 的行为改动；
+  若幻影标记主导（1223 型），维持全攻定案并转查终端锁前置的血税节奏。
+- 若幻影/可执行标记错分、锁链部件与原生 blocked_by_hook 不符、非白绮注记口径
+  变化或动作/参数漂移，将 `race_allin_lethal_cover_obs` 置 False 同灭本批两型
+  注记（旧行为零差异）；必要时回滚本地提交，原贪心覆盖审计与买活对账口径恢复。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

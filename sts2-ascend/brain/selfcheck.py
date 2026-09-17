@@ -15525,6 +15525,80 @@ def main() -> int:
         and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc3.reason, \
         f"键=False 观测未同灭: {d_rallc3.action}（{d_rallc3.reason}）"
 
+    # 3rallc2) 覆盖旁观的謦欬锁链执行模拟（RACE_ALLIN_COVER_EXEC_SIM /
+    #      RACE_ALLIN_COVER_PHANTOM_OBS，第1212~1242局批复盘）：旧审计把生命
+    #      支付格挡牌当作无条件可执行——1223 局 F21 终段 3 血组合[9+9+8]三张
+    #      皆 LifeCost 2，实际打出一张后 hp=1 触发终端锁（余牌
+    #      blocked_by_hook），组合是幻影；1234 局 F33（10 血对 13 缺口，
+    #      [1费9甲]实付 2 血可执行，全攻阵亡）为可执行对照。模拟按格挡降序
+    #      逐张扣 Margin/实付血，hp-实付<1 的牌记入锁链部件。夹具：
+    #      ① 幻影——3 血对 23 意图、能量 3、三张 LifeCost 2 格挡（9/9/8），
+    #      执行模拟只放得下一張（3-2=1），sum=9<20 缺口 → PHANTOM_OBS、
+    #      无 COVER_OBS/买活对账，动作仍是全攻攻击（零行为差异）；
+    #      ② 可执行——10 血对 13 缺口、单张 9 甲 LifeCost 2 格挡，
+    #      实付 2 后 hp=8 覆盖成立 → COVER_OBS+EXEC_SIM，买活后生命按
+    #      8+9-13=4 计价（0.3 回合），动作不变；③ 键=False 两型观测同灭。
+    rallc_v_atk = {"index": 0, "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+                   "name": "弦光投影", "card_type": "Attack", "playable": True,
+                   "energy_cost": 1, "requires_target": True,
+                   "valid_target_indices": [0],
+                   "dynamic_values": [
+                       {"name": "Damage", "current_value": 10},
+                       {"name": "LifeCost", "current_value": 0}]}
+
+    def _rallc_v_blk(idx, blk):
+        return {"index": idx,
+                "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                "name": "闭域映射", "card_type": "Skill", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [
+                    {"name": "Block", "current_value": blk},
+                    {"name": "LifeCost", "current_value": 2}]}
+
+    def rallc_v_policy():
+        return policy.Policy(_vivhite_know("sts2-selfcheck-rallc-viv-"),
+                             random.Random(13))
+
+    def rallc_v_decide(pol_r, hp_now, incoming, energy_now, hand):
+        # 同 rallc_decide：首 tick 绑定战斗身份后注入净损 EMA 与实测输出
+        pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
+        pol_r._race_rounds = 2
+        pol_r._race_loss_rate = 15.0
+        pol_r._krace_turns = 2
+        pol_r._krace_dmg = pol_r._krace_dmg_sustained = 40.0
+        return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
+                            lsl_ctx)
+
+    d_rallcv1 = rallc_v_decide(rallc_v_policy(), 3, 23, 3,
+                               [rallc_v_atk, _rallc_v_blk(1, 9),
+                                _rallc_v_blk(2, 9), _rallc_v_blk(3, 8)])
+    assert d_rallcv1.action == "play_card" \
+        and d_rallcv1.params.get("card_index") == 0 \
+        and "RACE_ALLIN_COVER_PHANTOM_OBS" in d_rallcv1.reason \
+        and "锁链部件：闭域映射实付2+闭域映射实付2" in d_rallcv1.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallcv1.reason \
+        and "买活对账" not in d_rallcv1.reason, \
+        f"謦欬锁链幻影覆盖未单独标记或全攻行为被改写: {d_rallcv1.action}（{d_rallcv1.reason}）"
+    d_rallcv2 = rallc_v_decide(rallc_v_policy(), 10, 13, 2,
+                               [rallc_v_atk, _rallc_v_blk(1, 9)])
+    assert d_rallcv2.action == "play_card" \
+        and d_rallcv2.params.get("card_index") == 0 \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallcv2.reason \
+        and "组合实付2血后覆盖成立（RACE_ALLIN_COVER_EXEC_SIM）" in d_rallcv2.reason \
+        and "买活后约可存活0.3回合（净损15/回合）→买活仍必败" in d_rallcv2.reason \
+        and "RACE_ALLIN_COVER_PHANTOM_OBS" not in d_rallcv2.reason, \
+        f"可执行覆盖未过模拟披露或买活口径未扣实付: {d_rallcv2.action}（{d_rallcv2.reason}）"
+    pol_rallcv3 = rallc_v_policy()
+    pol_rallcv3.know.policy["race_allin_lethal_cover_obs"] = False
+    d_rallcv3 = rallc_v_decide(pol_rallcv3, 3, 23, 3,
+                               [rallc_v_atk, _rallc_v_blk(1, 9),
+                                _rallc_v_blk(2, 9), _rallc_v_blk(3, 8)])
+    assert d_rallcv3.action == d_rallcv1.action \
+        and d_rallcv3.params == d_rallcv1.params \
+        and "RACE_ALLIN_COVER_PHANTOM_OBS" not in d_rallcv3.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallcv3.reason, \
+        f"键=False 白绮两型观测未同灭或动作漂移: {d_rallcv3.action}（{d_rallcv3.reason}）"
+
 
     print("SELFCHECK OK")
     return 0

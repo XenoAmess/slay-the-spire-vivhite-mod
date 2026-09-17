@@ -916,10 +916,11 @@ class Policy:
             cards_played_this_turn=cards_played_this_turn,
         )
 
-    def _vivhite_hp_pay(self, card: dict, player_powers) -> float:
-        """謦欬打出时的真实生命支付：LifeCost（含绯红仪式附加）− Margin 抵扣。
+    def _vivhite_life_cost_raw(self, card: dict, player_powers) -> float:
+        """謦欬原始生命成本：LifeCost（含绯红仪式附加），未扣 Margin。
 
-        与 _rescue_block_tradeoff 的计价口径一致；非白绮角色或目录外牌恒 0。
+        非白绮角色或目录外牌恒 0；执行模拟需要按出牌顺序逐张消耗 Margin，
+        故原始成本与 Margin 抵扣分离。
         """
         strategy = self.character_strategy
         if (strategy is None
@@ -937,9 +938,20 @@ class Policy:
             ritual_life_cost, _ritual_damage = vivhite_crimson_ritual_totals(
                 strategy, player_powers)
             life_cost += ritual_life_cost
-        margin_before = max(0.0, character_power_amount(
-            player_powers, VIVHITE_MARGIN_POWER_ID))
-        return max(0.0, life_cost - min(life_cost, margin_before))
+        return life_cost
+
+    def _vivhite_hp_pay(self, card: dict, player_powers,
+                        margin_before: float | None = None) -> float:
+        """謦欬打出时的真实生命支付：LifeCost（含绯红仪式附加）− Margin 抵扣。
+
+        与 _rescue_block_tradeoff 的计价口径一致；非白绮角色或目录外牌恒 0。
+        margin_before 缺省时取当前 Margin 层数；执行模拟可传入局部余额。
+        """
+        life_cost = self._vivhite_life_cost_raw(card, player_powers)
+        if margin_before is None:
+            margin_before = max(0.0, character_power_amount(
+                player_powers, VIVHITE_MARGIN_POWER_ID))
+        return max(0.0, life_cost - min(life_cost, max(0.0, margin_before)))
 
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
@@ -4523,6 +4535,10 @@ class Policy:
         reserve_blk_boost *= 1.0 + min(0.24, 0.08 * max(0, len(enemies) - 1))
         worthwhile_blk_costs = []
         _worthwhile_blks = []
+        # 与 _worthwhile_blks 平行的 (cost, block, card) 三元组：仅供
+        # RACE_ALLIN 覆盖旁观的謦欬锁链执行模拟逐张计价（第1212~1242局批），
+        # 不进入任何评分或资格判定。
+        _worthwhile_blk_cards = []
         for c in hand:
             cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
             _dmg, block, _hits = card_numbers(c)
@@ -4541,6 +4557,7 @@ class Policy:
             if marginal > float(pol["play_threshold"]):
                 worthwhile_blk_costs.append(cost)
                 _worthwhile_blks.append((cost, block))
+                _worthwhile_blk_cards.append((cost, block, c))
         reserve_for_block = gap_now > 0 and bool(worthwhile_blk_costs)
         min_blk_cost = min(worthwhile_blk_costs) if worthwhile_blk_costs else 99
         # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
@@ -4615,13 +4632,44 @@ class Policy:
                 and reserve_lethal and gap_now > 0 and _worthwhile_blks):
             _ralc_need = gap_now - my_hp
             if _ralc_need > 0:
+                # 謦欬锁链执行模拟（第1212~1242局批复盘新增，同属纯观测）：
+                # 旧覆盖审计把生命支付格挡牌当作无条件可执行——1223 局 F21
+                # 终段 3 血组合[9+9+8]三张皆 LifeCost 2，实际打出一张后 hp=1
+                # 触发终端锁（余牌 blocked_by_hook），组合是幻影；同批 1234
+                # 局 F33（10 血对 13 缺口，[1费9甲]实付 2 血可执行，全攻阵亡）
+                # 与 1235 局 F17（1 血[1费15甲] hp-cost=0 可执行）为对照。
+                # 模拟按格挡降序逐张扣 Margin/实付血，hp-实付<1 的牌记入锁链
+                # 部件并跳过；非白绮角色实付恒 0，与旧贪心逐项等价。评分、
+                # 判决、动作零改动。
+                _ralc_powers = player.get("powers") or []
+                _ralc_is_viv = (getattr(self.character_strategy, "profile_id",
+                                        None) == VIVHITE_PROFILE_ID)
+                _ralc_margin_left = (max(0.0, character_power_amount(
+                    _ralc_powers, VIVHITE_MARGIN_POWER_ID))
+                    if _ralc_is_viv else 0.0)
                 _ralc_sum = 0.0
                 _ralc_energy = energy
+                _ralc_sim_hp = float(my_hp)
                 _ralc_parts = []
-                for _cst, _blk in sorted(_worthwhile_blks,
-                                         key=lambda cb: (-cb[1], cb[0])):
+                _ralc_locked_parts = []
+                _ralc_locked_blk = 0.0
+                for _cst, _blk, _card in sorted(
+                        _worthwhile_blk_cards, key=lambda cb: (-cb[1], cb[0])):
                     if _cst > _ralc_energy:
                         continue
+                    if _ralc_is_viv:
+                        _raw_lc = self._vivhite_life_cost_raw(
+                            _card, _ralc_powers)
+                        _consume = min(_raw_lc, _ralc_margin_left)
+                        _pay = _raw_lc - _consume
+                        if _pay > 0.0 and _ralc_sim_hp - _pay < 1.0:
+                            _ralc_locked_parts.append(
+                                f"{_card.get('name') or _card.get('card_id')}"
+                                f"实付{_pay:.0f}")
+                            _ralc_locked_blk += _blk
+                            continue
+                        _ralc_margin_left = max(0.0, _ralc_margin_left - _consume)
+                        _ralc_sim_hp -= _pay
                     _ralc_sum += _blk
                     _ralc_energy -= _cst
                     _ralc_parts.append(f"{_cst}费{_blk}甲")
@@ -4633,6 +4681,19 @@ class Policy:
                         f"；败局竞速致死回合生还覆盖旁观：缺口{gap_now}"
                         f"-生命{my_hp}可由格挡组合[{_ralc_combo}]覆盖"
                         "，仍维持全攻（RACE_ALLIN_LETHAL_COVER_OBS）")
+                    _ralc_paid = float(my_hp) - _ralc_sim_hp
+                    if _ralc_is_viv and _ralc_paid > 0.0:
+                        danger_note += (
+                            f"｜执行模拟已过謦欬锁链：组合实付{_ralc_paid:.0f}血"
+                            "后覆盖成立（RACE_ALLIN_COVER_EXEC_SIM）")
+                elif (_ralc_locked_parts
+                        and _ralc_sum + _ralc_locked_blk > _ralc_need):
+                    danger_note += (
+                        f"；败局竞速致死回合生还覆盖旁观：缺口{gap_now}"
+                        f"-生命{my_hp}的原始格挡组合未过謦欬锁链执行模拟"
+                        f"（锁链部件：{'+'.join(_ralc_locked_parts)}）"
+                        "，覆盖不成立（RACE_ALLIN_COVER_PHANTOM_OBS）")
+                if _ralc_sum > _ralc_need:
                     # 买活对账（第1514~1519局批复盘新增，同属纯观测）：
                     # 本批五例样本（1504-F17-T9、1516-F11-T7、1516-F17-T13、
                     # 1518-F11-T7、1519-F17-T7）的「买活回合是否仍必败」全部
@@ -4640,7 +4701,8 @@ class Policy:
                     # 按竞速投影同一把尺（净损 EMA）直接记入注记，后续局可
                     # 机械对账；「买活可翻盘」注记出现即生还线扩展 race_allin
                     # 的直接证据信号，「买活仍必败」累计即全攻定案的反向
-                    # 证成台账。评分、判决、动作零改动。
+                    # 证成台账。评分、判决、动作零改动。第1212~1242局批起
+                    # 买活后生命扣除执行模拟实付（謦欬格挡牌的买活成本）。
                     _ralc_pool = 0
                     _ralc_invuln_floor = float(pol.get(
                         "race_invulnerable_hp_floor", 100000.0) or 0.0)
@@ -4656,7 +4718,7 @@ class Policy:
                             continue
                         _ralc_pool += _ehp
                     _ralc_loss = max(1.0, float(self._race_loss_rate))
-                    _ralc_post_hp = my_hp + _ralc_sum - gap_now
+                    _ralc_post_hp = _ralc_sim_hp + _ralc_sum - gap_now
                     _ralc_surv = _ralc_post_hp / _ralc_loss
                     if self._krace_turns >= 1:
                         _ralc_dpt = ((self._krace_dmg_sustained
