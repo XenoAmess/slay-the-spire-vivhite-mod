@@ -12163,6 +12163,18 @@ def main() -> int:
             f"不可能签名未携带 boot 指纹: {_rd6_snap}"
         assert "err=" not in _rd6_snap, \
             f"无异常路径不得携带 err 读数: {_rd6_snap}"
+        # 3yr-read-obs4) 源码指纹（第 1547~1551 局批复盘）：分歧指纹首个有效
+        #      窗口（1550/1551 两局 8 条）信号②达线——line=3046 与 boot=
+        #      24f0635c 提交实测 def 行（git show 核证 3041）、当前 HEAD 均不
+        #      符，部署分歧坐实。指纹增配 srcline（磁盘源码 def 行）/src（函数
+        #      体 sha1 前 6 位）：srcline≠line=陈旧 .pyc 坐实；srcline==line
+        #      而 src≠HEAD 离线哈希=部署源文件非 HEAD 版本。本锚断言不可能
+        #      签名注记携带 srcline=/src= 且格式合法；否决/名册/坐实与 n<2
+        #      的未知严格不带指纹（rd_pol/rd2_pol/rd7_pol 逐字相等断言锚住）。
+        assert ",srcline=" in _rd6_snap, \
+            f"不可能签名未携带 srcline 指纹: {_rd6_snap}"
+        assert re.search(r",src=[0-9a-f]{6}\)?$", _rd6_snap), \
+            f"不可能签名的 src 指纹应为 sha1 前 6 位: {_rd6_snap}"
         _veto_nib6 = ((ra_know.stats.get("respawn_native_vetoes", {})
                        .get("NIBBIT") or {}).get("vetoes", 0))
         assert _veto_nib6 == _veto_before6, \

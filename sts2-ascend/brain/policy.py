@@ -9,6 +9,8 @@ Every decision carries:
 """
 from __future__ import annotations
 
+import hashlib
+import inspect
 import math
 import os
 import random
@@ -7591,6 +7593,18 @@ class Policy:
         is_known_respawn_add 的 co_firstlineno（HEAD=3041，不符即部署代码
         分歧坐实）；boot=STS2_ASCEND_BOOT_HEAD 短戳（与 git ref 对账）。
         纯观测：重 probe 为只读调用，判决/名册读写/否决计数/评分零改动。
+
+        源码指纹（第 1547~1551 局批复盘）：分歧指纹首个有效窗口（1550/
+        1551 两局 8 条全新格式注记）全部 probe=0,line=3046,boot=24f0635c——
+        boot 戳与部署时 git ref 相符（24f0635c 的 policy.py 含指纹代码），
+        但 line=3046 与该提交 knowledge.py 实测 def 行（git show 核证
+        3041）及当前 HEAD（3048）均不符，且全部 git 提交均无 3046 版本：
+        预注册信号②「部署分歧（运行代码≠boot 指称的 git ref）」正式达线，
+        probe=0+n≥2 的不可能签名随之获得解释（生产函数体可能是另一版本）。
+        指纹再增配 srcline（inspect.getsourcelines 的当前磁盘源码 def 行）
+        与 src（函数体源码 sha1 前 6 位）：srcline≠line=陈旧 .pyc 字节码
+        坐实；srcline==line 而 src 与 HEAD 离线哈希不符=部署源文件本身是
+        非 HEAD 版本；均一致=窗口期残留封账。只读、不改判决。
         """
         result = self._is_respawn_add_core(enemy)
         try:
@@ -7643,6 +7657,26 @@ class Policy:
                         _boot = os.environ.get(
                             "STS2_ASCEND_BOOT_HEAD", "").strip()[:8]
                         _reads += f",boot={_boot or '?'}"
+                        # 源码指纹（第 1547~1551 局批复盘）：分歧指纹首个有效
+                        # 窗口（1550/1551 两局 8 条全新格式）信号②达线——
+                        # line=3046 与 boot=24f0635c 提交实测 def 行（git show
+                        # 核证 3041）、当前 HEAD（3048）均不符，部署分歧坐实。
+                        # 追加 srcline=inspect.getsourcelines 报告的当前磁盘
+                        # 源码 def 行 / src=函数体源码 sha1 前 6 位：srcline
+                        # ≠line=陈旧 .pyc 字节码坐实（加载字节码与磁盘源码
+                        # 脱节）；srcline==line 但 src 与 HEAD 离线哈希不符=
+                        # 部署源码文件本身是非 HEAD 版本（哈希可离线比对定位
+                        # 版本）；二者均与部署时一致=窗口期残留封账。只读
+                        # inspect 调用，判决/名册读写/否决计数/评分零改动。
+                        try:
+                            _slines, _sline = inspect.getsourcelines(
+                                self.know.is_known_respawn_add)
+                            _reads += f",srcline={_sline}"
+                            _reads += ",src=" + hashlib.sha1(
+                                "".join(_slines).encode(
+                                    "utf-8")).hexdigest()[:6]
+                        except Exception:
+                            _reads += ",srcline=?,src=?"
                     self._respawn_read_obs[kid] = f"{_src}:{_verdict}({_reads})"
         except Exception:
             pass  # 观测绝不改变判决；任何载荷异常静默放弃本次快照

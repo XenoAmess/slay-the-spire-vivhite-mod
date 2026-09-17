@@ -11429,3 +11429,133 @@ retry_resolution: none (no replay target; local production observation)
    随附）；⑥ e5a88656 启动失败根因是否在宿主侧定位（决定
    ELITE_FORCED_ENTRY_OBS 是否重投）。
 
+
+# 2026-09-17（第 1547~1551 局复盘，异步追及队列 5 局 exact_batch 全败；观测增配 #1：RESPAWN_ROSTER_READ_OBS 源码指纹——分歧指纹首个有效窗口 8 条注记信号②达线（line=3046 与 boot=24f0635c 实测 def 行 3041、当前 HEAD 3048 均不符，部署分歧坐实），指纹从此携带 srcline/src 把「陈旧 .pyc 字节码 vs 非 HEAD 源文件」变成一次遭遇机械可判）
+
+## 一、失败包核对（固定动作）
+
+- failed_review_replay.requested_packages=[]、attempt_packages=[]、
+  packages=[]、complete_evidence.required=false——本批无待回放失败包、
+  无 replay target。
+- 上批（1538~1546）last_paths 关键签名离线核对：RESPAWN 分歧指纹
+  （policy.py probe/line/boot 段、selfcheck 3yr-read-obs3）、RALC 买活
+  对账（3rallc）、RINGING_SINGLE_PLAY_OBS（3rsp）、LETHAL_SURVIVABLE_LINE
+  （3lsl）均在当前 HEAD 逐字在产。
+
+retry_resolution: none (no replay target; local production observation)
+
+## 二、本批证据核对与逐局裁决
+
+- 队列 requested=[1547..1551]，exact 5/5、missing=0，5 局全败（生涯
+  0/1551）：1547 F17 Boss T4判死→实战8回合阵亡、1548 F17 Boss T4判死
+  →8回合阵亡（途中 F9 T7判死→7回合获胜）、1549 F24 精英 T2判死→7回合
+  阵亡、1550 F17 WATERFALL_GIANT T2判死→7回合阵亡、1551 F17
+  LAGAVULIN_MATRIARCH T4判死→10回合阵亡。旋钮侧 kill_bonus 20.00 顶格、
+  burst_starve 双旋钮/饥饿带/前夜锻造线/长战加成上限顶格、
+  kill_race_prior_eff 触底——与前五批一致，不重复干预。
+- **最新死亡局完整链裁决（1551，GH1SNHN8ZVL1，F17 乐加维林族母，
+  kept 133/omitted 166，complete_persisted_chain=false，完整链可按需
+  深读 runs/20260917-144037_GH1SNHN8ZVL1.json）**：逐条核读 45 条
+  F17 COMBAT 决策——进场 62/80（78%），T1 三瓶增益药水+岩石铠甲，
+  沉睡期 SLEEP_GUARD 逐次放行（牌面≤敌甲不唤醒），唤醒意图突发 19 有
+  HARD_INTENT_SPIKE_FIRE 在账，T4 判死入锁后投影维持 18~20 伤/回合
+  （RACE_UPSHIFT_STALE 在账），终局 3 血全攻踩踏/打击/战斗专注后硬吃
+  14 阵亡——竞速判死应验，动作执行与既往定案一致，无新生系统性偏离。
+- **RESPAWN 分歧指纹（1538~1546 批部署）首个有效窗口——预注册信号②
+  达线（本批主假设现场）**：部署提交（12:52）晚于 1547~1549 开局
+  （10:27/11:21/12:12）、早于 1550/1551（13:24/14:40）——前三局注记
+  为旧读数格式、后两局 8 条 n≥2 注记全部携带 probe/line/boot 新格式，
+  窗口有效性成立。8 条注记（TOADPOLE n=4、CORPSE_SLUG n=41/42、
+  TWO_TAILED_RAT n=43、GAS_BOMB n=7、WATERFALL_GIANT n=2）全部
+  probe=0,line=3046,boot=24f0635c：rs 恒 29 与磁盘名册逐键一致、n 读数
+  与磁盘一致（CORPSE_SLUG 41→42、TWO_TAILED_RAT 42→43 跨局增量与写侧
+  坐实注记 1548 TWO_TAILED_RAT#0、1550 CORPSE_SLUG#0 互证）、无 err、
+  vetoes 恒 {}。boot=24f0635c 即部署时 git ref（该提交 policy.py 含指纹
+  代码，git show 核证）；但 line=3046 与该提交 knowledge.py 实测 def 行
+  3041（git show 核证）、当前 HEAD 3048 均不符，近 15 个 knowledge.py
+  变更提交（def 行 3001~3048）无一为 3046——信号②「运行代码与 boot
+  指称的 git ref 部署分歧」正式达线。probe=0 重 probe 与 n≥2 直读的同
+  调用矛盾在 boot 提交代码下不可能（同 dict 同键同字段），「部署的是另
+  一版本函数体」成为唯一剩余解释；「陈旧 .pyc 字节码 vs 部署源文件本身
+  非 HEAD 版本」两细分不可分辨——本次源码指纹增配的直接动机。
+- **RALC 买活对账第三窗 4 例（1550-F17 终局段）**：全部「买活仍必败」
+  （击杀约需 3~4 回合 vs 买活后可存活 0.7 回合，实测 21~24 伤/回合、
+  净损 8/回合），对应该局阵亡——全攻定案滚动反向证成 +4；「买活可翻盘」
+  仍 0 例，生还线扩展升级线①未达。
+- **竞速台账**：507/1128≈44.9%（上批 505/1122≈45.0%），应验 +4、反向
+  +2，带内平稳，未触 ≥46% 预警线。
+- **RINGING_SINGLE_PLAY_OBS**：本批 0 例（无昏眩回合现场），顺延不判
+  失效。
+- **RESPAWN_CONFIRM_OBS 写侧**：本批 2 例同场坐实注记（1548
+  TWO_TAILED_RAT#0、1550 CORPSE_SLUG#0）在产，与名册跨局增量互证，
+  写侧健康续记。
+
+## 三、本批落地行为修改 #1（RESPAWN_ROSTER_READ_OBS 源码指纹，纯观测）
+
+| # | 项目 | 内容 |
+| --- | --- | --- |
+| issue_id | **RESPAWN_ROSTER_READ_OBS 源码指纹（srcline/src 二读数）**：分歧指纹首个有效窗口（1550/1551 两局 8 条全新格式注记）信号②达线——line=3046 与 boot=24f0635c 提交实测 def 行（git show 核证 3041）、当前 HEAD（3048）均不符，且全部 git 提交均无 3046 版本，部署分歧坐实；但「陈旧 .pyc 字节码（加载代码与磁盘源码脱节）/ 部署源文件本身是非 HEAD 版本」两细分仍不可分辨，下一批同类遭遇仍需同等人工成本且无法定位分歧源 | |
+| 假设 | HYPOTHESIS：部署分歧的细分真因必居 {加载了陈旧 .pyc 字节码（磁盘 .py 与运行字节码 def 行不一致）/ 部署源文件本身是非 HEAD 版本（行号与函数体哈希均与 HEAD 离线值不符）} 之一，指纹增配 srcline=inspect.getsourcelines 报告的当前磁盘源码 def 行、src=函数体源码 sha1 前 6 位后，下一名册 n≥2 物种遭遇即机械可判；EVIDENCE：1550/1551 两局 8 条注记全 probe=0,line=3046,boot=24f0635c（二节）+ git show 核证 24f0635c 实测 def 行 3041/函数体与 HEAD 逐字节一致 + 近 15 提交无 3046 版本 + 本地 HEAD 复现名册/否决逐字相反；EXPECTED_SIGNAL：未来 3~10 局 n≥2 物种遭遇注记变为 未知(n≥2,...,line=3046,srcline≠3046)=陈旧 .pyc 坐实转查 runner 字节码缓存、未知(...,line=3046,srcline=3046,src≠a8ae96)=部署源文件非 HEAD 版本坐实按哈希定位版本、指纹绝迹且 verdict 恢复否决/名册=窗口期残留封账 | |
+| 落地动作 | ① brain/policy.py：_is_respawn_add 分歧指纹段（未知且 n≥2 且无 err 的不可能签名分支）在 boot 尾缀后追加 srcline/src——inspect.getsourcelines(self.know.is_known_respawn_add) 取磁盘源码 def 行与函数体，sha1 前 6 位拼 src=；新增 import hashlib/inspect；异常路径降级 srcline=?,src=?；docstring 同步登记本批核证事实；② brain/selfcheck.py：3yr-read-obs4——沿用静默 False 夹具断言快照携带 ,srcline= 且 ,src= 为 sha1 前 6 位 hex；否决/名册/坐实与 n<2 未知严格不带指纹（rd_pol/rd2_pol/rd7_pol 逐字相等断言锚住） | |
+| 行为边界 | **纯观测、零行为改动**：_is_respawn_add 返回值、名册读写、否决计数、门闸、评分、动作全部不变——srcline/src 只在不可能签名分支的注记字符串内拼接，inspect.getsourcelines/sha1 均为只读；respawn_roster_read_obs=False 观测整体同灭（3yr rd4 对照锚原样通过） | |
+| 自检 | py -3 -B sts2-ascend/brain/selfcheck.py → **SELFCHECK OK**（新增 3yr-read-obs4 两断言+既有 3yr/3yr-gate-obs/3yr-read-obs/3yr-read-obs2/3yr-read-obs3/3rallc/3rsp/3lsl/3ra 全系列锚原样通过）；HEAD 离线参考值（本批提交后）：line/srcline=3048、src=a8ae96（inspect.getsourcelines 口径）；boot 提交 24f0635c 函数体与 HEAD 逐字节一致（同哈希）、def 行 3041 | |
+| 未来 3~10 局观测指标 | ① 「未知(n≥2,...,srcline≠line)」→ 陈旧 .pyc 字节码坐实，立项查 runner 部署的字节码缓存与 mtime 失效；② 「未知(n≥2,...,srcline==line=3046,src≠a8ae96)」→ 部署源文件本身非 HEAD 版本坐实，按 src 哈希离线比对定位版本来源；③ 指纹绝迹且 verdict 恢复否决/名册 → 此前异常判部署窗口期残留，封账；④ srcline=?,src=? 高频 → inspect 读源码路径自身异常面立项 | |
+| 继续调整条件 | ①~④ 任一信号达 1 例即按对应分支立项；src 哈希与 HEAD/历史提交离线比对不符 → 修指纹口径或定位未提交工作树来源 | |
+| 撤回条件 | knowledge/policy.json 写 
+espawn_roster_read_obs: false 观测整体即灭（3yr rd4 对照锚）；或删除 policy.py 源码指纹段/import hashlib/inspect 与 selfcheck 3yr-read-obs4 段，完全回滚 | |
+
+## 四、历史积案对账
+
+1. **historical_zero_code_debt**：本批无新增零代码债务（预注册信号
+   达线即落地源码指纹增配，非登记延后）。
+2. **RESPAWN_ROSTER_READ_OBS 分歧指纹（1538~1546 批观察）**：首个
+   有效窗口信号②达线，升级为源码指纹（三节）；信号①③④维持不排除
+   （probe=0 本身在分歧部署下不再是硬证）。
+3. **RACE_ALLIN_LETHAL_COVER_OBS / RALC_BUYBACK_AUDIT**：带内 +4
+   「买活仍必败」全对应阵亡，升级线①未达，全攻定案滚动反向证成，
+   续记。
+4. **RINGING_SINGLE_PLAY_OBS（1505~1513 批观察）**：本批 0 例现场，
+   顺延不判失效。
+5. **竞速台账**：507/1128≈44.9%，<46% 预警线，续记。
+6. **RESPAWN_CONFIRM_OBS / RESPAWN_NATIVE_VETO_OBS**：写侧坐实 +2
+   （1548 TWO_TAILED_RAT#0、1550 CORPSE_SLUG#0）健康；否决台账恒 {}
+   的裁决已由三节源码指纹接管。
+7. **REMOVAL_COST_FLIP_AUDIT / REMOVAL_COST_TARGET**：本批无删牌
+   现场（累计 12 翻 46 随附沿用），KIN 对照未更新，续记。
+8. **ELITE_FORCED_ENTRY_OBS（e5a88656 被撤观测）**：本批无低血强制
+   进场死亡签名现场，重投评估顺延（沿上批口径）。
+9. **STEAM_ERUPTION_KILL_VETO / INVULN_TARGET_VETO /
+   ENEMY_INTANGIBLE_DMG_CAP / SLEEP_GUARD / EXHAUST_FIZZLE_EXEMPT /
+   SLIPPERY_TTK_BREAK_EST / ENGINE_COMMIT_LOWHP_DISCOUNT / HP_COST
+   豁免疫价旁观 / BARRICADE_BANK_VALUE / RACE_HAND_TAX_FIRE /
+   HAND_TAX_NOTE_DEDUP / FOCUS_DRIFT_FLUSH_OBS / SELF_LOSS_PHASE_OBS /
+   KILL_RACE_HOPELESS_HP_PAY_OBS**：本批注记在产（1551-F17 沉睡放行
+   逐场披露）或无对应现场，顺延不判失效。
+10. 其余积案（stance 反向偏置捆绑 / PANIC_BUTTON / PANTOGRAPH /
+    per-Boss 血池精度 / 死亡谷 least-bad / 无色药水词表 /
+    SETTLE_TIMEOUT_CONCEDE_OBS / RACE_BLK_FLOOR_RESERVE /
+    MINION_FOCUS_OBS / RACE_UPSHIFT_STALE）：本批注记在产或无对应
+    现场，顺延不判失效。
+
+## 五、新沉淀的经验知识
+
+1. **指纹行号必须离线核证 boot 提交的实测行号，不能只与当前 HEAD
+   比**：line=3046 与 HEAD 3048 不符只是弱信号（HEAD 会漂移），与
+   boot=24f0635c 实测 def 行 3041 不符才构成部署分歧的硬证；再用
+   「git 史无一提交为 3046」排除「boot 戳与代码同漂移」——三步核证
+   缺一不可。
+2. **「boot 戳相符 + 行号不符」是部署卫生的高价值签名**：runner 冻结
+   的 git ref 与实际加载的模块代码来自不同源（陈旧 .pyc / 未提交工作
+   树 / 部署副本）时，此前一切「同代码矛盾」指纹（probe=0）即刻获得
+   解释——观测设计要把「磁盘源码 def 行 + 函数体哈希」也变成带内可
+   读，一次遭遇即可分辨陈旧字节码与非 HEAD 源文件，不再依赖复盘手工
+   git 考古。
+3. **写侧增量与读侧 n 读数互证是窗口有效性的便宜锚**：CORPSE_SLUG
+   41→42、TWO_TAILED_RAT 42→43 与同场坐实注记逐字互证，证明观测
+   窗口内名册读写链路本身健康，异常被干净隔离在「部署的 is_known
+   代码版本」单点上。
+4. 观察点（下批复盘核对）：① 源码指纹四信号裁决（三节指标①~④）；
+   ② 买活对账「可翻盘+阵亡」0→1 线/「仍必败」滚动证成（累计带内
+   13 例）；③ 竞速台账 507/1128 走向（≥46% 预警）；④
+   RINGING_SINGLE_PLAY_OBS 偏离样本；⑤ REMOVAL_COST 翻案/随附比
+   （累计 12 翻 46 随附）。
