@@ -4262,3 +4262,68 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1243~1275 局批复盘：0 费引擎仪式被长线估值压成空过的窗口观测
+
+日期：2026-09-17
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮 0 费、自身零血税的相位成长引擎「猩红转化仪式」被无上限
+  长线估值（`_ritual_longline_projection`）系统性压到出牌阈值之下，即使在高血、
+  低/零意图的廉价窗口也被判「无值得出」空过；引擎整场不上线，后续攻击的
+  生命自付买不到相位缩放，终端回合仪式又可能被謦欬 hook 锁死。该假设可证伪：
+  若未来 3~10 局 `VIVHITE_RITUAL_WINDOW_SKIP_OBS` 很少触发、或触发场次并未
+  呈现「全场未上线＋高自损」形态，则假设驳回。
+- **EVIDENCE**：本批 33 局全负（进阶 3）。精确失败运行
+  `runs/20260917-125118_PM49CTFTCRUD.json`（第 1275 局，F33 无厌沙虫）已按
+  `full_chain_available_in` 深读全部 496 条决策：T1（13:05:20）77/84 血、
+  敌意图 0，仪式在手可出（✓）仍随 5 张可出牌一起空过；该仪式是开战前
+  能力药水三选一的最高分选择（13:05:18，价值 12.8），全场 6 回合从未打出，
+  终段 hp=2 时手牌被 blocked_by_hook 全锁，自损 28 后阵亡。同型独立对局：
+  1262 局 `05RE44KDL2MC` F24 精英（77 血/意图 24）与 F25（87 血/意图 7、
+  68 血/意图 24）三次「猩红转化仪式✓」空过；1258 局 `430FHA2DUW3E` F23
+  （1 血/28 甲/意图 9）同型保留为对照样本。源码侧：仪式 LifeCalculationCost=0、
+  0 费，长线估值按敌血池/卡组 dpt 推 future_turns 后对相位和（phase_sum）计价，
+  Boss 血池 321 时未来血税项压倒相位增伤项。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  `VIVHITE_RITUAL_WINDOW_SKIP_OBS` 的触发回合、血量比例、意图、竞速/致死投影
+  标志分布，并与同战斗 `SELF_LOSS_PHASE_OBS`、终局胜负和「仪式是否最终打出」
+  对账；高危 Boss 零意图高血窗的触发应是最有翻案价值的切片，低血（1258 型）
+  触发应被解释为正确 Skip。若标记在 1275 型场景缺失、非白绮对局出现该注记、
+  观测解析异常或任一动作/参数漂移，则实现假设被证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：「评估后无值得出的牌」end_turn 收口处，当
+  profile 为白绮且手牌中存在可出（playable）的猩红转化仪式时，追加
+  `VIVHITE_RITUAL_WINDOW_SKIP_OBS` 注记，披露回合号、血量比例、敌意图总伤、
+  竞速（kill_race/race_allin）与服务端致死投影标志。纯观测锚：不改评分、
+  候选资格、放行、目标或动作；残能救场等独立出口语义不变。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的静态键
+  `ritual_window_skip_obs`（=0 注记消失，旧行为零差异；非白绮角色零改动）。
+- `sts2-ascend/brain/selfcheck.py`：新增 3rws 夹具——① 1275 型 Boss T1
+  （77/84 血、意图 0、仪式+1费格挡在手、能量 0）：end_turn 且注记在产并披露
+  血量 92%；② 键=0：注记消失且动作/参数逐项一致；③ 手无仪式不产注记；
+  ④ 非白绮 profile 手握仪式不产注记。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或
+  任务书；宿主预置的 `assets/` 长路径删除状态未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`（既有 lff、rallc、
+  终端锁、沙坑全部夹具保持）。
+- `git diff --check -- sts2-ascend`：退出码 0；报告写入前已回读完整目标 diff，
+  变更仅为上述三个脑文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局：若高危 Boss 高血零/低意图窗口的仪式 Skip 累计 ≥3 独立对局且
+  同场均呈「引擎未上线＋高自损阵亡」，立项评估窗口内仪式底分下限的行为改动；
+  若触发集中在低血/致死窗（正确 Skip 形态），维持现状并转查长线估值口径。
+- 若标记错分、非白绮触发、注记解析异常或动作/参数漂移，将
+  `ritual_window_skip_obs` 置 0（旧行为零差异）；必要时回滚本地提交。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

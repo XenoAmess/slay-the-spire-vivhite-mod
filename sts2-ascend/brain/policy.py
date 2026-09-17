@@ -6180,8 +6180,40 @@ class Policy:
                     _gate_note += (f"；连续未覆盖拦截"
                                    f"{self._hp_gate_stall_uncovered}回合"
                                    f"（VIVHITE_HP_GATE_STALL_UNCOVERED）")
+            # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
+            # 批复盘新增，静态键 ritual_window_skip_obs）：猩红转化仪式是 0 费、
+            # 自身零血税的相位成长引擎，但无上限长线估值（ritual-longline）把它
+            # 压在出牌线下——1275 局 F33 无厌沙虫 T1：77/84 血、敌意图 0，仪式
+            # 在手可出（✓）仍被判「无值得出」空过，全场 6 回合未上线、自损 28
+            # 阵亡，终端回合手牌被 hook 全锁；1262 局 F24（77 血/意图24）与
+            # F25（87 血/意图7、68 血/意图24）三次同型，1258 局 F23（1 血/28 甲）
+            # 同型保留为对照样本。纯观测锚：空过收口处披露仪式可出未出的回合、
+            # 血量比例、意图、竞速/致死投影状态，供后续 run 按「窗口 Skip→全场
+            # 未上线→自损无相位缩放」切片验证；评分、候选资格、放行、动作零改动，
+            # 键=0 注记消失（旧行为零差异），非白绮角色零改动。
+            _ritual_skip_note = ""
+            try:
+                _ritual_skip_obs = bool(int(float(pol.get(
+                    "ritual_window_skip_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _ritual_skip_obs = False
+            if (_ritual_skip_obs
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID):
+                _ritual_skipped = any(
+                    c.get("playable")
+                    and str(c.get("card_id") or "").upper().rstrip("+")
+                    == "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
+                    for c in hand)
+                if _ritual_skipped:
+                    _ritual_skip_note = (
+                        f"；引擎仪式可出未出（回合{round_no}，"
+                        f"血量{my_hp / my_max_hp:.0%}，意图{incoming}，"
+                        f"竞速={bool(kill_race or race_allin)}，"
+                        f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
+                        "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

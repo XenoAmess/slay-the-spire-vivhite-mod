@@ -6456,6 +6456,85 @@ def main() -> int:
         f"非致死0费功能牌误触发致死保留行动: {d_lff_nonlethal.reason}"
     del d_lff, d_lff_off, d_lff_nonlethal, lff_pol, lff_off, lff_nonlethal
 
+    # 3rws（第1243~1275局批复盘）：引擎仪式窗口空过观测
+    #      （VIVHITE_RITUAL_WINDOW_SKIP_OBS）。1275 局 F33 无厌沙虫 T1：77/84 血、
+    #      敌意图 0，0 费零血税的猩红转化仪式在手可出（✓）仍被判「无值得出」
+    #      空过，全场 6 回合未上线、自损 28 阵亡；1262 局 F24/F25 三次同型、
+    #      1258 局 F23（1 血/28 甲）同型对照。① 白绮+仪式可出空过：注记在产、
+    #      动作仍是 end_turn；② 键=0：同状态注记消失且动作/参数逐项一致；
+    #      ③ 白绮手无仪式：注记不产；④ 非白绮 profile 手握仪式：注记不产。
+    rws_ritual = {"index": 0,
+                  "card_id": "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+                  "name": "白绮的猩红转化仪式", "playable": True,
+                  "energy_cost": 0, "requires_target": False,
+                  "resolved_rules_text": "抽2张牌并获得1点能量。"}
+    rws_block = {"index": 1, "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+                 "name": "闭域映射", "playable": True, "energy_cost": 1,
+                 "requires_target": False,
+                 "dynamic_values": [{"name": "Block", "current_value": 9}],
+                 "rules_text": "获得9点格挡。"}
+    rws_deck = [{
+        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+        "card_type": "Attack", "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 10}],
+    } for _ in range(20)]
+
+    def _rws_state(hand_cards):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": 77, "max_hp": 84, "block": 0,
+                           "energy": 0, "powers": []},
+                "hand": [dict(c) for c in hand_cards],
+                "enemies": [{"index": 0, "enemy_id": "THE_INSATIABLE",
+                             "name": "无厌沙虫", "current_hp": 321,
+                             "max_hp": 321, "block": 0, "is_alive": True,
+                             "is_hittable": True, "intents": []}],
+            },
+            "run": {"current_hp": 77, "max_hp": 84, "gold": 0,
+                    "floor": 33, "deck": [dict(c) for c in rws_deck]},
+        }
+
+    rws_ctx = type("RWSCTX", (), {
+        "combat": {"comp_id": "THE_INSATIABLE", "node_type": "Boss"},
+        "current_combat_is_hard": True,
+        "credit_tags": [],
+    })()
+
+    rws_pol = policy.Policy(_vivhite_know("sts2-selfcheck-rws-"), random.Random(5))
+    d_rws = rws_pol.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
+    assert d_rws.action == "end_turn" \
+        and "评估后无值得出的牌" in d_rws.reason \
+        and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" in d_rws.reason \
+        and "血量92%" in d_rws.reason, \
+        f"仪式可出空过未产窗口观测: {d_rws.action}（{d_rws.reason}）"
+
+    rws_off = policy.Policy(_vivhite_know("sts2-selfcheck-rws-off-"),
+                            random.Random(5))
+    rws_off.know.policy["ritual_window_skip_obs"] = 0
+    d_rws_off = rws_off.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
+    assert d_rws_off.action == d_rws.action \
+        and d_rws_off.params == d_rws.params \
+        and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_off.reason, \
+        f"键=0 未严格回滚注记或动作漂移: {d_rws_off.action}（{d_rws_off.reason}）"
+
+    rws_no = policy.Policy(_vivhite_know("sts2-selfcheck-rws-no-"),
+                           random.Random(5))
+    d_rws_no = rws_no.decide(_rws_state([rws_block]), rws_ctx)
+    assert "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_no.reason, \
+        f"手无仪式不得产窗口观测: {d_rws_no.action}（{d_rws_no.reason}）"
+
+    rws_iron = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rws-iron-"))),
+        random.Random(5))
+    d_rws_iron = rws_iron.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
+    assert "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_iron.reason, \
+        f"非白绮 profile 不得产窗口观测: {d_rws_iron.action}（{d_rws_iron.reason}）"
+    del d_rws, d_rws_off, d_rws_no, d_rws_iron, \
+        rws_pol, rws_off, rws_no, rws_iron
+
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
     #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：
