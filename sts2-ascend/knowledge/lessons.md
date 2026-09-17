@@ -12591,3 +12591,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.384370971084337局)，BASH(14分/3.709852360148286局)，SETUP_STRIKE(14分/3.372593054680256局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.35 → 0.37（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F30——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1545 胜，当前目标进阶 0
+
+## 第 1546 局复盘（2026-09-17 09:26）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：BREAKTHROUGH, INFLAME, UNRELENTING, HEADBUTT, SWORD_BOOMERANG, AGGRESSION, STOMP, TAUNT, THUNDERCLAP, INFLAME, HEADBUTT, STOMP, CONFLAGRATION, DISMANTLE, UNRELENTING, RESTLESSNESS
+- 本局遗物：MOLTEN_EGG, PEAR
+- 战斗记录：F14 Monster战 掉血19; F15 Monster战 掉血11; F17 Boss战 掉血16｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血14｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血16; F21 Monster战 掉血65（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.342174889086661局)，ASHEN_STRIKE(26分/2.5710950694041617局)，PACTS_END(25分/75.09383606451792局)，FEED(25分/39.6427127665732局)，BRAND(25分/2.595442559929928局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.369025672685542局)，BASH(14分/3.6968678768877674局)，SETUP_STRIKE(14分/3.360788978988875局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F21——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1546 胜，当前目标进阶 0
