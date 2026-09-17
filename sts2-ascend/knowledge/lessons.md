@@ -12690,3 +12690,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.248181085391044局)，BASH(14分/3.5946147645616544局)，BODY_SLAM(15分/2.5916114241275436局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1554 胜，当前目标进阶 0
+
+## 第 1555 局复盘（2026-09-17 18:55）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：SALVO, RAMPAGE, DISMANTLE, IRON_WAVE, TAUNT, HEADBUTT, HEADBUTT, CRUELTY, BREAKTHROUGH, JUGGERNAUT, DISMANTLE, STRATAGEM, DISMANTLE
+- 本局遗物：CAPTAINS_WHEEL
+- 战斗记录：F6 Monster战 掉血3; F7 Monster战 掉血2; F8 Monster战 掉血3; F9 Monster战 掉血3; F14 Unknown战 掉血3; F17 Boss战 掉血62｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.2694208879945688局)，ASHEN_STRIKE(26分/2.4912302162888387局)，PERFECTED_STRIKE(25分/4.065969505531961局)，PACTS_END(25分/75.69878829601016局)，FEED(25分/38.411307724468294局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.233312451592176局)，BASH(14分/3.582033612885689局)，BODY_SLAM(15分/2.5825407841430974局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1555 胜，当前目标进阶 0
