@@ -13966,3 +13966,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.624311063225831局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/6.664813943148125局)，FASTEN(23分/2.6036351992973317局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（6回合掉血90，每回合15≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.40 → 0.43（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1266 胜，当前目标进阶 3
+
+## 第 1267 局复盘（2026-09-17 11:05）
+- 结果：💀 失败｜进阶 3｜到达层数 14｜当局评分 14
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_BACKTRACKING_SPELL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：GORGET, RED_MASK
+- 战斗记录：F2 Monster战 掉血4｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0; F5 Monster战 掉血0; F11 Monster战 掉血35｜自损26（可行动段26/非行动段13，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血7｜自损18（可行动段18/非行动段13，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血36｜自损18（可行动段18/非行动段15，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(40分/5.048456461054857局)，BOLAS(38分/2.4997698313742局)，VIVHITE_CARD_SPECTRAL_INTEGRAL(37分/2.3829890414631256局)，FLASH_OF_STEEL(35分/6.466418649936212局)，SALVO(34分/13.906682508996363局)
+- 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/5.6046259745045415局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/6.641487094347107局)，FASTEN(23分/2.594522476099791局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Elite战实测自损18/掉血36（50%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1267 胜，当前目标进阶 3
