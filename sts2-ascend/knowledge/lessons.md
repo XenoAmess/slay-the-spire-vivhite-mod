@@ -12624,3 +12624,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.338496013541233局)，BASH(14分/3.671035088381045局)，SETUP_STRIKE(14分/3.337304625800946局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1548 胜，当前目标进阶 0
+
+## 第 1549 局复盘（2026-09-17 12:23）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：TRUE_GRIT, TWIN_STRIKE, SWORD_BOOMERANG, MOLTEN_FIST, SHRUG_IT_OFF, HEMOKINESIS, SHRUG_IT_OFF, INFLAME, SHRUG_IT_OFF, HEMOKINESIS, VICIOUS, CINDER, VICIOUS, CRUELTY, HEADBUTT, PACTS_END, JUGGERNAUT
+- 本局遗物：MERCURY_HOURGLASS, MEAL_TICKET
+- 战斗记录：F17 Boss战 掉血74｜自损8（可行动段8/非行动段70，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战9回合获胜; F19 Monster战 掉血5｜自损2（可行动段2/非行动段9，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血10｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血23; F24 Elite战 掉血61｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3176680272576773局)，ASHEN_STRIKE(26分/2.544192948683518局)，PACTS_END(25分/76.30460726466764局)，FEED(25分/39.227919452537044局)，BRAND(25分/2.568285684285142局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.323311277493839局)，BASH(14分/3.6581864655717116局)，SETUP_STRIKE(14分/3.3256240596106426局)
+- 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.35 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.02 → 2.01（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1549 胜，当前目标进阶 0
