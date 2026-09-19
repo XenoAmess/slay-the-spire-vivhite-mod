@@ -482,8 +482,7 @@ DEFAULT_POLICY = {
                                            # 已抑制锁后换挡上浮，但 CRUSHER+ROCKET 等
                                            # 非滑溜 Boss 尚无实际敌血净降/投影 dpt 对账；
                                            # 判死/入锁后追加上一回合首→本回合首的净降、
-                                           # 投影/差值及逐敌起止 HP，纯观测不改评分、
-                                           # 判决或动作。
+                                           # 投影与差值，纯观测不改评分、判决或动作。
                                            # False=严格回滚无该留痕
     "boss_race_focus_switch_obs": True,  # Boss 竞速有效火力对账的换线上下文（BOSS_RACE_FOCUS_SWITCH_OBS）：
                                          # 在已有跨回合净降/投影标记旁披露此前实际非击杀换线次数
