@@ -12789,3 +12789,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.116221609279305局)，BASH(14分/3.482956746313259局)，BODY_SLAM(15分/2.5111092800477812局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血87，每回合17≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.38 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1563 胜，当前目标进阶 0
+
+## 第 1564 局复盘（2026-09-20 03:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HEADBUTT, MOLTEN_FIST, BREAKTHROUGH, SPITE, ULTIMATE_STRIKE, EXPECT_A_FIGHT, SHRUG_IT_OFF, ARMAMENTS, RAMPAGE, CINDER, EQUILIBRIUM
+- 本局遗物：LETTER_OPENER
+- 战斗记录：F5 Monster战 掉血4｜自损1（可行动段1/非行动段8，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血2｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血9; F9 Monster战 掉血8｜自损1（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血4｜自损1（可行动段1/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血73｜竞速审计：T9判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.19892681407511局)，ASHEN_STRIKE(26分/2.4138461717748907局)，PERFECTED_STRIKE(25分/3.9396699916808653局)，PACTS_END(25分/74.33346175609374局)，FEED(25分/39.20766555326945局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.101814833646827局)，BASH(14分/3.470766397701163局)，BODY_SLAM(15分/2.502320397567614局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
+- 生涯战绩：0/1564 胜，当前目标进阶 0
