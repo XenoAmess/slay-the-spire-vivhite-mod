@@ -14945,3 +14945,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.781614673233901局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.116700786681109局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.450308564720867局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1355 胜，当前目标进阶 3
+
+## 第 1356 局复盘（2026-09-20 07:59）
+- 结果：💀 失败｜进阶 3｜到达层数 8｜当局评分 8
+- 死因：敌人组合 CALCIFIED_CULTIST+SEAPUNK
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血8｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损6（可行动段6/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损2（可行动段2/非行动段3，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血5｜自损15（可行动段15/非行动段8，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血77（阵亡）
+- 当前高价值卡牌：REND(38分/5.350270346084585局)，BOLAS(37分/2.745778698965439局)，FISTICUFFS(35分/8.757554288733399局)，AUTOMATION(34分/5.950801125881725局)，THINKING_AHEAD(34分/5.871936552416387局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.761379021877582局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.102292333927726局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.4417324847443442局)
+- 策略进化：block_safety: 2.03 → 2.08（高速失血爆毙（5回合掉血77，每回合15≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1356 胜，当前目标进阶 3
