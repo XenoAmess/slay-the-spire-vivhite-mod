@@ -11520,3 +11520,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
 
+## 2026-09-20｜第 1563 局复盘（exact run AZ3ZL98MQCYK；有界观测 ×1：BOSS_RACE_FOCUS_SWITCH_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：多敌 Boss 竞速中，非击杀换线可能使实际有效输出低于竞速投影；现有 `FOCUS_DRIFT_*` 与 `BOSS_RACE_EFFECTIVE_DPT_OBS` 分开留痕，无法按换线次数分层验证。该假设可证伪。
+- **EVIDENCE**：第 1563 局 `AZ3ZL98MQCYK` 精确链为 427 个决策，F33 决策 407 起进入 CRUSHER+ROCKET 竞速。D412 对账为敌血净降 36.0/回合 vs 投影 22.9，D416 为 33.0 vs 32.4，D419 换线后为 56.0 vs 37.4；D423 第二次非击杀换线后降为 16.0 vs 31.8，D427 `GAME_OVER`。既有 `FOCUS_DRIFT_OBS`/`FOCUS_DRIFT_MULTI_SCALER_OBS` 已证明换线存在，但未与有效 DPT 同条记录联结。
+- **EXPECTED_SIGNAL**：未来 3~10 局相关 Boss 竞速的有效 DPT 对账应在原 marker 后追加 `竞速火线已换线N次至目标（BOSS_RACE_FOCUS_SWITCH_OBS）`。按 N 分层比较实际/投影比值；换线后重复低于 1 支持假设，稳定接近 1 或无差异则削弱假设。关闭 `boss_race_focus_switch_obs` 时只消失该尾缀，动作与参数不变。
+
+### MINIMUM_CHANGE
+
+- `brain/knowledge.py` 新增默认开启、可回滚的 `boss_race_focus_switch_obs`。
+- `brain/policy.py` 在既有 `BOSS_RACE_EFFECTIVE_DPT_OBS` 对账 marker 后追加截至当前回合首的实际非击杀换线次数与当前火线；不读取新外部状态，不改变评分、判决、目标或动作。
+- `brain/selfcheck.py` 增加两次换线夹具与开关关闭对照，验证 marker 内容以及 action/params 不变。
+
+### CONTINUE / ROLLBACK / VALIDATION
+
+- 继续条件：未来窗口出现至少 1 个换线后实际/投影比值显著偏低样本，按 Boss 组合和换线次数继续取证；不得仅凭胜率改行为。
+- 撤回条件：发现回合边界错配、当前火线与实际目标不符，或关闭开关改变 action/params，则将 `boss_race_focus_switch_obs` 设为 `False` 并保留失败链。
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；本批 `git diff --check` → **DIFF_CHECK_OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

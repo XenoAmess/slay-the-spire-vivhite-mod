@@ -10630,7 +10630,8 @@ def main() -> int:
                           esc_rounds=2, hand_override=None,
                           intangible=False, intangible_obs=True,
                           effective_dpt_obs=True, sample_effective_round=False,
-                          boss_effective_dpt_obs=True, vivhite=False):
+                          boss_effective_dpt_obs=True, vivhite=False,
+                          boss_focus_switch_obs=True, focus_switches=0):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10696,11 +10697,16 @@ def main() -> int:
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
         cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
+        cap_pol.know.policy[
+            "boss_race_focus_switch_obs"] = boss_focus_switch_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         decision = cap_pol.decide(cap_state, cap_ctx)
         if sample_effective_round:
+            if focus_switches:
+                cap_pol._focus_drift_flips = focus_switches
+                cap_pol._focus_played_index = 0
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
             return cap_pol.decide(cap_state, cap_ctx)
@@ -10775,6 +10781,24 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+    # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
+    # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
+    # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
+    # 独立开关关闭时严格只删该尾缀。
+    d_combat_boss_focus = combat_flip_probe(
+        1.5, sample_effective_round=True, focus_switches=2)
+    assert ("BOSS_RACE_FOCUS_SWITCH_OBS" in d_combat_boss_focus.reason
+            and "竞速火线已换线2次至攻坚巨兽" in d_combat_boss_focus.reason), \
+        f"Boss 竞速有效火力对账缺少换线上下文: {d_combat_boss_focus.reason}"
+    d_combat_boss_focus_off = combat_flip_probe(
+        1.5, sample_effective_round=True, focus_switches=2,
+        boss_focus_switch_obs=False)
+    assert (d_combat_boss_focus_off.action == d_combat_boss_focus.action
+            and d_combat_boss_focus_off.params == d_combat_boss_focus.params
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_focus_off.reason
+            and "BOSS_RACE_FOCUS_SWITCH_OBS"
+            not in d_combat_boss_focus_off.reason), \
+        f"Boss 竞速换线观测开关未严格回滚: {d_combat_boss_focus_off.reason}"
 
     # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
     # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的

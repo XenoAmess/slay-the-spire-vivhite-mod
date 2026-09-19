@@ -3836,12 +3836,35 @@ class Policy:
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
                         _boss_gap = _boss_net_dpt - _boss_projected
+                        _boss_focus_tail = ""
+                        if bool(pol.get("boss_race_focus_switch_obs", True)):
+                            try:
+                                _boss_focus_switches = int(
+                                    getattr(self, "_focus_drift_flips", 0) or 0)
+                            except (TypeError, ValueError):
+                                _boss_focus_switches = 0
+                            if _boss_focus_switches > 0:
+                                _boss_focus_name = "?"
+                                try:
+                                    _boss_focus_name = next(
+                                        str(_e.get("name") or _e.get("enemy_id")
+                                            or "敌人")
+                                        for _e in enemies
+                                        if _e.get("index")
+                                        == getattr(self, "_focus_played_index", None))
+                                except StopIteration:
+                                    pass
+                                _boss_focus_tail = (
+                                    f"；竞速火线已换线{_boss_focus_switches}次"
+                                    f"至{_boss_focus_name}"
+                                    "（BOSS_RACE_FOCUS_SWITCH_OBS）")
                         danger_note += (
                             f"；Boss竞速有效火力对账：采样{_boss_prev_round}→"
                             f"{round_no}回合，敌血净降{_boss_net_dpt:.1f}/回合"
                             f" vs 投影{_boss_projected:.1f}/回合"
                             f"（差{_boss_gap:+.1f}，"
-                            "BOSS_RACE_EFFECTIVE_DPT_OBS）")
+                            "BOSS_RACE_EFFECTIVE_DPT_OBS）"
+                            + _boss_focus_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
