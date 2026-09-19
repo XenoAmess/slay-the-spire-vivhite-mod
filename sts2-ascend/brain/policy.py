@@ -3340,6 +3340,7 @@ class Policy:
                     f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
                     f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
                     "（LOW_POOL_BURST_RACE_OBS）")
+            _self_pay_terminal_note = ""
             if enemy_hp_total >= _race_pool_gate or esc_gate:
                 # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
                 # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的
@@ -3583,6 +3584,20 @@ class Policy:
                     # 挂观测键开关——行为缩放键需要独立稳定的读取锚。每个投影
                     # tick 刷新：DOMINATES 触发记 自付/敌方净损 比值（净损≤0 记
                     # inf），否则归 0；纯属性锚，本函数 tsurv/ttk/判决零改动。
+                    if (bool(pol.get("vivhite_race_self_pay_terminal_obs", True))
+                            and self.character_strategy.profile_id
+                            == VIVHITE_PROFILE_ID
+                            and _vivhite_race_self_loss_dominates(
+                                self._race_self_paid_rate, loss_rate)):
+                        _self_pay_tsurv = my_hp / max(
+                            1.0, loss_rate + self._race_self_paid_rate)
+                        if _self_pay_tsurv <= 2.0:
+                            _self_pay_terminal_note = (
+                                f"；白绮自付终端窗口：hp={my_hp:.0f}，敌方净损"
+                                f"{loss_rate:.1f}/回合，自付"
+                                f"{self._race_self_paid_rate:.1f}/回合，"
+                                f"并入存活{_self_pay_tsurv:.1f}回合（≤2.0，"
+                                "VIVHITE_RACE_SELF_PAY_TERMINAL_OBS）")
                     self._race_self_loss_dom_ratio = 0.0
                     if (self.character_strategy.profile_id == VIVHITE_PROFILE_ID
                             and _vivhite_race_self_loss_dominates(
@@ -4003,6 +4018,8 @@ class Policy:
                                                 f"维持攻防节奏不全攻{_esc_mark}"
                                                 f"{_tax_fire_note}")
                     if race_lost:
+                        if _self_pay_terminal_note:
+                            danger_note += _self_pay_terminal_note
                         kill_race = True
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速"
