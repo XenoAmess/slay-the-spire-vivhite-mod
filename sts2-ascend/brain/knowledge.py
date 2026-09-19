@@ -819,6 +819,13 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
+    "zero_energy_lethal_end_turn_obs": 1,  # 零能量致死空过观测（VIVHITE_ZERO_ENERGY_LETHAL_END_TURN_OBS，
+                                      # 第1314局 F48 批复盘）：28血/12甲/意图50/能量0时，整手牌
+                                      # 均因 EnergyCostTooHigh 锁死，end_turn 后直接进入 GAME_OVER；既有
+                                      # END_TURN_LEFTOVER_ENERGY_AUDIT 只记录逐张拒因，无法把「零能量→
+                                      # 致死收口→下一条状态」作为独立事件切片。仅在白绮、服务端或本地投影
+                                      # 判定结束回合致死、能量≤0 且所有非诅咒牌均明确因能量不足锁定时留痕；
+                                      # 不改评分、动作或结算，0=关闭（严格回滚注记），非白绮角色零改动
     "ritual_window_skip_obs": 1,        # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
                                         # 批复盘新增，静态键）：0费、自身零血税的猩红转化仪式被无上限长线估值
                                         # 压在出牌线下——1275 局 F33 T1（77/84血、意图0）可出未出空过，全场

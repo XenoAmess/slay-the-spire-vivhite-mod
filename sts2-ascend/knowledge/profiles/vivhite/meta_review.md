@@ -4327,3 +4327,34 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1314 局批复盘：零能量致死空过的状态链观测
+
+日期：2026-09-19
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：本局 F48 Boss 的直接可观测死亡前置是「能量为 0、所有非诅咒牌均因能量不足锁死、结束回合投影致死」，而不是生命支付闸本身。若把这一收口单独记账，才能与生命支付、结算超时和终端 hook 锁区分，并对账下一条状态。
+- **EVIDENCE**：精确失败运行 `sts2-ascend/knowledge/profiles/vivhite/runs/20260919-221015_0RC2U0MWMEN8.json`，完整链共 703 条决策；packet 仅保留 92/703 条切片（611 条省略），已按 `full_chain_available_in` 回读原始文件。F48 `decisions[701]` 为 `hp=28/block=12/incoming=50/energy=0`，7 张手牌全部 `not_enough_energy`，动作 `end_turn`；下一条 `[702]` 为 `GAME_OVER`、`hp=0`。该状态现有逐张审计可见，但没有独立事件键。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立白绮 Boss/高危战统计 `VIVHITE_ZERO_ENERGY_LETHAL_END_TURN_OBS` 触发数、非诅咒锁定张数、`hp/block/incoming/energy/net_damage`，并对账下一条是 HP 下降、继续战斗还是 `GAME_OVER`。标记必须始终满足能量≤0、所有牌明确 `not_enough_energy`、致死投影为真；任何条件不符即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `zero_energy_lethal_end_turn_obs`，可设为 0 隐藏注记。
+- `sts2-ascend/brain/policy.py`：在既有 `end_turn` 收口追加 `VIVHITE_ZERO_ENERGY_LETHAL_END_TURN_OBS`，只读记录锁定张数、HP、格挡、意图、能量和净伤；不改评分、候选、动作、参数或结算。
+- `sts2-ascend/brain/selfcheck.py`：新增 F48 形态夹具，验证两拍确认、完整字段、关闭键和动作/参数零差异。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：退出码 0；报告写入前目标 diff 仅含上述 3 个脑文件。
+- 未修改在线 runs、stats、policy、lessons、`.runtime`、任务书或取证 cache；本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局逐场记录触发/总高危收口、条件匹配率、下一条状态类别和最终胜负，并与 `SELF_LOSS_PHASE_OBS`、`VIVHITE_HP_TERMINAL_LOCK_OBS` 交叉。
+- 若出现能量>0、任一牌非能量锁、非致死或非白绮触发，或关闭键后动作/参数变化，将 `zero_energy_lethal_end_turn_obs` 设为 0；必要时回滚本地提交，旧 `end_turn` 语义保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 replay target。

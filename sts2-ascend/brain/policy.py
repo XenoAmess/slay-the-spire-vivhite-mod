@@ -3221,6 +3221,37 @@ class Policy:
                     f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
                     f"/latent={','.join(_latent)}"
                     f"/hp={my_hp}/block={my_block}/incoming={incoming}")
+            _zero_energy_lethal_note = ""
+            try:
+                _zero_energy_lethal_obs = bool(int(float(pol.get(
+                    "zero_energy_lethal_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _zero_energy_lethal_obs = False
+            if (_zero_energy_lethal_obs
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and energy <= 0
+                    and _settle_lethal
+                    and non_curse_cards):
+                _energy_locked = []
+                for _card in non_curse_cards:
+                    if self._card_unavailable(_card):
+                        break
+                    _native = self._native_card_unplayable_reason(_card).casefold()
+                    _cost = energy if _card.get("costs_x") else (
+                        _card.get("energy_cost") or 0)
+                    if _cost <= energy or _native not in {
+                            "not_enough_energy", "energycosttoohigh"}:
+                        break
+                    _energy_locked.append(_card)
+                if len(_energy_locked) == len(non_curse_cards):
+                    _zero_energy_lethal_note = (
+                        f"｜零能量致死空过观测：非诅咒{len(_energy_locked)}张手牌"
+                        f"均因能量不足锁定，hp={my_hp}/block={my_block}"
+                        f"/incoming={incoming}/energy={energy}"
+                        f"/net_damage={max(0, incoming - my_block)}"
+                        f"/end_turn_lethal={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+                        "（VIVHITE_ZERO_ENERGY_LETHAL_END_TURN_OBS）")
             if self._saw_playable_this_turn:
                 if self._end_stall < 2:
                     return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
@@ -3231,7 +3262,8 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}"
+                    f"{_zero_energy_lethal_note}{_ff_tax_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
