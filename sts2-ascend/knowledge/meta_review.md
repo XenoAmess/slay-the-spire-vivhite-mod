@@ -11429,3 +11429,32 @@ retry_resolution: none (no replay target; local production observation)
    随附）；⑥ e5a88656 启动失败根因是否在宿主侧定位（决定
    ELITE_FORCED_ENTRY_OBS 是否重投）。
 
+## 六、1552~1556 批收口：HP_COST_LETHAL_GUARD
+
+### 假设、证据与预期信号
+
+| 项 | 内容 |
+| --- | --- |
+| HYPOTHESIS | 当自残攻击的原生生命支付额满足 `my_hp - self_cost <= 0` 时，现有 `race_allin`/`kill_race`/「击杀最后一个敌人」豁免会错误放行；这类牌在攻击结算前已经把玩家降为 0 HP，因此是可证伪的直死路径，而非有效的抢斩杀。 |
+| EVIDENCE | 1556-F31 的低血竞速窗口中，玩家仅 1/91 HP、敌方意图 16，仍实际打出 `HEMOKINESIS+`（「御血术+」，自付 2）并以「败局竞速全攻／自残2豁免疫价／致死竞速抢斩杀」为理由；随后立即以 HP0 `GAME_OVER` 收口。原生知识 `sts2-ascend/knowledge/game/v0.111.0/mechanics/cards.jsonl` 的 HEMOKINESIS 条目确认 `CreatureCmd.Damage` 生命支付先于 `DamageCmd.Attack`。同批其余旧积案（RESPAWN 三指纹、RINGING、RALC）不构成这条因果链，故不重开。 |
+| EXPECTED_SIGNAL | 后续 3~10 局中：① 选中攻击牌的自付额 `c` 且出牌前 HP≤`c` 的次数为 0；② 同条件 AOE 次数为 0；③ 该条件后紧邻 `GAME_OVER` 的次数为 0；④ 所有 HP>`c` 的合法自残竞速样本仍保留原有 `HP_COST_ATK_PRICING` 半价/豁免留痕；⑤ 选中动作理由中不应出现 `HP_COST_LETHAL_GUARD`，若出现则说明仍有候选选择或混合攻防回退绕过禁玩线。 |
+
+### 本批最小生产改动
+
+- `brain/knowledge.py` 新增默认开启的 `hp_cost_lethal_guard`，并保留 `False` 作为审计回滚开关。
+- `brain/policy.py` 在 AOE 与单体攻击的竞速/孤注/单敌击杀豁免前统一检查自付后 HP；直死候选压到 `floor_score` 并追加 `HP_COST_LETHAL_GUARD`。混合攻防牌的防御面回退也不得越过该保护。
+- `brain/selfcheck.py` 新增 HP1 的单体 HEMOKINESIS、AOE BREAKTHROUGH 夹具，以及关闭开关后恢复旧分数/旧理由的可逆对照；`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。
+- 生产边界保持最小：HP>`self_cost` 的自残牌仍按原竞速口径评分，未改变 HP 支付、伤害结算或普通攻击逻辑。
+
+### 继续调整、撤回与 replay
+
+- **继续调整条件**：未来 3~10 局若出现任一「HP≤自付额仍选中自残攻击」或其后 `GAME_OVER`，按单体/AOE/混合牌路径分别回放该决策；若合法的 HP>自付额样本数量或 `HP_COST_ATK_PRICING` 留痕下降，则检查误拦截并补充原生支付证据。
+- **撤回条件**：只有确认存在原生不扣除该生命支付、或保护误拦截 HP>自付额的真实牌型时，才将 `hp_cost_lethal_guard` 设为 `False` 并保留失败样本；不得因竞速胜率短期波动单独撤回。
+- **retry_resolution**：`failed_review_replay.requested_packages=[]`，本批无 replay target；本次为基于 1556-F31 完整链的本地行为化，不新增重试包。
+
+### 历史积案对账
+
+1. SELF_LOSS_PHASE_OBS 已在此前批次完成行为化，本批只用其相位证据确认自残支付语义，不重复登记。
+2. RESPAWN_ROSTER_READ_OBS 的 n/rs/err/probe/line/boot 指纹在本批已按既有格式工作；无新异常，不重开其已收口假设。
+3. RALC 买活、RINGING_SINGLE_PLAY_OBS、RACE_UPSHIFT_STALE 与其他未达升级线积案继续按上一节“顺延/续记”处理。
+

@@ -6377,6 +6377,10 @@ class Policy:
         # 4 血败局全攻两次打出均无痕迹），与 AOE 同语境半价计价+留痕不
         # 对称——豁免语境追加「豁免疫价」披露注记，计价行为不变。
         _hp_atk_trace = float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
+        # 原生生命支付先于攻击结算（v0.111.0 Hemokinesis：CreatureCmd.Damage
+        # 后才执行 DamageCmd.Attack）。竞速/孤注/「击杀最后一个敌人」豁免都不能
+        # 让自付额把玩家先降到 0；该保护可用静态键回滚，供自检与审计对照。
+        _hp_cost_lethal_guard = bool(pol.get("hp_cost_lethal_guard", True))
         # VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE：第362局 VANTOM F17 观测到
         # 可行动段自付速率 13/回合、敌方净损 5/回合；在 SLIPPERY 逐 hit
         # 限伤时，判死竞速豁免仍可能把「支付血量 > 实际移除」的单体攻击
@@ -6599,7 +6603,14 @@ class Policy:
                     # 覆盖成立的致死回合（LETHAL_SURVIVABLE_LINE）恢复本守卫。
                     score = min(score, floor_score)
                 _hp_atk_note = ""
-                if self_cost and lethal and len(killable) < len(enemies):
+                if (_hp_cost_lethal_guard and self_cost
+                        and my_hp - self_cost <= 0):
+                    score = min(score, floor_score)
+                    if _hp_atk_trace:
+                        _hp_atk_note = (
+                            f"｜自残{self_cost}直死禁玩"
+                            "（HP_COST_LETHAL_GUARD）")
+                elif self_cost and lethal and len(killable) < len(enemies):
                     # 判死竞速豁免（第 635~640 批复盘）：竞速/孤注一掷判定的
                     # 致死回合里，群体自残攻击（突破族：小额掉血换全体伤害）
                     # 旧例被无条件压到禁玩线——非群体自残在同一局面走
@@ -6635,7 +6646,9 @@ class Policy:
                     # 全体目标皆无敌帧：AOE 零有效移除，压到禁玩线
                     score = min(score, floor_score)
                 hb = _hybrid_defense()
-                if hb is not None and hb[0] > score:
+                if (hb is not None and hb[0] > score
+                        and not (_hp_cost_lethal_guard and self_cost
+                                 and my_hp - self_cost <= 0)):
                     return hb[0], None, hb[1]
                 why = f"群体伤害≈{eff}" + _hp_atk_note
                 if _invuln_veto is not None:
@@ -7137,12 +7150,18 @@ class Policy:
                            if race_blk_floor else 8.0)
                 if race_blk_floor:
                     why += "｜竞速格挡下限预留"
-                if race_allin and not best_kill:
-                    why += "｜败局竞速全攻"
-                    if self_cost and _hp_atk_trace:
-                        # 竞速豁免语境计价豁免的事实披露（第1325~1330局批）
-                        why += (f"｜自残{self_cost}豁免疫价"
-                                "（HP_COST_ATK_PRICING）")
+            if (_hp_cost_lethal_guard and self_cost
+                    and my_hp - self_cost <= 0):
+                best_s = min(best_s, floor_score)
+                if _hp_atk_trace:
+                    why += (f"｜自残{self_cost}直死禁玩"
+                            "（HP_COST_LETHAL_GUARD）")
+            elif race_allin and not best_kill:
+                why += "｜败局竞速全攻"
+                if self_cost and _hp_atk_trace:
+                    # 竞速豁免语境计价豁免的事实披露（第1325~1330局批）
+                    why += (f"｜自残{self_cost}豁免疫价"
+                            "（HP_COST_ATK_PRICING）")
             elif desperate and not best_kill:
                 why += "｜无甲孤注抢斩杀"
                 if self_cost and _hp_atk_trace:
@@ -7179,7 +7198,9 @@ class Policy:
             if cost == 0:
                 best_s += pol["free_card_bonus"]
             hb = _hybrid_defense()
-            if hb is not None and hb[0] > best_s:
+            if (hb is not None and hb[0] > best_s
+                    and not (_hp_cost_lethal_guard and self_cost
+                             and my_hp - self_cost <= 0)):
                 return hb[0], None, hb[1]
             if kill_race and lethal and not best_kill and best_s > floor_score:
                 why += "｜致死竞速抢斩杀"

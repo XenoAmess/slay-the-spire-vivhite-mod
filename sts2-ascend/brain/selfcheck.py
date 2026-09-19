@@ -14933,6 +14933,33 @@ def main() -> int:
     assert "自残" not in why_allin_off and abs(s_allin_off - s_allin) < 1e-9, \
         f"全攻豁免披露非纯观测: {s_allin_off}vs{s_allin}（{why_allin_off}）"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
+    # ⑥a 原生生命支付先于攻击结算：HP1 不能在 race_allin/kill_race 中
+    #     通过「豁免疫价」打出自残攻击；否则 Hemokinesis 会先把玩家打死，
+    #     根本没有机会结算其伤害。保护键关闭时保留旧口径作可逆对照。
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
+    s_lethal_guard, _, why_lethal_guard = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+    assert s_lethal_guard <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_lethal_guard, \
+        f"竞速自残直死未被保护: {s_lethal_guard}（{why_lethal_guard}）"
+    s_lethal_guard_aoe, _, why_lethal_guard_aoe = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        hopeless_race=True)
+    assert s_lethal_guard_aoe <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_lethal_guard_aoe, \
+        f"竞速 AOE 自残直死未被保护: {s_lethal_guard_aoe}（{why_lethal_guard_aoe}）"
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = False
+    s_lethal_guard_off, _, why_lethal_guard_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+    assert "HP_COST_LETHAL_GUARD" not in why_lethal_guard_off \
+        and s_lethal_guard_off > s_lethal_guard, \
+        f"hp_cost_lethal_guard=False 未回滚直死保护: {s_lethal_guard_off}（{why_lethal_guard_off}）"
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
     # ⑦ 自残旁观（HP_COST_ATK_PRICING 手侧扩展，第1331~1335局批复盘）：
     #    孤注/全攻中标时手牌内其他可出单体自残攻击须随中标理由入链——
     #    「豁免疫价」首验 5 局零出现的归属（语境回避 vs 手中无牌）只能靠

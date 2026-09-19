@@ -164,6 +164,11 @@ DEFAULT_POLICY = {
                                      # 第1331~1335局批扩展：孤注/全攻中标时手牌内其他可出单体
                                      # 自残攻击追加「自残旁观」披露（结算豁免疫价零出现归属）；
                                      # 0 = 关闭（留痕整体消失，旧口径逐字不变）
+    "hp_cost_lethal_guard": True,  # 自残攻击直死保护（HP_COST_LETHAL_GUARD）：原生
+                                    # Hemokinesis 先执行生命支付再执行伤害；当自付额将
+                                    # 生命降至 0 时，竞速/孤注/单敌击杀豁免也不能放行，
+                                    # 否则所谓「抢斩杀」会在攻击结算前自杀。False =
+                                    # 回滚该保护（仅用于可审计对照）。
     "race_invulnerable_hp_floor": 100000.0,  # 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
                                              # WATERFALL_GIANT 击倒进 AboutToBlow 相后原生 HP=999999999
                                              # （不可击杀、随后自爆），1341-F17 T11 投影「击杀还需
