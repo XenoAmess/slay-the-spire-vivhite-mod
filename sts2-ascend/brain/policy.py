@@ -6696,9 +6696,6 @@ class Policy:
             # 拖长战斗正是死因形态。击杀辅助消除的是未来的意图增长，
             # 给予定向转火加分（重生召唤物与单敌战斗除外）
             sup_bonus = float(pol.get("support_target_bonus", 0.0))
-            _support_debuff_veto = bool(pol.get(
-                "support_target_debuff_veto", True))
-            _support_debuff_veto_names = []
             # 减员成本加分上限（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：
             # 多敌战斗中「移除一个攻击源要花多少血」此前完全不入评分——同族
             # 双子生涯 227 战 147 死（65%，全组合头号死因），90 场样本火线
@@ -6861,20 +6858,8 @@ class Policy:
                 # 零伤害减益体当头号目标，真正持续叠力量的敌人反而被晾着。
                 scaler_stack = (self._enemy_strength_stack(e)
                                 if (not resp and len(enemies) > 1) else 0.0)
-                _zero_damage_debuff = (
-                    _support_debuff_veto
-                    and threat <= 0
-                    and any(
-                        "debuff" in str(
-                            it.get("intent_type") or "").strip().lower()
-                        for it in (e.get("intents") or [])
-                        if isinstance(it, dict)))
-                if _zero_damage_debuff:
-                    _support_debuff_veto_names.append(
-                        e.get("name") or e.get("enemy_id") or "敌人")
                 is_support = (not resp and len(enemies) > 1 and threat <= 0
-                              and sup_bonus > 0 and scaler_stack <= 0
-                              and not _zero_damage_debuff)
+                              and sup_bonus > 0 and scaler_stack <= 0)
                 if resp:
                     # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
                     # 输出、本体雾菇意图滚到 22 的教训）：
@@ -7085,10 +7070,6 @@ class Policy:
                        "能量让给防守/铺垫（INVULN_TARGET_VETO）")
             elif best_t is not None and _invuln_veto is not None:
                 why += "｜无敌帧目标剔出打击候选（INVULN_TARGET_VETO）"
-            if _support_debuff_veto_names and best_t is not None:
-                _veto_names = "、".join(dict.fromkeys(_support_debuff_veto_names))
-                why += (f"｜零伤害减益不计辅助转火：{_veto_names}"
-                        "（SUPPORT_TARGET_DEBUFF_VETO）")
             # 沉睡放行对账（SLEEP_GUARD_PASS_OBS，第 1425~1429 局批复盘新增，
             # 纯观测不改分）：veto 只留痕拦截侧，放行侧（牌面≤敌甲不唤醒/可击杀）
             # 完全无痕——1429 局 F17 族母 T1 痛击 8 伤打出后 T2 意图 0（眩晕）、

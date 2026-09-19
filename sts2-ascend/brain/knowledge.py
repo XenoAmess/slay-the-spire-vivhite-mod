@@ -1329,8 +1329,6 @@ DEFAULT_POLICY = {
                                   # 目标均为 base.Creature（自我强化），神官不强化信徒；零伤害
                                   # 意图窗口的定向转火教义保留，但廉价自我强化体的减员账改由
                                   # removal_cost_bonus_max 计价。
-    "support_target_debuff_veto": True,  # 零伤害 DebuffIntent 不属于辅助体：不吃上项转火加分，
-                                          # 并在选牌理由留下 SUPPORT_TARGET_DEBUFF_VETO；False=回滚旧口径。
     "removal_cost_bonus_max": 6.0,  # 多敌战斗减员成本加分上限（第 1356~1360 批复盘，REMOVAL_COST_TARGET）：
                                     # 剩余血池 ≤ 全场峰值一半的目标按不对称度 +上限×(1−池/峰值)——
                                     # 同族双子生涯 227 战 147 死（65% 头号死因），90 场火线 802:0

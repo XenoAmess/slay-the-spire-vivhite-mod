@@ -11496,30 +11496,3 @@ VALIDATION
 py -3 -B sts2-ascend/brain/selfcheck.py -> SELFCHECK OK.
 git diff --check -> OK. No replay target: failed_review_replay.requested_packages=[].
 
-## Review batch 1558: SUPPORT_TARGET_DEBUFF_VETO
-
-### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-| 项 | 内容 |
-| --- | --- |
-| HYPOTHESIS | 多敌战斗的 `support_target_bonus` 把所有零伤害意图都当成治疗/增益/蓄力辅助体；若原生 `intent_type=Debuff` 也进入该分支，就会把对玩家施加减益的敌人错误地写成“辅助体优先转火”，并可能压过真正的成长威胁。 |
-| EVIDENCE | 第1558局 `R4UZUPMPVQSQ` 的 F6 决策 85（20:51:17）及后续决策理由把缩小甲虫写成“辅助体优先转火：缩小甲虫（零伤害意图，放生=纵容其强化队友）”。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的 `SHRINKER_BEETLE` 记录显示首个 `SHRINK_MOVE` 是 `DebuffIntent(strong: true)`，`ShrinkMove` 将 `ShrinkPower` 施加给玩家；同场毛绒伏地虫的 `Inhale` 才是对自身施加 `StrengthPower(7)`。因此现有理由与原生消费语义不一致。 |
-| EXPECTED_SIGNAL | 后续 3~10 局按战斗统计：显式零伤害 `Debuff` 候选应在选中理由出现 `SUPPORT_TARGET_DEBUFF_VETO`，不再出现“辅助体优先转火”；显式 `Buff/Heal` 仍保留旧辅助体路径；缺失 `intent_type` 时保持旧行为。同步比较同类多敌战斗的目标索引、该标记后的 `GAME_OVER` 楼层和死亡组合。若标记后的目标仍频繁错误转火或生存无改善，假设不成立，转查威胁/成长预测；若类型字段缺失占主导，则先补载荷观测。 |
-
-### 本批最小生产改动
-
-- `sts2-ascend/brain/knowledge.py` 新增默认开启的 `support_target_debuff_veto`，设为 `False` 可审计回滚。
-- `sts2-ascend/brain/policy.py` 仅对已有明确 `intent_type` 且本回合零伤害的 `Debuff` 敌人取消辅助转火加分，并追加 `SUPPORT_TARGET_DEBUFF_VETO`；没有类型字段的输入不变。
-- `sts2-ascend/brain/selfcheck.py` 扩展辅助体夹具：`Debuff` 默认转回当前威胁目标，关闭开关恢复旧目标与旧理由；原有无类型和攻击意图夹具继续通过。
-- 生产边界保持最小：不改变生命、伤害、回合、Buff/Heal 辅助加分或单敌战斗逻辑。
-
-### 继续调整与撤回
-
-- 未来 3~10 局若出现显式 `Debuff` 标记，逐战斗核对候选目标、选中目标和随后 1~3 回合意图；若仍选中减益体或死亡楼层不改善，暂停扩大规则，回放该战斗的完整状态。
-- 若 `Buff/Heal` 出现误拦、类型归一化与原生不符，或确认游戏 API 未稳定提供 `intent_type`，将 `support_target_debuff_veto` 设为 `False`；不得仅凭短期胜率波动撤回。
-- `retry_resolution: none (no replay target; local production behavior)`；`failed_review_replay.requested_packages=[]`。
-
-### 验证
-
-`py -3 -B sts2-ascend/brain/selfcheck.py` -> **SELFCHECK OK**；批文件 scoped `git diff --check` -> **OK**。未写入在线状态、`policy.json`、runs 或 archive。
-
