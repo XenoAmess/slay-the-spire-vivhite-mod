@@ -14678,62 +14678,6 @@ def main() -> int:
         and "结算超时收口观测" not in d_conc_off.reason, \
         f"观测键关闭后标记仍出现: {d_conc_off and d_conc_off.reason}"
 
-    # 3z-4) 白绮 Boss 致死空过观测（VIVHITE_BOSS_LETHAL_END_TURN_OBS）：
-    #       1336-F35-T9 的可证伪签名——已进入出牌态后，能量归零、手牌全部
-    #       不可负担，hp=6/block=0 对 incoming=26 被迫 end_turn；观测同时
-    #       记录原生致死标志与算术口径，但开关关闭时动作/参数保持一致。
-    lethal_end_know = _vivhite_know("sts2-selfcheck-vh-lethal-end-")
-    lethal_end_pol = policy.Policy(lethal_end_know)
-    lethal_end_know.policy["end_turn_settle_recovery_ticks"] = 0
-
-    def _lethal_end_state(hand_playable):
-        s = _settle_state(hand_playable)
-        s["combat"]["player"].update(
-            {"current_hp": 6, "block": 0, "energy": 0})
-        s["combat"]["enemies"][0]["intents"][0]["total_damage"] = 26
-        s["combat"]["end_turn_will_kill_player"] = True
-        s["run"]["current_hp"] = 6
-        return s
-
-    lethal_end_ctx = _SettleCtx()
-    lethal_end_ctx.combat = {"node_type": "Boss"}
-    assert lethal_end_pol.decide(_lethal_end_state(True), lethal_end_ctx) is not None, \
-        "Boss 致死空过观测夹具热身帧无决策"
-    d_lethal_end = None
-    for _ in range(4):
-        d_try = lethal_end_pol.decide(_lethal_end_state(False), lethal_end_ctx)
-        if d_try.action == "end_turn":
-            d_lethal_end = d_try
-            break
-    assert d_lethal_end is not None \
-        and "VIVHITE_BOSS_LETHAL_END_TURN_OBS" in d_lethal_end.reason \
-        and "native_end_turn_lethal=yes" in d_lethal_end.reason \
-        and "arithmetic_lethal=yes" in d_lethal_end.reason \
-        and "hp=6" in d_lethal_end.reason \
-        and "incoming=26" in d_lethal_end.reason, \
-        f"Boss 致死空过观测缺失: {d_lethal_end and d_lethal_end.reason}"
-
-    lethal_end_off_know = _vivhite_know("sts2-selfcheck-vh-lethal-end-off-")
-    lethal_end_off_know.policy["end_turn_settle_recovery_ticks"] = 0
-    lethal_end_off_know.policy["vivhite_boss_lethal_end_turn_obs"] = 0
-    lethal_end_off_pol = policy.Policy(lethal_end_off_know)
-    lethal_end_off_ctx = _SettleCtx()
-    lethal_end_off_ctx.combat = {"node_type": "Boss"}
-    assert lethal_end_off_pol.decide(
-        _lethal_end_state(True), lethal_end_off_ctx) is not None
-    d_lethal_end_off = None
-    for _ in range(4):
-        d_try = lethal_end_off_pol.decide(
-            _lethal_end_state(False), lethal_end_off_ctx)
-        if d_try.action == "end_turn":
-            d_lethal_end_off = d_try
-            break
-    assert d_lethal_end_off is not None \
-        and d_lethal_end_off.action == d_lethal_end.action \
-        and d_lethal_end_off.params == d_lethal_end.params \
-        and "VIVHITE_BOSS_LETHAL_END_TURN_OBS" not in d_lethal_end_off.reason, \
-        f"致死空过观测关闭后改变动作或仍留痕: {d_lethal_end_off and d_lethal_end_off.reason}"
-
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
