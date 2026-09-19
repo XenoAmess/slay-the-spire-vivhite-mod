@@ -8398,54 +8398,6 @@ def main() -> int:
     assert "绝境全候选死亡投影" not in d_dv_mon.reason, \
         f"无价值节点时误留痕: {d_dv_mon.reason}"
 
-    # 3xy2-d) 生存主导闸门（第1560局 F9 形态）：死亡罚分软饱和不得让
-    #       投影中途死亡的 Treasure 压过仍能到达 Boss 的 Treasure；但关闭
-    #       开关时必须严格回到旧排序，且全部候选死亡仍由 3xy2-c 锚住。
-    sv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-survival-dominance-"))
-    sv_know = knowledge.Knowledge(sv_dir)
-    sv_know.policy["boss_entry_min_hp_pct"] = 0.88
-    sv_know.policy["boss_entry_penalty"] = 500.0
-    sv_know.policy["path_doomed_value_bonus"] = 0.0
-    sv_know.policy["path_survival_dominance_guard"] = False
-    sv_pol_off = policy.Policy(sv_know)
-
-    sv_heads = [
-        {"index": 0, "row": 1, "col": 0, "node_type": "Treasure",
-         "children": [{"row": 2, "col": 0}]},
-        {"index": 1, "row": 1, "col": 1, "node_type": "Treasure",
-         "children": [{"row": 2, "col": 1}]},
-    ]
-    sv_nodes = list(sv_heads)
-    for row in range(2, 6):
-        sv_nodes.append({"row": row, "col": 0, "node_type": "Monster",
-                         "children": [{"row": row + 1, "col": 0}]})
-        sv_nodes.append({"row": row, "col": 1,
-                         "node_type": "Monster" if row == 2 else "Event",
-                         "children": [{"row": row + 1, "col": 1}]})
-    sv_nodes.extend([
-        {"row": 6, "col": 0, "node_type": "Boss"},
-        {"row": 6, "col": 1, "node_type": "Boss"},
-    ])
-    sv_state = {
-        "screen": "MAP", "available_actions": ["choose_map_node"],
-        "map": {"available_nodes": sv_heads, "nodes": sv_nodes,
-                "boss_node": {"row": 6}},
-        "run": {"current_hp": 31, "max_hp": 80, "gold": 0,
-                "floor": 9, "deck": []},
-    }
-    sv_ctx = type("SurvivalCtx", (), {"credit_tags": []})()
-    d_sv_off = sv_pol_off.decide(sv_state, sv_ctx)
-    assert d_sv_off.params.get("option_index") == 0 \
-        and "PATH_SURVIVAL_DOMINANCE_GUARD" not in d_sv_off.reason, \
-        f"关闭生存主导闸门未回滚旧排序: {d_sv_off.params}（{d_sv_off.reason}）"
-    sv_know.policy["path_survival_dominance_guard"] = True
-    sv_pol_on = policy.Policy(sv_know)
-    d_sv_on = sv_pol_on.decide(sv_state, sv_ctx)
-    assert d_sv_on.params.get("option_index") == 1 \
-        and "PATH_SURVIVAL_DOMINANCE_GUARD" in d_sv_on.reason \
-        and "预计进 Boss 血量 0%" not in d_sv_on.reason, \
-        f"死亡候选未让位于存活候选: {d_sv_on.params}（{d_sv_on.reason}）"
-
     # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
     #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
     #       depth 越深的精英越不是承诺（中间岔口可改道），罚分须随深度衰减；

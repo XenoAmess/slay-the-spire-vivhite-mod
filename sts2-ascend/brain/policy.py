@@ -2806,32 +2806,6 @@ class Policy:
                         c["notes"].append(
                             f"竞速必败预演：优先{c['nt']}换战力(+{_race_bonus:.0f}，"
                             f"入场血量已非生死变量)")
-        # 生存主导闸门（PATH_SURVIVAL_DOMINANCE_GUARD）：死亡罚分软饱和后，
-        # 一个已经投影中途死亡的高价值节点可能仍压过有正存活投影的路线。
-        # 这不是把所有低血路线都判死：只有「当前最高分是死亡候选」且存在
-        # 到达 Boss 的候选时才改用最高分存活候选；全候选死亡仍保留原有
-        # 强制行军/资源偏好，避免在没有安全出口时伪造可行路线。
-        survival_guard_active = False
-        selection_cand = cand
-        if bool(pol.get("path_survival_dominance_guard", True)) and cand:
-            _best_raw = max(cand, key=lambda c: c["ps"])
-            _surviving = [
-                c for c in cand
-                if (not c["doomed"] and boss_row is not None and c["path"]
-                    and int(c["path"][-1][0]) >= int(boss_row))
-            ]
-            if _best_raw["doomed"] and _surviving:
-                selection_cand = _surviving
-                survival_guard_active = True
-                _survival_best = max(_surviving, key=lambda c: c["ps"])
-                _survival_best["notes"].append(
-                    "投影死亡路线让位于存活路线"
-                    "（PATH_SURVIVAL_DOMINANCE_GUARD）")
-                for _candidate in cand:
-                    if _candidate["doomed"]:
-                        _candidate["notes"].append(
-                            "死亡路线因存在投影可存活候选被生存主导闸门压制"
-                            "（PATH_SURVIVAL_DOMINANCE_GUARD）")
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
         best_path = []
         details = []
@@ -2844,8 +2818,6 @@ class Policy:
                 target={"row": c["node"].get("row"),
                         "col": c["node"].get("col"),
                         "projected_hp": c.get("proj")})
-        for c in selection_cand:
-            label = f"{c['nt']}({c['node']['row']},{c['node']['col']})"
             if c["ps"] > best_score:
                 best_node, best_score = c["node"], c["ps"]
                 best_detail = label
@@ -2914,10 +2886,6 @@ class Policy:
         self._trace_gate(
             "GATE 精英生存闸门", "pass" if elite_gate_f >= 1.0 else "warn",
             elite_gate_note or f"系数 {elite_gate_f:.2f}")
-        if survival_guard_active:
-            self._trace_gate(
-                "GATE 投影生存主导", "active",
-                "死亡候选最高分，让位于投影可存活候选（PATH_SURVIVAL_DOMINANCE_GUARD）")
         self._trace_gate(
             "RANK 路径聚合评分", "pass",
             f"{len(cand)} 条候选；最高 {best_score:.2f}")
