@@ -1,39 +1,56 @@
 {
- "pending": [
-  {
-   "run": 1335,
-   "time": "2026-09-20 03:46",
-   "profile_id": "vivhite",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "VUUDZ83Q400V",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
-  },
-  {
-   "run": 1336,
-   "time": "2026-09-20 04:10",
-   "profile_id": "vivhite",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "16M5SFGU7YPE",
-   "review_epoch": "reset:2026-08-31T08:10:50.489211Z"
-  }
- ],
- "reviewing": null
+ "pending": [],
+ "reviewing": {
+  "runs": [
+   1335,
+   1336
+  ],
+  "items": [
+   {
+    "run": 1335,
+    "time": "2026-09-20 03:46",
+    "profile_id": "vivhite",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "VUUDZ83Q400V",
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "queue_id": "80248-1789848866493987300-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 1336,
+    "time": "2026-09-20 04:10",
+    "profile_id": "vivhite",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "16M5SFGU7YPE",
+    "review_epoch": "reset:2026-08-31T08:10:50.489211Z",
+    "queue_id": "80248-1789848866493987300-1",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "vivhite",
+  "retry_group": "",
+  "started": "2026-09-20 04:14:26"
+ }
 }
