@@ -2971,7 +2971,8 @@ def main() -> int:
         f"同回合第 2 次复打应被递增门槛拦下: {d_rt2}"
     assert "謦欬出牌门拦下" in d_rt2.reason \
         and "VIVHITE_HP_PLAY_MARGIN_GATE" in d_rt2.reason \
-        and "VIVHITE_HP_REPEAT_PLAY_TAX" in d_rt2.reason, \
+        and "VIVHITE_HP_REPEAT_PLAY_TAX" in d_rt2.reason \
+        and "VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS" in d_rt2.reason, \
         f"复打拦截缺决策链留痕: {d_rt2.reason}"
     st_rt3 = _vgate_state(83, 0)
     st_rt3["turn"] = 2
@@ -2995,6 +2996,27 @@ def main() -> int:
         f"tax=0 回滚键下同回合复打不得被复打税拦下: {d_ro2b}"
     assert "VIVHITE_HP_REPEAT_PLAY_TAX" not in d_ro2b.reason, \
         f"回滚键下不得出现复打税留痕: {d_ro2b.reason}"
+
+    # 自由回合复打税观测只影响注记，不得改变复打税本身的拦截动作/参数。
+    vknow_rto = _vivhite_know("sts2-selfcheck-vhgate-repeat-obs-off-")
+    vknow_rto.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_rto.policy["vivhite_hp_repeat_play_tax"] = 50.0
+    vknow_rto.policy["vivhite_hp_free_turn_repeat_gate_obs"] = 0
+    vpol_rto = policy.Policy(vknow_rto, random.Random(11))
+    vctx_rto = _vgate_ctx()
+    d_rto1 = vpol_rto.decide(_vgate_state(85, 0), vctx_rto)
+    assert d_rto1.action == "play_card", \
+        f"观测关闭时首打仍必须放行: {d_rto1}"
+    vctx_rto.credit_tags.append(
+        ("combat_play_commit", "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         False, False, 10.0, 1, ""))
+    d_rto2 = vpol_rto.decide(_vgate_state(83, 0), vctx_rto)
+    assert d_rto2.action == d_rt2.action \
+        and d_rto2.params == d_rt2.params, \
+        f"观测开关不得改变复打拦截动作/参数: on={d_rt2}, off={d_rto2}"
+    assert "VIVHITE_HP_REPEAT_PLAY_TAX" in d_rto2.reason \
+        and "VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS" not in d_rto2.reason, \
+        f"观测关闭后只应隐藏新增注记: {d_rto2.reason}"
 
     # 3pri) 謦欬门僵局放行（VIVHITE_HP_GATE_STALL_BREAK，第 231~243 局批复盘）：
     #      余量门顶格 3.0 后低危长战放血死循环——243 局 F3 拖 56 回合（自损46/

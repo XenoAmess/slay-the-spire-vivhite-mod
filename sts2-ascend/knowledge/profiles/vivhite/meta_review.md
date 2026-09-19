@@ -4327,3 +4327,59 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1317~1323 局批复盘：自由回合复打税的收口观测
+
+日期：2026-09-20
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮在敌意图为 0 的自由回合中，`VIVHITE_HP_GATE_FREE_TURN_RELIEF`
+  只撤销余量门的基础分量，仍保留同回合复打税；因此一个已经实际打过同名生命支付
+  攻击牌、但当前仍有能量和可支付生命的输出窗口，可能被复打税单独拦下，延迟伤害并
+  把战斗推向后续终端锁。此批只观测，不据此直接放宽门。
+- **EVIDENCE**：精确失败运行 `36BWLZJWMQDT`（第 1323 局）F15 决策 262 先在
+  4 生命、3 能量、敌意图 0 时打出弦光投影；同一回合决策 264 仍有可出弦光投影、
+  3 能量和敌意图 0，但因“同回合第 2 次复打税”被余量门拦下并结束回合。随后
+  决策 266 才再次攻击，决策 271/273 进入 1 生命的终端锁，决策 274 GAME_OVER。
+  该链同时带有 `HP_GATE_STALL_ANY` 进度，说明现有终端锁观测不能单独区分本次
+  自由回合复打税前置。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计
+  `VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS` 的战斗数、触发帧、卡牌、实付生命、
+  复打次数、意图和血量；对账标记后下一状态的敌血净降/继续出牌、
+  `SELF_LOSS_PHASE_OBS`、`VIVHITE_HP_TERMINAL_LOCK_OBS` 与最终胜负。支持假设的
+  形态是标记集中在 `incoming=0` 且有复打税的实际拦截，并常见后续延迟输出或生命
+  锁；若标记在非零意图、无复打税或未实际拦截时出现，或关闭观测键改变动作/参数，
+  则假设被证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `vivhite_hp_free_turn_repeat_gate_obs` 静态回滚键。
+- `sts2-ascend/brain/policy.py`：当白绮非致死候选同时满足自由回合减免生效、
+  `incoming<=0`、同回合复打税大于 0 且确实被余量门拦下时，追加
+  `VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS`，并把标记传到 end-turn 拦截注记；不改
+  候选分、资格、评分、动作、参数、残能救场或闩锁。
+- `sts2-ascend/brain/selfcheck.py`：扩展复打税夹具，验证标记在产；关闭键后复打
+  仍被同一门拦截，但 `action`/`params` 完全一致且新增标记消失。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或任务书；
+  宿主预置的 `assets/` 删除状态和 `.review-cache/` 未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：退出码 0；目标 diff 仅包含上述三个脑文件，
+  报告文件另按本节追加。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局先收集独立战斗的标记覆盖率和标记后首个有效行动；不把标记本身当作
+  该门错误或胜利证据。若累计 ≥3 个独立战斗仍显示自由回合复打税拦截后明显延迟
+  输出并增加终端锁/自损，下一批再评估有界的门带行为调整。
+- 若标记错分、未出现在真实 gate hit、与原生 `incoming`/复打提交不符，或开关关闭
+  导致动作/参数变化，将 `vivhite_hp_free_turn_repeat_gate_obs` 设为 `0`；必要时
+  回滚本地 commit，旧复打税与自由回合门语义保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

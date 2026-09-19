@@ -4833,6 +4833,13 @@ class Policy:
                     pol.get("vivhite_hp_repeat_play_tax", 0.0) or 0.0))
             except (TypeError, ValueError):
                 _hp_repeat_tax = 0.0
+        _hp_free_turn_repeat_obs = False
+        if _hp_play_margin > 0.0:
+            try:
+                _hp_free_turn_repeat_obs = bool(int(pol.get(
+                    "vivhite_hp_free_turn_repeat_gate_obs", 1) or 0))
+            except (TypeError, ValueError):
+                _hp_free_turn_repeat_obs = False
         # 竞速判死自付压价门（KILL_RACE_HOPELESS_HP_PAY_MARGIN，第 927~944 局批
         # 复盘新增，静态键）：上批 KILL_RACE_HOPELESS_HP_PAY_OBS 观测结算——判死
         # 投影下同帧自付在首个可观测窗口（939~944 局，异步部署时滞后）6/6 局共
@@ -5325,6 +5332,11 @@ class Policy:
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
+                        _free_turn_repeat_obs_hit = bool(
+                            _hp_free_turn_repeat_obs
+                            and _hp_free_relief > 0.0
+                            and incoming <= 0
+                            and _hp_rep_extra > 0.0)
                         _gate_formula = (f"实付{_hp_pay:g}血×"
                                          f"{_hp_margin_eff:.2f}")
                         if _hp_margin_eff != _hp_play_margin:
@@ -5351,6 +5363,10 @@ class Policy:
                             _gate_formula += (
                                 "（普通战不享意图0减免，"
                                 "VIVHITE_HP_FREE_TURN_HARD_ONLY）")
+                        if _free_turn_repeat_obs_hit:
+                            why += (
+                                "｜意图0自由回合减免后仍由同回合复打税拦截"
+                                "（VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS）")
                         why += (f"｜謦欬出牌门：{_gate_formula}=+{_hp_extra:.1f}门槛，"
                                 f"{score:.2f}未过（VIVHITE_HP_PLAY_MARGIN_GATE）")
                         _gate_row = (c.get("index"), c.get("name") or cid,
@@ -5359,6 +5375,8 @@ class Policy:
                             _gate_row += ("KRH_MARGIN",)
                             if _krh_dom_scale > 1.0:
                                 _gate_row += ("KRH_DOM_SCALE",)
+                        if _free_turn_repeat_obs_hit:
+                            _gate_row += ("FREE_TURN_REPEAT",)
                         _hp_gate_blocked.append(_gate_row)
                     elif _hp_rep_extra > 0.0:
                         # 复打税已计价但总分仍超带顶放行——供复盘区分「税未接线」
@@ -6147,6 +6165,8 @@ class Policy:
                                   + ("（VIVHITE_HP_LETHAL_CAP_GATE）"
                                      if len(row) > 6
                                      and row[6] == "LETHAL_CAP_GATE" else "")
+                                  + ("（VIVHITE_HP_FREE_TURN_REPEAT_GATE_OBS）"
+                                     if "FREE_TURN_REPEAT" in row[6:] else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 if _hp_relief_hard_suppressed and incoming <= 0:
