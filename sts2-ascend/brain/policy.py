@@ -10949,49 +10949,6 @@ class Policy:
         upgradable = [c for c in deck if not c.get("upgraded")]
         heal_frac = self.know.policy.get("rest_heal_fraction", 0.30)
         pol = self.know.policy
-
-        def _boss_eve_decision_obs(
-                decision: Decision,
-                branch: str,
-                *,
-                current_hp: float,
-                boss_loss: float,
-                boss_samples: int,
-                pessimistic_loss: float,
-                safety_margin: float,
-                effective_heal: float,
-                post_heal_margin=None,
-                race_doomed=None,
-                audit_heal=None,
-                defense_feasible=None):
-            """Append a rollback-safe Boss-eve decision snapshot to the reason."""
-            if not bool(pol.get("boss_eve_decision_obs", True)):
-                return decision
-
-            def _number(value):
-                try:
-                    parsed = float(value)
-                    return f"{parsed:.1f}" if math.isfinite(parsed) else "na"
-                except (TypeError, ValueError, OverflowError):
-                    return "na"
-
-            def _flag(value):
-                if value is None:
-                    return "na"
-                return "1" if bool(value) else "0"
-
-            post = ("na" if post_heal_margin is None
-                    else _number(post_heal_margin))
-            decision.reason = (
-                f"{decision.reason or ''}；BOSS_EVE_DECISION_OBS:"
-                f"branch={branch},hp={_number(current_hp)}/{_number(max_hp)},"
-                f"boss_loss={_number(boss_loss)},samples={_number(boss_samples)},"
-                f"pess={_number(pessimistic_loss)},margin={_number(safety_margin)},"
-                f"heal={_number(effective_heal)},post={post},"
-                f"doomed={_flag(race_doomed)},audit={_flag(audit_heal)},"
-                f"defense={_flag(defense_feasible)}")
-            return decision
-
         smith_ok = smith is not None and bool(upgradable)
         for option in options:
             self._trace_candidate(
@@ -11092,19 +11049,12 @@ class Policy:
                     self._boss_eve_race_audit_heal(cur_hp, max_hp))
                 if (_doomed and _audit_heal
                         and eff_heal >= 0.08 * max_hp):
-                    return _boss_eve_decision_obs(
-                        Decision(
-                            "choose_rest_option", {"option_index": heal["index"]},
-                            f"篝火：Boss 前夜竞速审计覆盖弃疗（当前 {hp_pct:.0%}；"
-                            f"{_audit_heal_note}；有效回血{eff_heal:.0f}点，"
-                            f"保留低血生还余量；{_doom_note}）",
-                            tags=[("rest", "heal")], wait=1.2),
-                        "heal_audit_override",
-                        current_hp=cur_hp, boss_loss=boss_loss,
-                        boss_samples=boss_n, pessimistic_loss=pess,
-                        safety_margin=margin, effective_heal=eff_heal,
-                        post_heal_margin=cur_hp + eff_heal - pess,
-                        race_doomed=_doomed, audit_heal=_audit_heal)
+                    return Decision(
+                        "choose_rest_option", {"option_index": heal["index"]},
+                        f"篝火：Boss 前夜竞速审计覆盖弃疗（当前 {hp_pct:.0%}；"
+                        f"{_audit_heal_note}；有效回血{eff_heal:.0f}点，"
+                        f"保留低血生还余量；{_doom_note}）",
+                        tags=[("rest", "heal")], wait=1.2)
                 if cur_hp - pess <= margin:
                     # 第664~674批复盘修正：悲观战损超过最大生命时（一幕 max80 vs
                     # pess≈91），「cur_hp-pess≤margin」对整个血条恒真，翻转带吞掉
@@ -11138,23 +11088,15 @@ class Policy:
                                 float(pol.get("kill_race_margin", 1.5)),
                                 eff=1.0, blk_eff=1.0)
                     if _doomed and _post_margin <= margin and not _dopt_feasible:
-                        return _boss_eve_decision_obs(
-                            Decision("choose_rest_option",
-                                     {"option_index": smith["index"]},
-                                     f"篝火：Boss 前夜必败弃疗改锻造（当前 {hp_pct:.0%}；"
-                                     f"回血后预期余量{_post_margin:.0f}仍≤安全余量"
-                                     f"{margin:.0f}（悲观战损{pess:.0f}=场均{boss_loss:.0f}"
-                                     f"×{float(pol.get('boss_eve_pess_mult', 1.5)):.1f}），"
-                                     f"回血买不到生还；{_doom_note}；本次可升级"
-                                     f"{len(upgradable)}张，缩短战斗是唯一杠杆）",
-                                     tags=[("rest", "smith")], wait=1.2),
-                            "smith_doomed_margin",
-                            current_hp=cur_hp, boss_loss=boss_loss,
-                            boss_samples=boss_n, pessimistic_loss=pess,
-                            safety_margin=margin, effective_heal=eff_heal,
-                            post_heal_margin=_post_margin,
-                            race_doomed=_doomed, audit_heal=_audit_heal,
-                            defense_feasible=_dopt_feasible)
+                        return Decision("choose_rest_option",
+                                        {"option_index": smith["index"]},
+                                        f"篝火：Boss 前夜必败弃疗改锻造（当前 {hp_pct:.0%}；"
+                                        f"回血后预期余量{_post_margin:.0f}仍≤安全余量"
+                                        f"{margin:.0f}（悲观战损{pess:.0f}=场均{boss_loss:.0f}"
+                                        f"×{float(pol.get('boss_eve_pess_mult', 1.5)):.1f}），"
+                                        f"回血买不到生还；{_doom_note}；本次可升级"
+                                        f"{len(upgradable)}张，缩短战斗是唯一杠杆）",
+                                        tags=[("rest", "smith")], wait=1.2)
                     if _doomed and _dopt_feasible:
                         _doom_tail = ("；竞速预演虽判必败（乐观口径复核存在可行攻防分配，"
                                       "判死主要来自折算悲观），紧急带内回血保住翻盘前提")
@@ -11175,16 +11117,10 @@ class Policy:
                                     f"{_doom_tail}，回血{eff_heal:.0f}点直接兑换生还率）",
                                     tags=[("rest", "heal")], wait=1.2)
                 if _doomed:
-                    return _boss_eve_decision_obs(
-                        Decision("choose_rest_option", {"option_index": smith["index"]},
-                                 f"篝火：Boss 前夜竞速必败改锻造（当前 {hp_pct:.0%}；{_doom_note}；"
-                                 f"本次可升级{len(upgradable)}张，缩短战斗是唯一杠杆）",
-                                 tags=[("rest", "smith")], wait=1.2),
-                        "smith_doomed",
-                        current_hp=cur_hp, boss_loss=boss_loss,
-                        boss_samples=boss_n, pessimistic_loss=pess,
-                        safety_margin=margin, effective_heal=eff_heal,
-                        race_doomed=_doomed, audit_heal=_audit_heal)
+                    return Decision("choose_rest_option", {"option_index": smith["index"]},
+                                    f"篝火：Boss 前夜竞速必败改锻造（当前 {hp_pct:.0%}；{_doom_note}；"
+                                    f"本次可升级{len(upgradable)}张，缩短战斗是唯一杠杆）",
+                                    tags=[("rest", "smith")], wait=1.2)
                 if hp_pct >= smith_line:
                     return Decision("choose_rest_option", {"option_index": smith["index"]},
                                     f"篝火：Boss 前夜安全区改锻造（血量 {hp_pct:.0%} ≥ 锻造线 "

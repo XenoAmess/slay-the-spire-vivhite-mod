@@ -10330,17 +10330,6 @@ def main() -> int:
     assert d_br_weak_out.tags and d_br_weak_out.tags[0] == ("rest", "smith") \
         and "竞速必败" in d_br_weak_out.reason, \
         f"处决带外的竞速必败前夜应改锻造: {d_br_weak_out.action}（{d_br_weak_out.reason}）"
-    assert "BOSS_EVE_DECISION_OBS:branch=smith_doomed" in d_br_weak_out.reason, \
-        f"Boss 前夜必败改锻造缺少裁决快照: {d_br_weak_out.reason}"
-    _br_obs_action = d_br_weak_out.action
-    _br_obs_params = dict(d_br_weak_out.params or {})
-    br_pol.know.policy["boss_eve_decision_obs"] = False
-    d_br_obs_rb = br_pol.decide(br_rest_weak_out, br_ctx)
-    assert d_br_obs_rb.action == _br_obs_action \
-        and dict(d_br_obs_rb.params or {}) == _br_obs_params \
-        and "BOSS_EVE_DECISION_OBS:" not in d_br_obs_rb.reason, \
-        f"Boss 前夜裁决观测关闭后未严格保持动作/参数: {d_br_obs_rb.action}（{d_br_obs_rb.reason}）"
-    br_pol.know.policy["boss_eve_decision_obs"] = True
     # 强卡组对照（3×15伤攻击 burst=45→先验24.75）：击杀需 6.5 ≤ 8+1.5 → 可赢 → 旧裁决回血
     br_strong_deck = [{"card_id": f"BR_BIG{i}", "card_type": "Attack", "energy_cost": 1,
                        "dynamic_values": [{"name": "Damage", "current_value": 15}]} for i in range(3)]
@@ -10478,8 +10467,6 @@ def main() -> int:
     assert d_br_audit_heal.tags and d_br_audit_heal.tags[0] == ("rest", "heal") \
         and "RACE_AUDIT_HEAL_OVERRIDE" in d_br_audit_heal.reason, \
         f"竞速误报达到审计门槛时低血前夜仍被迫上砧: {d_br_audit_heal.reason}"
-    assert "BOSS_EVE_DECISION_OBS:branch=heal_audit_override" in d_br_audit_heal.reason, \
-        f"竞速审计回血缺少裁决快照: {d_br_audit_heal.reason}"
     br_pol.know.policy["boss_eve_race_audit_heal_enabled"] = False
     d_br_audit_rb = br_pol.decide(br_rest_weak, br_ctx)
     assert d_br_audit_rb.tags and d_br_audit_rb.tags[0] == ("rest", "heal") \
