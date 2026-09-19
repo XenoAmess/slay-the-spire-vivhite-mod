@@ -6535,6 +6535,77 @@ def main() -> int:
     del d_rws, d_rws_off, d_rws_no, d_rws_iron, \
         rws_pol, rws_off, rws_no, rws_iron
 
+    # 3rlp（第1307局复盘）：白绮致死可出牌空过观测
+    #      （VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS）。F33-T7 为 9 血/30 意图/3
+    #      能量，变身式原生 playable 且 1 费，但候选被评分拒绝后直接 end_turn；
+    #      该夹具只验证稳定区分「可出牌被评分拒绝」与终端 blocked_by_hook，
+    #      键=0 时动作/参数逐项不变，非白绮 profile 不产注记。
+    rlp_card = {"index": 0,
+                "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+                "name": "白绮的变身式+", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Power", "current_value": 1}],
+                "rules_text": "获得1点力量和1点敏捷。"}
+    rlp_deck = [{
+        "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+        "card_type": "Attack", "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 10}],
+    } for _ in range(16)]
+
+    def _rlp_state(lethal=True):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 7,
+            "combat": {
+                "player": {"current_hp": 9, "max_hp": 95, "block": 0,
+                           "energy": 3, "powers": []},
+                "hand": [dict(rlp_card)],
+                "enemies": [{"index": 0, "enemy_id": "KNOWLEDGE_DEMON",
+                             "name": "知识恶魔", "current_hp": 98,
+                             "max_hp": 299, "block": 0, "is_alive": True,
+                             "is_hittable": True,
+                             "intents": [{"total_damage": 30}]}],
+                "end_turn_will_kill_player": lethal,
+            },
+            "run": {"current_hp": 9, "max_hp": 95, "gold": 0,
+                    "floor": 33, "deck": [dict(c) for c in rlp_deck]},
+        }
+
+    rlp_ctx = type("RLPCTX", (), {
+        "combat": {"comp_id": "KNOWLEDGE_DEMON", "node_type": "Boss"},
+        "current_combat_is_hard": True,
+        "credit_tags": [],
+    })()
+    rlp_pol = policy.Policy(_vivhite_know("sts2-selfcheck-rlp-"), random.Random(5))
+    d_rlp = rlp_pol.decide(_rlp_state(), rlp_ctx)
+    assert d_rlp.action == "end_turn" \
+        and "VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS" in d_rlp.reason \
+        and "VIVHITE_CARD_VIVHITE_TRANSFORMATION(cost=1)" in d_rlp.reason, \
+        f"致死可出牌空过观测未产出: {d_rlp.action}（{d_rlp.reason}）"
+
+    rlp_off = policy.Policy(_vivhite_know("sts2-selfcheck-rlp-off-"), random.Random(5))
+    rlp_off.know.policy["vivhite_lethal_playable_end_turn_obs"] = 0
+    d_rlp_off = rlp_off.decide(_rlp_state(), rlp_ctx)
+    assert d_rlp_off.action == d_rlp.action \
+        and d_rlp_off.params == d_rlp.params \
+        and "VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS" not in d_rlp_off.reason, \
+        f"键=0 未严格回滚致死空过注记或动作漂移: {d_rlp_off.action}（{d_rlp_off.reason}）"
+
+    rlp_nonlethal = policy.Policy(
+        _vivhite_know("sts2-selfcheck-rlp-nonlethal-"), random.Random(5))
+    d_rlp_nonlethal = rlp_nonlethal.decide(_rlp_state(False), rlp_ctx)
+    assert "VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS" not in d_rlp_nonlethal.reason, \
+        f"非致死可出牌空过误产致死观测: {d_rlp_nonlethal.action}（{d_rlp_nonlethal.reason}）"
+
+    rlp_iron = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rlp-iron-"))), random.Random(5))
+    d_rlp_iron = rlp_iron.decide(_rlp_state(), rlp_ctx)
+    assert "VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS" not in d_rlp_iron.reason, \
+        f"非白绮 profile 不得产致死空过观测: {d_rlp_iron.action}（{d_rlp_iron.reason}）"
+    del d_rlp, d_rlp_off, d_rlp_nonlethal, d_rlp_iron, \
+        rlp_pol, rlp_off, rlp_nonlethal, rlp_iron
+
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
     #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：
