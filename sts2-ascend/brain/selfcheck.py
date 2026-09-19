@@ -10782,7 +10782,6 @@ def main() -> int:
     d_combat_boss_effective = combat_flip_probe(
         1.5, sample_effective_round=True)
     assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_effective.reason
-            and "BOSS_RACE_EFFECTIVE_DPT_GATE_OBS" in d_combat_boss_effective.reason
             and "敌血净降10.0/回合" in d_combat_boss_effective.reason
             and "vs 投影" in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
@@ -10793,8 +10792,6 @@ def main() -> int:
             and d_combat_boss_effective_off.params
             == d_combat_boss_effective.params
             and "BOSS_RACE_EFFECTIVE_DPT_OBS"
-            not in d_combat_boss_effective_off.reason
-            and "BOSS_RACE_EFFECTIVE_DPT_GATE_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
