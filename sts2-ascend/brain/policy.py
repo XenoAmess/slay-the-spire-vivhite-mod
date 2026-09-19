@@ -5735,7 +5735,6 @@ class Policy:
             # 分账）都无法按「判死投影同帧自付」切片对账。纯观测锚：注记只披露
             # 「判死投影下同帧实付血」事实，评分/放行/动作零改动；键=0 注记消失
             # （旧行为零差异）。只覆盖主评分出牌位（残能救场/僵局强攻为独立出口）。
-            _krh_gate_state = "unclassified"
             try:
                 _krh_obs = bool(int(float(pol.get(
                     "kill_race_hopeless_hp_pay_obs", 1) or 0)))
@@ -5824,27 +5823,6 @@ class Policy:
                                     f"候选分{float(chosen_score):.2f}>门槛+"
                                     f"{_krh_gate_extra:.1f}"
                                     "（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS）")
-            # 1313 F33 follow-up observation：同一判死竞速里，连续高分自付
-            # 牌的“越门放行”仍无法回答它们把生命推到终端锁前多少。记录选中
-            # 时的预计支付前后血量；这是决策时的账面预测，不把预测冒充实际
-            # 掉血，也不把它反馈给评分/放行/动作。仅白绮主评分出牌位生效。
-            try:
-                _krh_headroom_obs = bool(int(float(pol.get(
-                    "vivhite_kr_hopeless_hp_pay_headroom_obs", 1) or 0)))
-            except (TypeError, ValueError):
-                _krh_headroom_obs = False
-            if (_krh_headroom_obs and kill_race
-                    and getattr(self.character_strategy, "profile_id", None)
-                    == VIVHITE_PROFILE_ID):
-                _krh_headroom_pay = float(self._vivhite_hp_pay(
-                    card, player.get("powers") or []) or 0.0)
-                if _krh_headroom_pay > 0.0:
-                    why += (
-                        f"｜竞速判死自付头寸：当前{float(my_hp):g}血，"
-                        f"本次预付{_krh_headroom_pay:g}血，"
-                        f"支付后预测{float(my_hp) - _krh_headroom_pay:g}血，"
-                        f"门带状态={_krh_gate_state}"
-                        "（VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS）")
             # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
             # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
             # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，

@@ -3742,8 +3742,6 @@ def main() -> int:
     assert "竞速判死自付2血" in d_krh_hemo.reason \
         and "KILL_RACE_HOPELESS_HP_PAY_OBS" in d_krh_hemo.reason, \
         f"非白绮文本自残牌缺判死自付注记: {d_krh_hemo.reason}"
-    assert "VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS" not in d_krh_hemo.reason, \
-        f"非白绮角色不得出现白绮头寸观测: {d_krh_hemo.reason}"
     # ⑤ 防守可行对照（满血+轻意图，击杀回合数＜可存活回合数）：
     #    投影不判死，实付謦欬攻击也不显形
     vknow_krn = _vivhite_know("sts2-selfcheck-krhopeless-calm-")
@@ -3759,8 +3757,6 @@ def main() -> int:
         f"防守可行时误触发竞速投影: {d_krn.reason}"
     assert "KILL_RACE_HOPELESS_HP_PAY_OBS" not in d_krn.reason, \
         f"未判死时不得显形判死自付注记: {d_krn.reason}"
-    assert "VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS" not in d_krn.reason, \
-        f"未判死时不得显形白绮头寸注记: {d_krn.reason}"
 
     # 3krhm) 竞速判死自付压价门（KILL_RACE_HOPELESS_HP_PAY_MARGIN，第 927~944
     #      局批复盘）：3krh 观测结算——判死投影下同帧自付在首个可观测窗口
@@ -3929,22 +3925,12 @@ def main() -> int:
         and "state=bypass" in d_kd0.reason \
         and "cause=gate_active" in d_kd0.reason, \
         f"选中自付门带状态观测缺越门分类: {d_kd0.reason}"
-    assert float(knowledge.DEFAULT_POLICY[
-        "vivhite_kr_hopeless_hp_pay_headroom_obs"]) == 1.0, \
-        "DEFAULT_POLICY 缺少 vivhite_kr_hopeless_hp_pay_headroom_obs 静态键或默认值被改"
-    assert "VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS" in d_kd0.reason \
-        and "当前45血" in d_kd0.reason \
-        and "本次预付2血" in d_kd0.reason \
-        and "支付后预测43血" in d_kd0.reason, \
-        f"判死自付头寸观测缺支付前后血量: {d_kd0.reason}"
 
-    def _krh_bypass_drive(enabled, forced_kill=False, headroom_enabled=None):
+    def _krh_bypass_drive(enabled, forced_kill=False):
         vk = _vivhite_know("sts2-selfcheck-krhbypass-")
         vk.policy["vivhite_hp_cost_play_margin"] = 1.0
         vk.policy["kill_race_hopeless_hp_pay_margin"] = 6.0
         vk.policy["kill_race_hopeless_hp_pay_bypass_obs"] = enabled
-        if headroom_enabled is not None:
-            vk.policy["vivhite_kr_hopeless_hp_pay_headroom_obs"] = headroom_enabled
         vp = policy.Policy(vk, random.Random(11))
         vc = _krh_ctx()
         for _turn, _hp in ((1, 65), (2, 55)):
@@ -3968,15 +3954,6 @@ def main() -> int:
         f"越门观测关闭后不得出现注记: {d_khb_off.reason}"
     assert "KILL_RACE_HOPELESS_HP_PAY_GATE_STATE_OBS" not in d_khb_off.reason, \
         f"越门观测关闭后不得出现门带状态注记: {d_khb_off.reason}"
-    assert "VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS" in d_khb_off.reason, \
-        f"独立头寸观测不应受越门观测键关闭影响: {d_khb_off.reason}"
-    d_khh_off = _krh_bypass_drive(1, headroom_enabled=0)
-    assert d_khh_off.action == d_kd0.action \
-        and d_khh_off.params == d_kd0.params, \
-        f"头寸观测关闭不得改变动作: on={d_kd0.action}/{d_kd0.params} " \
-        f"off={d_khh_off.action}/{d_khh_off.params}"
-    assert "VIVHITE_KR_HOPELESS_HP_PAY_HEADROOM_OBS" not in d_khh_off.reason, \
-        f"头寸观测关闭后不得出现注记: {d_khh_off.reason}"
 
     # ⑦ 服务端致死闸关闭余量门时仍应披露 disabled/lethal，而不是把
     # “无 BYPASS”误报成“低分未越门”。评分与动作保持同一条竞速路径。
