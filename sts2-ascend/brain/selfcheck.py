@@ -3676,49 +3676,6 @@ def main() -> int:
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
 
-    # 3let) 致死空过仍有可行动牌观测（VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS，
-    #      第1316局F33索引449）：羽化可出且费用≤能量，但评分收口为 end_turn；
-    #      观测只连接该前置与下一状态的终端生命锁，不改变选择。键=0 与非致死
-    #      对照都必须保持动作/参数不变。
-    _lethal_playable_card = {
-        "index": 0, "card_id": "METAMORPHOSIS", "name": "羽化",
-        "card_type": "Power", "playable": True, "energy_cost": 2,
-        "requires_target": False,
-    }
-
-    def _lethal_playable_state():
-        _st = _krh_state(6, 2, [_lethal_playable_card], incoming=21)
-        _st["combat"]["player"]["energy"] = 3
-        _st["combat"]["end_turn_will_kill_player"] = True
-        _st["available_actions"] = ["play_card", "end_turn"]
-        return _st
-
-    vknow_lep = _vivhite_know("sts2-selfcheck-vlethal-playable-")
-    vpol_lep = policy.Policy(vknow_lep, random.Random(11))
-    d_lep = vpol_lep.decide(_lethal_playable_state(), _krh_ctx())
-    assert d_lep.action == "end_turn" \
-        and "VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS" in d_lep.reason \
-        and "METAMORPHOSIS(2)" in d_lep.reason \
-        and "/hp=2/block=0/incoming=21/energy=3/server_lethal=yes" in d_lep.reason, \
-        f"致死空过可行动牌观测缺失或改变动作: {d_lep.action}（{d_lep.reason}）"
-
-    vknow_lep0 = _vivhite_know("sts2-selfcheck-vlethal-playable-off-")
-    vknow_lep0.policy["vivhite_lethal_end_turn_playable_obs"] = 0
-    vpol_lep0 = policy.Policy(vknow_lep0, random.Random(11))
-    d_lep0 = vpol_lep0.decide(_lethal_playable_state(), _krh_ctx())
-    assert d_lep0.action == d_lep.action and d_lep0.params == d_lep.params \
-        and "VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS" not in d_lep0.reason, \
-        f"致死空过观测关闭后动作或参数漂移: on={d_lep}/{d_lep0}"
-
-    _lep_nonlethal = _lethal_playable_state()
-    _lep_nonlethal["combat"]["player"]["current_hp"] = 80
-    _lep_nonlethal["combat"]["end_turn_will_kill_player"] = False
-    _lep_nonlethal["run"]["current_hp"] = 80
-    d_lep_nonlethal = vpol_lep.decide(_lep_nonlethal, _krh_ctx())
-    assert "VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS" not in d_lep_nonlethal.reason, \
-        f"非致死场景误产致死空过观测: {d_lep_nonlethal.reason}"
-    del d_lep, d_lep0, d_lep_nonlethal, vpol_lep, vpol_lep0
-
     # ① 白绮判死竞速下实付謦欬攻击：注记显形且带实付额
     vknow_krh = _vivhite_know("sts2-selfcheck-krhopeless-")
     vpol_krh = policy.Policy(vknow_krh, random.Random(11))

@@ -6178,44 +6178,6 @@ class Policy:
                     _gate_note += (f"；连续未覆盖拦截"
                                    f"{self._hp_gate_stall_uncovered}回合"
                                    f"（VIVHITE_HP_GATE_STALL_UNCOVERED）")
-            # 白绮致死空过仍有可行动牌观测（VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS，
-            # 第1316局F33索引449）：本地缺口已足以致死，但评分收口前仍有费用可负担、
-            # 目标合法的 playable 牌。它与下一个状态的终端生命锁标记形成可对账链，
-            # 不把“有牌可出”误报成謦欬 hook 锁死；纯观测，键=0 严格回滚动作/参数。
-            _lethal_playable_note = ""
-            try:
-                _lethal_playable_obs = bool(int(float(pol.get(
-                    "vivhite_lethal_end_turn_playable_obs", 1) or 0)))
-            except (TypeError, ValueError):
-                _lethal_playable_obs = False
-            if (_lethal_playable_obs
-                    and lethal_now
-                    and getattr(self.character_strategy, "profile_id", None)
-                    == VIVHITE_PROFILE_ID):
-                _lethal_playable = []
-                for _lethal_card in hand:
-                    if (not _lethal_card.get("playable")
-                            or self._card_unavailable(_lethal_card)):
-                        continue
-                    _lethal_cost = (energy if _lethal_card.get("costs_x")
-                                    else (_lethal_card.get("energy_cost") or 0))
-                    if _lethal_cost > energy:
-                        continue
-                    if (_lethal_card.get("requires_target")
-                            and not _lethal_card.get("valid_target_indices")):
-                        continue
-                    _lethal_id = (_lethal_card.get("card_id")
-                                  or _lethal_card.get("name") or "?")
-                    _lethal_playable.append(
-                        f"{_lethal_id}({_lethal_cost:g})")
-                if _lethal_playable:
-                    _lethal_playable_note = (
-                        "；致死空过仍有可负担可出牌="
-                        + ",".join(_lethal_playable)
-                        + f"/hp={my_hp}/block={my_block}/incoming={incoming}"
-                        + f"/energy={energy}/server_lethal="
-                        + ("yes" if forced_kill else "no")
-                        + "（VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS）")
             # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
             # 批复盘新增，静态键 ritual_window_skip_obs）：猩红转化仪式是 0 费、
             # 自身零血税的相位成长引擎，但无上限长线估值（ritual-longline）把它
@@ -6249,7 +6211,7 @@ class Policy:
                         f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
                         "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}{_lethal_playable_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
