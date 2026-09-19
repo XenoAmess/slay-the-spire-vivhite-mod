@@ -14934,3 +14934,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.801921398127346局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.131159846142609局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.4589147664032787局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1354 胜，当前目标进阶 3
+
+## 第 1355 局复盘（2026-09-20 07:54）
+- 结果：💀 失败｜进阶 3｜到达层数 6｜当局评分 6
+- 死因：敌人组合 CALCIFIED_CULTIST+DAMP_CULTIST
+- 本局拿牌：VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血2｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Unknown战 掉血9｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损8（可行动段8/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血76（阵亡）
+- 当前高价值卡牌：REND(38分/5.369062063306156局)，BOLAS(37分/2.7554226783396274局)，FISTICUFFS(35分/8.788313385582939局)，AUTOMATION(34分/5.971702083172829局)，THINKING_AHEAD(34分/5.892560514216143局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.781614673233901局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.116700786681109局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.450308564720867局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1355 胜，当前目标进阶 3
