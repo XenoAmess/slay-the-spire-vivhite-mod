@@ -6210,6 +6210,35 @@ class Policy:
                         f"竞速={bool(kill_race or race_allin)}，"
                         f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
                         "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
+            _invuln_lethal_note = ""
+            try:
+                _invuln_lethal_obs = bool(int(float(
+                    pol.get("invuln_lethal_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _invuln_lethal_obs = True
+            try:
+                _end_turn_lethal = bool(
+                    combat.get("end_turn_will_kill_player")) or (
+                    float(incoming) >= float(my_hp + my_block))
+            except (TypeError, ValueError):
+                _end_turn_lethal = bool(
+                    combat.get("end_turn_will_kill_player"))
+            if (_invuln_lethal_obs and _resc_invuln_note
+                    and not _resc_card and _end_turn_lethal):
+                _vetoed_attack_count = 0
+                for _candidate in hand:
+                    try:
+                        if float(card_numbers(_candidate)[0] or 0) > 0:
+                            _vetoed_attack_count += 1
+                    except (TypeError, ValueError):
+                        continue
+                _non_attack_count = max(0, len(hand) - _vetoed_attack_count)
+                _invuln_lethal_note = (
+                    f"；无敌帧致死空过观测：攻击候选{_vetoed_attack_count}张、"
+                    f"非攻击手牌{_non_attack_count}张、"
+                    f"hp={my_hp}/甲={my_block}/意图={incoming}"
+                    "（INVULN_LETHAL_END_TURN_OBS）")
+                audit_note += _invuln_lethal_note
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
                             wait=1.2)

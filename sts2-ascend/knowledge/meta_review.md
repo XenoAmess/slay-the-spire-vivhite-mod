@@ -11520,3 +11520,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
 
+## Review batch 1562: INVULN_LETHAL_END_TURN_OBS
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1562-F17 Waterfall Giant 的 T237 `end_turn` 是蒸汽喷发无敌自爆相下的真实无救窗口，不是漏选可生存救场牌；若后续观测在仍有可用格挡或可击杀目标时出现，则该假设被证伪。
+- **EVIDENCE**：run `9JAVW56XYDNQ` 的 T233-T237 持续记录敌方 HP=999999999、`INVULN_TARGET_VETO` 和无敌帧；T237 为我方 HP25/格挡7、敌意图33，记录伤害缺口26并判定结束回合致死，剩余手牌为攻击候选，T238 随即 `GAME_OVER`。现有输出能解释禁攻，但不能单独区分“正确无救”与“漏选救场”。
+- **EXPECTED_SIGNAL**：未来 3~10 局 Ironclad 战斗中，`INVULN_LETHAL_END_TURN_OBS` 只应在结束回合致死、无敌帧攻击救场被移除且没有救场牌被选中时出现；统计 marker 后的 `GAME_OVER`、敌方是否仍无敌及是否存在可用格挡。开关关闭时 marker 消失且动作/参数不变；若 marker 出现在非致死、可格挡或目标可击杀窗口，则证伪假设。
+
+### MINIMUM_CHANGE
+
+- `brain/knowledge.py`：新增默认开启的 `invuln_lethal_end_turn_obs`，并提供关闭开关。
+- `brain/policy.py`：在原有无敌帧攻击救场禁用且结束回合将致死、未选救场牌的路径追加 `INVULN_LETHAL_END_TURN_OBS`，记录攻击候选数、非攻击手牌数、HP、格挡和敌意图；不改变评分、目标选择或动作顺序。
+- `brain/selfcheck.py`：加入默认观测与开关关闭回滚断言，并让夹具显式表达结束回合致死。
+
+### CONTINUE / ROLLBACK
+
+- **继续调整**：收集未来 3~10 局 marker 数量、marker 后终局距离、敌方无敌状态、可用格挡牌数量和动作保持率；只有出现可生存窗口误标时再改判定条件。
+- **撤回**：若出现非致死、可用格挡或可击杀目标时误报，先将 `invuln_lethal_end_turn_obs` 设为 `false`；若仍有路径污染，再撤回本批观测代码并保留失败样本。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+### VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
+
