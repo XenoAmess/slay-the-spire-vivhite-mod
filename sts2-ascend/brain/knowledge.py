@@ -1000,6 +1000,11 @@ DEFAULT_POLICY = {
                                         # 非攻击謦欬维持门拦），豁免注记留痕对账；0=恢复
                                         # 577~589 批旧口径（一键回滚，旧行为零差异），非白
                                         # 绮角色零改动
+    "vivhite_hp_zp_attack_margin_obs": 1,  # 零压攻击余量门观测（VIVHITE_HP_ZP_ATTACK_MARGIN_OBS，
+                                            # 第1299局 F6 T1 形态）：攻击豁免只绕过零压闸，
+                                            # 普通战意图0时仍可能被普通余量门拦下；记录被拦的
+                                            # 攻击牌、实付血和候选分，纯观测不改评分/放行/动作。
+                                            # 0=隐藏该注记（旧行为零差异），非白绮角色零改动
     "thorns_reflect_pricing": 1,     # 荆棘反伤计价与自杀式斩杀闸（THORNS_REFLECT_PRICING，第 784~789
                                         # 局批复盘新增，静态键）：784-F21 棘刺蟾蜍（SpikesMove 自挂
                                         # 5 层荆棘，mechanics 实证 PowerCmd.Apply<ThornsPower>(5m)）

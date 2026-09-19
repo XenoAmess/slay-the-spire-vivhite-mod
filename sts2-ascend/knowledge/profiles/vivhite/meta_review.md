@@ -4400,3 +4400,59 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 retry_resolution: 20260918-005804-1789664284472436700-c8af6c7c integrated
 （失败包为 lifecycle_stop 维护停机保全，candidate_patch 为空、无模型成果可重
 实现；本批 1276~1296 已在当前 HEAD 由本次复盘完整闭环覆盖。）
+
+# 第 1297~1299 局批复盘：零压攻击牌仍被普通余量门拦截的窗口观测
+
+日期：2026-09-19
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮普通 Monster 战的无伤窗口里，现有
+  `VIVHITE_HP_ZP_ATTACK_EXEMPT` 只绕过零压闸，攻击牌仍可能被普通余量门拦下；
+  这会把本可在敌人无伤首动打出的伤害推迟到后续受击回合，增加战斗长度与自损。
+  假设可证伪：若未来 3~10 局中标记主要出现在非 Monster/竞速/可击杀场景，或标记后
+  下一次伤害意图前攻击已兑现、没有额外战损/延迟，便不支持该归因。
+- **EVIDENCE**：1297、1298、1299 均为精确批次失败；1299 的完整链
+  `sts2-ascend/knowledge/profiles/vivhite/runs/20260918-010113_Z2BQREDWCC59.json`
+  已逐条读取 73 条决策。F6-T1（decision 45）为 57/83 血、能量 3、敌意图 0，
+  五张可出牌全部被门拦；其中两张弦光投影候选分 4.111、递推星芒分 1.997，最终
+  `end_turn`。原生 mechanics 证据显示 SHRINKER_BEETLE 首动 `SHRINK_MOVE` 只施加
+  `ShrinkPower`，随后才进入 7/13 伤害循环；该窗口不是伤害回合。此后实际火力仅
+  2~6/回合，T11 进入竞速判死，T13 以 0 血结束；F6 记录敌方掉血 57、自损 26。
+  这证明了候选阻断与后续自损的时间邻接，但尚不足以证明放行攻击必然更优。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立 Monster 战统计
+  `VIVHITE_HP_ZP_ATTACK_MARGIN_OBS` 的战斗数、卡名/实付血/候选分、标记后下一
+  次伤害意图前是否实际出牌、敌血净降、战斗回合数、`SELF_LOSS_PHASE_OBS` 与胜负。
+  观测必须只落在 `node_type=Monster`、意图≤0、非竞速、非击杀豁免，且键关闭时动作/
+  参数逐项不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `vivhite_hp_zp_attack_margin_obs`，0 可隐藏注记并保持旧行为。
+- `sts2-ascend/brain/policy.py`：在攻击豁免开启但普通余量门实际拦截的零压 Monster
+  候选上，追加 `VIVHITE_HP_ZP_ATTACK_MARGIN_OBS`，披露卡名、实付血与候选分；不改
+  评分、候选资格、放行、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：新增高余量门夹具，验证注记出现、关闭键时动作/
+  参数保持一致且注记消失；既有零压攻击豁免、非攻击门拦与击杀豁免夹具保持通过。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或任务书；
+  宿主预置的 assets 删除状态与 `.review-cache` 现场未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 最终目标 diff 将再次执行 `git diff --check -- sts2-ascend` 并复核只包含上述观测、
+  selfcheck、报告与口播短评；不添加或恢复任何用户现场文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 先收集 3~10 局独立 Monster 窗口；若至少 3 场命中且其中至少 2 场在下一次伤害
+  意图前未兑现攻击并伴随更长战斗/自损，下一批再评估有界攻击窗口行为实验；本批不
+  直接放宽余量门。
+- 若标记出现在非 Monster、竞速、可击杀或意图>0 场景，候选/动作解析异常，或键=0
+  导致动作/参数漂移，将 `vivhite_hp_zp_attack_margin_obs` 置 0；必要时回滚本地
+  提交，原余量门与零压攻击豁免语义保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
