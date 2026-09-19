@@ -11516,6 +11516,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-20｜第 1566 局复盘（exact run V6RT4KXQNTD5；MINION_ILLUSION_FOCUS_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`MINION_FOCUS_OBS` 的泛化文案会把带 `ILLUSION_POWER` 的随从复生/状态切换路径与领袖狂暴样本混在一起，导致后续归因不可证伪。
+- **EVIDENCE**：第 1566 局 F27 决策 327、330 两次集火“寄生惧魔”均产生 `MINION_FOCUS_OBS`。原生 knowledge 的 `PARAFRIGHT` 在加入房间时获得 `IllusionPower`；`IllusionPower` 记录含 `AfterDeath` 状态切换与 Parafright `ReviveMove`，并处理 `MinionPower`。现有留痕只写“死亡可能触发主场敌行为切换/狂暴”，没有把两条路径分开。
+- **EXPECTED_SIGNAL**：未来 3~10 个相关战斗窗口中，目标同时携 `MINION_POWER` 与 `ILLUSION_POWER` 时应追加 `MINION_ILLUSION_FOCUS_OBS` 及层数；只有普通 `MINION_POWER` 时不追加。关闭 `minion_focus_obs` 时两种标记都消失，action/params 保持一致。若持续出现错误能力识别或动作差异，该假设被否证并撤回。
+
+### MINIMUM_CHANGE
+
+- `brain/policy.py`：在既有爪牙观测内读取 `ILLUSION_POWER`，仅追加“幻象复生/状态切换路径”归因标记；不改变评分、目标、判决或动作。
+- `brain/knowledge.py`：同步默认策略说明，明确该附加标记及其回滚语义。
+- `brain/selfcheck.py`：新增 Minion+Illusion 夹具，验证 marker 出现、普通 Minion 不受影响，以及关闭开关时 marker 与 action/params 一并回滚。
+
+### CONTINUE / ROLLBACK / VALIDATION
+
+- 继续条件：按能力组合统计附加标记，并与后续实际复生/状态切换及主场行为分别对账；不因单局标记直接改集火策略。
+- 撤回条件：出现非 Illusion 目标误挂、能力层数读取错配、或开关关闭改变 action/params；届时移除附加观测并保留失败链。
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff → **DIFF_CHECK_OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
 ### VALIDATION
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。

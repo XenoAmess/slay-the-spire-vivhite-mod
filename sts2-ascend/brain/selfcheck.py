@@ -1539,13 +1539,26 @@ def main() -> int:
     assert d_mf.action == "play_card" and d_mf.params.get("target_index") == 1 \
         and "MINION_FOCUS_OBS" in d_mf.reason, \
         f"中标爪牙+领导者存活未留痕: {d_mf.params}（{d_mf.reason}）"
+    _mf_illusion = [
+        {"id": "MINION_POWER", "amount": 1},
+        {"id": "ILLUSION_POWER", "amount": 1},
+    ]
+    d_mf_illusion = mf_pol.decide(
+        minion_focus_state(amal_powers=_mf_illusion), ctx)
+    assert d_mf_illusion.action == d_mf.action \
+        and d_mf_illusion.params == d_mf.params \
+        and "MINION_FOCUS_OBS" in d_mf_illusion.reason \
+        and "MINION_ILLUSION_FOCUS_OBS" in d_mf_illusion.reason, \
+        f"爪牙+幻象复生路径未单列且动作发生变化: {d_mf_illusion.params}（{d_mf_illusion.reason}）"
     mf_rb_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-rb-")))
     mf_rb_know.policy["minion_focus_obs"] = False
     mf_rb_pol = policy.Policy(mf_rb_know, random.Random(11))
-    d_mf_rb = mf_rb_pol.decide(minion_focus_state(amal_powers=_mf_minion), ctx)
-    assert d_mf_rb.action == "play_card" and d_mf_rb.params.get("target_index") == 1 \
-        and "MINION_FOCUS_OBS" not in d_mf_rb.reason, \
+    d_mf_rb = mf_rb_pol.decide(minion_focus_state(amal_powers=_mf_illusion), ctx)
+    assert d_mf_rb.action == d_mf_illusion.action \
+        and d_mf_rb.params == d_mf_illusion.params \
+        and "MINION_FOCUS_OBS" not in d_mf_rb.reason \
+        and "MINION_ILLUSION_FOCUS_OBS" not in d_mf_rb.reason, \
         f"minion_focus_obs=False 未严格回滚（目标/评分须零差异）: {d_mf_rb.params}（{d_mf_rb.reason}）"
     mf_nm_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-minion-focus-nm-")))

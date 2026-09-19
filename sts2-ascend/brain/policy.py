@@ -7048,6 +7048,17 @@ class Policy:
                         why += ("｜爪牙集火在账：目标携MINION_POWER且主场敌存活，"
                                 "其死亡可能触发主场敌行为切换/狂暴"
                                 "（MINION_FOCUS_OBS）")
+                        # 原生 IllusionPower.AfterDeath 会把 Parafright 送入复生/状态
+                        # 切换路径；它同时由 IllusionPower 自动获得 MinionPower。若只
+                        # 留下上面的泛化文案，复盘会把这条路径误并入领袖狂暴样本。纯
+                        # 观测，不改评分、目标或动作；关闭主键时连同本附加标记一并回滚。
+                        _minion_illusion_layers = self._enemy_power_stack(
+                            e, "illusion", "幻象")
+                        if _minion_illusion_layers > 0:
+                            why += (
+                                f"；目标另携ILLUSION_POWER×{_minion_illusion_layers:g}，"
+                                "原生死亡后进入幻象复生/状态切换路径，"
+                                "与领袖狂暴分开归因（MINION_ILLUSION_FOCUS_OBS）")
                     if _thorns_suicide:
                         why += (f"｜荆棘反伤≈{_thorns_reflect:g}≥支付后余血"
                                 f"{max(0.0, float(my_hp) - _thorns_hp_pay):g}，"

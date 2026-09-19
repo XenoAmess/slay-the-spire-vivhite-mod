@@ -541,7 +541,10 @@ DEFAULT_POLICY = {
                                         # 键=True 时中标目标携 MINION_POWER 且场上仍有
                                         # 非爪牙敌人存活，附纯观测注记（评分/判决零改动），
                                         # 供后续批次统计爪牙集火频率与狂暴阵亡相关性再议
-                                        # 行为化；False=严格回滚（无留痕旧版，零差异）。
+                                        # 行为化。若目标另携 ILLUSION_POWER，再附
+                                        # MINION_ILLUSION_FOCUS_OBS，单列原生复生/状态切换
+                                        # 路径，避免与领袖狂暴样本混计；False=严格回滚
+                                        # （无留痕旧版，零差异）。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的
