@@ -11562,3 +11562,23 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；本批 `git diff --check` → **DIFF_CHECK_OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-20｜第 1567 局复盘（exact run HKW8S796FM6Y；有界观测 ×1：BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速投影可能持续高估实际有效输出；现有 `BOSS_RACE_EFFECTIVE_DPT_OBS` 保存绝对差值，但没有直接保存实际/投影比，未来窗口无法机械按 Boss 与竞速段统计高估幅度。该假设可证伪。
+- **EVIDENCE**：第 1567 局 `HKW8S796FM6Y` 的完整链为 210 个决策；F17 `LAGAVULIN_MATRIARCH` 在决策 202 记录敌血净降 11.0/回合、投影 17.2/回合、差值 -6.2，实际/投影约 0.64，随后第 210 个决策 `GAME_OVER`。原生 mechanics 确认族母初始 222 HP、沉睡/镀层会影响有效命中；本批只收紧观测口径，不把单局样本直接当成策略结论。
+- **EXPECTED_SIGNAL**：未来 3~10 局 Boss 竞速 marker 应携带 `BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS` 与两位小数比值；按 Boss、回合跨度和换线次数统计比值。重复显著低于 1 支持投影高估，稳定接近 1 则削弱假设；关闭 `boss_race_effective_dpt_obs` 时绝对 marker 与比值尾缀均消失，action/params 不变。
+
+### MINIMUM_CHANGE
+
+- `brain/policy.py`：在已有跨回合 Boss 有效火力对账后追加 `实际/投影比X.XX（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）`；投影为 0 时不伪造比值。评分、判决、目标、姿态和动作均不变。
+- `brain/selfcheck.py`：普通 Boss 跨回合夹具断言比值 marker 出现；关闭既有观测开关的对照断言绝对 marker 和比值 marker 同时消失，action/params 保持一致。
+
+### CONTINUE / ROLLBACK / VALIDATION
+
+- 继续条件：未来窗口至少出现 1 个可核对的低比值样本后，按 Boss 机制、换线次数和回合跨度继续分层；在重复证据前不改竞速判决。
+- 撤回条件：比值与绝对净降/投影不一致、投影为 0 产生伪值、或关闭开关改变 action/params；届时移除比值尾缀即可恢复原观测。
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改在线状态、runs、archive、stats、policy.json、lessons 或 prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

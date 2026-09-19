@@ -3836,6 +3836,13 @@ class Policy:
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
                         _boss_gap = _boss_net_dpt - _boss_projected
+                        _boss_ratio = (_boss_net_dpt / _boss_projected
+                                       if _boss_projected > 0.0 else None)
+                        _boss_ratio_tail = ""
+                        if _boss_ratio is not None:
+                            _boss_ratio_tail = (
+                                f"；实际/投影比{_boss_ratio:.2f}"
+                                "（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）")
                         _boss_focus_tail = ""
                         if bool(pol.get("boss_race_focus_switch_obs", True)):
                             try:
@@ -3864,7 +3871,7 @@ class Policy:
                             f" vs 投影{_boss_projected:.1f}/回合"
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
-                            + _boss_focus_tail)
+                            + _boss_ratio_tail + _boss_focus_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
