@@ -11520,3 +11520,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
 
+
+## Review batch 1560: PATH_SURVIVAL_DOMINANCE_GUARD
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: `path_death_penalty` 的软饱和可能让“投影中途死亡”的路线继续压过一条能到达 Boss 且保有正血量的路线；当两者都存在时，生存路线应成为可观测的首选。
+- **EVIDENCE**: 精确批次 `ironclad` run `C4RTJU4TF4P6`（第1560局）F9 的决策链中，`Treasure(9,3)` 以 `-63.782` 被选中且预计进 Boss 血量为 `0%`、留痕“投影中途死亡”；`Treasure(9,2)` 预计存活约 `28.7%`，仍未被选中。该局随后在 F17 Boss 实战 8 回合、掉血 56 后 `GAME_OVER`。完整证据文件：`sts2-ascend/knowledge/runs/20260919-230506_C4RTJU4TF4P6.json`。
+- **EXPECTED_SIGNAL**: 后续 3~10 个相关地图窗口中，若死亡候选当前最高且另有到达 Boss 的存活候选，应出现 `PATH_SURVIVAL_DOMINANCE_GUARD` / `GATE 投影生存主导`，并选中存活候选；全候选死亡时行为不变。比较该 marker、选中路径 `projected_hp=0` 次数与随后 `GAME_OVER` 的时间关系；关闭开关应复现旧排序。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启的 `path_survival_dominance_guard`，可显式设为 `false` 回滚。
+- `sts2-ascend/brain/policy.py` 在候选评分完成后增加最小选择闸门：仅当当前最高分候选已投影死亡，且存在明确到达 Boss 的非死亡候选时，改在存活候选中按原分数排序；保留所有候选评分，并将切换原因写入候选留痕和 trace gate。无安全出口时不伪造可行路线。
+- `sts2-ascend/brain/selfcheck.py` 增加 3xy2-d：验证开关关闭的旧排序、开启后的存活让位、Boss 到达约束；既有 3xy2-c 继续覆盖全候选死亡资源偏好。
+
+### CONTINUE / ROLLBACK
+
+- 继续观察未来 3~10 局：按地图窗口统计 guard active、死亡/存活候选数、最终 `projected_hp`、F17/F18 后的 `GAME_OVER` 与实际楼层；若活路仍被选后快速阵亡，再回查路径伤害先验，不扩大本闸门范围。
+- 回滚条件：若出现合法存活候选被系统性误判，或 trace 与实际选择不一致，将 `path_survival_dominance_guard` 设为 `false`，保留失败样本和 selfcheck 对照；不得因短期胜率波动单独回滚。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+### VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **DIFF_CHECK_OK**。本批只修改静态项目文件，未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
