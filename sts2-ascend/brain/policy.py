@@ -6212,47 +6212,8 @@ class Policy:
                         f"竞速={bool(kill_race or race_allin)}，"
                         f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
                         "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
-            # 白绮致死可出牌空过观测（VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS，
-            # 第1307局F33-T7复盘新增，静态键）：该回合不是终端 blocked_by_hook
-            # 锁——服务端仍宣告牌可出，且费用落在当前能量内，但评分收口选择了
-            # end_turn。把牌清单与hp/意图/能量固定写入决策链，才能和
-            # VIVHITE_HP_TERMINAL_LOCK_OBS 的「全部非诅咒牌不可支付」分开计数；
-            # 纯观测锚，评分、候选、动作与参数零改动，键=0 严格回滚。
-            _lethal_playable_note = ""
-            try:
-                _lethal_playable_obs = bool(int(float(pol.get(
-                    "vivhite_lethal_playable_end_turn_obs", 1) or 0)))
-            except (TypeError, ValueError):
-                _lethal_playable_obs = False
-            if (_lethal_playable_obs
-                    and getattr(self.character_strategy, "profile_id", None)
-                    == VIVHITE_PROFILE_ID
-                    and bool(combat.get("end_turn_will_kill_player"))):
-                _lethal_playable_cards = []
-                for _card in hand:
-                    if (not _card.get("playable")
-                            or self._card_unavailable(_card)):
-                        continue
-                    _card_cost = (energy if _card.get("costs_x")
-                                  else (_card.get("energy_cost") or 0))
-                    if _card_cost < 0 or _card_cost > energy:
-                        continue
-                    if (_card.get("requires_target")
-                            and not _card.get("valid_target_indices")):
-                        continue
-                    _card_label = (_card.get("card_id")
-                                   or _card.get("name") or "?")
-                    _lethal_playable_cards.append(
-                        f"{_card_label}(cost={_card_cost})")
-                if _lethal_playable_cards:
-                    _lethal_playable_note = (
-                        f"；致死空过可出牌观测：hp={my_hp}/{my_max_hp}"
-                        f"/incoming={incoming}/energy={energy}"
-                        f"/kill_race={bool(kill_race)}/race_allin={bool(race_allin)}"
-                        f"/cards={','.join(_lethal_playable_cards)}"
-                        "（VIVHITE_LETHAL_PLAYABLE_END_TURN_OBS）")
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}{_lethal_playable_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
