@@ -14615,3 +14615,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.5733054767104235局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.72208502860435局)，VIVHITE_CARD_PREFETCH_FUTURE(22分/5.41937132651645局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿11张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.38 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.02 → 2.01（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1325 胜，当前目标进阶 3
+
+## 第 1326 局复盘（2026-09-20 01:33）
+- 结果：💀 失败｜进阶 3｜到达层数 15｜当局评分 15
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_PREFETCH_FUTURE, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：VENERABLE_TEA_SET, VAJRA
+- 战斗记录：F4 Monster战 掉血12｜自损12（可行动段12/非行动段14，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血28｜自损14（可行动段14/非行动段24，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血41｜自损26（可行动段26/非行动段28，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战6回合获胜; F14 Monster战 掉血0｜自损10（可行动段10/非行动段12，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血40｜自损14（可行动段14/非行动段16，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BOLAS(38分/2.0326420306102633局)，REND(38分/5.943696650189744局)，FISTICUFFS(35分/9.728900171912292局)，AUTOMATION(34分/6.610835421378796局)，THINKING_AHEAD(34分/6.52322356799505局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/6.400403526873643局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.557298907541937局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.712557731004235局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：3/1326 胜，当前目标进阶 3
