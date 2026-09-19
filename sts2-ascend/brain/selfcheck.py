@@ -6866,23 +6866,22 @@ def main() -> int:
     assert sl_pol._enemy_slippery_stack(sl_identity) == 8, \
         f"真实 power_id 被无关 id 短路: {sl_identity['powers']}"
 
-    # 无滑溜/零层严格保留旧计分；高层时每个穿甲 hit 只记1，且单体烧墙
-    # 按破层/能耗排序，避免高价牌与低价牌在实际收益相同的窗口打平。
+    # 无滑溜/零层严格保留旧计分；高层时不发“破层信用”，每个穿甲 hit 只记 1。
     s_plain, _, why_plain = sl_score(sl_bludgeon, sl_enemy(layers=None))
     s_zero, _, why_zero = sl_score(sl_bludgeon, sl_enemy(layers=0))
     s_sl_bludgeon, _, why_sl_bludgeon = sl_score(sl_bludgeon, sl_enemy(layers=8))
     s_sl_twin, _, why_sl_twin = sl_score(sl_twin, sl_enemy(layers=8))
     assert math.isclose(s_plain, 32.0) and math.isclose(s_zero, s_plain), \
         f"普通敌人旧评分回归: plain={s_plain} zero={s_zero} why={why_plain}/{why_zero}"
-    assert math.isclose(s_sl_bludgeon, 5.0 / 3.0) and math.isclose(s_sl_twin, 6.0), \
-        f"滑溜逐 hit/烧墙效率计分失效: hammer={s_sl_bludgeon} twin={s_sl_twin}"
+    assert math.isclose(s_sl_bludgeon, 1.0) and math.isclose(s_sl_twin, 2.0), \
+        f"滑溜逐 hit 计分或零信用失效: hammer={s_sl_bludgeon} twin={s_sl_twin}"
     assert s_sl_twin > s_sl_bludgeon and "预计破1层" in why_sl_bludgeon \
             and "预计破2层" in why_sl_twin, \
         f"多段牌未正确优先: hammer={why_sl_bludgeon} twin={why_sl_twin}"
 
     # 第760~765批复盘 SLIPPERY_BURN_AUDIT（失败包 5274ccbe 补合）：高价单发
     # 烧层（重锤 1/3）与廉价多段烧层（双击 2/1）的留痕必须披露每费破层率与
-    # 零意图标记；现在由 SLIPPERY_BURN_EFFICIENCY 把该差异落实到排序分。
+    # 零意图标记；纯文本观测注，一阶分账不得漂移（上方 isclose 断言即守卫）。
     assert "滑溜烧墙审计：每费破层0.33" in why_sl_bludgeon \
             and "滑溜烧墙审计：每费破层2.00" in why_sl_twin, \
         f"滑溜烧墙审计注缺失或口径漂移: hammer={why_sl_bludgeon} twin={why_sl_twin}"
@@ -10762,60 +10761,6 @@ def main() -> int:
     assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" not in \
         d_combat_slippery_effective_off.reason, \
         f"滑溜有效火力对账开关未严格回滚: {d_combat_slippery_effective_off.reason}"
-
-    # 3br-burn-efficiency：第1565局 F17 的最小行为夹具。CINDER(2费) 与
-    # STRIKE(1费) 对8层 Slippery 都只造成1点实际移除；新口径应优先低费
-    # STRIKE，且关闭键必须恢复旧的手牌顺序/面值平局。该断言同时验证生产
-    # 行为（动作与 card_index）和可审计原因，不接受仅增加观测尾缀。
-    def burn_efficiency_probe(enabled=True):
-        burn_state = {
-            "screen": "COMBAT",
-            "available_actions": ["play_card", "end_turn"],
-            "turn": 1,
-            "combat": {
-                "player": {"current_hp": 80, "max_hp": 80,
-                            "block": 0, "energy": 3},
-                "hand": [
-                    {"index": 0, "card_id": "CINDER", "name": "余烬",
-                     "card_type": "Attack", "playable": True,
-                     "energy_cost": 2, "requires_target": True,
-                     "valid_target_indices": [0],
-                     "dynamic_values": [{"name": "Damage", "current_value": 18}]},
-                    {"index": 1, "card_id": "STRIKE", "name": "打击",
-                     "card_type": "Attack", "playable": True,
-                     "energy_cost": 1, "requires_target": True,
-                     "valid_target_indices": [0],
-                     "dynamic_values": [{"name": "Damage", "current_value": 6}]},
-                ],
-                "enemies": [{"index": 0, "enemy_id": "BURN_BOSS",
-                              "name": "滑溜首领", "current_hp": 185,
-                              "max_hp": 185, "block": 0, "is_alive": True,
-                              "is_hittable": True,
-                              "intents": [{"total_damage": 0}],
-                              "powers": [{"id": "SLIPPERY_POWER", "amount": 8}]}],
-            },
-            "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
-                    "floor": 17, "deck": []},
-        }
-        burn_know = knowledge.Knowledge(
-            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-burn-efficiency-")))
-        burn_know.policy["slippery_burn_efficiency"] = enabled
-        burn_pol = policy.Policy(burn_know, random.Random(17))
-        burn_ctx = type("BURNCtx", (), {
-            "combat": {"comp_id": "BURN_BOSS", "node_type": "Boss"},
-            "current_combat_is_hard": False, "credit_tags": []})()
-        return burn_pol.decide(burn_state, burn_ctx)
-
-    d_burn_eff = burn_efficiency_probe()
-    assert (d_burn_eff.action == "play_card"
-            and d_burn_eff.params.get("card_index") == 1
-            and "SLIPPERY_BURN_EFFICIENCY" in d_burn_eff.reason), \
-        f"滑溜烧墙未优先低费破层: {d_burn_eff.action}（{d_burn_eff.reason}）"
-    d_burn_eff_rb = burn_efficiency_probe(False)
-    assert (d_burn_eff_rb.action == "play_card"
-            and d_burn_eff_rb.params.get("card_index") == 0
-            and "SLIPPERY_BURN_EFFICIENCY" not in d_burn_eff_rb.reason), \
-        f"滑溜烧墙效率开关未严格回滚旧排序: {d_burn_eff_rb.action}（{d_burn_eff_rb.reason}）"
 
     # 3br-boss-effective-dpt：普通 Boss 竞速在判死/入锁后也必须对账实际
     # 敌血净降与投影 dpt。1205-F33 的 CRUSHER+ROCKET 没有滑溜层，旧的

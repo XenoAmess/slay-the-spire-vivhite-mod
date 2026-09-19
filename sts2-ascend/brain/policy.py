@@ -6922,23 +6922,6 @@ class Policy:
                         s += _damp_add
                 if killed:
                     s += self._kill_bonus(e, threat, incoming, pol, ignore_respawn=all_respawn)
-                # 滑溜烧墙效率排序（SLIPPERY_BURN_EFFICIENCY）：第1565局 F17
-                # VANTOM 仍有8层时，2费 CINDER 与1费 STRIKE 都只换来1点
-                # 实际移除；旧面值排序把高价牌与低价牌视为同值，烧墙期会先
-                # 消耗昂贵能量。仅对未击杀、实际移除不超过破层收益的单体攻击
-                # 加入每费破层回报；一旦同牌已穿过破层窗口（eff>broken），
-                # 或生命支付闸已拦截，保持原有伤害/生存评分。关闭键严格回滚。
-                _burn_efficiency_bonus = 0.0
-                if (bool(pol.get("slippery_burn_efficiency", True))
-                        and slippery > 0
-                        and slippery_broken > 0
-                        and not killed
-                        and float(eff) <= float(slippery_broken) + 1e-9):
-                    try:
-                        _burn_efficiency_bonus = 2.0 * float(slippery_broken) / max(
-                            1.0, float(cost))
-                    except (TypeError, ValueError, OverflowError):
-                        _burn_efficiency_bonus = 0.0
                 # 滑溜破层抵扣（VIVHITE_RACE_PAYBACK_SLIPPERY_CREDIT，
                 # 第386~391局批复盘）：滑溜层把每次命中压成 1 点实际移除，
                 # 但破层本身是解锁后续全额伤害的必经进度，旧口径只按当次
@@ -6963,8 +6946,6 @@ class Policy:
                     and not killed)
                 if _payback_blocked:
                     s = floor_score
-                elif _burn_efficiency_bonus > 0.0:
-                    s += _burn_efficiency_bonus
                 # 去分对照分：减员分剔除；粘性曾被该候选的减员分休眠时复活
                 # （_doctrine_present 全局休眠口径与减员分无关，两边一致）。
                 if _payback_blocked:
@@ -7009,12 +6990,8 @@ class Policy:
                     if slippery > 0:
                         why += (f"｜滑溜{slippery:g}层，逐段折算≈{eff:.1f}，"
                                 f"预计破{slippery_broken}层")
-                        if _burn_efficiency_bonus > 0.0:
-                            why += (f"｜滑溜烧墙效率排序+{_burn_efficiency_bonus:.2f}"
-                                    "（每费破层优先，SLIPPERY_BURN_EFFICIENCY）")
                         # SLIPPERY_BURN_AUDIT（第760~765批复盘补合失败包
-                        # 5274ccbe 新增）：上方效率排序已负责行为变化，本段仍只
-                        # 披露每费破层率与零意图上下文。765-F17 全链实证——
+                        # 5274ccbe 新增，纯观测不改分）：765-F17 全链实证——
                         # T1~T5 烧墙期 13 费只换 7 点输出（每费 0.54），重锤
                         # (3费)与打击(1费)的逐段折算产出完全相同，高价单发
                         # 烧层在零意图蓄力回合白费 2~3 费能量；765 局把 Boss
