@@ -1384,7 +1384,10 @@ def main() -> int:
     #      的神官本回合零伤害意图（治疗/增益型）——威胁分成恒为 0，旧评分永远把它排
     #      最后，信徒被持续强化、意图逐轮滚升，拖长战斗正是死因形态。零伤害意图的
     #      辅助体获得定向转火加分；负例：辅助体转为攻击意图后恢复常规威胁评分。
-    def support_state(sup_threat):
+    def support_state(sup_threat, sup_intent_type=None):
+        _sup_intent = {"total_damage": sup_threat}
+        if sup_intent_type is not None:
+            _sup_intent["intent_type"] = sup_intent_type
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
             "combat": {"player": {"current_hp": 70, "max_hp": 80, "block": 0, "energy": 3},
@@ -1396,7 +1399,7 @@ def main() -> int:
                            {"index": 0, "enemy_id": "KIN_PRIEST_T", "name": "同族神官",
                             "current_hp": 30, "max_hp": 50, "block": 0, "is_alive": True,
                             "is_hittable": True,
-                            "intents": [{"total_damage": sup_threat}]},
+                            "intents": [_sup_intent]},
                            {"index": 1, "enemy_id": "KIN_FOLLOWER_T", "name": "同族信徒",
                             "current_hp": 120, "max_hp": 190, "block": 0, "is_alive": True,
                             "is_hittable": True,
@@ -1416,6 +1419,29 @@ def main() -> int:
     assert d_sup2.action == "play_card" and d_sup2.params.get("target_index") == 1 \
         and "辅助体优先转火" not in d_sup2.reason, \
         f"辅助体转攻击意图后应恢复威胁评分: {d_sup2.reason}（{d_sup2.params}）"
+
+    # 3yhd) 零伤害 DebuffIntent 不是辅助体（SUPPORT_TARGET_DEBUFF_VETO）：
+    #      1558-F6 的 SHRINKER_BEETLE 使用 DebuffIntent(Shrink)，此前被误写成
+    #      「辅助体优先转火」；保留旧开关可审计恢复旧目标排序。
+    debuff_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-support-debuff-")))
+    debuff_pol = policy.Policy(debuff_know, random.Random(11))
+    d_sup_debuff = debuff_pol.decide(support_state(0, "Debuff"), ctx)
+    assert d_sup_debuff.action == "play_card" \
+        and d_sup_debuff.params.get("target_index") == 1 \
+        and "辅助体优先转火" not in d_sup_debuff.reason \
+        and "SUPPORT_TARGET_DEBUFF_VETO" in d_sup_debuff.reason, \
+        f"零伤害减益不应吃辅助转火加分: {d_sup_debuff.reason}（{d_sup_debuff.params}）"
+    debuff_rb_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-support-debuff-rb-")))
+    debuff_rb_know.policy["support_target_debuff_veto"] = False
+    debuff_rb_pol = policy.Policy(debuff_rb_know, random.Random(11))
+    d_sup_debuff_rb = debuff_rb_pol.decide(support_state(0, "Debuff"), ctx)
+    assert d_sup_debuff_rb.action == "play_card" \
+        and d_sup_debuff_rb.params.get("target_index") == 0 \
+        and "辅助体优先转火" in d_sup_debuff_rb.reason \
+        and "SUPPORT_TARGET_DEBUFF_VETO" not in d_sup_debuff_rb.reason, \
+        f"support_target_debuff_veto=False 未严格回滚旧排序: {d_sup_debuff_rb.reason}（{d_sup_debuff_rb.params}）"
 
     # 3yhr) 减员成本转火（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：
     #      真实同族双子血池口径（神官 190 / 信徒 58——3yh 旧夹具把两者血池
