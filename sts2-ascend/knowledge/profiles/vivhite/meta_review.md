@@ -4327,3 +4327,56 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1315~1316 局批复盘：致死空过与终端生命锁前置分离
+
+日期：2026-09-19
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮在 Boss 致死空过收口时，可能仍有费用可负担且目标合法的
+  可玩牌被评分压过出牌线；这与下一状态才出现的生命支付终端锁不是同一原因。
+  若把两者分别标记，才能验证「评分拒绝空过→下一状态终端锁→掉血/GAME_OVER」
+  的链条，而不把前置误报为 `blocked_by_hook`。该假设只影响观测，不预设应当
+  放行这张牌。
+- **EVIDENCE**：1316 局精确失败运行 `J0E3X3HJWLJL` 的完整 453 条决策已回读。
+  F33 索引 449 为 2 HP、0 格挡、21 点来袭、3 能量，`羽化` 原生 `playable=true`
+  且费用 2，但候选分 `-50.0`，最终 `end_turn`；索引 450 仅打出免费星体测度，
+  索引 451 才出现 4/4 `blocked_by_hook` 的 `VIVHITE_HP_TERMINAL_LOCK_OBS`，
+  下一条为 `GAME_OVER`。1315/1316 均在 F33 失败，且已有同回合自损/竞速观测作为
+  交叉证据。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立白绮 Boss 战统计
+  `VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS` 的牌清单、hp/block/incoming/energy、
+  服务端致死来源，并对账其后是否出现 `VIVHITE_HP_TERMINAL_LOCK_OBS`、下一条
+  是否继续出牌或 `GAME_OVER`。若 F33 型状态缺标、非白绮/非致死误触发，或关闭
+  观测键后动作/参数变化，则假设或实现被证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `vivhite_lethal_end_turn_playable_obs` 静态回滚键。
+- `sts2-ascend/brain/policy.py`：在白绮、本地致死、评分收口为 `end_turn` 且仍有
+  可负担可玩牌时追加 `VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS`，记录牌 ID、hp、
+  block、incoming、energy 与服务端致死标志；不改评分、候选资格、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 F33 型 `METAMORPHOSIS` 夹具，验证
+  开启标记、关闭键动作/参数零差异、非致死不标记。
+- 未修改 runs、stats、policy.json、lessons.md、`.runtime`、归档或任务书；宿主
+  已有的 assets 删除状态与 `.review-cache` 未纳入本批。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：退出码 0；最终目标 diff 仅含上述三个脑文件
+  及本报告/短评，未纳入宿主既有现场变更。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局先收集至少 3 场独立 Boss 对账：标记前后动作、终端锁、下一状态
+  和最终胜负；标记本身不作为应当出牌或胜利证据。
+- 若牌清单与原生 `playable`/费用/目标不符、非致死或非白绮触发、与终端锁链无法
+  对账，或键=0 后动作/参数漂移，将 `vivhite_lethal_end_turn_playable_obs` 设为
+  `0`；必要时回滚本地提交，旧的评分收口和终端锁行为保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

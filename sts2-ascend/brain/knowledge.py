@@ -819,6 +819,11 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
+    "vivhite_lethal_end_turn_playable_obs": 1,  # 白绮致死空过可行动牌观测（VIVHITE_LETHAL_END_TURN_PLAYABLE_OBS，
+                                      # 第1316局F33索引449）：本地致死空过时仍有可负担、目标合法的可玩牌，
+                                      # 但评分全部低于出牌线；与后续 VIVHITE_HP_TERMINAL_LOCK_OBS 串联，区分
+                                      # 「评分拒绝导致的致死空过」和「下一状态已被生命支付锁死」。只追加手牌/生命/
+                                      # 能量/来袭与服务端致死来源，不改评分、动作或候选资格。0=关闭注记，非白绮零改动
     "ritual_window_skip_obs": 1,        # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
                                         # 批复盘新增，静态键）：0费、自身零血税的猩红转化仪式被无上限长线估值
                                         # 压在出牌线下——1275 局 F33 T1（77/84血、意图0）可出未出空过，全场
