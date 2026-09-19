@@ -10630,8 +10630,7 @@ def main() -> int:
                           esc_rounds=2, hand_override=None,
                           intangible=False, intangible_obs=True,
                           effective_dpt_obs=True, sample_effective_round=False,
-                          boss_effective_dpt_obs=True, vivhite=False,
-                          self_pay_rate=None, self_pay_terminal_obs=True):
+                          boss_effective_dpt_obs=True, vivhite=False):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10682,8 +10681,6 @@ def main() -> int:
         cap_pol._krace_latch = latched
         cap_pol._race_rounds = 2
         cap_pol._race_loss_rate = 20.0
-        if self_pay_rate is not None:
-            cap_pol._race_self_paid_rate = float(self_pay_rate)
         cap_pol._incoming_ema = 20.0
         cap_pol._esc_rounds = esc_rounds
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
@@ -10699,8 +10696,6 @@ def main() -> int:
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
         cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
-        cap_pol.know.policy[
-            "vivhite_race_self_pay_terminal_obs"] = self_pay_terminal_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
@@ -10780,24 +10775,6 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
-
-    d_combat_self_pay_terminal = combat_flip_probe(
-        1.5, vivhite=True, self_pay_rate=20.0)
-    assert ("VIVHITE_RACE_SELF_PAY_TERMINAL_OBS"
-            in d_combat_self_pay_terminal.reason
-            and "hp=46" in d_combat_self_pay_terminal.reason
-            and "自付20.0/回合" in d_combat_self_pay_terminal.reason), \
-        f"白绮自付终端窗口观测缺失: {d_combat_self_pay_terminal.reason}"
-    d_combat_self_pay_terminal_off = combat_flip_probe(
-        1.5, vivhite=True, self_pay_rate=20.0,
-        self_pay_terminal_obs=False)
-    assert (d_combat_self_pay_terminal_off.action
-            == d_combat_self_pay_terminal.action
-            and d_combat_self_pay_terminal_off.params
-            == d_combat_self_pay_terminal.params
-            and "VIVHITE_RACE_SELF_PAY_TERMINAL_OBS"
-            not in d_combat_self_pay_terminal_off.reason), \
-        f"白绮自付终端窗口开关未严格回滚: {d_combat_self_pay_terminal_off.reason}"
 
     # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
     # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的

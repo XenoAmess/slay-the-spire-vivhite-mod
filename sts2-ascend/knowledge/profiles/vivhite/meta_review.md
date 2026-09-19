@@ -4327,35 +4327,3 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
-
-# 第 1324~1327 局批复盘：白绮自付终端窗口收口观测
-
-日期：2026-09-20
-批次：1324~1327
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：在白绮的已判负竞速中，若自付速率不低于敌方净损，且把自付并入后存活视界不超过 2 回合，则这是一个可复核的「自付预算耗尽」终端窗口，区别于普通敌方伤害主导。该假设可证伪：未来 3~10 场独立白绮战斗若标记在非竞速/非白绮路径出现，或标记后经常继续存活并获胜，则假设不成立。
-- **EVIDENCE**：1324 局汇总为自损 33、敌方净损 81，Boss 竞速 T2 预测死亡→实际约 7 回合；1325 局为自损 30、敌方净损 67，T2→约 6 回合；1326 局在精英战出现自损 14/26 的终端失败；1327 局为 F17 Boss，自损 42、敌方净损 91，T2→约 7 回合。精确原始链 `runs/20260920-013355_F1Z01M1S10P4.json`（269 条决策、459549 字节，victory=false，death=`SOUL_FYSH`）显示：决策 227 在 Boss 前选择买活；决策 262 已出现 `VIVHITE_RACE_SELF_LOSS_DOMINATES`，自付 6.2/回合≥敌方净损 6.1/回合，并入自付后的存活视界由 3.4 降至 1.7 回合；决策 264~266 连续进入致死竞速留痕，决策 268 `GAME_OVER`。这给出了“速率主导 + ≤2 回合 + 随后终局”的最小观测切片。
-- **EXPECTED_SIGNAL**：后续 3~10 场独立白绮竞速失败中统计 `VIVHITE_RACE_SELF_PAY_TERMINAL_OBS` 的触发回合、标记后的下一状态、`GAME_OVER`/胜负和实际终局回合；标记应集中在白绮、竞速已判负、自付主导且并入存活≤2回合的窗口，不应改变动作。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py` 新增默认开启的 `vivhite_race_self_pay_terminal_obs`，值为 0 时严格关闭该注记。
-- `sts2-ascend/brain/policy.py` 在已有竞速投影中计算 `hp / (敌方净损速率 + 自付速率)`；仅当 profile 为白绮、自付速率主导、结果≤2.0 回合且 `race_lost` 时追加 `VIVHITE_RACE_SELF_PAY_TERMINAL_OBS`。这是最小生产观测改动，不改变评分、候选、目标、动作、`ttk` 或 `tsurv` 判决。
-- `sts2-ascend/brain/selfcheck.py` 增加白绮正例与关闭开关反例；关闭后断言 action/params 逐项一致且标记消失。
-- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、任务书或在线进程。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
-- `git diff --check -- sts2-ascend`：退出码 0；报告写入前已复读目标 diff，代码变更仅为上述三个脑文件。
-
-## FOLLOW-UP / ROLLBACK
-
-- 后续 3~10 场保持失败关闭式观测：核对新标记是否只落在上述窗口，以及标记后是否通常在 1~2 回合内终局；若标记后稳定继续战斗或获胜，或出现非白绮/非竞速误报，则判假设失败并停止扩展。
-- 发现误报时将 `vivhite_race_self_pay_terminal_obs` 置 0；必要时回滚本地提交。保留原始批次与本次注记，先用后续证据复核，不把观测直接升级为行为改动。
-
-## REPLAY
-
-本批 `failed_review_replay.requested_packages` 为空，无重放目标。
