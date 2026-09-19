@@ -3221,6 +3221,31 @@ class Policy:
                     f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
                     f"/latent={','.join(_latent)}"
                     f"/hp={my_hp}/block={my_block}/incoming={incoming}")
+            _lethal_end_turn_note = ""
+            try:
+                _lethal_end_turn_obs = bool(int(float(pol.get(
+                    "vivhite_boss_lethal_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _lethal_end_turn_obs = False
+            _combat_meta = getattr(ctx, "combat", None)
+            _is_vivhite_boss = (
+                getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID
+                and isinstance(_combat_meta, dict)
+                and _combat_meta.get("node_type") == "Boss")
+            _native_end_turn_lethal = bool(
+                combat.get("end_turn_will_kill_player"))
+            _arithmetic_end_turn_lethal = incoming >= (my_hp + my_block)
+            if (_lethal_end_turn_obs and _is_vivhite_boss
+                    and (_native_end_turn_lethal or _arithmetic_end_turn_lethal)):
+                _lethal_end_turn_note = (
+                    f"｜Boss致死空过观测：hp={my_hp}/block={my_block}"
+                    f"/incoming={incoming}/energy={energy}/round={round_no}"
+                    f"/native_end_turn_lethal="
+                    f"{'yes' if _native_end_turn_lethal else 'no'}"
+                    f"/arithmetic_lethal="
+                    f"{'yes' if _arithmetic_end_turn_lethal else 'no'}"
+                    "（VIVHITE_BOSS_LETHAL_END_TURN_OBS）")
             if self._saw_playable_this_turn:
                 if self._end_stall < 2:
                     return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
@@ -3231,7 +3256,8 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}"
+                    f"{_lethal_end_turn_note}{_ff_tax_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)

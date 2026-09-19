@@ -4327,3 +4327,47 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1335~1336 局批复盘：Boss 致死空过收口的可验证观测
+
+日期：2026-09-20
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮 Boss 战在已经进入出牌态后，若当前回合手牌全部不可负担，策略会提交
+  「确认无牌可出」的 `end_turn`；当该回合的来袭已经覆盖 `hp+block` 时，这个收口是可独立
+  对账的致死事件，而不是既有的生命支付 `blocked_by_hook` 终端锁。假设可证伪：若未来
+  3~10 局的该标记连续出现，却没有下一状态实际掉血或 `GAME_OVER`，则标记口径或归因错误。
+- **EVIDENCE**：精确失败运行 `16M5SFGU7YPE`（第1336局）F35 Boss，完整 640 条决策已读。
+  T4 已判死但实战拖至 T9；索引 638 的 `end_turn` 为 HP 6、格挡 0、来袭 26、能量 0，
+  手牌 4 张均为 1 费且 `not_enough_energy`，下一条索引 639 为 `GAME_OVER`。该帧没有
+  `blocked_by_hook` 终端锁；此前的 `BOSS_RACE_EFFECTIVE_DPT_OBS` 与换线观测只覆盖中段，
+  没有为终局空过留下稳定事件键。1335 局 F33 作为同批失败对照，不强行外推该签名。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立 Boss 战统计
+  `VIVHITE_BOSS_LETHAL_END_TURN_OBS`、下一状态 HP/`GAME_OVER`、原生致死标志与算术致死
+  标志；至少 3 个标记样本中若多数紧随实际致死，支持“终局收口可切片”假设；若出现
+  3 个标记而均未致死，或非白绮/非 Boss 触发，立即将键置 0 并回滚归因。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在白绮 Boss、已进入出牌态且被迫「无牌可出」结束回合的
+  收口处，追加 `VIVHITE_BOSS_LETHAL_END_TURN_OBS`；同时记录
+  `native_end_turn_lethal` 与 `arithmetic_lethal`、hp/block/incoming/energy/round。该改动
+  只写 reason 观测，不改变评分、候选、等待预算、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启键
+  `vivhite_boss_lethal_end_turn_obs`；设为 0 即严格回滚注记。
+- `sts2-ascend/brain/selfcheck.py`：新增 F35 形态白绮 Boss 夹具，验证观测命中、双致死口径
+  及关闭后动作/参数一致。
+- 未修改 `runs/`、profile 在线 `stats/policy/lessons`、`.runtime`、归档、任务书；宿主预置
+  的 `assets/` 长路径删除状态与 `.review-cache/` 未纳入本批成果。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：退出码 0；报告写入前已回读生产 diff，确认只有一个观测闭环。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局以独立 Boss 战为单位核对 marker→下一状态实际掉血/终局；不满足预注册信号
+  时将 `vivhite_boss_lethal_end_turn_obs` 置 0，动作与参数恢复旧文案；必要时回滚本地提交。
+- `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
