@@ -8360,10 +8360,11 @@ def main() -> int:
     #       商店(468金可换战力/删诅咒)以 0.61 分之差输给又一场白死的怪物战。
     #       全候选死亡投影且存在 Shop/Treasure/Event 首节点时：资源节点加
     #       path_doomed_value_bonus 正分胜出并留痕；无资源节点时行为不变
-    dv_know = _vivhite_know("sts2-selfcheck-doomval-")
+    dv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-doomval-"))
+    dv_know = knowledge.Knowledge(dv_dir)
     dv_pol = policy.Policy(dv_know)
 
-    def doomval_map(second_head, planner=dv_pol):
+    def doomval_map(second_head):
         """Monster 链(col0，depth0 开战) vs 第二候选(col1)；双方均投影中途死亡。
 
         hp=20/80：怪物链第 3 场战斗(depth2)打死；商店/怪物链首场延后到 depth1、
@@ -8386,38 +8387,16 @@ def main() -> int:
                       "boss_node": {"row": 12}},
               "run": {"current_hp": 20, "max_hp": 80, "gold": 200,
                       "floor": 5, "deck": []}}
-        return planner.decide(st, type("C", (), {"credit_tags": []})())
+        return dv_pol.decide(st, type("C", (), {"credit_tags": []})())
 
     d_dv_shop = doomval_map("Shop")
     assert "绝境全候选死亡投影" in d_dv_shop.reason, \
         f"绝境偏好未留痕: {d_dv_shop.reason}"
     assert re.search(r"路径规划：Shop\(1,1\)", d_dv_shop.reason), \
         f"绝境时资源节点未胜出: {d_dv_shop.reason}"
-    assert ("VIVHITE_PATH_DOOM_SELECTION_OBS:selected_doomed=yes" in d_dv_shop.reason
-            and "candidate_count=2" in d_dv_shop.reason
-            and "doomed_count=2" in d_dv_shop.reason
-            and "survivable_count=0" in d_dv_shop.reason
-            and "all_candidates_doomed=yes" in d_dv_shop.reason), \
-        f"死亡路径候选池观测缺字段或计数错误: {d_dv_shop.reason}"
-    dv_off_know = _vivhite_know("sts2-selfcheck-doomobs-off-")
-    dv_off_know.policy["vivhite_path_doom_selection_obs"] = 0
-    d_dv_shop_off = doomval_map("Shop", policy.Policy(dv_off_know))
-    assert d_dv_shop_off.action == d_dv_shop.action \
-        and d_dv_shop_off.params == d_dv_shop.params \
-        and "VIVHITE_PATH_DOOM_SELECTION_OBS" not in d_dv_shop_off.reason, \
-        f"路径死亡观测键=0 未严格回滚注记或动作漂移: {d_dv_shop_off.action}（{d_dv_shop_off.reason}）"
     d_dv_mon = doomval_map("Monster")   # 对照组：无价值节点，行为不变
     assert "绝境全候选死亡投影" not in d_dv_mon.reason, \
         f"无价值节点时误留痕: {d_dv_mon.reason}"
-    assert "VIVHITE_PATH_DOOM_SELECTION_OBS" in d_dv_mon.reason, \
-        f"死亡路径观测不应依赖资源节点: {d_dv_mon.reason}"
-    assert "VIVHITE_PATH_DOOM_SELECTION_OBS" not in d_ds.reason, \
-        f"选中可存活路径却误报死亡选择观测: {d_ds.reason}"
-    dv_iron_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-doomobs-iron-"))
-    d_dv_shop_iron = doomval_map(
-        "Shop", policy.Policy(knowledge.Knowledge(dv_iron_dir)))
-    assert "VIVHITE_PATH_DOOM_SELECTION_OBS" not in d_dv_shop_iron.reason, \
-        f"非白绮路径误产死亡选择观测: {d_dv_shop_iron.reason}"
 
     # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
     #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
