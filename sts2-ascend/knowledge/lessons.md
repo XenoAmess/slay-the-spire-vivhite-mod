@@ -12778,3 +12778,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.130678985729357局)，BASH(14分/3.495189911001765局)，BODY_SLAM(15分/2.5199290316585863局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1562 胜，当前目标进阶 0
+
+## 第 1563 局复盘（2026-09-20 02:14）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：SWORD_BOOMERANG, BREAKTHROUGH, HEMOKINESIS, STOMP, SPITE, ROLLING_BOULDER, STONE_ARMOR, TRUE_GRIT, HEADBUTT, SWORD_BOOMERANG, BATTLE_TRANCE, UNMOVABLE, FLAME_BARRIER, DISMANTLE, HOWL_FROM_BEYOND, UPPERCUT, INFLAME, FEED, SWORD_BOOMERANG, SWORD_BOOMERANG, EVIL_EYE, FEEL_NO_PAIN, TAUNT, BREAKTHROUGH, CINDER, RUPTURE
+- 本局遗物：STRIKE_DUMMY, GORGET, MEAL_TICKET, RED_MASK, LASTING_CANDY, WAR_PAINT
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血2; F24 Monster战 掉血23｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）; F30 Unknown战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血0｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血87｜自损1（可行动段1/非行动段56，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.206650089387968局)，ASHEN_STRIKE(26分/2.4223243068488616局)，PERFECTED_STRIKE(25分/3.9535072671157705局)，PACTS_END(25分/74.5945426553876局)，FEED(25分/39.34537436354184局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.116221609279305局)，BASH(14分/3.482956746313259局)，BODY_SLAM(15分/2.5111092800477812局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血87，每回合17≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.38 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
+- 生涯战绩：0/1563 胜，当前目标进阶 0
