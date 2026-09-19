@@ -411,3 +411,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-16 23:12:47 | 第 1520~1524 局 | `ea57c19e` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `b42152ae` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 b42152ae 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260918-005804-1789664284472436700-c8af6c7c -->
 | 2026-09-18 00:58:04 | 第 1276~1296 局 | `c8af6c7c` | 维护中断/取消（lifecycle_stop） | kimi-k3 (opencode/kimi-for-coding/k3) | kimi-k3 (opencode/kimi-for-coding/k3) 已补合并闭环 `96808030` | （闭环清理） | kimi-k3 (opencode/kimi-for-coding/k3) 重审结论与提交 96808030 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260920-032831-1789846111043194400-d0fbdf46 -->
+| 2026-09-20 03:28:31 | 第 1564 局 | `d0fbdf46` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260920-032831-1789846111043194400-d0fbdf46` | 隔离 clone checkout 失败：fatal: Out of memory, realloc failed |
