@@ -487,6 +487,9 @@ DEFAULT_POLICY = {
     "boss_race_focus_switch_obs": True,  # Boss 竞速有效火力对账的换线上下文（BOSS_RACE_FOCUS_SWITCH_OBS）：
                                          # 在已有跨回合净降/投影标记旁披露此前实际非击杀换线次数
                                          # 与当前火线，纯观测不改评分、判决或动作；False=严格回滚
+    "boss_eve_decision_obs": True,  # Boss 前夜裁决快照（BOSS_EVE_DECISION_OBS）：
+                                    # 记录回血后余量、悲观战损、竞速/审计闸与最终分支，
+                                    # 纯观测不改评分、判决或动作；False=严格回滚
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否

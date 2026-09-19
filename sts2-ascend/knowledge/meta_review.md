@@ -11541,3 +11541,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；本批 `git diff --check` → **DIFF_CHECK_OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## Review batch 1564: BOSS_EVE_DECISION_OBS
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 前夜「必败弃疗改锻造」可能把悲观战损、回血后余量与竞速/审计闸的最终裁决压缩成一段不可分解的理由，导致 F16 的锻造选择无法与 F17 的实际整管战损逐项对账；该假设可证伪。
+- **EVIDENCE**：精确 run `B7KH464W8C6L`（第 1564 局）保留 123/234 条决策，F16 记录当前 91%、悲观战损 83、回血后余量仍低于安全余量并改锻造；F17 最终实际掉血 73 后 `GAME_OVER`。现有生产链没有结构化的 Boss 前夜分支快照，无法区分竞速判死、审计覆盖和回血后余量。
+- **EXPECTED_SIGNAL**：未来 3~10 个 Boss 前夜样本应出现 `BOSS_EVE_DECISION_OBS`，含分支、HP、历史战损样本、悲观战损、安全余量、有效回血、回血后余量及闸状态；按分支与后续 Boss 结果核对，若输入与分支能解释 F16 类结果则假设获得支持，否则削弱。关闭开关时 marker 消失且 action/params 不变。
+
+### MINIMUM_CHANGE
+
+- `brain/knowledge.py` 新增默认开启、可回滚的 `boss_eve_decision_obs`。
+- `brain/policy.py` 仅在 Boss 前夜关键「审计回血」与「判死改锻造」返回理由追加 `BOSS_EVE_DECISION_OBS` 快照，不改变评分、判决、动作或参数。
+- `brain/selfcheck.py` 增加两条分支 marker 断言，并验证关闭开关的 action/params 严格一致。
+
+### CONTINUE / ROLLBACK / VALIDATION
+
+- 继续条件：下一窗口至少取得 1 个带快照的 Boss 前夜样本，并按 `post` 与最终 Boss 结果核对；没有结果前不改策略行为。
+- 撤回条件：发现快照字段与实际分支错配，或关闭开关改变 action/params，则将 `boss_eve_decision_obs` 设为 `False` 并保留失败链。
+- `retry_resolution: 20260920-032831-1789846111043194400-d0fbdf46 integrated`
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **DIFF_CHECK_OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
+
