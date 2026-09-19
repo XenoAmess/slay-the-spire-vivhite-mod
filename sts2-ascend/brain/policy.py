@@ -6992,9 +6992,22 @@ class Policy:
                     # 「无实体窗口攻击折价」在产频率，并核对「可击杀」不再穿透
                     # 无实体（1440 局前 SOUL_FYSH 被误判重生体入册的污染源）。
                     # 键=False 与击杀穿透（hp≤hits 的合法击杀）均不留痕。
+                    _intangible_layers = 0.0
+                    if (slippery <= 0
+                            and bool(pol.get("enemy_intangible_dmg_cap", True))):
+                        _intangible_layers = self._enemy_intangible_stack(e)
+                    if (bool(pol.get("intangible_hp_cost_obs", True))
+                            and _intangible_layers > 0
+                            and self_cost > 0
+                            and float(eff) < float(self_cost)
+                            and not killed):
+                        why += (
+                            f"| INTANGIBLE_HP_COST_AUDIT eff={float(eff):g}"
+                            f"/self={self_cost:g}/net={float(eff) - float(self_cost):+g}"
+                            f"/layers={_intangible_layers:g}")
                     if (slippery <= 0 and not killed
                             and bool(pol.get("enemy_intangible_dmg_cap", True))
-                            and self._enemy_intangible_stack(e) > 0):
+                            and _intangible_layers > 0):
                         why += "｜敌无实体逐hit封顶1（ENEMY_INTANGIBLE_CAP_OBS）"
                     # 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘新增，
                     # 纯观测不改分）：MinionPower（zhs「爪牙会在他们的领导者死亡时

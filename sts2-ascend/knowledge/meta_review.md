@@ -11457,4 +11457,42 @@ retry_resolution: none (no replay target; local production observation)
 1. SELF_LOSS_PHASE_OBS 已在此前批次完成行为化，本批只用其相位证据确认自残支付语义，不重复登记。
 2. RESPAWN_ROSTER_READ_OBS 的 n/rs/err/probe/line/boot 指纹在本批已按既有格式工作；无新异常，不重开其已收口假设。
 3. RALC 买活、RINGING_SINGLE_PLAY_OBS、RACE_UPSHIFT_STALE 与其他未达升级线积案继续按上一节“顺延/续记”处理。
+## Review batch 1557: INTANGIBLE_HP_COST_AUDIT
+
+HYPOTHESIS
+
+When a self-cost attack is selected against an enemy with Intangible, the existing
+per-hit cap audit and HP-cost audit are separate. A non-lethal play can therefore
+pay more HP than the effective damage it produces, while the persisted reason does
+not expose that joined loss. This is falsifiable: the next 3-10 relevant combat
+windows should either produce joined non-lethal markers or show that the observed
+F17 case was isolated.
+
+EVIDENCE
+
+Run 1557, run_id R4FCNEGYX07F, F17 Soul Fysh: native knowledge records
+Intangible's one-damage-per-hit cap; decision 229 played HEMOKINESIS, paying 2 HP
+for one effective damage, without killing the 211-HP target. The run reached
+GAME_OVER at decision 239. Existing code already priced HP and capped damage,
+but did not join those values in one production observation.
+
+MINIMUM_CHANGE
+
+Added the default-on, rollback-safe intangible_hp_cost_obs key. Single-target
+non-lethal cases with effective damage below self-cost now append
+INTANGIBLE_HP_COST_AUDIT with effective damage, self-cost, net value, and layers.
+Scoring, target choice, action order, and lethal-kill exceptions are unchanged.
+
+EXPECTED_SIGNAL
+
+Count INTANGIBLE_HP_COST_AUDIT markers by kill-race context and compare them with
+subsequent GAME_OVER timing across the next evidence window. A marker must not
+appear for a lethal play, and setting intangible_hp_cost_obs=false must remove it.
+If repeated markers occur outside hopeless race states, this observation supports
+a later behavior review; this batch intentionally does not change behavior.
+
+VALIDATION
+
+py -3 -B sts2-ascend/brain/selfcheck.py -> SELFCHECK OK.
+git diff --check -> OK. No replay target: failed_review_replay.requested_packages=[].
 

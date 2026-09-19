@@ -705,6 +705,7 @@ DEFAULT_POLICY = {
     "deck_thin_discount": 0.35,   # 单薄期每缺 1 张核心牌降低拾取门槛的幅度（门槛只升不降曾让 91 局整场只拿 6 张牌）
     # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
     "kill_race_enabled": True,
+    "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，

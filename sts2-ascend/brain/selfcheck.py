@@ -6983,6 +6983,13 @@ def main() -> int:
             dict(card), [enemy], incoming, 0, 2, use.know.policy,
             my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
 
+    int_hemo = {
+        "index": 4, "card_id": "HEMOKINESIS", "name": "HEMOKINESIS", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "resolved_rules_text": "lose 2 hp. Deal 15 damage.",
+        "dynamic_values": [{"name": "Damage", "current_value": 15}],
+    }
+
     # 身份三字段合并识别（与滑溜同口径）；零层/无层严格保留旧牌面计分。
     assert int_pol._enemy_intangible_stack(int_enemy(layers=2)) == 2, \
         f"无实体层数读取失效: {int_enemy(layers=2)['powers']}"
@@ -6997,6 +7004,20 @@ def main() -> int:
     #    中标单体攻击携带纯观测注记。
     s_int_bludgeon, _, why_int_bludgeon = int_score(sl_bludgeon, int_enemy(layers=2))
     s_int_twin, _, why_int_twin = int_score(sl_twin, int_enemy(layers=2))
+    _, _, why_int_hemo = int_score(int_hemo, int_enemy(layers=2))
+    assert ("INTANGIBLE_HP_COST_AUDIT" in why_int_hemo
+            and "eff=1/self=2/net=-1" in why_int_hemo), \
+        f"intangible self-cost audit missing: {why_int_hemo}"
+    _, _, why_int_hemo_kill = int_score(int_hemo, int_enemy(hp=1, layers=2))
+    assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_kill, \
+        f"intangible self-cost audit flagged a lethal play: {why_int_hemo_kill}"
+    int_pol.know.policy["intangible_hp_cost_obs"] = False
+    try:
+        _, _, why_int_hemo_off = int_score(int_hemo, int_enemy(layers=2))
+        assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_off, \
+            f"intangible_hp_cost_obs=False did not roll back: {why_int_hemo_off}"
+    finally:
+        int_pol.know.policy["intangible_hp_cost_obs"] = True
     assert math.isclose(s_int_bludgeon, 1.0) and math.isclose(s_int_twin, 2.0), \
         f"无实体逐hit封顶计分失效: hammer={s_int_bludgeon} twin={s_int_twin}"
     assert not why_int_bludgeon.startswith("可击杀") \
