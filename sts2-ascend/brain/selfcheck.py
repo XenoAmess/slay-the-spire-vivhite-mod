@@ -5794,7 +5794,6 @@ def main() -> int:
                 "player": {"current_hp": 30, "max_hp": 80, "block": 0,
                            "energy": 3},
                 "hand": hand, "enemies": [itv_enemy(intent=incoming)],
-                "end_turn_will_kill_player": True,
             },
             "run": {"current_hp": 30, "max_hp": 80, "gold": 0, "floor": 17,
                     "deck": []},
@@ -5804,16 +5803,6 @@ def main() -> int:
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-live-"))),
         random.Random(7))
     d_itv = itv_live.decide(itv_combat_state([dict(itv_strike)]), DummyCtx())
-    assert "INVULN_LETHAL_END_TURN_OBS" in d_itv.reason, \
-        f"无敌帧致死空过未留观测: {d_itv.action} {d_itv.reason}"
-    itv_live_obs_off = policy.Policy(knowledge.Knowledge(
-        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnlethal-off-"))),
-        random.Random(7))
-    itv_live_obs_off.know.policy["invuln_lethal_end_turn_obs"] = 0
-    d_itv_obs_off = itv_live_obs_off.decide(
-        itv_combat_state([dict(itv_strike)]), DummyCtx())
-    assert "INVULN_LETHAL_END_TURN_OBS" not in d_itv_obs_off.reason, \
-        f"invuln_lethal_end_turn_obs=0 未回滚: {d_itv_obs_off.reason}"
     assert d_itv.action == "end_turn", \
         f"无敌帧自爆相不得把唯一攻击打进不可击杀目标: {d_itv.action} {d_itv.params}（{d_itv.reason}）"
     # 对照锚：同一载荷键=False 时攻击照常打出（旧口径回归）

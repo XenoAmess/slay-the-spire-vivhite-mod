@@ -186,8 +186,6 @@ DEFAULT_POLICY = {
                                      # 帧时攻击压禁玩线并显式留痕；AOE 分支同口径不计其伤害贡献。
                                      # 阈值复用 race_invulnerable_hp_floor（floor=0 时本禁攻同灭）；
                                      # 0 = 关闭（严格回滚旧口径，无敌目标按面值计分）
-    "invuln_lethal_end_turn_obs": 1,  # 仅记录无敌帧攻击救场被禁且结束回合将致死的观测；不改变动作
-                                       # 0 = 关闭该观测（严格回滚旧输出，不影响无敌目标禁攻）
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——
