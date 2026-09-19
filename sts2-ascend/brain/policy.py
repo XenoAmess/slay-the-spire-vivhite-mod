@@ -768,6 +768,7 @@ class Policy:
         self._boss_effective_dpt_round = None
         self._boss_effective_dpt_start_hp = None
         self._boss_effective_dpt_projected = 0.0
+        self._boss_effective_dpt_round_attack_est = {}
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
@@ -1262,6 +1263,10 @@ class Policy:
                 round_no = int(raw[5])
             except (TypeError, ValueError):
                 round_no = None
+            if estimated_damage > 0.0 and round_no is not None:
+                self._boss_effective_dpt_round_attack_est[round_no] = (
+                    self._boss_effective_dpt_round_attack_est.get(round_no, 0.0)
+                    + estimated_damage)
             if round_no is not None and self._krace_round != round_no:
                 self._krace_round = round_no
                 self._krace_turns += 1
@@ -3819,11 +3824,15 @@ class Policy:
                             if (_boss_prev_start_hp is not None
                                     and _boss_span > 0
                                     and self._boss_effective_dpt_projected > 0.0):
+                                _boss_prev_attack_est = float(
+                                    self._boss_effective_dpt_round_attack_est.get(
+                                        _boss_prev_round, 0.0))
                                 _boss_effective_dpt_pending = (
                                     _boss_prev_round, _boss_span,
                                     float(_boss_prev_start_hp),
                                     float(enemy_hp_total),
-                                    float(self._boss_effective_dpt_projected))
+                                    float(self._boss_effective_dpt_projected),
+                                    _boss_prev_attack_est)
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
                                 float(enemy_hp_total))
@@ -3831,12 +3840,27 @@ class Policy:
                             self._boss_effective_dpt_projected = float(dpt)
                     if _boss_effective_dpt_pending is not None:
                         (_boss_prev_round, _boss_span, _boss_start_hp,
-                         _boss_end_hp, _boss_projected) = (
+                         _boss_end_hp, _boss_projected,
+                         _boss_prev_attack_est) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
                         _boss_gap = _boss_net_dpt - _boss_projected
                         _boss_focus_tail = ""
+                        _boss_causality_tail = ""
+                        if bool(pol.get("boss_race_dpt_causality_obs", True)):
+                            _boss_causality_gap = (
+                                _boss_net_dpt - _boss_prev_attack_est)
+                            _boss_causality = (
+                                "unattributed_positive_drop"
+                                if (_boss_prev_attack_est <= 0.0
+                                    and _boss_net_dpt > 0.0)
+                                else "committed_attack_compare")
+                            _boss_causality_tail = (
+                                f"；前回合已提交攻击估计{_boss_prev_attack_est:.1f}/回合"
+                                f"，净降-提交估计{_boss_causality_gap:+.1f}/回合"
+                                f"，归因={_boss_causality}"
+                                "（BOSS_RACE_DPT_CAUSALITY_OBS）")
                         if bool(pol.get("boss_race_focus_switch_obs", True)):
                             try:
                                 _boss_focus_switches = int(
@@ -3864,7 +3888,7 @@ class Policy:
                             f" vs 投影{_boss_projected:.1f}/回合"
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
-                            + _boss_focus_tail)
+                            + _boss_focus_tail + _boss_causality_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
@@ -4186,6 +4210,7 @@ class Policy:
             self._boss_effective_dpt_round = None
             self._boss_effective_dpt_start_hp = None
             self._boss_effective_dpt_projected = 0.0
+            self._boss_effective_dpt_round_attack_est = {}
             self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0
             self._esc_rounds = 0
