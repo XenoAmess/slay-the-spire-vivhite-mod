@@ -4327,3 +4327,33 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1332~1334 局批复盘：路径死亡候选池可证伪对账
+
+日期：2026-09-20
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1334 局 F8 选中投影死亡路径，可能不是评分主动压过了可存活路线，而是当时所有可走候选都已进入不可存活尾部。若把选中节点与同一候选池的死亡/可存活计数稳定写入运行时，就能区分“被迫进死路”和“规划器错选死路”；若未来出现选中死亡路径且存在可存活候选，则该假设被证伪。
+- **EVIDENCE**：精确失败运行 `4SQ8CD8FW7CK`（第 1334 局）完整链 111 条决策已回读。F8 地图决策（决策 98）以 26/78 血选择 `Unknown(8,6)`，路径分 `-60.74`，理由已经写出预计进 Boss 血量 `0%`、低血尾部定价、单场最差 25 打完仅剩 1，以及“投影中途死亡”；随后 F9 Unknown 战自损 9、敌方掉血 26，决策 110 进入 `GAME_OVER`。原有理由没有稳定的候选池可存活计数，无法判定该次选择是否可避免。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立白绮地图决策统计 `VIVHITE_PATH_DOOM_SELECTION_OBS` 的 `candidate_count`、`doomed_count`、`survivable_count`、`projected_hp` 与选中节点。`selected_doomed=yes` 且 `survivable_count>0` 支持“规划器错选死路”；死亡数等于候选数或候选数为 1 时，支持“尾部不可避免”。标记缺失、计数与候选理由不符、非白绮触发，或开关关闭后动作/参数变化，均证伪实现并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_path_doom_selection_obs`，作为纯观测回滚键。
+- `sts2-ascend/brain/policy.py`：仅当 profile 为白绮且选中路径已被投影判定为中途死亡时，在 `Decision.reason` 追加 `VIVHITE_PATH_DOOM_SELECTION_OBS`，披露选中节点、候选总数、死亡数、可存活数、是否全灭、预计入场血量和当前血量比例；不改变评分、候选排序、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：加入全候选死亡计数、键关闭零差异、选中可存活路径不误报及非白绮 profile 隔离断言。未修改在线 runs、stats、policy.json、lessons、`.runtime` 或任务书。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check`：退出码 0；报告写入前完整目标 diff 仅含上述三个脑文件，报告写入后将一并纳入本地提交。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局优先按独立地图决策对账：若出现可存活候选仍选中死亡路径，下一批立项修正排序/候选闸；若死亡候选始终全灭或唯一，则不把不可避免尾部误判为排序缺陷。
+- 若观测计数错分、非白绮触发、候选理由与字段不一致，或键设为 0 后动作/参数漂移，将 `vivhite_path_doom_selection_obs` 设为 `0`；必要时回滚本地提交，原地图规划行为保持不变。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

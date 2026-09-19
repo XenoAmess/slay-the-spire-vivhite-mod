@@ -2807,6 +2807,7 @@ class Policy:
                             f"竞速必败预演：优先{c['nt']}换战力(+{_race_bonus:.0f}，"
                             f"入场血量已非生死变量)")
         best_node, best_score, best_detail, best_notes, best_proj = None, -1e9, "", [], 0.0
+        best_doomed = False
         best_path = []
         details = []
         for c in cand:
@@ -2823,7 +2824,20 @@ class Policy:
                 best_detail = label
                 best_notes, best_proj = c["notes"], c["proj"]
                 best_path = c["path"]
+                best_doomed = bool(c["doomed"])
 
+        if (best_doomed
+                and getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID
+                and bool(pol.get("vivhite_path_doom_selection_obs", 1))):
+            _doomed_count = sum(1 for c in cand if c["doomed"])
+            _survivable_count = len(cand) - _doomed_count
+            best_notes.append(
+                "VIVHITE_PATH_DOOM_SELECTION_OBS:"
+                f"selected_doomed=yes;node={best_detail};candidate_count={len(cand)};"
+                f"doomed_count={_doomed_count};survivable_count={_survivable_count};"
+                f"all_candidates_doomed={'yes' if _survivable_count == 0 else 'no'};"
+                f"projected_hp={best_proj:.0%};current_hp={hp_pct:.0%}")
         note_txt = f"；{'；'.join(best_notes)}" if best_notes else ""
         # 留痕诚实化（第 90~91 批复盘）：91 局 F14 以 55% 血选了精英（闸门否决后
         # 1.37 分仍压过 -13/-18 的其余候选，实战只掉 13 血属正确取舍），但日志
