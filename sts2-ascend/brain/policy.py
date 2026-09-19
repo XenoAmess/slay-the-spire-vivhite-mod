@@ -5520,6 +5520,45 @@ class Policy:
                     f"{_free_function_base_score:.2f}，原候选分"
                     f"{_free_function_raw_score:.2f}不阻止当前出牌"
                     "（VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT）")
+            # 廉价窗口仪式保留行动（VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT）：
+            # 1243~1275 批已用观测确认猩红转化仪式在高血/意图0的首窗被
+            # ritual-longline 长线血税压成空过；1331 局又出现同牌全场0次
+            # 实际打出。这里仅恢复一个窄的0费成长窗口：白绮、首两回合、
+            # 高血、敌意图0、尚未进入 kill-race/race_allin/致死，且没有其他
+            # 当前可负担牌时，把低于阈值的仪式抬到阈值上方最小值。这样不
+            # 改高危/竞速/致死取舍，也不挤掉同回合仍可执行的其他牌；开关
+            # False 严格回滚旧选择。
+            _ritual_window_entry = self._strategy_card(c)
+            if (
+                    not _hp_gate_hit
+                    and score <= float(pol["play_threshold"])
+                    and cost == 0
+                    and cid == "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
+                    and _ritual_window_entry is not None
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and bool(pol.get("ritual_window_play_exempt", True))
+                    and round_no <= 2
+                    and incoming <= 0
+                    and my_hp / max(1, my_max_hp) >= 0.75
+                    and not lethal_now
+                    and not kill_race
+                    and not race_allin
+                    and not never_played_dead
+                    and not any(
+                        _other is not c
+                        and _other.get("playable")
+                        and not self._card_unavailable(_other)
+                        and (energy if _other.get("costs_x")
+                             else (_other.get("energy_cost") or 0)) <= energy
+                        for _other in hand)
+            ):
+                _ritual_window_raw_score = score
+                score = float(pol["play_threshold"]) + 0.01
+                why += (
+                    f"｜高血零意图0费仪式保留行动：原候选分"
+                    f"{_ritual_window_raw_score:.2f}不阻止当前成长窗口"
+                    "（VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             # 竞速判死自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，

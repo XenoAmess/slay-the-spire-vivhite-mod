@@ -6456,13 +6456,11 @@ def main() -> int:
         f"非致死0费功能牌误触发致死保留行动: {d_lff_nonlethal.reason}"
     del d_lff, d_lff_off, d_lff_nonlethal, lff_pol, lff_off, lff_nonlethal
 
-    # 3rws（第1243~1275局批复盘）：引擎仪式窗口空过观测
-    #      （VIVHITE_RITUAL_WINDOW_SKIP_OBS）。1275 局 F33 无厌沙虫 T1：77/84 血、
-    #      敌意图 0，0 费零血税的猩红转化仪式在手可出（✓）仍被判「无值得出」
-    #      空过，全场 6 回合未上线、自损 28 阵亡；1262 局 F24/F25 三次同型、
-    #      1258 局 F23（1 血/28 甲）同型对照。① 白绮+仪式可出空过：注记在产、
-    #      动作仍是 end_turn；② 键=0：同状态注记消失且动作/参数逐项一致；
-    #      ③ 白绮手无仪式：注记不产；④ 非白绮 profile 手握仪式：注记不产。
+    # 3rws/3rwp（第1243~1275与1331局批复盘）：引擎仪式窗口空过后，
+    #      仅把高血/首两回合/意图0/非竞速场景的唯一0费仪式抬过阈值。
+    #      ① 白绮窄窗口选择仪式并留痕；② play_exempt=0 严格回滚为
+    #      end_turn 且保留 skip 观测；③ 意图>0 不触发；④ 手无仪式不产
+    #      skip；⑤ 非白绮 profile 不产任何白绮注记。
     rws_ritual = {"index": 0,
                   "card_id": "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
                   "name": "白绮的猩红转化仪式", "playable": True,
@@ -6505,20 +6503,31 @@ def main() -> int:
 
     rws_pol = policy.Policy(_vivhite_know("sts2-selfcheck-rws-"), random.Random(5))
     d_rws = rws_pol.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
-    assert d_rws.action == "end_turn" \
-        and "评估后无值得出的牌" in d_rws.reason \
-        and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" in d_rws.reason \
-        and "血量92%" in d_rws.reason, \
-        f"仪式可出空过未产窗口观测: {d_rws.action}（{d_rws.reason}）"
+    assert d_rws.action == "play_card" \
+        and d_rws.params.get("card_index") == 0 \
+        and "VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT" in d_rws.reason, \
+        f"高血零意图窗口未保留仪式行动: {d_rws.action}（{d_rws.reason}）"
 
     rws_off = policy.Policy(_vivhite_know("sts2-selfcheck-rws-off-"),
                             random.Random(5))
+    rws_off.know.policy["ritual_window_play_exempt"] = False
     rws_off.know.policy["ritual_window_skip_obs"] = 0
     d_rws_off = rws_off.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
-    assert d_rws_off.action == d_rws.action \
-        and d_rws_off.params == d_rws.params \
+    assert d_rws_off.action == "end_turn" \
+        and d_rws_off.params == {} \
+        and "VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT" not in d_rws_off.reason \
         and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_off.reason, \
-        f"键=0 未严格回滚注记或动作漂移: {d_rws_off.action}（{d_rws_off.reason}）"
+        f"行为/观测键关闭后未严格回滚: {d_rws_off.action}（{d_rws_off.reason}）"
+
+    rws_intent = policy.Policy(_vivhite_know("sts2-selfcheck-rws-intent-"),
+                               random.Random(5))
+    rws_intent_state = _rws_state([rws_ritual])
+    rws_intent_state["combat"]["enemies"][0]["intents"] = [
+        {"total_damage": 14}]
+    d_rws_intent = rws_intent.decide(rws_intent_state, rws_ctx)
+    assert d_rws_intent.action == "end_turn" \
+        and "VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT" not in d_rws_intent.reason, \
+        f"有敌意图时误触发廉价窗口仪式行为: {d_rws_intent.action}（{d_rws_intent.reason}）"
 
     rws_no = policy.Policy(_vivhite_know("sts2-selfcheck-rws-no-"),
                            random.Random(5))
@@ -6532,8 +6541,8 @@ def main() -> int:
     d_rws_iron = rws_iron.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
     assert "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_iron.reason, \
         f"非白绮 profile 不得产窗口观测: {d_rws_iron.action}（{d_rws_iron.reason}）"
-    del d_rws, d_rws_off, d_rws_no, d_rws_iron, \
-        rws_pol, rws_off, rws_no, rws_iron
+    del d_rws, d_rws_off, d_rws_intent, d_rws_no, d_rws_iron, \
+        rws_pol, rws_off, rws_intent, rws_no, rws_iron
 
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
