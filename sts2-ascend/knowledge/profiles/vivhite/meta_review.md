@@ -4327,3 +4327,53 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+## 第 1343~1344 批复盘闭环（2026-09-20）
+
+### STATUS / ATTRIBUTION
+
+- 精确证据为 `S1Y5EPDXZVY7`（1343，F33 阵亡）与 `9P0J2FE8RCRC`（1344，F38 阵亡）。
+  1344 完整链共 852 条 decision，已从指向的 runs 文件逐条校验结构并复核 F38 的 49 条尾段；
+  packet 的 726 条省略项未被当作完整链。`failed_review_replay.requested_packages=[]`，无重放目标。
+- 1343-F33 是本批唯一直接相关的 Boss 现场：T2 起有 `RACE_SAME_ROUND_HP_LOSS_OBS`，
+  T6 记录 `VIVHITE_HP_TERMINAL_LOCK_OBS`，但全局
+  `BOSS_RACE_EFFECTIVE_DPT_OBS` 计数为 0。1344-F38 是 Monster，不能用来证明 Boss 对账。
+  profile policy 中 `boss_race_effective_dpt_obs=true`，所以不是配置关闭证据。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速有效火力对账的零样本可能是“尚未挂载或没有跨过完整回合窗口”，
+  现有最终对账标记无法区分这两种情况；这会把 1343-F33 的观测缺口误归因为没有有效火力。
+- **EVIDENCE**：1343-F33 的竞速判死与同回合 HP 损失留痕已经证明 Boss 竞速分支进入过，
+  但没有一个挂载/前样本标记；1344-F38 的 34 次竞速出牌与终局锁属于 Monster 范围。
+- **EXPECTED_SIGNAL**：未来 3~10 局的 Boss 竞速回合首应出现
+  `BOSS_RACE_EFFECTIVE_DPT_GATE_OBS`：`state=armed` 表示已进入观测但尚无完整上一窗口，
+  `state=ready` 表示已有上一窗口并应同时出现
+  `BOSS_RACE_EFFECTIVE_DPT_OBS`。若有 `RACE_SAME_ROUND_HP_LOSS_OBS` 却没有 gate，
+  则优先查上下文/竞速门条件；若连续只有 armed，则查回合边界或投影 dpt 缺失。
+
+### PRODUCTION ACTION
+
+- `sts2-ascend/brain/policy.py`：复用现有
+  `boss_race_effective_dpt_obs` 开关，在每个新的 Boss 竞速回合首追加挂载状态与前样本回合；
+  这是纯观测，不改 `ttk`、`tsurv`、竞速判定、评分、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：Boss 跨回合夹具要求同时看到 gate 与既有净降/dpt 对账，
+  并验证关闭开关时动作、参数和两类标记均回滚。
+
+### VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 最终目标 diff 复核：生产改动仅上述两个脑文件，共 20 行新增；`git diff --check` 退出码 0。
+  报告文件在复核完成后才追加；预存 assets 删除项与 `.review-cache/` 未加入本批。
+
+### FOLLOW-UP / ROLLBACK
+
+- 后续只统计 Boss 竞速局的 gate 状态、`BOSS_RACE_EFFECTIVE_DPT_OBS` 样本数及净降-投影差值，
+  不把 Monster 局混入分母。至少取得 3 个独立 Boss 样本后，再决定是否调整火力口径；
+  在此之前不改变行为。
+- 若 gate 非 Boss 触发、标记污染普通战、解析失败，或出现动作/参数漂移，使用现有
+  `boss_race_effective_dpt_obs=false` 关闭整组观测或回滚本地提交；不改在线 policy/学习记忆。
+
+### REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。

@@ -3795,7 +3795,11 @@ class Policy:
                     # 于下一回合首记录敌血净降/回合与当时投影 dpt；回血、召唤或
                     # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
+                    # 每个新回合首还会留下挂载门观测，区分“未进入 Boss 对账”
+                    # 与“已挂载但尚未跨过完整窗口”。
                     _boss_effective_dpt_pending = None
+                    _boss_effective_dpt_gate_note = None
+                    _boss_effective_dpt_gate_prev = None
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
                             and cctx.get("node_type") == "Boss"
                             and race_lost
@@ -3824,11 +3828,24 @@ class Policy:
                                     float(_boss_prev_start_hp),
                                     float(enemy_hp_total),
                                     float(self._boss_effective_dpt_projected))
+                            _boss_effective_dpt_gate_prev = _boss_prev_round
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
                                 float(enemy_hp_total))
+                            _boss_effective_dpt_gate_note = True
                         if dpt > 0.0:
                             self._boss_effective_dpt_projected = float(dpt)
+                    if _boss_effective_dpt_gate_note:
+                        _boss_gate_state = (
+                            "ready" if _boss_effective_dpt_pending is not None
+                            else "armed")
+                        _boss_gate_prev = (
+                            "none" if _boss_effective_dpt_gate_prev is None
+                            else str(_boss_effective_dpt_gate_prev))
+                        danger_note += (
+                            f"；Boss竞速有效火力观测挂载：窗口{round_no}回合、"
+                            f"前样本{_boss_gate_prev}、state={_boss_gate_state}"
+                            "（BOSS_RACE_EFFECTIVE_DPT_GATE_OBS）")
                     if _boss_effective_dpt_pending is not None:
                         (_boss_prev_round, _boss_span, _boss_start_hp,
                          _boss_end_hp, _boss_projected) = (
