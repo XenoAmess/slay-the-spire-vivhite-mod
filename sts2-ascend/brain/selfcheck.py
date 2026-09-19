@@ -10935,6 +10935,22 @@ def main() -> int:
         and "斩杀竞速投影" not in d_low_pool.reason \
         and not low_pool_pol._krace_latch, \
         f"low-pool observation or race latch mismatch: {d_low_pool.action}/{d_low_pool.reason}"
+    terminal_state = json.loads(json.dumps(low_pool_state))
+    terminal_state["combat"]["player"]["current_hp"] = 15
+    terminal_state["run"]["current_hp"] = 15
+    d_low_pool_terminal = low_pool_pol.decide(terminal_state, low_pool_ctx)
+    assert "LOW_POOL_BURST_TERMINAL_OBS" in d_low_pool_terminal.reason \
+        and d_low_pool_terminal.action == d_low_pool.action \
+        and d_low_pool_terminal.params == d_low_pool.params \
+        and not low_pool_pol._krace_latch, \
+        f"low-pool terminal observation mismatch: {d_low_pool_terminal.action}/{d_low_pool_terminal.reason}"
+    low_pool_know.policy["low_pool_burst_terminal_obs"] = False
+    d_low_pool_terminal_off = low_pool_pol.decide(terminal_state, low_pool_ctx)
+    assert ("LOW_POOL_BURST_TERMINAL_OBS" not in d_low_pool_terminal_off.reason
+            and d_low_pool_terminal_off.action == d_low_pool_terminal.action
+            and d_low_pool_terminal_off.params == d_low_pool_terminal.params
+            and not low_pool_pol._krace_latch), \
+        f"low-pool terminal observation switch changed action or remained latched: {d_low_pool_terminal_off.action}/{d_low_pool_terminal_off.reason}"
     low_pool_know.policy["low_pool_burst_race_obs"] = False
     low_pool_off_ctx = SimpleNamespace(
         combat={"comp_id": "LOW_POOL_RUBY_OFF", "node_type": "Monster"},

@@ -706,6 +706,7 @@ DEFAULT_POLICY = {
     # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
     "kill_race_enabled": True,
     "intangible_hp_cost_obs": True,
+    "low_pool_burst_terminal_obs": True,  # low-pool burst is already uncovered by current HP and block
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，

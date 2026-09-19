@@ -3329,17 +3329,27 @@ class Policy:
                 1 for e in enemies
                 if isinstance(e, dict) and e.get("is_alive", True))
             # 低池多敌爆发观测只增加可复核留痕，不打开 kill_race、不改变评分。
-            if (bool(pol.get("low_pool_burst_race_obs", True))
-                    and not esc_gate
-                    and _live_enemy_count >= 2
-                    and 0 < enemy_hp_total < _race_pool_gate
-                    and my_hp / max(1.0, float(my_max_hp)) <= 0.55
-                    and float(incoming) >= max(10.0, float(my_hp) * 0.75)):
+            _low_pool_burst = (
+                bool(pol.get("low_pool_burst_race_obs", True))
+                and not esc_gate
+                and _live_enemy_count >= 2
+                and 0 < enemy_hp_total < _race_pool_gate
+                and my_hp / max(1.0, float(my_max_hp)) <= 0.55
+                and float(incoming) >= max(10.0, float(my_hp) * 0.75))
+            if _low_pool_burst:
                 danger_note += (
                     f"；低池多敌爆发观测：血池{enemy_hp_total:.0f}<门槛"
                     f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
                     f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
                     "（LOW_POOL_BURST_RACE_OBS）")
+            if (_low_pool_burst
+                    and bool(pol.get("low_pool_burst_terminal_obs", True))
+                    and float(my_hp) + float(my_block) < float(incoming)):
+                _coverage_margin = (
+                    float(my_hp) + float(my_block) - float(incoming))
+                danger_note += (
+                    f"|LOW_POOL_BURST_TERMINAL_OBS margin={_coverage_margin:.0f}"
+                    f"/hp={my_hp}/block={my_block}/incoming={float(incoming):.0f}")
             if enemy_hp_total >= _race_pool_gate or esc_gate:
                 # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
                 # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的

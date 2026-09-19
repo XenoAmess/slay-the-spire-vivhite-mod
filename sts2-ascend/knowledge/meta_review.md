@@ -11520,3 +11520,29 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 
 `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
 
+## Review batch 1561: LOW_POOL_BURST_TERMINAL_OBS
+
+### HYPOTHESIS
+
+The existing LOW_POOL_BURST_RACE_OBS marker is too broad to distinguish a low-enemy-pool combat that is still coverable from one that has already crossed the current-turn terminal line. This is falsifiable: in the next 3-10 relevant windows, terminal markers (HP + block - incoming < 0) should correlate with the following GAME_OVER or damage outcome more strongly than covered markers; if they do not, the terminal-line split is not useful evidence for a later policy change.
+
+### EVIDENCE
+
+- Exact run 1561 (67Y7E2TRUW6P) is a complete 364-decision failure ending at floor 25. In the BOWLBUG_EGG+BOWLBUG_NECTAR+BOWLBUG_ROCK fight, the T3 low-pool entry was 13 HP, 0 block, and 36 incoming damage; the run then died after the all-in line. The existing marker recorded the low pool but not the negative coverage margin.
+- The current production gate is deliberately observation-only when enemy HP is below the 80-point race threshold, so changing target choice, scoring, or kill_race from this single run would not be justified.
+- failed_review_replay.requested_packages=[], attempt_packages=[], and packages=[]; there is no replay target for this batch.
+
+### MINIMUM_CHANGE
+
+- brain/knowledge.py: add default-on low_pool_burst_terminal_obs as a rollback-safe observation switch.
+- brain/policy.py: reuse the existing low-pool predicate and append LOW_POOL_BURST_TERMINAL_OBS with the signed coverage margin only when current HP plus block is below incoming damage. No score, target, posture, potion, race latch, or action output is changed.
+- brain/selfcheck.py: cover a non-terminal 78-HP pool, a terminal variant, and switch-off equality of action and parameters.
+
+### EXPECTED_SIGNAL / ROLLBACK
+
+Count terminal and non-terminal low-pool markers, their signed margins, and the next combat outcome over the next 3-10 relevant windows. A terminal marker must not appear when current HP plus block covers incoming damage. Setting low_pool_burst_terminal_obs=false must remove only the new marker; any action or parameter difference is a regression. If the marker does not separate subsequent damage or death outcomes, close this hypothesis without changing behavior.
+
+### VALIDATION
+
+py -3 -B sts2-ascend/brain/selfcheck.py -> SELFCHECK OK. The final production diff is limited to the three brain files above; no online state, runs, stats, policy.json, lessons, prompt, or cache artifact is part of the change.
+
