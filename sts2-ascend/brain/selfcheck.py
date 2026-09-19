@@ -10631,9 +10631,7 @@ def main() -> int:
                           intangible=False, intangible_obs=True,
                           effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
-                          boss_focus_switch_obs=True, focus_switches=0,
-                          boss_dpt_causality_obs=True,
-                          boss_dpt_causality_commit=None):
+                          boss_focus_switch_obs=True, focus_switches=0):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10700,8 +10698,6 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
         cap_pol.know.policy[
-            "boss_race_dpt_causality_obs"] = boss_dpt_causality_obs
-        cap_pol.know.policy[
             "boss_race_focus_switch_obs"] = boss_focus_switch_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
@@ -10711,14 +10707,6 @@ def main() -> int:
             if focus_switches:
                 cap_pol._focus_drift_flips = focus_switches
                 cap_pol._focus_played_index = 0
-            if boss_dpt_causality_commit is not None:
-                # Keep this synthetic receipt in the already sampled round so
-                # the causality probe exercises the production handshake path
-                # without changing the probe's round count.
-                cap_pol._krace_round = 1
-                cap_ctx.credit_tags.append(
-                    ("combat_play_commit", "CAP_HIT", False, False,
-                     float(boss_dpt_causality_commit), 1, ""))
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
             return cap_pol.decide(cap_state, cap_ctx)
@@ -10793,40 +10781,6 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
-    # 3br-dpt-causality：第1329局 F33 的有效火力对账出现「前一回合
-    # 已提交攻击估计与敌血净降不相称」的质量问题。新增尾缀只把上一回合
-    # 已成功回执的攻击估计接到跨回合净降上；本夹具故意不提交攻击回执，
-    # 因而必须披露 0.0/回合与未归因正净降。评分、判决、动作不变，独立
-    # 关闭时既有 BOSS_RACE_EFFECTIVE_DPT_OBS 仍保留。
-    d_combat_boss_causality = combat_flip_probe(
-        1.5, sample_effective_round=True)
-    assert ("BOSS_RACE_DPT_CAUSALITY_OBS" in
-            d_combat_boss_causality.reason
-            and "前回合已提交攻击估计0.0/回合" in
-            d_combat_boss_causality.reason
-            and "归因=unattributed_positive_drop" in
-            d_combat_boss_causality.reason), \
-        f"Boss 净降因果基线观测缺失: {d_combat_boss_causality.reason}"
-    d_combat_boss_causality_commit = combat_flip_probe(
-        1.5, sample_effective_round=True, boss_dpt_causality_commit=10.0)
-    assert ("前回合已提交攻击估计10.0/回合" in
-            d_combat_boss_causality_commit.reason
-            and "净降-提交估计+0.0/回合" in
-            d_combat_boss_causality_commit.reason
-            and "归因=committed_attack_compare" in
-            d_combat_boss_causality_commit.reason), \
-        f"Boss 成功出牌回执未进入净降因果基线: {d_combat_boss_causality_commit.reason}"
-    d_combat_boss_causality_off = combat_flip_probe(
-        1.5, sample_effective_round=True, boss_dpt_causality_obs=False)
-    assert (d_combat_boss_causality_off.action
-            == d_combat_boss_causality.action
-            and d_combat_boss_causality_off.params
-            == d_combat_boss_causality.params
-            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in
-            d_combat_boss_causality_off.reason
-            and "BOSS_RACE_DPT_CAUSALITY_OBS" not in
-            d_combat_boss_causality_off.reason), \
-        f"Boss 净降因果基线开关未严格回滚: {d_combat_boss_causality_off.reason}"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，

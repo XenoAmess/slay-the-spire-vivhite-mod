@@ -484,12 +484,6 @@ DEFAULT_POLICY = {
                                            # 判死/入锁后追加上一回合首→本回合首的净降、
                                            # 投影与差值，纯观测不改评分、判决或动作。
                                            # False=严格回滚无该留痕
-    "boss_race_dpt_causality_obs": True,  # 跨回合净降的因果基线（BOSS_RACE_DPT_CAUSALITY_OBS，
-                                           # 第1329局 F33 复盘新增）：在既有
-                                           # BOSS_RACE_EFFECTIVE_DPT_OBS 旁记录前一回合已提交
-                                           # 攻击估计与净降差值，区分可对账的牌面输出与未归因
-                                           # 的血池变化；纯观测不改评分、判决或动作。
-                                           # False=严格回滚该尾缀
     "boss_race_focus_switch_obs": True,  # Boss 竞速有效火力对账的换线上下文（BOSS_RACE_FOCUS_SWITCH_OBS）：
                                          # 在已有跨回合净降/投影标记旁披露此前实际非击杀换线次数
                                          # 与当前火线，纯观测不改评分、判决或动作；False=严格回滚
