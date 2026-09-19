@@ -483,7 +483,7 @@ DEFAULT_POLICY = {
                                            # 非滑溜 Boss 尚无实际敌血净降/投影 dpt 对账；
                                            # 判死/入锁后追加上一回合首→本回合首的净降、
                                            # 投影与差值，纯观测不改评分、判决或动作。
-                                           # False=严格回滚无该留痕，非白绮角色零改动
+                                           # False=严格回滚无该留痕
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否

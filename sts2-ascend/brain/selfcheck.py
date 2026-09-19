@@ -10761,14 +10761,13 @@ def main() -> int:
     # SLIPPERY_TTK_EFFECTIVE_DPT_OBS 无法覆盖；本观测只读两个回合首快照，
     # 不改变动作/评分/判决，开关关闭严格回滚。
     d_combat_boss_effective = combat_flip_probe(
-        1.5, sample_effective_round=True, vivhite=True)
+        1.5, sample_effective_round=True)
     assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_effective.reason
             and "敌血净降10.0/回合" in d_combat_boss_effective.reason
             and "vs 投影" in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
-        1.5, sample_effective_round=True, boss_effective_dpt_obs=False,
-        vivhite=True)
+        1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
     assert (d_combat_boss_effective_off.action
             == d_combat_boss_effective.action
             and d_combat_boss_effective_off.params

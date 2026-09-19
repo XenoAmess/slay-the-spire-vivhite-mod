@@ -11496,3 +11496,27 @@ VALIDATION
 py -3 -B sts2-ascend/brain/selfcheck.py -> SELFCHECK OK.
 git diff --check -> OK. No replay target: failed_review_replay.requested_packages=[].
 
+## Review batch 1559: BOSS_RACE_EFFECTIVE_DPT_OBS profile coverage
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1559-F33 无厌沙虫战的斩杀竞速投影可能高估了实际每回合有效输出；但现有 `BOSS_RACE_EFFECTIVE_DPT_OBS` 只对白绮启用，Ironclad 的 Boss 竞速没有实际敌血净降对账，因此该假设无法被当前生产链证伪。
+- **EVIDENCE**：精确批次 `2RVEFS7QCQXS` 的完整决策数为 401，packet 保留 97、裁剪 304；F33 T3/T4/T6 的持久理由持续出现 `击杀还需 N 回合>可存活 M 回合`，并在 T6 记录 `击杀还需5回合>可存活1回合（实测24伤/回合）`，随后 `GAME_OVER`。当前 run JSON 没有 `BOSS_RACE_EFFECTIVE_DPT_OBS` 留痕；HEAD 原实现还要求 `character_strategy.profile_id == VIVHITE_PROFILE_ID`，所以本批 Ironclad 无法取得实际净降/投影差值。
+- **EXPECTED_SIGNAL**：未来 3~10 局相关 Ironclad Boss 竞速在判死/入锁后，于回合首出现 `敌血净降X/回合 vs 投影Y/回合`；实际/投影比值可直接按 Boss 与回合统计。若连续样本中位比值明显低于 1，支持投影高估假设；若稳定接近 1，则该假设被削弱。`boss_race_effective_dpt_obs=false` 时留痕消失且动作、参数保持不变。
+
+### MINIMUM_CHANGE
+
+- `brain/policy.py`：移除 Boss 有效火力对账的白绮角色限制；其余 Boss、竞速判死、回合首快照和开关条件不变。该改动只增加跨角色生产观测，不改变评分、判决、姿态或动作。
+- `brain/knowledge.py`：同步默认策略注释，明确该观测不再限定白绮。
+- `brain/selfcheck.py`：将普通 Boss 跨回合对账夹具切到默认非白绮路径；关闭观测开关的动作/参数/无留痕回滚断言保留。
+
+### CONTINUE / ROLLBACK
+
+- **继续调整**：下一窗口按 Boss、判死回合统计 marker 数量、实际/投影比值及随后 `GAME_OVER`；若出现实际输出显著低于投影的重复样本，再单独复盘 dpt 口径，不先改动作策略。
+- **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+### VALIDATION
+
+`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**。本批未修改在线运行状态、runs、stats、policy.json、lessons 或 prompt。
+

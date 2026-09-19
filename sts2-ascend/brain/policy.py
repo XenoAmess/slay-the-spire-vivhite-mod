@@ -3791,14 +3791,12 @@ class Policy:
                     # 第1205局 F33 复盘新增）：RACE_UPSHIFT_STALE 已把锁后换挡上浮
                     # 置零，但现有有效 dpt 对账只覆盖滑溜层，CRUSHER+ROCKET 这类
                     # 普通 Boss 组合仍无法逐回合核对「投影 dpt」与实际敌血净降。
-                    # 在已经判死/入锁的白绮 Boss 战中，绑定上一回合首的竞速血池，
+                    # 在已经判死/入锁的 Boss 战中，绑定上一回合首的竞速血池，
                     # 于下一回合首记录敌血净降/回合与当时投影 dpt；回血、召唤或
                     # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
                     _boss_effective_dpt_pending = None
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
-                            and self.character_strategy.profile_id
-                            == VIVHITE_PROFILE_ID
                             and cctx.get("node_type") == "Boss"
                             and race_lost
                             and round_no is not None):
