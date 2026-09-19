@@ -4327,3 +4327,53 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1300 局复盘：相近力量体第二次换线的窄锁
+
+日期：2026-09-19
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮在两名层数相近的自我强化敌人仍存活时，第一次非击杀换线后，
+  现有 `focus_drift_lock_step=2.0` 只把记忆目标阻尼从 4.0 提到 6.0，仍可能放行
+  第二次边际换线；这会让锁后实际火力低于投影。若只对“至少两名力量体且层数最大差≤2”
+  的窗口再加 2.0 阻尼，后续应能看到 `FOCUS_DRIFT_MULTI_SCALER_LOCK` 留痕、记忆目标
+  保持率提高，同时不压制明显强弱分层的合法转火。
+- **EVIDENCE**：精确失败运行 `G1YEAMMEEW3G`（第 1300 局）F33 中，T2 已从碾碎爪
+  转向火箭，T5 17:02:36 又从火箭转回碾碎爪；两名力量体均为 2 层，标记为
+  `FOCUS_DRIFT_MULTI_SCALER_OBS`。同一决策的 `BOSS_RACE_EFFECTIVE_DPT_OBS` 为
+  敌血净降 25.0/回合、投影 34.9/回合，差 -9.9，随后本场于 T5 结束并进入
+  `GAME_OVER`。当前 clone 中该复发观测已在 20 条运行记录出现，说明不是单局孤立形态。
+- **EXPECTED_SIGNAL**：未来 3~10 局按独立战斗统计多强化体观测数、锁步长留痕数、
+  首次换线后的记忆目标保持/再次换线比例，并与下一条有效火力对账的实测/投影比值及
+  终局胜负交叉。若 12/1 等明显强弱场景出现新锁注、相近层数仍持续二次换线，或锁注
+  后有效火力缺口不收窄，则假设被证伪，回滚或把锁步长设为 0。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认 `focus_drift_multi_scaler_lock_step=2.0`；
+  仅作为本批行为化旋钮，设为 0 可回滚。
+- `sts2-ascend/brain/policy.py`：在已有实际翻线、至少两名力量体且层数最大差≤2时，
+  给记忆目标额外 +2.0 阻尼，并追加 `FOCUS_DRIFT_MULTI_SCALER_LOCK`；不改变击杀、
+  放行、能量或生命支付，明显强弱分层仍走旧转火路径。
+- `sts2-ascend/brain/selfcheck.py`：新增 1/1 层、意图 30/5 的窄窗夹具，验证开启时
+  记忆目标中标并留痕、关闭时回到另一目标；保留 12/1 强弱分层对照与既有观测回滚。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：退出码 0；最终目标 diff 仅含上述三个 brain 文件。
+- 未修改 `runs/`、`stats`、`policy.json`、`lessons.md`、`.runtime`、归档或拒合现场。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局优先检查 `FOCUS_DRIFT_MULTI_SCALER_LOCK` 是否只出现在层数差≤2的
+  多强化体战斗，并与 `BOSS_RACE_EFFECTIVE_DPT_OBS`、`SELF_LOSS_PHASE_OBS` 和
+  终局结果逐场对账；不把锁注本身当作胜利证据。
+- 若明显强弱场景误锁、相近层数仍反复换线、实测火力比未改善、非强化体触发，或关闭
+  `focus_drift_multi_scaler_lock_step` 后动作/参数不完全回滚，将该键设为 0；必要时
+  回滚本地提交，恢复原有翻线锁。
+
+## REPLAY
+
+本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
