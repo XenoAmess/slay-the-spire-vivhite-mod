@@ -3676,6 +3676,56 @@ def main() -> int:
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
 
+    # 3tll-recovery) 同一场战斗的致死终端锁若携带原生 Lizard Tail，下一回合
+    # 只记录实际跨回合 HP 回升，不把「本回合致死」误报成 GAME_OVER；观测关闭时
+    # 动作与参数逐位回滚。
+    def _terminal_lock_tail_state():
+        _st = _terminal_lock_state()
+        _st["run"]["relics"] = [{"relic_id": "LIZARD_TAIL", "status": "Normal"}]
+        return _st
+
+    def _terminal_lock_recovered_state():
+        _st = _krh_state(13, 29, _krh_hand_vivhite(), incoming=36)
+        _st["run"]["relics"] = [{"relic_id": "LIZARD_TAIL", "status": "Disabled",
+                                  "is_used_up": True}]
+        return _st
+
+    vknow_tll_tail = _vivhite_know("sts2-selfcheck-vterminal-lock-tail-")
+    vpol_tll_tail = policy.Policy(vknow_tll_tail, random.Random(11))
+    vctx_tll_tail = _krh_ctx()
+    d_tll_tail_wait = vpol_tll_tail.decide(
+        _terminal_lock_tail_state(), vctx_tll_tail)
+    d_tll_tail = vpol_tll_tail.decide(
+        _terminal_lock_tail_state(), vctx_tll_tail)
+    d_tll_recovered = vpol_tll_tail.decide(
+        _terminal_lock_recovered_state(), vctx_tll_tail)
+    assert d_tll_tail_wait.action is None and d_tll_tail.action == "end_turn" \
+        and "lizard_tail=ready" in d_tll_tail.reason, \
+        f"终端锁未记录可用蜥蜴尾巴: {d_tll_tail.reason}"
+    assert "VIVHITE_HP_TERMINAL_LOCK_RECOVERY_OBS" in d_tll_recovered.reason \
+        and "回合12血2→回合13血29" in d_tll_recovered.reason, \
+        f"终端锁后跨回合回血观测缺失: {d_tll_recovered.reason}"
+
+    vknow_tll_tail0 = _vivhite_know("sts2-selfcheck-vterminal-lock-tail-off-")
+    vknow_tll_tail0.policy["vivhite_hp_terminal_lock_obs"] = 0
+    vpol_tll_tail0 = policy.Policy(vknow_tll_tail0, random.Random(11))
+    vctx_tll_tail0 = _krh_ctx()
+    d_tll_tail0_wait = vpol_tll_tail0.decide(
+        _terminal_lock_tail_state(), vctx_tll_tail0)
+    d_tll_tail0 = vpol_tll_tail0.decide(
+        _terminal_lock_tail_state(), vctx_tll_tail0)
+    d_tll_recovered0 = vpol_tll_tail0.decide(
+        _terminal_lock_recovered_state(), vctx_tll_tail0)
+    assert (d_tll_tail0_wait.action, d_tll_tail0_wait.params) \
+        == (d_tll_tail_wait.action, d_tll_tail_wait.params) \
+        and (d_tll_tail0.action, d_tll_tail0.params) \
+        == (d_tll_tail.action, d_tll_tail.params) \
+        and (d_tll_recovered0.action, d_tll_recovered0.params) \
+        == (d_tll_recovered.action, d_tll_recovered.params), \
+        "终端锁恢复观测关闭后不得改变动作/参数"
+    assert "VIVHITE_HP_TERMINAL_LOCK_RECOVERY_OBS" not in d_tll_recovered0.reason, \
+        f"终端锁恢复观测关闭后不得出现注记: {d_tll_recovered0.reason}"
+
     # ① 白绮判死竞速下实付謦欬攻击：注记显形且带实付额
     vknow_krh = _vivhite_know("sts2-selfcheck-krhopeless-")
     vpol_krh = policy.Policy(vknow_krh, random.Random(11))

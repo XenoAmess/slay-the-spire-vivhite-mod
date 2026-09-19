@@ -91,6 +91,35 @@ def _vivhite_combat_scope(state: dict, ctx) -> tuple[str, int] | None:
     return str(run_id), floor
 
 
+def _vivhite_lizard_tail_state(state: dict) -> str:
+    """Classify the native Lizard Tail state exposed in the run payload.
+
+    The inventory is optional in older Agent payloads, so absence of the field
+    is deliberately different from an observed empty inventory.  This is only
+    an observation aid; it never predicts or authorizes a death-prevention
+    effect.
+    """
+    run = state.get("run") or {}
+    relics = run.get("relics")
+    if not isinstance(relics, list):
+        return "unknown"
+    for relic in relics:
+        if not isinstance(relic, dict):
+            continue
+        relic_id = str(relic.get("relic_id") or relic.get("id") or "").strip().upper()
+        relic_name = str(relic.get("name") or "").strip()
+        if relic_id != "LIZARD_TAIL" and relic_name != "蜥蜴尾巴":
+            continue
+        if any(relic.get(key) is True for key in (
+                "is_used_up", "used_up", "is_disabled")):
+            return "used"
+        status = str(relic.get("status") or relic.get("relic_status") or "").casefold()
+        if any(token in status for token in ("disabled", "used", "耗尽", "已用")):
+            return "used"
+        return "ready"
+    return "absent"
+
+
 @dataclass
 class Decision:
     action: str | None = None          # None = wait (do nothing this tick)
@@ -619,6 +648,7 @@ class Policy:
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
+        self._terminal_life_lock_pending = None
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_instance_key = None  # exact live reward payload; repeated rewards may share text
@@ -2991,6 +3021,36 @@ class Policy:
             return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
         return None
 
+    def _consume_terminal_life_lock_recovery_obs(
+            self, ctx, round_no: int, my_hp: float) -> str:
+        """Consume one same-combat, next-round HP rebound after a lethal lock."""
+        pending = self._terminal_life_lock_pending
+        if not isinstance(pending, dict):
+            return ""
+        if pending.get("combat") is not getattr(ctx, "combat", None):
+            self._terminal_life_lock_pending = None
+            return ""
+        try:
+            locked_round = int(pending.get("round") or 0)
+            current_round = int(round_no or 0)
+            locked_hp = float(pending.get("hp") or 0.0)
+            current_hp = float(my_hp)
+        except (TypeError, ValueError):
+            self._terminal_life_lock_pending = None
+            return ""
+        if current_round <= locked_round:
+            return ""
+        self._terminal_life_lock_pending = None
+        if current_hp <= locked_hp:
+            return ""
+        delta = current_hp - locked_hp
+        return (
+            f"；生命支付终端锁后观测：回合{locked_round}血{locked_hp:.0f}"
+            f"→回合{current_round}血{current_hp:.0f}（净回升{delta:.0f}，"
+            f"锁定时意图{float(pending.get('incoming') or 0.0):.0f}，"
+            f"蜥蜴尾巴={pending.get('lizard_tail', 'unknown')}，"
+            "VIVHITE_HP_TERMINAL_LOCK_RECOVERY_OBS）")
+
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -3080,16 +3140,29 @@ class Policy:
                 if (_terminal_lock_obs
                         and getattr(self.character_strategy, "profile_id", None)
                         == VIVHITE_PROFILE_ID):
+                    _lizard_tail_state = _vivhite_lizard_tail_state(state)
                     _hook_blocked = sum(
                         1 for _card in non_curse_cards
                         if self._native_card_unplayable_reason(
                             _card).casefold().startswith("blocked_by_hook"))
+                    self._terminal_life_lock_pending = None
+                    if (ctx.combat is not None
+                            and bool(combat.get("end_turn_will_kill_player"))
+                            and _lizard_tail_state == "ready"):
+                        self._terminal_life_lock_pending = {
+                            "combat": ctx.combat,
+                            "round": round_no,
+                            "hp": my_hp,
+                            "incoming": incoming,
+                            "lizard_tail": _lizard_tail_state,
+                        }
                     _terminal_lock_note = (
                         f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
                         f"native_blocked_by_hook={_hook_blocked}/"
                         f"{len(non_curse_cards)}/hp={my_hp}/energy={energy}"
                         f"/incoming={incoming}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+                        f"/lizard_tail={_lizard_tail_state}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},
@@ -4132,6 +4205,7 @@ class Policy:
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
             self._race_combat = ctx.combat
+            self._terminal_life_lock_pending = None
             self._race_round = None
             self._race_prev_hp = None
             self._race_loss_rate = 0.0
@@ -4215,6 +4289,10 @@ class Policy:
         my_block = player.get("block", 0)
         my_hp = player.get("current_hp", 1)
         my_max_hp = max(1, player.get("max_hp", my_hp))
+        _terminal_lock_recovery_note = (
+            self._consume_terminal_life_lock_recovery_obs(ctx, round_no, my_hp)
+            if getattr(self.character_strategy, "profile_id", None)
+            == VIVHITE_PROFILE_ID else "")
         block_gap = max(0, incoming - my_block)
 
         # 敌方血池/火力观测写入侧（第 214 批补全）：第 138~141 批铺好了 agent 合并
@@ -4387,6 +4465,8 @@ class Policy:
                 danger_note += f"；{ramp_relief_note}"
         else:
             danger_note = ""
+        if _terminal_lock_recovery_note:
+            danger_note += _terminal_lock_recovery_note
         # 税负战斗防守姿态成本观测（HAND_TAX_STANCE_OBS，第808~812局批复盘）：
         # 812-F9 全链实证——PHROG 塞手的 INFECTION「不能被打出，回合结束时每张
         # 3伤」不进格挡结算管线，高危组合姿态「转防守节奏」把战斗拖长，每多拖
