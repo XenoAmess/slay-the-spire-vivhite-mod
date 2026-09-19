@@ -4327,34 +4327,3 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
-
-# 第 1330~1331 局批复盘：高血零意图窗口的猩红转化仪式由观测转为窄行为
-
-日期：2026-09-20
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS（单一、可证伪）**：白绮在高血（至少 75%）、第 1~2 回合、敌意图为 0、尚未进入 kill-race/致死竞速，且唯一可负担牌是 0 费「白绮的猩红转化仪式」时，`ritual-longline` 的无上限长期血税会把成长牌压到出牌阈值以下，导致本应上线引擎的窗口直接 `end_turn`。若新闸在匹配窗口把该牌实际打出并在下一状态仍推进战斗/留下仪式效果，则支持假设；若匹配窗口仍稳定空过，或打出后没有可观测的状态推进，则否证并回滚/重查评分口径。
-- **EVIDENCE**：本批提示词锁定 1330、1331 局；当前失败 run 的完整链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260920-024533_7CJ83L910PVW.json`，已逐条读取 481 条 decision。1331 局仪式实际打出 0 次：F33 的 decision 465 为 HP 55、仪式可出但 incoming 28 且 `kill_race=true`；decision 479 为 HP 1、incoming 20 且已达致死投影。两次都保留 `VIVHITE_RITUAL_WINDOW_SKIP_OBS`，并明确排除在本次窄闸之外；该局 F33 自损 31、HP drop 76，不能被冒充为行为改善证据。历史批复盘已记录 1275 局首回合 HP 77/84、意图 0 的仪式空过与自损 28 阵亡，以及 1262 局同类窗口连续跳过；此前只有观测没有行为改变。
-- **EXPECTED_SIGNAL**：后续 3~10 局只统计真正满足全部条件的独立窗口：`VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT` 应出现并伴随 `play_card`/正确 card index，下一状态仍为有效战斗且可见仪式效果或其他明确推进；同时记录 `SELF_LOSS_PHASE_OBS`、战斗结果与是否胜利。高危、低血、非 0 意图、已有其他可负担牌或非白绮场景不得出现该 marker。若开关关闭，动作和参数应回到旧的 `end_turn` 选择。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py` 新增默认开启的 `ritual_window_play_exempt`，可设为 `False` 一键回滚旧选择；原有 `ritual_window_skip_obs` 保留。
-- `sts2-ascend/brain/policy.py` 只在白绮、0 费目标仪式、高血、第 1~2 回合、敌意图 0、无其他可负担牌且未进入致死/竞速闸时，将低于阈值的仪式候选抬到阈值上方最小值，并写入 `VIVHITE_RITUAL_WINDOW_PLAY_EXEMPT`。没有扩大到其他卡牌、其他角色或高危窗口，也没有改变生命支付实现。
-- `sts2-ascend/brain/selfcheck.py` 增加开启、关闭、敌意图非 0 三组夹具断言，并保留无仪式/非白绮回归覆盖；这是本批最小生产行为与可观测标记改动。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
-- `git diff --check -- sts2-ascend`：退出码 0；仅有 Git 的 LF/CRLF 提示，无 whitespace error。
-- 报告写入前已回读目标代码变更；仓库中原有的 assets 删除和 `.review-cache/` 未纳入本批文件。
-
-## FOLLOW-UP / ROLLBACK
-
-- 后续 3~10 局按上述 marker、真实 `play_card`、下一状态推进、仪式效果、自损与胜负逐窗口对账。至少 3 个独立匹配窗口后，才评估是否需要进一步调整长期估值；没有匹配窗口不作结论。
-- 若 marker 在任一排除条件下出现、动作/参数漂移、打出后无状态推进，或匹配窗口的自损/阵亡没有改善，将配置 `ritual_window_play_exempt` 设为 `False` 并保留证据，必要时回滚本地提交；低血/致死窗口继续使用旧的 Skip 行为。
-
-## REPLAY
-
-本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
