@@ -4979,13 +4979,6 @@ class Policy:
                     "vivhite_hp_zp_attack_exempt", 1) or 0))
             except (TypeError, ValueError):
                 _zp_attack_exempt = False
-        _zp_attack_margin_obs = False
-        if _hp_zero_pressure:
-            try:
-                _zp_attack_margin_obs = bool(int(pol.get(
-                    "vivhite_hp_zp_attack_margin_obs", 1) or 0))
-            except (TypeError, ValueError):
-                _zp_attack_margin_obs = False
         # 复打账回合边界清零（无出牌 commit 的回合也要跨回合复位；新战斗由
         # _combat_stall_check 的战斗身份重置兜底，同步侧的回合切换重置同效）
         if self._hp_repeat_round != round_no:
@@ -5125,7 +5118,6 @@ class Policy:
             except (TypeError, ValueError):
                 _hp_gate_nm_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
-        _hp_zp_attack_margin_blocked: list = []  # (name, pay, score)
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
         # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
@@ -5323,17 +5315,6 @@ class Policy:
             successful_plays = self._successful_card_plays(cid)
             safe_trial = self._safe_controlled_trial(c)
             trial_already = cid in self._novel_trials
-            _zp_is_attack = False
-            if _zp_attack_exempt:
-                _zp_observed = str(c.get("card_type") or "").casefold()
-                _zp_entry = (
-                    self.character_strategy.card(cid)
-                    if getattr(self.character_strategy, "profile_id", None)
-                    == VIVHITE_PROFILE_ID else None)
-                _zp_is_attack = bool(
-                    _zp_observed == "attack"
-                    or (_zp_entry is not None
-                        and _zp_entry.card_type == "attack"))
             # 謦欬出牌余量门：仅拦「本已过普通阈值、但未过抬升后阈值」的謦欬候选
             # ——普通阈值都过不了的牌维持旧语义（marginal「不空过」通道不受影响）
             _hp_gate_hit = False
@@ -5371,21 +5352,6 @@ class Policy:
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
                     if _hp_gate_hit:
-                        if (
-                                _zp_attack_margin_obs
-                                and _zp_attack_exempt
-                                and _zp_is_attack
-                                and _hp_zero_pressure
-                                and incoming <= 0
-                                and _hp_margin_eff > 0.0
-                                and _hp_rep_extra <= 0.0
-                                and not race_allin
-                                and not kill_race
-                                and cctx.get("node_type") == "Monster"
-                                and "可击杀" not in why
-                                and not re.search(r"kills=[1-9]", why)):
-                            _hp_zp_attack_margin_blocked.append(
-                                (c.get("name") or cid, _hp_pay, score))
                         _gate_formula = (f"实付{_hp_pay:g}血×"
                                          f"{_hp_margin_eff:.2f}")
                         if _hp_margin_eff != _hp_play_margin:
@@ -5475,7 +5441,13 @@ class Policy:
                 # 攻击牌改回「余量门带计价、不视同门拦」（边际付血仍被既有门带
                 # 拦，513/514/529 放血防线不动），非攻击謦欬（格挡/抽牌/增益）
                 # 维持视同门拦；豁免注记留痕供后续批次对账放行规模与战损走向。
+                _zp_is_attack = False
                 if _zp_attack_exempt:
+                    _zp_observed = str(c.get("card_type") or "").casefold()
+                    _zp_entry = (
+                        self.character_strategy.card(cid)
+                        if getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID else None)
                     _zp_is_attack = bool(
                         _zp_observed == "attack"
                         or (_zp_entry is not None
@@ -5610,14 +5582,6 @@ class Policy:
                                          or immediate_score > marginal_best[0]):
                     marginal_best = (immediate_score, c, target, why, mode)
 
-        _zp_attack_margin_note = ""
-        if _hp_zp_attack_margin_blocked:
-            _zp_attack_margin_note = (
-                "；零压回合攻击牌仍被普通余量门拦下："
-                + "、".join(
-                    f"【{name}】实付{pay:g}血/候选分{score:.2f}"
-                    for name, pay, score in _hp_zp_attack_margin_blocked)
-                + "（VIVHITE_HP_ZP_ATTACK_MARGIN_OBS）")
         choice_mode = ""
         chosen = best if best and best[0] > pol["play_threshold"] else None
         if chosen is None and marginal_best is not None:
@@ -5625,8 +5589,6 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             chosen_score, card, target, why = chosen
-            if _zp_attack_margin_note:
-                why += _zp_attack_margin_note
             # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，
             # 纯观测不改分）：本 tick 评分侧静默翻线的挂账在此挂到实际打出牌
             # 的 why 上——只有打出牌的 why 会入决策链，跨回合火线横跳从此可
@@ -6252,8 +6214,6 @@ class Policy:
                     _gate_note += (f"；连续未覆盖拦截"
                                    f"{self._hp_gate_stall_uncovered}回合"
                                    f"（VIVHITE_HP_GATE_STALL_UNCOVERED）")
-            if _zp_attack_margin_note:
-                _gate_note += _zp_attack_margin_note
             # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
             # 批复盘新增，静态键 ritual_window_skip_obs）：猩红转化仪式是 0 费、
             # 自身零血税的相位成长引擎，但无上限长线估值（ritual-longline）把它

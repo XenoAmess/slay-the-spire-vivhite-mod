@@ -4258,26 +4258,6 @@ def main() -> int:
         f"攻击豁免缺决策链留痕: {d_z1.reason}"
     assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z1.reason, \
         f"攻击豁免后不得再视同门拦: {d_z1.reason}"
-    # ①a 攻击豁免只绕过零压闸；若普通余量门仍拦下攻击牌，必须单独留痕，
-    #     供 1299-F6-T1 型「Shrink Move 意图0」窗口统计，且不得改变动作。
-    vknow_z1a = _vivhite_know("sts2-selfcheck-vhzeropay-attack-margin-obs-")
-    vknow_z1a.policy["vivhite_hp_cost_play_margin"] = 50.0
-    vpol_z1a = policy.Policy(vknow_z1a, random.Random(11))
-    d_z1a = vpol_z1a.decide(_vgate_state(85, 0), _vzp_monster_ctx())
-    assert d_z1a.action == "end_turn", \
-        f"纯观测不得改变普通余量门拦截行为: {d_z1a}"
-    assert "VIVHITE_HP_ZP_ATTACK_MARGIN_OBS" in d_z1a.reason \
-        and "弦光投影" in d_z1a.reason, \
-        f"零压攻击余量门拦截缺观测留痕: {d_z1a.reason}"
-    vknow_z1a_off = _vivhite_know("sts2-selfcheck-vhzeropay-attack-margin-off-")
-    vknow_z1a_off.policy["vivhite_hp_cost_play_margin"] = 50.0
-    vknow_z1a_off.policy["vivhite_hp_zp_attack_margin_obs"] = 0
-    vpol_z1a_off = policy.Policy(vknow_z1a_off, random.Random(11))
-    d_z1a_off = vpol_z1a_off.decide(_vgate_state(85, 0), _vzp_monster_ctx())
-    assert (d_z1a_off.action, d_z1a_off.params) == (d_z1a.action, d_z1a.params), \
-        f"观测关闭后动作/参数必须逐项不变: on={d_z1a} off={d_z1a_off}"
-    assert "VIVHITE_HP_ZP_ATTACK_MARGIN_OBS" not in d_z1a_off.reason, \
-        f"观测关闭后不得残留零压攻击余量门注记: {d_z1a_off.reason}"
     # ①b 非攻击謦欬（增益牌 白绮的变身式，实付4血）维持视同门拦并留痕——
     #     577~589 批立项证据（分治法阵抽牌提速）口径不变
     def _vzp_power_state(hp_now, incoming):
