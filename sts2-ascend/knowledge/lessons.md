@@ -12712,3 +12712,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.218495858011604局)，BASH(14分/3.569496495240589局)，BODY_SLAM(15分/2.5735018913985965局)
 - 策略进化：block_safety: 1.99 → 2.04（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.36 → 0.36（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1556 胜，当前目标进阶 0
+
+## 第 1557 局复盘（2026-09-19 19:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：SHRUG_IT_OFF, MOLTEN_FIST, HEMOKINESIS, INFLAME, BREAKTHROUGH, ARMAMENTS, UNRELENTING, DRAMATIC_ENTRANCE, DARK_EMBRACE, SPITE
+- 本局遗物：AMETHYST_AUBERGINE, REGAL_PILLOW, BOWLER_HAT
+- 战斗记录：F3 Monster战 掉血0; F6 Unknown战 掉血3; F7 Monster战 掉血7｜自损4（可行动段4/非行动段7，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血8｜自损4（可行动段4/非行动段7，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血54｜自损8（可行动段8/非行动段52，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战9回合获胜; F17 Boss战 掉血47｜自损3（可行动段3/非行动段34，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.253562742184485局)，ASHEN_STRIKE(26分/2.4738221223449663局)，PERFECTED_STRIKE(25分/4.03755752711968局)，PACTS_END(25分/75.16982408809471局)，FEED(25分/38.142899108916644局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/4.203731122508564局)，BASH(14分/3.557003257507247局)，BODY_SLAM(15分/2.5644946347787014局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1557 胜，当前目标进阶 0
