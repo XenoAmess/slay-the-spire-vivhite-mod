@@ -763,10 +763,12 @@ class Policy:
         self._slippery_effective_dpt_layers = 0.0
         self._slippery_effective_dpt_projected = 0.0
         # Boss 竞速有效火力对账（BOSS_RACE_EFFECTIVE_DPT_OBS）：只记录
-        # 锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
+        # 锁定竞速判死后的回合首敌方血池净下降及逐敌起止 HP，不回写
+        # 竞速 dpt/判决/评分。
         self._boss_effective_dpt_combat = None
         self._boss_effective_dpt_round = None
         self._boss_effective_dpt_start_hp = None
+        self._boss_effective_dpt_start_targets = None
         self._boss_effective_dpt_projected = 0.0
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
@@ -3792,8 +3794,10 @@ class Policy:
                     # 置零，但现有有效 dpt 对账只覆盖滑溜层，CRUSHER+ROCKET 这类
                     # 普通 Boss 组合仍无法逐回合核对「投影 dpt」与实际敌血净降。
                     # 在已经判死/入锁的 Boss 战中，绑定上一回合首的竞速血池，
-                    # 于下一回合首记录敌血净降/回合与当时投影 dpt；回血、召唤或
-                    # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
+                    # 于下一回合首记录敌血净降/回合与当时投影 dpt；同时保留稳定
+                    # 槽位/敌人 ID 的逐敌起止 HP，区分总血池下降与换线/目标漂移。
+                    # 回血、召唤或其他非伤害变化会如实反映为净值，故不冒充逐卡
+                    # 伤害。
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
                     _boss_effective_dpt_pending = None
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
@@ -3804,11 +3808,36 @@ class Policy:
                             self._boss_effective_dpt_combat = cctx
                             self._boss_effective_dpt_round = None
                             self._boss_effective_dpt_start_hp = None
+                            self._boss_effective_dpt_start_targets = None
                             self._boss_effective_dpt_projected = 0.0
                         if (self._boss_effective_dpt_round != round_no):
+                            _boss_targets_now = []
+                            for _boss_pos, _boss_enemy in enumerate(enemies):
+                                if not isinstance(_boss_enemy, dict):
+                                    continue
+                                try:
+                                    _boss_hp = float(
+                                        _boss_enemy.get("current_hp") or 0.0)
+                                except (TypeError, ValueError):
+                                    continue
+                                _boss_slot = _boss_enemy.get("index")
+                                if _boss_slot is None:
+                                    _boss_slot = _boss_pos
+                                _boss_id = str(
+                                    _boss_enemy.get("enemy_id")
+                                    or _boss_enemy.get("id") or "")
+                                _boss_name = str(
+                                    _boss_enemy.get("name")
+                                    or _boss_id or f"敌人{_boss_slot}")
+                                _boss_key = f"{_boss_slot}:{_boss_id or _boss_name}"
+                                _boss_targets_now.append(
+                                    (_boss_key, _boss_name, _boss_hp))
+                            _boss_targets_now = tuple(_boss_targets_now)
                             _boss_prev_round = self._boss_effective_dpt_round
                             _boss_prev_start_hp = (
                                 self._boss_effective_dpt_start_hp)
+                            _boss_prev_targets = (
+                                self._boss_effective_dpt_start_targets)
                             _boss_span = 0
                             if _boss_prev_round is not None:
                                 try:
@@ -3823,19 +3852,50 @@ class Policy:
                                     _boss_prev_round, _boss_span,
                                     float(_boss_prev_start_hp),
                                     float(enemy_hp_total),
-                                    float(self._boss_effective_dpt_projected))
+                                    float(self._boss_effective_dpt_projected),
+                                    tuple(_boss_prev_targets or ()),
+                                    _boss_targets_now)
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
                                 float(enemy_hp_total))
+                            self._boss_effective_dpt_start_targets = (
+                                _boss_targets_now)
                         if dpt > 0.0:
                             self._boss_effective_dpt_projected = float(dpt)
                     if _boss_effective_dpt_pending is not None:
                         (_boss_prev_round, _boss_span, _boss_start_hp,
-                         _boss_end_hp, _boss_projected) = (
+                         _boss_end_hp, _boss_projected, _boss_start_targets,
+                         _boss_end_targets) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
                         _boss_gap = _boss_net_dpt - _boss_projected
+                        _boss_target_tail = ""
+                        _boss_target_rows = {}
+                        for (_boss_key, _boss_name, _boss_hp) in (
+                                tuple(_boss_start_targets)
+                                + tuple(_boss_end_targets)):
+                            if _boss_key not in _boss_target_rows:
+                                _boss_target_rows[_boss_key] = [
+                                    _boss_name, None, None]
+                        for _boss_key, _boss_name, _boss_hp in (
+                                _boss_start_targets):
+                            _boss_target_rows[_boss_key][1] = _boss_hp
+                        for _boss_key, _boss_name, _boss_hp in (
+                                _boss_end_targets):
+                            _boss_target_rows[_boss_key][2] = _boss_hp
+                        _boss_target_parts = []
+                        for _boss_name, _boss_start, _boss_end in (
+                                _boss_target_rows.values()):
+                            _boss_target_parts.append(
+                                f"{_boss_name}="
+                                f"{'-' if _boss_start is None else f'{_boss_start:.0f}'}"
+                                "→"
+                                f"{'-' if _boss_end is None else f'{_boss_end:.0f}'}")
+                        if _boss_target_parts:
+                            _boss_target_tail = (
+                                "；逐敌HP[" + "，".join(_boss_target_parts)
+                                + "]")
                         _boss_focus_tail = ""
                         if bool(pol.get("boss_race_focus_switch_obs", True)):
                             try:
@@ -3864,7 +3924,7 @@ class Policy:
                             f" vs 投影{_boss_projected:.1f}/回合"
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
-                            + _boss_focus_tail)
+                            + _boss_target_tail + _boss_focus_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
@@ -4185,6 +4245,7 @@ class Policy:
             self._boss_effective_dpt_combat = ctx.combat
             self._boss_effective_dpt_round = None
             self._boss_effective_dpt_start_hp = None
+            self._boss_effective_dpt_start_targets = None
             self._boss_effective_dpt_projected = 0.0
             self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0

@@ -10644,7 +10644,8 @@ def main() -> int:
                           intangible=False, intangible_obs=True,
                           effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
-                          boss_focus_switch_obs=True, focus_switches=0):
+                          boss_focus_switch_obs=True, focus_switches=0,
+                          enemy_override=None, sample_enemy_hps=None):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10668,16 +10669,19 @@ def main() -> int:
                      "requires_target": False, "rules_text": "获得8点格挡",
                      "dynamic_values": [{"name": "Block", "current_value": 8}]},
                 ],
-                "enemies": [{"index": 0, "enemy_id": "CAP_BOSS",
-                              "name": "攻坚巨兽", "current_hp": 185,
-                              "max_hp": 341, "block": 0, "is_alive": True,
-                              "is_hittable": True,
-                              "intents": [{"total_damage": 0}],
-                              "powers": (([{"id": "SLIPPERY_POWER", "amount": 8}]
-                                          if slippery else [])
-                                         + ([{"id": "INTANGIBLE_POWER",
-                                              "name": "无实体", "amount": 2}]
-                                            if intangible else []))}],
+                "enemies": (
+                    [dict(_enemy) for _enemy in enemy_override]
+                    if enemy_override is not None else
+                    [{"index": 0, "enemy_id": "CAP_BOSS",
+                      "name": "攻坚巨兽", "current_hp": 185,
+                      "max_hp": 341, "block": 0, "is_alive": True,
+                      "is_hittable": True,
+                      "intents": [{"total_damage": 0}],
+                      "powers": (([{"id": "SLIPPERY_POWER", "amount": 8}]
+                                  if slippery else [])
+                                 + ([{"id": "INTANGIBLE_POWER",
+                                      "name": "无实体", "amount": 2}]
+                                    if intangible else []))}]),
             },
             "run": {"current_hp": 46, "max_hp": 80, "gold": 0,
                     "floor": 33, "deck": []},
@@ -10699,7 +10703,8 @@ def main() -> int:
         cap_pol._esc_rounds = esc_rounds
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
         cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
-        cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        if enemy_override is None:
+            cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
         if hand_override is not None:
             cap_state["combat"]["hand"] = hand_override
         if longfight_cap is not None:
@@ -10721,7 +10726,12 @@ def main() -> int:
                 cap_pol._focus_drift_flips = focus_switches
                 cap_pol._focus_played_index = 0
             cap_state["turn"] = 2
-            cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            if sample_enemy_hps is None:
+                cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            else:
+                for _enemy, _hp in zip(
+                        cap_state["combat"]["enemies"], sample_enemy_hps):
+                    _enemy["current_hp"] = _hp
             return cap_pol.decide(cap_state, cap_ctx)
         return decision
 
@@ -10785,6 +10795,22 @@ def main() -> int:
             and "敌血净降10.0/回合" in d_combat_boss_effective.reason
             and "vs 投影" in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
+    d_combat_boss_targets = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        enemy_override=[
+            {"index": 0, "enemy_id": "CAP_LEFT", "name": "左臂",
+             "current_hp": 185, "max_hp": 341, "block": 0,
+             "is_alive": True, "is_hittable": True,
+             "intents": [{"total_damage": 0}], "powers": []},
+            {"index": 1, "enemy_id": "CAP_RIGHT", "name": "右臂",
+             "current_hp": 120, "max_hp": 341, "block": 0,
+             "is_alive": True, "is_hittable": True,
+             "intents": [{"total_damage": 0}], "powers": []},
+        ],
+        sample_enemy_hps=[175, 120])
+    assert "逐敌HP[左臂=185→175，右臂=120→120]" \
+        in d_combat_boss_targets.reason, \
+        f"普通 Boss 有效火力对账缺少逐敌 HP 快照: {d_combat_boss_targets.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
     assert (d_combat_boss_effective_off.action

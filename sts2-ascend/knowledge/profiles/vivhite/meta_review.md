@@ -4327,3 +4327,55 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1337~1342 局批复盘：Boss 总血池火力样本可能混合换线
+
+日期：2026-09-20
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1342 局 F33 唯一的 Boss 有效火力样本（敌血净降
+  55.0/回合、投影 29.1/回合）可能把 CRUSHER 与 ROCKET 的总血池变化混在一起；
+  当前总量观测不足以证伪「投影高估」还是「换线导致目标级伤害分散」。该假设可
+  证伪：后续同型样本若逐敌 HP 显示伤害集中在实际火线且总量差异仍稳定，混合
+  换线不是主因。
+- **EVIDENCE**：1342 局 F33 决策 452 首次记录
+  BOSS_RACE_EFFECTIVE_DPT_OBS（55.0 vs 29.1），决策 456 发生
+  CRUSHER→ROCKET 换线，决策 473 又记录 ROCKET→CRUSHER 的第二次非击杀换线，
+  并触发 FOCUS_DRIFT_MULTI_SCALER_OBS。1337~1342 局均失败，现有批次已有
+  多条换线/火力观测，但只有这一条总血池有效 DPT 样本。
+- **EXPECTED_SIGNAL**：未来 3~10 局 Boss 对账注记应同时出现稳定槽位/敌人 ID
+  对应的逐敌起止 HP；若总血池差异主要来自换线，应看到某一目标下降而另一目标
+  近似不变、或出现旧目标消失/新目标出现。若逐敌读数仍一致地高估/低估投影，
+  再立项调整竞速估值。
+
+## PRODUCTION_CHANGE
+
+- sts2-ascend/brain/policy.py：在既有
+  BOSS_RACE_EFFECTIVE_DPT_OBS 的回合首快照中保存稳定槽位/敌人 ID、名称与
+  起止 HP，并把 逐敌HP[目标=起始→结束] 追加到同一观测注记。该改动不写回
+  ttk、tsurv、评分、判决、候选排序、目标或动作；关闭
+  boss_race_effective_dpt_obs 时不推进也不输出该账。
+- sts2-ascend/brain/knowledge.py：更新现有观测键说明，未新增行为配置。
+- sts2-ascend/brain/selfcheck.py：扩展 Boss 夹具支持双目标，验证逐敌快照、
+  总量 10.0/回合对账，以及观测关闭时既有 action/params 零漂移断言。
+
+## VALIDATION
+
+- py -3 -B sts2-ascend/brain/selfcheck.py：SELFCHECK OK。
+- py_compile 通过；git diff --check 通过。
+- 代码与 selfcheck diff 已回读；未修改 runs/、stats、policy.json、
+  lessons.md、.runtime、归档或任务书。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局按 Boss 对账注记统计：逐敌 HP 的下降分布、换线次数、总量与投影
+  差值，并与胜负/终局楼层交叉核对。若 ≥3 个独立样本仍显示同一目标级高估，
+  进入竞速投影修正；若差异只随换线出现，保留观测并优先修目标漂移。
+- 若目标槽位错配、快照缺失、观测文本污染，或任一 action/params 漂移，将
+  boss_race_effective_dpt_obs 置 False 可立即回滚新增留痕；必要时回滚本地
+  提交，恢复原总血池观测。
+
+## REPLAY
+
+本批 failed_review_replay.requested_packages 为空，无 retry_resolution 目标。
