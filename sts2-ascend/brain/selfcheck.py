@@ -7407,40 +7407,10 @@ def main() -> int:
     sl_pol._focus_played_index = None
     sl_pol._focus_drift_flips = 0
 
-    # 3fdm) FOCUS_DRIFT_MULTI_SCALER_OBS 多强化体重复换线观测（第 1180 局 F35）与
-    #      FOCUS_DRIFT_MULTI_SCALER_LOCK 行为化（第 1300 局 F33）：
+    # 3fdm) FOCUS_DRIFT_MULTI_SCALER_OBS 多强化体重复换线观测（第 1180 局 F35）：
     #      CRUSHER/ROCKET 型两名当前力量体在同一场第二次非击杀实际换线时，最终
-    #      出牌 why 只追加一次力量体层数；已有一次实际换线后，多强化体锁再给记忆
-    #      目标+2阻尼，压住6→8之间的边际换线。旧观测键=False仍严格只回滚注记，
-    #      新行为键=0则目标/评分回到旧口径。
-    fdm_lock_enemies = [
-        sl_str_enemy(1, hp=80, layers=None, index=0, intent=30, name="甲"),
-        sl_str_enemy(1, hp=80, layers=None, index=1, intent=5, name="乙"),
-    ]
-    sl_pol._focus_index = 1
-    sl_pol._focus_drift_flips = 1
-    _, fdm_lock_on_target, fdm_lock_on_why = sl_pol._score_play(
-        dict(fdl_card), fdm_lock_enemies, 0, 0, 2, sl_pol.know.policy,
-        my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
-    assert fdm_lock_on_target == 1 \
-            and "换线阻尼+8.0" in fdm_lock_on_why \
-            and "FOCUS_DRIFT_MULTI_SCALER_LOCK" in fdm_lock_on_why, \
-        f"多强化体锁未压住6→8边际换线: target={fdm_lock_on_target} " \
-        f"why={fdm_lock_on_why}"
-    sl_pol.know.policy["focus_drift_multi_scaler_lock_step"] = 0
-    try:
-        sl_pol._focus_index = 1
-        sl_pol._focus_drift_flips = 1
-        _, fdm_lock_off_target, fdm_lock_off_why = sl_pol._score_play(
-            dict(fdl_card), fdm_lock_enemies, 0, 0, 2, sl_pol.know.policy,
-            my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
-        assert fdm_lock_off_target == 0 \
-                and "FOCUS_DRIFT_MULTI_SCALER_LOCK" not in fdm_lock_off_why, \
-            f"多强化体锁 step=0 未严格回滚目标/注记: " \
-            f"target={fdm_lock_off_target} why={fdm_lock_off_why}"
-    finally:
-        sl_pol.know.policy["focus_drift_multi_scaler_lock_step"] = 2.0
-
+    #      出牌 why 只追加一次力量体层数；目标、翻线计数与评分路径不变。键=False
+    #      严格回滚注记且动作/目标/翻线计数保持一致。
     fdm_enemies = [
         sl_str_enemy(12, hp=80, layers=None, index=0, intent=5, name="甲"),
         sl_str_enemy(1, hp=80, layers=None, index=1, intent=5, name="乙"),

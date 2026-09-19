@@ -6766,33 +6766,8 @@ class Policy:
             # 步长 0=严格回滚固定阻尼。升级只在基础阻尼启用时生效——
             # focus_drift_damp=0 的旧键回滚语义不被本锁旁路。
             _drift_lock_step = float(pol.get("focus_drift_lock_step", 2.0) or 0.0)
-            # 多强化体重复换线锁（FOCUS_DRIFT_MULTI_SCALER_LOCK，第1300局
-            # 复盘行为化）：已有一次实际非击杀翻线且至少两名层数相近（最大差
-            # ≤2）的力量体仍在场时，单靠翻线次数阻尼（通常6.0）仍可能放行
-            # 第二次边际互拉；给记忆目标一次可回滚的额外阻尼，把该窄窗口抬到
-            # 8.0。明显强弱分层仍按原强转火，只改变定向攻击目标排序，不改变
-            # 击杀、放行资格或能量/生命支付；step=0严格回滚。
-            try:
-                _multi_scaler_lock_step = float(pol.get(
-                    "focus_drift_multi_scaler_lock_step", 2.0) or 0.0)
-            except (TypeError, ValueError, OverflowError):
-                _multi_scaler_lock_step = 0.0
-            _multi_scaler_stacks = [
-                self._enemy_strength_stack(_e)
-                for _e in enemies
-                if self._enemy_strength_stack(_e) > 0]
-            _multi_scaler_balanced = (
-                len(_multi_scaler_stacks) >= 2
-                and max(_multi_scaler_stacks) - min(_multi_scaler_stacks) <= 2.0)
-            _drift_multi_scaler_bonus = (
-                _multi_scaler_lock_step
-                if (_drift_damp > 0.0
-                    and self._focus_drift_flips > 0
-                    and _multi_scaler_balanced)
-                else 0.0)
             _drift_damp_eff = (_drift_damp
                                + _drift_lock_step * self._focus_drift_flips
-                               + _drift_multi_scaler_bonus
                                if _drift_damp > 0.0 else 0.0)
             _doctrine_present = False
             _sleep_veto = None
@@ -7105,9 +7080,6 @@ class Policy:
                     why += (f"｜火线翻线锁：本场已翻线{self._focus_drift_flips}次，"
                             f"阻尼升级+{_drift_lock_step * self._focus_drift_flips:.1f}"
                             "（FOCUS_DRIFT_LOCK）")
-                if _drift_multi_scaler_bonus > 0.0:
-                    why += (f"｜多强化体火线锁+{_drift_multi_scaler_bonus:.1f}"
-                            "（FOCUS_DRIFT_MULTI_SCALER_LOCK）")
             # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
             # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
             # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合
