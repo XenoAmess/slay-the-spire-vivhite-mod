@@ -15000,3 +15000,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.6811421897174705局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.0451610568117475局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.407727278904844局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（10回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1360 胜，当前目标进阶 3
+
+## 第 1361 局复盘（2026-09-20 08:21）
+- 结果：💀 失败｜进阶 3｜到达层数 13｜当局评分 13
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, DRAMATIC_ENTRANCE, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHIAROSCURO
+- 本局遗物：MERCURY_HOURGLASS, ETERNAL_FEATHER
+- 战斗记录：F2 Monster战 掉血8｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损9（可行动段9/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损4（可行动段4/非行动段1，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血78（阵亡）
+- 当前高价值卡牌：REND(38分/5.257293733228655局)，BOLAS(37分/2.6980627544303006局)，FISTICUFFS(35分/8.605366140845838局)，AUTOMATION(34分/5.847388532372569局)，THINKING_AHEAD(34分/5.76989446178668局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.6612581920534595局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.0310029931129066局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.399300233428677局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1361 胜，当前目标进阶 3
