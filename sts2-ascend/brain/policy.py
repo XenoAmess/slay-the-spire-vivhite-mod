@@ -3797,8 +3797,6 @@ class Policy:
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
                     _boss_effective_dpt_pending = None
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
-                            and self.character_strategy.profile_id
-                            == VIVHITE_PROFILE_ID
                             and cctx.get("node_type") == "Boss"
                             and race_lost
                             and round_no is not None):
