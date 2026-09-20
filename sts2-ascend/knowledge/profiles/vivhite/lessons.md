@@ -15055,3 +15055,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.582415709785591局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.9748645392172097局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.3658859676078876局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1365 胜，当前目标进阶 3
+
+## 第 1366 局复盘（2026-09-20 08:36）
+- 结果：💀 失败｜进阶 3｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_GOLDEN_COMPOSITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损2（可行动段2/非行动段53，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/5.16593286125664局)，BOLAS(37分/2.6511760141437564局)，FISTICUFFS(35分/8.455822707634754局)，AUTOMATION(34分/5.745773035467731局)，THINKING_AHEAD(34分/5.669625651260926局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.562877254801342局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.96095251332995局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.35760536672126局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1366 胜，当前目标进阶 3
