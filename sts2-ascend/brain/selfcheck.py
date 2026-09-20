@@ -10780,7 +10780,7 @@ def main() -> int:
     # SLIPPERY_TTK_EFFECTIVE_DPT_OBS 无法覆盖；本观测只读两个回合首快照，
     # 不改变动作/评分/判决，开关关闭严格回滚。
     d_combat_boss_effective = combat_flip_probe(
-        1.5, sample_effective_round=True, vivhite=True)
+        1.5, sample_effective_round=True)
     assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_effective.reason
             and "敌血净降10.0/回合" in d_combat_boss_effective.reason
             and "vs 投影" in d_combat_boss_effective.reason
@@ -10788,13 +10788,6 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
-    d_combat_boss_ironclad = combat_flip_probe(
-        1.5, sample_effective_round=True)
-    assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" not in
-            d_combat_boss_ironclad.reason
-            and "cannot access local variable '_boss_projected'"
-            not in d_combat_boss_ironclad.reason), \
-        f"non-Vivhite path unexpectedly entered Boss effective-DPT observation: {d_combat_boss_ironclad.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
     assert (d_combat_boss_effective_off.action
@@ -10811,12 +10804,12 @@ def main() -> int:
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
     # 独立开关关闭时严格只删该尾缀。
     d_combat_boss_focus = combat_flip_probe(
-        1.5, sample_effective_round=True, focus_switches=2, vivhite=True)
+        1.5, sample_effective_round=True, focus_switches=2)
     assert ("BOSS_RACE_FOCUS_SWITCH_OBS" in d_combat_boss_focus.reason
             and "竞速火线已换线2次至攻坚巨兽" in d_combat_boss_focus.reason), \
         f"Boss 竞速有效火力对账缺少换线上下文: {d_combat_boss_focus.reason}"
     d_combat_boss_focus_off = combat_flip_probe(
-        1.5, sample_effective_round=True, focus_switches=2, vivhite=True,
+        1.5, sample_effective_round=True, focus_switches=2,
         boss_focus_switch_obs=False)
     assert (d_combat_boss_focus_off.action == d_combat_boss_focus.action
             and d_combat_boss_focus_off.params == d_combat_boss_focus.params
