@@ -11582,3 +11582,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改在线状态、runs、archive、stats、policy.json、lessons 或 prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-20｜第 1572 局复盘（exact run LY82E3XULMR8；有界回滚观测 ×1：BOSS_RACE_EFFECTIVE_DPT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1559 批把 `BOSS_RACE_EFFECTIVE_DPT_OBS` 从白绮扩展到所有角色后，Ironclad 进入了尚未验证完成的 Boss 观测分支；该分支在 `_boss_projected` 尚未绑定时抛出异常，连续异常又触发了 `end_turn` 自救。该假设可由后续 Ironclad Boss 战直接证伪。
+- **EVIDENCE**：精确 run `LY82E3XULMR8` 为 Ironclad，第 1572 局完整持久链 36 个决策。SHRINKER_BEETLE 战在决策 28–35 连续选择 `end_turn`，持久理由重复包含 `cannot access local variable '_boss_projected' where it is not associated with a value`；生命从 78 降至 5，随后决策 36 为 `GAME_OVER`。`Policy.decide()` 的连续异常保护解释了动作退化，但异常源位于 Boss 有效 DPT 观测分支。
+- **EXPECTED_SIGNAL**：未来 3–10 个 Ironclad Boss 观测窗口不再出现 `_boss_projected` 异常、连续异常自救或该角色的 `BOSS_RACE_EFFECTIVE_DPT_OBS` marker；白绮仍保留原有绝对值/比值/换线观测，且 action/params 不变。若同一异常仍出现，该假设被否证。
+
+### MINIMUM_CHANGE
+
+- `brain/policy.py`：恢复 `BOSS_RACE_EFFECTIVE_DPT_OBS` 的 `VIVHITE_PROFILE_ID` 门禁。该 patch 只收窄生产观测覆盖面，不改评分、目标、判决、姿态或动作；白绮路径和既有 ratio/focus marker 保持不变。
+- `brain/selfcheck.py`：Boss 有效 DPT、换线和开关夹具明确使用 Vivhite；新增默认 Ironclad 负向断言，验证不进入该观测且不产生 `_boss_projected` 异常。
+
+### CONTINUE / ROLLBACK / VALIDATION
+
+- **继续条件**：按角色、Boss、回合统计异常数和 marker 覆盖；确认 Ironclad 不再因该观测退化，同时继续收集白绮的实际/投影比值。不得仅凭本局死亡改动战斗策略。
+- **撤回条件**：若后续 Ironclad 仍出现同一 `_boss_projected` 异常，或白绮 marker、action/params 回归，则撤回本门禁并先用可复现夹具修复变量绑定，再单独重新评估跨角色观测。
+- **VALIDATION**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **DIFF_CHECK_OK**（仅有 Git 行尾转换提示）。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
+- **replay_target**：none（`failed_review_replay.requested_packages=[]`）。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
