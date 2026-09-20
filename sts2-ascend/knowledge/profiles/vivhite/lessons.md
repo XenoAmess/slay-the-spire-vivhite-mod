@@ -15220,3 +15220,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.29641149948733局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.7712200862273324局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.2446744020422296局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1380 胜，当前目标进阶 3
+
+## 第 1381 局复盘（2026-09-20 09:45）
+- 结果：💀 失败｜进阶 3｜到达层数 7｜当局评分 7
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损7（可行动段7/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损12（可行动段12/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血80（阵亡）
+- 当前高价值卡牌：REND(38分/4.901266339584377局)，BOLAS(37分/2.5153481679735528局)，FISTICUFFS(35分/8.022605078987016局)，AUTOMATION(34分/5.4513995303413765局)，THINKING_AHEAD(34分/5.379153409246914局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.2778740592391244局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.758020815925537局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.236818041635082局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1381 胜，当前目标进阶 3
