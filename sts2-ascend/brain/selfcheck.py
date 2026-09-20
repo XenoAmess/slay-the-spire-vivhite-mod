@@ -10799,6 +10799,14 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+    # 3br-boss-effective-dpt-normal：普通战斗不能触碰 Boss 对账临时值。
+    # 该边界复现第1571局的非 Boss 战斗形态，保证异常不会退化为 end_turn 自救。
+    d_combat_normal_effective = combat_flip_probe(
+        1.5, node_type="Monster", sample_effective_round=True)
+    assert (d_combat_normal_effective.action != "end_turn"
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS"
+            not in d_combat_normal_effective.reason), \
+        f"普通战斗误进入 Boss 对账/自救结束回合: {d_combat_normal_effective.action}（{d_combat_normal_effective.reason}）"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
