@@ -1,46 +1,14 @@
 {
- "pending": [
-  {
-   "run": 1574,
-   "time": "2026-09-20 09:09",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "Y6JPA8WWN1V5"
-  },
-  {
-   "run": 1575,
-   "time": "2026-09-20 09:21",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "X40ED23E4L2C"
-  }
- ],
+ "pending": [],
  "reviewing": {
   "runs": [
-   1573
+   1574,
+   1575
   ],
   "items": [
    {
-    "run": 1573,
-    "time": "2026-09-20 08:45",
+    "run": 1574,
+    "time": "2026-09-20 09:09",
     "profile_id": "ironclad",
     "backend_key": "luna-max",
     "priority": 2,
@@ -52,8 +20,28 @@
     "sandbox": "workspace-write",
     "every": 1,
     "source": "fallback",
-    "run_id": "X8KMP0L3M0ZS",
-    "queue_id": "80652-1789866390812600500-0",
+    "run_id": "Y6JPA8WWN1V5",
+    "queue_id": "85264-1789867588913342000-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 1575,
+    "time": "2026-09-20 09:21",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "X40ED23E4L2C",
+    "queue_id": "85264-1789867588913342000-1",
     "retry_same_model": true,
     "salvage_packages": [],
     "salvage_attempts": []
@@ -61,6 +49,6 @@
   ],
   "profile_id": "ironclad",
   "retry_group": "",
-  "started": "2026-09-20 09:06:30"
+  "started": "2026-09-20 09:26:28"
  }
 }
