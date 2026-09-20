@@ -15231,3 +15231,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.2778740592391244局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.758020815925537局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.236818041635082局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1381 胜，当前目标进阶 3
+
+## 第 1382 局复盘（2026-09-20 09:50）
+- 结果：💀 失败｜进阶 3｜到达层数 11｜当局评分 11
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：ORICHALCUM
+- 战斗记录：F2 Monster战 掉血2｜自损10（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血3｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损2（可行动段2/非行动段5，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血86（阵亡）
+- 当前高价值卡牌：REND(38分/4.884111907395832局)，BOLAS(37分/2.5065444493856455局)，FISTICUFFS(35分/7.994525961210562局)，AUTOMATION(34分/5.432319631985182局)，THINKING_AHEAD(34分/5.3603263723145504局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.259401500031788局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.744867743069798局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.228989178489359局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1382 胜，当前目标进阶 3
