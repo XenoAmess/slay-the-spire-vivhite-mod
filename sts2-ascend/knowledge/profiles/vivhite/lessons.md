@@ -14967,3 +14967,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.741214195301011局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.087934310758979局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.433186421047739局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1357 胜，当前目标进阶 3
+
+## 第 1358 局复盘（2026-09-20 08:09）
+- 结果：💀 失败｜进阶 3｜到达层数 3｜当局评分 3
+- 死因：敌人组合 SLUDGE_SPINNER
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血17｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血45｜自损12（可行动段12/非行动段14，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/5.312883994473733局)，BOLAS(37分/2.7265918838617433局)，FISTICUFFS(35分/8.696358688752301局)，AUTOMATION(34分/5.909218415314346局)，THINKING_AHEAD(34分/5.83090492777224局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.721119945617458局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/4.073626540671323局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.424670268574072局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1358 胜，当前目标进阶 3
