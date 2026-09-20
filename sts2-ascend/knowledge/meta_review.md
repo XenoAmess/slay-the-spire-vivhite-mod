@@ -11582,3 +11582,23 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改在线状态、runs、archive、stats、policy.json、lessons 或 prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-20｜第 1576 局复盘（exact run C9GSEPEQ7J1G；最小生产修复 ×1：BOSS_EFFECTIVE_DPT_LOCAL_INIT）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 有效火力观测在没有跨回合 pending 样本时，临时变量 `_boss_projected` 可能未绑定，触发通用异常兜底并把可行动战斗拖成连续 `end_turn`。该假设可由后续生产异常计数证伪。
+- **EVIDENCE**：第 1576 局 F3 淤泥旋螺战中，第 5~9 回合连续 5 次记录同一异常 `cannot access local variable '_boss_projected' where it is not associated with a value`；当时手牌仍有 5 张可出牌、能量为 3，但每回合只发 `end_turn`，生命 73→56→44→27→7→0。第 1~4 回合决策正常。原生 knowledge 仅确认该敌人为普通怪，基础牌/余烬均可正常行动，故故障定位在策略观测局部变量而非敌方机制。
+- **EXPECTED_SIGNAL**：未来 3~10 局中，`_boss_projected` 未绑定异常、由该异常触发的 `决策异常` 与 `end_turn` 自救次数均为 0；Boss pending 对账仍只在有效样本出现，ratio marker、action、params 与开关关闭回滚保持不变。
+
+### MINIMUM_CHANGE / VALIDATION
+
+- `brain/policy.py`：在 Boss 对账 pending 分支前初始化 `_boss_projected = 0.0`；有 pending 样本时仍由 tuple 解包覆盖。评分、判决、目标、动作和观测开关语义不变。
+- `brain/selfcheck.py`：增加 `node_type="Monster"` 回归夹具，断言普通战斗不出现该局部变量异常；既有 Boss pending/off 的 action/params 与 marker 回滚夹具保持通过。
+- `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` → **OK**。未修改在线状态、runs、stats、policy.json、lessons 或 prompt。
+
+### CONTINUE / ROLLBACK
+
+- 继续条件：后续窗口异常计数为 0，Boss pending marker 仍按样本出现且关闭开关不改变 action/params；若重复出现，继续收集异常所在屏幕/回合。
+- 撤回条件：异常复现、`0.0` 泄漏为有效对账、pending/off marker 或 action/params 改变；届时移除初始化并保留本局失败证据。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

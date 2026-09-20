@@ -10799,6 +10799,11 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+    d_combat_non_boss = combat_flip_probe(1.5, node_type="Monster")
+    assert ("cannot access local variable '_boss_projected'"
+            not in d_combat_non_boss.reason
+            and "决策异常" not in d_combat_non_boss.reason), \
+        f"普通战斗不应落入 Boss 对账局部变量异常: {d_combat_non_boss.reason}"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
