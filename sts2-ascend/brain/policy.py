@@ -3796,9 +3796,6 @@ class Policy:
                     # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
                     _boss_effective_dpt_pending = None
-                    # Keep the report-only local totalized even when this combat is
-                    # not a Boss or has not produced a complete sample yet.
-                    _boss_projected = 0.0
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
                             and cctx.get("node_type") == "Boss"
                             and race_lost
