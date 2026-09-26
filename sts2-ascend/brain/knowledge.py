@@ -498,6 +498,12 @@ DEFAULT_POLICY = {
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否
                                          # 在高自损 Boss 战中过度乐观；只观测、不改判定。
+    "vivhite_race_stale_self_loss_obs": True,  # 锁后自付饱和观测：仅当
+                                                  # RACE_UPSHIFT_STALE 与
+                                                  # VIVHITE_RACE_SELF_LOSS_DOMINATES
+                                                  # 同一投影 tick 成立时记录，区分
+                                                  # 「换挡上浮已停止」后仍由生命支付主导的
+                                                  # 长战窗口；纯观测、不改评分/动作，False=回滚。
     "vivhite_race_tsurv_inclusive_obs": True,  # 自付并入存活口径观测（第 679~684 局
                                                # 批复盘）：DOMINATES 触发的判决现场并排
                                                # 披露「可存活 excl→incl」双读数，验证隔离

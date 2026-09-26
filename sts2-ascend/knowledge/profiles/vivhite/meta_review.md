@@ -4504,3 +4504,60 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 - 仅在后续真实千足虫样本中核对 `missing`/`returned` 与两回合窗口，不把观测本身当作死亡原因或策略结论。
 - 若标记缺失、实例错配、窗口与原生证据不符或 action/params 漂移，将配置键设为 `False`，并回滚本地提交。
+
+# 第1394~1395批：锁后生命支付饱和观测
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮进入 `RACE_UPSHIFT_STALE` 后，换挡上浮已经停止；若同一
+  投影 tick 仍满足 `VIVHITE_RACE_SELF_LOSS_DOMINATES`，则竞速账已进入“锁后自付
+  饱和”窗口，持续生命支付可能比敌方净损更快地消耗长战生存余量。该假设可证伪：
+  后续样本若该交集只出现在胜局、与终局无关，或在同型长战中稳定缺失，则不应据此
+  推动行为改动。
+- **EVIDENCE**：exact batch 覆盖第1394、1395局，均在 F33 `THE_INSATIABLE`
+  阵亡。1394 战斗记录为掉血95/自损36，T2判死后实战6回合阵亡；1395 为掉血
+  103/自损48，T2判死后实战9回合阵亡。1395 的完整运行文件
+  `runs/20260926-161008_QPFWUEK8SHS8.json` 有478条决策；任务书 packet 仅保留
+  107条、裁剪371条，已按提示逐条核对保留切片，并按 `full_chain_available_in`
+  深读 F33 终段。1395 在 `RACE_UPSHIFT_STALE` 后连续出现
+  `BOSS_SUSTAIN_NET_HP`、`VIVHITE_HP_PAY_PHASE_AUDIT` 与
+  `VIVHITE_RACE_SELF_LOSS_DOMINATES`，最终生命从103降至0。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Boss 战斗样本中，统计
+  `VIVHITE_RACE_STALE_SELF_LOSS_OBS` 的出现次数、`stale_age`、`self`/`enemy_net`
+  比值、`boss_sustain`，并与同场的 `BOSS_SUSTAIN_NET_HP`、战斗胜负和阵亡回合对账。
+  至少3个独立样本后再决定是否评估竞速行为；标记错分、非白绮触发、字段无法与原始
+  状态对上或动作/参数漂移，均视为假设失败。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启的
+  `vivhite_race_stale_self_loss_obs`，关闭即移除本批观测。
+- `sts2-ascend/brain/policy.py` 在已有换挡上浮置零分支记录本 tick 的 stale 状态，
+  仅在白绮且自付速率主导敌方净损时追加
+  `VIVHITE_RACE_STALE_SELF_LOSS_OBS`，披露回合、锁龄、双方速率、比值及
+  `boss_sustain`；不进入评分、候选、判决、目标或动作参数。
+- `sts2-ascend/brain/selfcheck.py` 新增白绮 stale/自付主导夹具，并验证关闭开关后
+  既有 `RACE_UPSHIFT_STALE` 保留且 action/params 逐项一致。
+- 未修改 `runs/`、stats、progression、`policy.json`、`lessons.md`、`.runtime`、
+  归档或任务书；失败 replay package 的候选 patch 为空，当前 HEAD 由本批独立重实现。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：退出码0；最终代码 diff 仅为上述三个 brain 文件，
+  现场的素材删除、`.review-cache/` 与 `.review_evidence/` 未纳入提交。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续3~10局只做真实 Boss 战斗对账，不把观测本身当作死亡因果；达到3个独立样本后，
+  再比较带标记与不带标记的胜率、终局回合和自付/敌方净损比值。
+- 若标记缺失、错误归类、非白绮触发或 action/params 改变，先将
+  `vivhite_race_stale_self_loss_obs` 设为 `False`；必要时回滚本地提交，保留既有
+  `RACE_UPSHIFT_STALE` 与 `VIVHITE_RACE_SELF_LOSS_DOMINATES` 观测。
+
+## REPLAY
+
+retry_resolution: 20260926-163051-1790411451932212500-e0c3d3bc integrated

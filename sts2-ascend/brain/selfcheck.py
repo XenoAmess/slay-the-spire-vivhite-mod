@@ -15735,6 +15735,41 @@ def main() -> int:
             and "RACE_UPSHIFT_STALE" not in d_stale3.reason), \
         f"键=0 未回滚旧口径: {d_stale3.action}（{d_stale3.reason}）"
 
+    # 3rss) 锁后自付饱和观测（VIVHITE_RACE_STALE_SELF_LOSS_OBS）：
+    #      1395-F33 在 RACE_UPSHIFT_STALE 后仍持续出现生命支付主导；把两个
+    #      已有信号的同 tick 交集单独落账，供后续按胜负核对，不改变判决。
+    assert knowledge.DEFAULT_POLICY["vivhite_race_stale_self_loss_obs"] is True, \
+        "锁后自付饱和观测默认键缺失或未开启"
+
+    def stale_self_loss_policy(enabled):
+        p = policy.Policy(_vivhite_know("sts2-selfcheck-vhrace-stale-"),
+                          random.Random(13))
+        accepted_combat(p, pcap_state(1, 0), pcap_ctx)
+        p._krace_turns = 2
+        p._krace_dmg = p._krace_dmg_sustained = 40.0
+        p.know.policy["vivhite_race_stale_self_loss_obs"] = enabled
+        p._krace_latch = True
+        p._krace_latch_round = 1
+        p._race_round = 4
+        p._race_rounds = 2
+        p._race_loss_rate = 4.0
+        p._race_self_paid_rate = 8.0
+        return p
+
+    pol_stale_loss = stale_self_loss_policy(True)
+    d_stale_loss = pol_stale_loss.decide(pcap_state(4, 0), pcap_ctx)
+    assert ("RACE_UPSHIFT_STALE" in d_stale_loss.reason
+            and "VIVHITE_RACE_SELF_LOSS_DOMINATES" in d_stale_loss.reason
+            and "VIVHITE_RACE_STALE_SELF_LOSS_OBS" in d_stale_loss.reason), \
+        f"锁后自付饱和交集观测缺失: {d_stale_loss.action}（{d_stale_loss.reason}）"
+    pol_stale_loss_rb = stale_self_loss_policy(False)
+    d_stale_loss_rb = pol_stale_loss_rb.decide(pcap_state(4, 0), pcap_ctx)
+    assert ("RACE_UPSHIFT_STALE" in d_stale_loss_rb.reason
+            and "VIVHITE_RACE_STALE_SELF_LOSS_OBS" not in d_stale_loss_rb.reason
+            and d_stale_loss_rb.action == d_stale_loss.action
+            and d_stale_loss_rb.params == d_stale_loss.params), \
+        f"锁后自付饱和观测回滚改变了动作/参数: on={d_stale_loss} off={d_stale_loss_rb}"
+
     # 3lsl) 致死生还线（LETHAL_SURVIVABLE_LINE，第1414~1419局批复盘）：
     #      kill_race 致死回合「非斩杀攻击让位格挡」豁免的前提是防守已被证伪，
     #      但前提只证伪长期防守——可负担格挡组合足以把本回合致死缺口补回

@@ -3428,6 +3428,8 @@ class Policy:
                     # 带引擎卡组不再被面值账推向过早 all-in
                     dpt = self.deck_effective_burst(_deck_now) * _prior_eff
                     dpt_src = f"先验{dpt:.0f}伤/回合" if dpt > 0 else ""
+                _race_upshift_stale = False
+                _race_upshift_stale_age = None
                 # 换挡上浮校准（RACE_LATCH_DPT_UPSHIFT，第823~832局批复盘）：
                 # 实测均值取自防守姿态的开局回合，而判死判决本身的行为后果
                 # 就是全攻换挡——审计首窗实测入锁后输出 10→15~17伤/回合
@@ -3461,6 +3463,8 @@ class Policy:
                             and round_no is not None):
                         _latch_age = int(round_no) - int(self._krace_latch_round)
                         if _latch_age >= _fresh_turns:
+                            _race_upshift_stale = True
+                            _race_upshift_stale_age = _latch_age
                             danger_note += (
                                 f"；入锁已{_latch_age}回合（≥新鲜窗"
                                 f"{_fresh_turns}），实测窗已含全攻换挡，"
@@ -3657,6 +3661,23 @@ class Policy:
                                     f"（敌方净损{loss_rate:.1f}+自付"
                                     f"{self._race_self_paid_rate:.1f}/回合，"
                                     "VIVHITE_RACE_TSURV_INCLUSIVE_OBS）")
+                    if (bool(pol.get("vivhite_race_stale_self_loss_obs", True))
+                            and _race_upshift_stale
+                            and self.character_strategy.profile_id
+                            == VIVHITE_PROFILE_ID
+                            and _vivhite_race_self_loss_dominates(
+                                self._race_self_paid_rate, loss_rate)):
+                        _stale_ratio = (
+                            self._race_self_paid_rate / loss_rate
+                            if loss_rate > 0.0 else float("inf"))
+                        danger_note += (
+                            f"；锁后自付饱和：round={round_no},"
+                            f"stale_age={_race_upshift_stale_age},"
+                            f"self={self._race_self_paid_rate:.1f},"
+                            f"enemy_net={loss_rate:.1f},"
+                            f"ratio={_stale_ratio:.2f},"
+                            f"boss_sustain={int(_boss_sustain_net_hp)}"
+                            "（VIVHITE_RACE_STALE_SELF_LOSS_OBS）")
                     # 自付主导比值锚（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，第
                     # 1037~1051 局批复盘新增）：与上方 DOMINATES 观测完全同口径
                     # （同一精修 loss_rate、同一 _race_self_paid_rate EMA），但不
