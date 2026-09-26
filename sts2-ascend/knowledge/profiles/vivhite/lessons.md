@@ -15297,3 +15297,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.168003999440026局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.679789701060413局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.190253965032319局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1387 胜，当前目标进阶 3
+
+## 第 1388 局复盘（2026-09-26 14:07）
+- 结果：💀 失败｜进阶 3｜到达层数 9｜当局评分 9
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血7｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血8｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损7（可行动段7/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血12｜自损13（可行动段13/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血13｜自损20（可行动段20/非行动段7，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血53｜自损27（可行动段27/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.782438835755994局)，BOLAS(37分/2.4543654497634373局)，FISTICUFFS(35分/7.828103072834503局)，AUTOMATION(34分/5.319234462442491局)，THINKING_AHEAD(34分/5.2487398940358725局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/5.149915985441987局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.6669104371067016局)，VIVHITE_CARD_GEODESIC_VEIL(22分/2.182588076154706局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Elite战实测自损27/掉血53（51%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1388 胜，当前目标进阶 3
