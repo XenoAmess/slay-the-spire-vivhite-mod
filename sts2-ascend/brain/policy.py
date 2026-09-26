@@ -6495,7 +6495,18 @@ class Policy:
                         _krh_pay = float(next(
                             g for g in _m_krh.groups() if g))
                 if _krh_pay > 0.0:
+                    try:
+                        _krh_hp_before = float(my_hp)
+                        _krh_hp_after = max(0.0,
+                                            _krh_hp_before - _krh_pay)
+                        _krh_incoming = float(incoming)
+                        _krh_margin_note = (
+                            f"，hp={_krh_hp_before:g}->{_krh_hp_after:g}"
+                            f"，incoming={_krh_incoming:g}")
+                    except (TypeError, ValueError, OverflowError):
+                        _krh_margin_note = ""
                     why += (f"｜竞速判死自付{_krh_pay:g}血"
+                            f"{_krh_margin_note}"
                             "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
                     # 1195~1196 follow-up observation: a selected self-paying
                     # card must expose why BYPASS_OBS is absent.  The existing

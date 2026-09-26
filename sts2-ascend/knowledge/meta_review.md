@@ -11905,3 +11905,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1590 局复盘（HP_COST_KILL_RACE_MARGIN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：判死竞速中的合法自残攻击（出牌前 `HP>自付额`）仍可能把支付后的生命余量压到敌方下一击以下，并与随后 `GAME_OVER` 相关；现有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 只记录自付额，无法分层核对。这一假设可证伪。
+- **EVIDENCE**：精确 run `SCGGUESW7G00`（第 1590 局，证据文件 `20260927-022635_SCGGUESW7G00.json`）F17 的 D248（第 249 条决策）在 HP=13 时选择 HEMOKINESIS，自付 2，理由同时含 `HP_COST_ATK_PRICING` 与 `KILL_RACE_HOPELESS_HP_PAY_OBS`；敌人 HP 62→45，支付后 HP=11，敌意图=25，随后两次 STRIKE、结束回合，并在 D252 进入 `GAME_OVER`。这不是 `HP_COST_LETHAL_GUARD` 反例，因为 13>2；旧 marker 只留下“自付2血”。
+- **EXPECTED_SIGNAL**：未来 3~10 局同类窗口按 run_id、Boss/敌人、支付前后 HP、敌意图、marker 与后续 `GAME_OVER` 分层；若支付后余量持续低于下一击且终局相关，支持假设；若余量与终局无关，或至少 3 个独立窗口不复现，则削弱假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `KILL_RACE_HOPELESS_HP_PAY_OBS` marker 追加 `hp=支付前->支付后` 与 `incoming`；仅用于审计，评分、候选排序、选牌、action、params 和 `HP_COST_LETHAL_GUARD` 均不变。快照字段不可数值化时不追加字段，不阻断决策。
+- `sts2-ascend/brain/knowledge.py`：更新既有静态键说明，明确新增字段仍是纯观测且可回滚。
+- `sts2-ascend/brain/selfcheck.py`：在已有 HP45/自付2/敌意图22 夹具断言 `hp=45->43,incoming=22`；既有 `obs=0` 回滚继续验证 action/params 不变且 marker 消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 局，按 run_id、遭遇、支付后 HP、下一次敌方伤害和终局结果核对新增字段；不因单局相关性调整自付或竞速行为。若字段与状态快照错配，或新增观测改变 action/params，回滚并保留失败证据。
+- **撤回**：将 `kill_race_hopeless_hp_pay_obs` 设为 `0`；selfcheck 已验证关闭后 action/params 不变且旧 marker 消失。
+- **验证**：`git diff --check` 通过；`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+

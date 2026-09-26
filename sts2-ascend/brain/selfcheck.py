@@ -3908,6 +3908,9 @@ def main() -> int:
     assert "竞速判死自付" in d_krh.reason \
         and "KILL_RACE_HOPELESS_HP_PAY_OBS" in d_krh.reason, \
         f"判死竞速实付謦欬攻击缺观测注记: {d_krh.reason}"
+    assert "hp=45->43" in d_krh.reason \
+        and "incoming=22" in d_krh.reason, \
+        f"判死竞速实付观测缺支付前后生命/敌意图: {d_krh.reason}"
     # ② obs=0 一键回滚：同一驱动动作逐参一致、注记全灭、竞速投影本体不变
     vknow_krh0 = _vivhite_know("sts2-selfcheck-krhopeless-off-")
     vknow_krh0.policy["kill_race_hopeless_hp_pay_obs"] = 0
