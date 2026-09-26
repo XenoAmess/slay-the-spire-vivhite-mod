@@ -15759,3 +15759,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.460356468609923局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.1759212643851313局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/45.4238462605868局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：3/1429 胜，当前目标进阶 3
+
+## 第 1430 局复盘（2026-09-27 01:22）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SUCCESSOR_FORMULA
+- 本局遗物：CANDELABRA, BRONZE_SCALES
+- 战斗记录：F6 Monster战 掉血7｜自损12（可行动段12/非行动段9，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损13（可行动段13/非行动段15，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血8｜自损19（可行动段19/非行动段14，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损12（可行动段12/非行动段10，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血4｜自损17（可行动段17/非行动段11，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血74｜自损28（可行动段28/非行动段23，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(37分/5.099926810860868局)，BOLAS(37分/2.1182926351007536局)，STRATAGEM(36分/5.060561650875436局)，FISTICUFFS(35分/7.634546958539904局)，AUTOMATION(35分/5.542978449334982局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.444745220969788局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.1648055399597834局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/45.26486279867475局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.46（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1430 胜，当前目标进阶 3
