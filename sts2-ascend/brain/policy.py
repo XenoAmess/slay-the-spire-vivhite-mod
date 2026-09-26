@@ -696,6 +696,7 @@ class Policy:
         self._focus_drift_multi_scaler_obs_emitted = False  # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
+        self._race_prev_enemy_hp = None  # 上一个回合开始时的敌方总血池
         self._race_loss_rate = 0.0  # 回合开始→下一回合开始的净损血 EMA（允许回血为负）
         self._race_rounds = 0       # 完成的回合边界采样数
         self._race_tick_round = None  # 上一个逐 tick HP 观测所属回合
@@ -3715,6 +3716,10 @@ class Policy:
                             float(self._race_prev_hp)
                             if self._race_prev_hp is not None
                             else float(my_hp))
+                        _hp_pay_audit_start_enemy_hp = (
+                            float(self._race_prev_enemy_hp)
+                            if self._race_prev_enemy_hp is not None
+                            else float(enemy_hp_total))
                         danger_note += (
                             f";hp-pay-audit round={round_no},"
                             f"boundaries={self._race_rounds},"
@@ -3722,7 +3727,9 @@ class Policy:
                             f"enemy_total={self._race_same_round_loss_enemy:.1f},"
                             f"heal_total={self._race_same_round_heal:.1f},"
                             f"hp_start={_hp_pay_audit_start_hp:.1f},"
-                            f"hp_now={float(my_hp):.1f};"
+                            f"hp_now={float(my_hp):.1f},"
+                            f"enemy_hp_start={_hp_pay_audit_start_enemy_hp:.1f},"
+                            f"enemy_hp_now={float(enemy_hp_total):.1f};"
                             "VIVHITE_HP_PAY_PHASE_AUDIT")
                     if esc_gate and not _boss_sustain_net_hp:
                         # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
@@ -4548,6 +4555,7 @@ class Policy:
             self._race_combat = ctx.combat
             self._race_round = None
             self._race_prev_hp = None
+            self._race_prev_enemy_hp = None
             self._race_loss_rate = 0.0
             self._race_rounds = 0
             self._race_tick_round = None
@@ -4768,6 +4776,7 @@ class Policy:
             self._race_round = round_no
             # 只在回合边界更新；同回合出牌后的謦欬/汲取不能覆盖起点。
             self._race_prev_hp = my_hp
+            self._race_prev_enemy_hp = enemy_hp_total
 
         if not can_play:
             # 接口就绪阶梯（提取段，行为与原内联实现严格等价）：

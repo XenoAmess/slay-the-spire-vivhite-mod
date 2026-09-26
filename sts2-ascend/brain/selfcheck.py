@@ -10941,7 +10941,9 @@ def main() -> int:
             and "enemy_total=20.0" in d_combat_hp_pay.reason
             and "heal_total=12.0" in d_combat_hp_pay.reason
             and "hp_start=46.0" in d_combat_hp_pay.reason
-            and "hp_now=46.0" in d_combat_hp_pay.reason), \
+            and "hp_now=46.0" in d_combat_hp_pay.reason
+            and "enemy_hp_start=185.0" in d_combat_hp_pay.reason
+            and "enemy_hp_now=185.0" in d_combat_hp_pay.reason), \
         f"白绮 Boss 续航 HP 分相对账观测缺失: {d_combat_hp_pay.reason}"
     assert (d_combat_hp_pay_off.action == d_combat_hp_pay.action
             and d_combat_hp_pay_off.params == d_combat_hp_pay.params

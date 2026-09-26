@@ -4625,3 +4625,34 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1402~1404批：Boss续航分相补充敌方血池对账
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1404-F33 `KNOWLEDGE_DEMON` 的失败可能同时包含白绮生命支付过快与实际 Boss 输出低于投影两种因素；现有 `VIVHITE_HP_PAY_PHASE_AUDIT` 只有玩家 HP 起止和自付/敌方/回血分账，缺少敌方血池起止，因此不能把两者分开证伪。若补充敌方回合起点与当前血池后，字段能与原始状态对上并解释实际敌血净降，假设得到可检验的观测锚；若缺失、错配或动作漂移，假设证伪。
+- **EVIDENCE**：exact batch 覆盖 1402~1404 局；完整运行文件 `sts2-ascend/knowledge/profiles/vivhite/runs/20260926-182125_AM5MXAKZ4LD1.json` 含 418 条决策，F33 Boss 段为 T1~T6，最终掉血 65、自损 35（可行动段 35/非行动段 17）。T3~T6 已反复出现 `BOSS_SUSTAIN_NET_HP`、`VIVHITE_HP_PAY_PHASE_AUDIT`、`VIVHITE_RACE_SELF_LOSS_DOMINATES` 与并入口径存活读数，但原审计串没有敌方血池起止。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 续航样本中，每次既有分相审计都应追加 `enemy_hp_start` 与 `enemy_hp_now`，并能按同一回合边界和原始状态核对敌血净降；再与 own/enemy/heal、终局回合和胜负对账。字段缺失、跨回合错配、非 Boss/非续航误触发，或 action/params 改变，均证伪本假设。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：按战斗实例保存回合边界的敌方总血池起点；在既有 `VIVHITE_HP_PAY_PHASE_AUDIT` 中追加 `enemy_hp_start`/`enemy_hp_now`。不改评分、竞速判定、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：扩展白绮 Boss 分相夹具，核对 185→185 的敌方血池字段，并保持观测关闭时 action/params 与开启时一致。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或任务书；本批 `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；最终目标改动仅为上述两个 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局只核对敌方血池起止与原始状态、实际/投影输出、生命支付分相及胜负，不把观测本身当作死亡因果；至少 3 个独立 Boss 样本后再决定是否调整竞速或血价行为。
+- 若字段缺失、数值错配或动作参数漂移，先将现有 `vivhite_hp_pay_phase_audit_obs` 设为 `False` 关闭本条审计，再回滚本地提交；保留其余竞速与自付观测。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
