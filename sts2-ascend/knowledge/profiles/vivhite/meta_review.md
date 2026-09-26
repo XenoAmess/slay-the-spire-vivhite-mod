@@ -4327,3 +4327,57 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 本批 `failed_review_replay.requested_packages` 为空，无 `retry_resolution` 目标。
+
+# 第 1345~1348 局批复盘：策略异常稳定观测与 F2 连续自救
+
+日期：2026-09-26
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1348 局 F2 的连续 `end_turn` 不是正常的白绮门拦决策，而是
+  可选 Boss 火力观测的旧代码排列触发 `_boss_projected` 未初始化，随后被通用
+  连续异常自救路径接管。当前 HEAD 已由此前的启动故障修复提交恢复该观测块的
+  正确排列；本批需要把这类异常从普通理由文本提升为稳定、可聚合的生产信号，且
+  不改变首个异常或第 10 次自救的动作/参数。
+- **EVIDENCE**：完整运行
+  `sts2-ascend/knowledge/profiles/vivhite/runs/20260920-072425_WF8HT0TFKCKZ.json`
+  的 13 条 decisions 已逐条回读。F2-T3 至 T8 的生命为 60→7，敌方意图为
+  13/7 交替，手牌仍有可出牌且 `action_readiness` 为 ready；6 条理由均为
+  `cannot access local variable '_boss_projected'...`，随后 T8→GAME_OVER。
+  失败 replay 索引完整，114 个证据文件的字节数与 SHA-256 全部匹配；target
+  工作补丁无生产候选，后续 attempt 的 327 文件候选包含大规模删除且未套用。
+- **EXPECTED_SIGNAL**：未来 3~10 局按局/战斗统计
+  `POLICY_DECISION_EXCEPTION_OBS` 的屏幕、异常类型、首次异常与连续自救次数，
+  并核对该标记前后的 action/params、`action_readiness` 和终局。健康决策不应有
+  该标记；若再次发生策略异常，标记必须同时出现在首个异常和第 10 次安全回退中。
+  若标记缺失、误出现在无异常决策，或观测改动导致动作/参数漂移，则假设被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在 `decide()` 的异常回退入口生成稳定的
+  `POLICY_DECISION_EXCEPTION_OBS screen=<screen> type=<ExceptionType>`；首个异常、
+  第 10 次后的安全动作和索引盲选三条路径都追加该标记。评分、候选、动作和参数
+  均未改动。
+- `sts2-ascend/brain/selfcheck.py`：新增异常注入夹具，分别验证首个异常返回空动作
+  与第 10 次连续异常返回 `end_turn`，两者参数保持 `{}` 且都带稳定标记。
+- 未修改 `runs/`、stats、progression、`policy.json`、`lessons.md`、`.runtime`、
+  复盘提示词或素材现场。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标 diff 共 `policy.py` 8 insertions/3 deletions、`selfcheck.py` 30 insertions/1 deletion；
+  `git diff --check` 退出码 0。宿主预置的素材删除和未跟踪证据目录未纳入提交。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局按独立战斗核对：异常标记局数、首次/连续回退次数、异常类型分布、
+  标记前后动作参数、下一条状态是否仍为可行动 COMBAT，以及最终胜负和自损。仅有
+  标记不等于死亡因果；若无标记则不把自检通过当作真机成功。
+- 若再次出现 `_boss_projected` 或其他策略异常，先用标记定位 screen/type 与回退次数；
+  若标记缺失、误报或 action/params 漂移，回滚本地提交即可移除本批观测，保留原有
+  异常吞吐和当前 HEAD 的 Boss 观测排列修复。
+
+## REPLAY
+
+retry_resolution: 20260920-081634-1789863394721693300-aaedd43b integrated
