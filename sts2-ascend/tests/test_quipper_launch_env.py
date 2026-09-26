@@ -57,6 +57,19 @@ class QuipperLaunchEnvironmentTests(unittest.TestCase):
             child_env["STS2_ASCEND_STOP_FILE"], r"G:\\runtime\\stop.request")
         thread.start.assert_called_once_with()
 
+    def test_inconclusive_game_probe_never_launches_a_duplicate(self) -> None:
+        instance = object.__new__(agent_module.Agent)
+        instance.client = SimpleNamespace(discover=mock.Mock(return_value=False))
+        instance._game_process_count = mock.Mock(return_value=None)
+        instance._wait_for_game_api = mock.Mock(return_value=False)
+
+        with (mock.patch.object(agent_module, "stop_requested", return_value=False),
+              mock.patch.object(agent_module.subprocess, "Popen") as popen):
+            self.assertFalse(instance.ensure_game())
+
+        instance._wait_for_game_api.assert_called_once_with(
+            timeout_s=300.0, poll_s=4.0)
+        popen.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()

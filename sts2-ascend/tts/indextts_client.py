@@ -88,6 +88,48 @@ def wait_ready(
     return None
 
 
+def suspend_for_broadcast(status: dict, timeout: float = 5.0) -> dict:
+    """Ask the exact current owner to drain and release CUDA before streaming."""
+    expected_session = os.environ.get("STS2_ASCEND_SESSION_ID", "legacy")
+    expected_epoch = code_epoch()
+    if not status_matches(
+            status, session_id=expected_session,
+            expected_epoch=expected_epoch, require_ready=True):
+        raise IndexTTSServiceError(
+            "IndexTTS owner identity/code does not match the current session")
+    payload = json.dumps({
+        "session_id": expected_session,
+        "owner_pid": status.get("owner_pid"),
+        "owner_created_unix": status.get("owner_created_unix"),
+        "owner_creation_filetime": status.get("owner_creation_filetime"),
+        "owner_code_epoch": status.get("owner_code_epoch"),
+        "reason": "bilibili_stream",
+    }, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        _url("/suspend"), data=payload, method="POST",
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=max(0.1, timeout)) as response:
+            result = _decode_response(response)
+    except urllib.error.HTTPError as exc:
+        try:
+            detail = _decode_response(exc)
+            message = str(detail.get("error") or detail)
+        except Exception:
+            message = str(exc)
+        finally:
+            exc.close()
+        raise IndexTTSServiceError(message) from exc
+    except (OSError, urllib.error.URLError, TimeoutError) as exc:
+        raise IndexTTSServiceError(
+            f"IndexTTS broadcast suspend unavailable: {exc}") from exc
+    if not result.get("ok") or not result.get("accepted"):
+        raise IndexTTSServiceError(
+            str(result.get("error") or "IndexTTS broadcast suspend was rejected"))
+    return result
+
+
 def speak(
     text: str,
     *,

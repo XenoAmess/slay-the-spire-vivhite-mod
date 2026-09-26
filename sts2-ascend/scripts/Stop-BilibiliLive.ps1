@@ -14,9 +14,12 @@ if (-not $PSCmdlet.ShouldProcess("Bilibili Livehime", "stop Bilibili streaming o
 }
 
 Invoke-LivehimeBridge -Action Stop -TimeoutSeconds $LiveTimeoutSeconds
+$projectRoot = [IO.Path]::GetFullPath((Split-Path $PSScriptRoot -Parent))
+$ttsRestore = Restore-AscendIndexTtsAfterBroadcast -ProjectRoot $projectRoot
 $gameWindow = Get-SlayTheSpireWindow -GameDir $GameDir
 if ($gameWindow) {
     Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds 10
     Set-AscendViewerTopMost
 }
-Write-Host "Bilibili streaming stopped through Livehime. No service or game process was stopped."
+Write-Host ("Bilibili streaming stopped through Livehime. No service or game process was stopped; " +
+    "IndexTTS restore state=$($ttsRestore.State), owner_pid=$($ttsRestore.OwnerPid).")

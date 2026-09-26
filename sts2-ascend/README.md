@@ -228,8 +228,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Instal
 ```
 
 安装器会把当前脚本按 SHA-256 复制到 `Program Files\VivhiteBilibiliLiveBridge`，并注册
-`\Vivhite\BilibiliLive-Start`、`\Vivhite\BilibiliLive-Stop`、`\Vivhite\BilibiliLive-DailyStopWatch`
-三个最高权限、交互式任务。**无人值守时不执行安装器、不点击 UAC、不自动确认游戏或直播姬弹窗。**
+`\Vivhite\BilibiliLive-Start`、`\Vivhite\BilibiliLive-Stop`、
+`\Vivhite\BilibiliLive-HealthWatch` 三个最高权限交互式任务，以及有限权限的
+`\Vivhite\BilibiliLive-DailyStart` 与 `\Vivhite\BilibiliLive-DailyStopWatch`。两个定时协调器只调用统一
+开/下播入口，不直接操作直播姬。**无人值守时不执行安装器、不点击 UAC、不自动确认游戏或直播姬弹窗。**
+**直播中同样禁止执行安装器。**安装器必须在请求 UAC 之前读取直播姬状态；只有明确的 `Idle` 或
+`NotRunning` 才能继续，`Streaming`、过渡态、`Unknown` 或读取失败都必须在弹窗前拒绝。生产场景
+使用显示器捕获，UAC 安全桌面或由其造成的全屏冻结画面可能被播出并触发平台挂机/消极直播处罚。
 安装后普通运行只触发已经注册的 worker；任务不存在时开/下播应失败关闭并等待人工处理，而不是
 自行提权。`-WhatIf` 可预览安装器/Stop 的目标，但不会替代真实安装。
 
@@ -258,7 +263,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Instal
 | Brain | Python 3.10+ 标准库（本机已用 3.14 验证） | 无第三方 Python 依赖 |
 | fork 构建工具链 | .NET 9 + Godot 4.5.1 Mono | 仅部署 fork 时需要 |
 
-启动默认在后台运行，不占住当前终端。常用参数：
+启动默认在后台运行，不占住当前终端。Brain 内部的游戏进程探针采用三态语义：只有明确得到 0 个进程才允许冷启动；`tasklist` 超时或失败属于“不确定”，只能等待 API/下轮复核，绝不能据此启动第二个 Vulkan 实例。重复实例统一由 `Stop-Agent.ps1` 的精确身份流程清理。
+
+常用参数：
 
 - `-Version <版本>`：`Deploy-Mod.ps1` 使用的上游 release 版本，默认 `0.9.1`；`-Source fork` 时仅作
   审计记录，不替代 fork 当前 checkout。
@@ -293,9 +300,9 @@ UAC、人工 GUI 或 Steam 文件修改；它也不替代原生存档/Continue �
 
 `Stack ready` 只表示当前 session 的 brain 与游戏 API 已就绪，**不等于真实对局、正在操作或具备开播资格**。ASCEND-VISION 驾驶舱随 brain 启动并由监督器持续检查心跳、异常退出后自动重拉；碎碎念在语音环境可用时启动，复盘 OpenCode 与复盘 speaker 仍只在有任务时按需出现。
 
-真实游玩和直播资格是独立的失败关闭门禁：开播入口在触碰 Livehime 前必须只读确认 `/state` 为非 `MAIN_MENU`/`run_unknown`/等待界面的有效 `run`，`state_version` 为合法数值且在推进，驾驶舱为 `connected`，并有近期 Brain 决策及动作回执 `outcome.status=applied`。随后还必须看到两次不同的状态/素材签名和递增的 `state_version`；刷新心跳、重复提案或只更换 `decision_id` 都不算进展。若任一证据缺失，禁止调用 `Start-BilibiliLive.ps1` 或自动复播；已经在 `Streaming` 时立即调用 `Stop-BilibiliLive.ps1` 并确认 `Idle`，不得为了两分钟断流预算继续空播。
+真实游玩和直播资格是独立的失败关闭门禁：开播入口在触碰 Livehime 前必须只读确认 `/state` 为非 `MAIN_MENU`/`run_unknown`/等待界面的有效 `run`，`state_version` 为合法数值，驾驶舱为 `connected`，并有近期 Brain 决策及动作回执 `outcome.status=applied`。`state_version` 是当前 API 快照的新鲜度标记，不保证逐动作递增；连续进展必须由同一 `run_id` 内两个不同 `decision_id` 的 `applied` 回执证明，且后一个 `outcome.at` 晚于前一个。动作之间的 `proposed`/`reconciling`/`waiting` 或短暂 `/state` 不可用样本不计作进展，但不会抹掉首个有效回执；最终放行样本仍须完整、新鲜、可执行。刷新心跳、重复提案、相同 `decision_id` 或没有较新 `applied` 回执都不算进展。若任一证据缺失，禁止调用 `Start-BilibiliLive.ps1` 或自动复播。已经在 `Streaming` 时，正常 `GAME_OVER` → 菜单 → 选角自动跨局使用两阶段门禁：从首次过渡起最多 120 秒取得新 `run_id` 的第一条 `applied`，再从该回执起独立等待 30 秒取得同一新局第二条连续回执；其间短暂空、`UNKNOWN`、`WAITING` screen 或重复的第一条回执都不能重置计时。任一阶段超时才下播，其他硬失败仍立即调用 `Stop-BilibiliLive.ps1` 并确认 `Idle`，不得为了两分钟断流预算继续空播。
 
-用户明确要求保持下播时，先核验 Livehime 为 `Idle`，只调用或复用统一 `Start-Agent.ps1` 运行游戏＋Brain；绝不调用 `Start-BilibiliLive.ps1`、自动复播入口或任何人工 GUI/UAC。下播训练也必须以真实 `/state`、有效 `run`、近期 `applied` 回执和连续状态进展证明实际游玩；若出现 `MAIN_MENU`、`run_unknown`、终局/孤儿账本阻塞、连续无新动作或证据过期，Brain 保持 fail-closed 并进入诊断/修复，不伪造动作或把健康检查当训练成功。直播中若这些证据丢失，或出现挂机提示/处罚弹窗，同样立即下播确认 `Idle`，修复并重新取得证据前不得复播。
+用户明确要求保持下播时，先核验 Livehime 为 `Idle`，只调用或复用统一 `Start-Agent.ps1` 运行游戏＋Brain；绝不调用 `Start-BilibiliLive.ps1`、自动复播入口或任何人工 GUI/UAC。下播训练也必须以真实 `/state`、有效 `run`、近期 `applied` 回执和连续状态进展证明实际游玩；若出现 `MAIN_MENU`、`run_unknown`、终局/孤儿账本阻塞、连续无新动作或证据过期，Brain 保持 fail-closed 并进入诊断/修复，不伪造动作或把健康检查当训练成功。直播中正常跨局按 120 秒首回执 + 30 秒第二回执的两阶段门禁观察；若跨局超时、其他证据丢失，或出现挂机提示/处罚弹窗，则下播确认 `Idle`，修复并重新取得证据前不得复播。
 
 全栈运行时可随时把游戏交还给玩家：`Ctrl+Alt+F9` 全局停止 Brain 发送操作，
 `Ctrl+Alt+F10` 恢复自主操作。暂停采用 runner 驻留的控制权切换，游戏、runner 与驾驶舱都不会关闭。
@@ -321,7 +328,7 @@ F9 一旦触及当前局，该局便永久标记为 `human_assisted` / `excluded
 | API `/state` | `screen` 不在菜单/等待/终局屏，`run_id` 与结构化 `run` 有效，`state_version` 为数值 | `MAIN_MENU`、`run_unknown`、`run=null`、`state_version` 缺失 |
 | Brain dashboard | `.runtime/live_dashboard.<SESSION_ID>.json` 的 schema 为 `sts2.ascend-live/v1`，session/run 与 API 一致，`connection.status=connected` 且 heartbeat 新鲜 | 另一个 session 的 dashboard、只有 viewer 进程心跳 |
 | 动作 | 最近决策的 `decision.status=applied` 且 `decision.outcome.status=applied`，有可执行 action | `proposed`/`pending`/`reconciling`、只换 `decision_id` |
-| 连续性 | 至少两次不同状态/素材签名，`state_version` 严格递增 | 重复快照、仅时间戳变化、重复提案 |
+| 连续性 | 同一 `run_id` 内至少两个不同 `decision_id`，均有 `applied` 回执且后一个 `outcome.at` 更晚；`state_version` 可相同 | 重复快照、仅刷新心跳、重复提案、相同决策或无较新动作回执 |
 
 可以用下面的**只读**片段快速查看（端口被占用时把 `8080` 换成实际发现的 `8081`–`8084`）：
 
@@ -374,25 +381,33 @@ Brain 使用本机回环地址，不对外开放：
 
 开播入口会先复用/启动完整 sts2-ascend 栈，再读取真实 `/state` 和当前 session dashboard；它要求
 连续两次新鲜、递增的游戏状态及最近 `applied` 动作，任何一步失败都不会点击 Livehime。通过后才
+验证唯一 IndexTTS/Quipper owner 已启用 3328 MiB CUDA allocator 上限和 `staged_cuda` BigVGAN；白绮克隆音色在直播中继续在线。随后才
 调用受保护的 Livehime worker，并将游戏和驾驶舱置顶：
 
 ```powershell
 # 会实际开播；不要在用户要求下播、无人值守或没有真实对局证据时运行
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Start-BilibiliLive.ps1 `
-  -ReadyTimeoutSeconds 120 -GameplayReadyTimeoutSeconds 30 -LiveTimeoutSeconds 30
+  -ReadyTimeoutSeconds 120 -GameplayReadyTimeoutSeconds 30 -LiveTimeoutSeconds 120
 
-# 只下播，不停止游戏、Brain、runner、TTS 或驾驶舱
+# 只下播，不停止游戏、Brain、runner、驾驶舱或唯一 IndexTTS owner
 powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-BilibiliLive.ps1
 ```
 
 `Start-BilibiliLive.ps1` 的失败路径若发现已有不安全的 `Streaming`，会优先停止并确认 `Idle`，
-然后报告原因；它不会为了达到“两分钟”而继续空播或自动重播。已经直播时若 `/state` 回到菜单、
-动作/状态无进展、dashboard 过期或出现平台挂机/处罚提示，应立即执行只下播入口并确认
+然后报告原因；它不会为了达到“两分钟”而继续空播或自动重播。已经直播时若 `/state` 进入
+正常 `GAME_OVER` → 菜单 → 选角跨局，则先在 120 秒内等待新局第一条 `applied`，取得后再用独立 30 秒等待第二条连续回执；期间短暂空、`UNKNOWN`、`WAITING` screen 和重复回执都不重置计时；任一阶段超时、
+普通对局动作/状态无进展、dashboard 过期或出现平台挂机/处罚提示时，执行只下播入口并确认
 `Get-LivehimeStreamingState` 为 `Idle`。两分钟是恢复预算，不是允许空播的宽限期。
 
-每日下播 watcher 只在安装器注册成功后存在；它按北京时间 `16:20`–`16:39` 每分钟检查一次，
-只对精确 `Streaming` 状态执行下播，其他状态或读取异常均不点击。它不会启动训练、访问 Web API、
-调用 LLM 或停止游戏。安装/更新 watcher 的管理员授权必须由用户在场完成，不能由无人值守流程代办。
+生产直播场景有意保留显示器捕获，以便把游戏上方的 ASCEND-VISION 蓝色悬浮窗一并播出；自动修复不得把它替换为游戏/窗口捕获。受保护的交互式 worker 在操作直播姬后必须先恢复游戏前台与 TOPMOST，再以不激活方式把驾驶舱叠到游戏上方；公共入口等待该恢复完成后才能报告成功。
+
+开播 worker 会关闭同步录制、只删除语义完全相同的重复 Bilibili 浏览器插件源（保留一份），并在历史高渲染阻塞或桌面复制错误后冷重建空闲直播姬。“直播已结束／近期违规”页先由完整四臂 X 像素门禁识别，之后才允许调用有 5 秒上限的 WinRT OCR；点击开始后同一弹窗若在 `Idle` 重现，则判定本次开播被拒绝，只允许一次正常冷重启和一次重试，禁止循环点击或误报成功。`BilibiliLive-HealthWatch` 在直播期间检查新 `887A0001` 错误和预览运动；只有错误爆发与静帧相互印证才走三次快速下播，单独低运动连续五分钟才失败关闭，任一新鲜预览会同时清零两类计数，避免篝火、地图或奖励页的短暂停留被误判。2026-09-07 实测故障中，Quipper 峰值仍为 3233–3235MiB（历史 3174–3289MiB），但长期运行的游戏、桌面合成与直播链把整卡推到 5.7–5.85GiB，导致语音从约 14–18 秒恶化到 844/4244 秒，同时直播姬渲染阻塞由此前 1.0% 升至 26.1%。整改后对 Quipper 设置 3328 MiB allocator 硬上限；BigVGAN 平时驻留 CPU，最终波形阶段先卸载已消费的 GPT/semantic codec，再短暂进入 CUDA，完成后恢复稳态。参考编码器仍在固定条件缓存后卸载，GPT 仍使用 FP16。这样保留直播卖点和生成速度，同时为 Vulkan、桌面捕获、浏览器插件和 NVENC 留出显存。
+
+每日开播协调器在北京时间半开窗口 `[23:00, 23:20)` 每分钟检查一次，只调用统一
+`Start-BilibiliLive.ps1`；真实游玩、Quipper 或显存门禁不满足即失败关闭，窗口内下一分钟再重试。
+每日下播协调器在 `[11:00, 11:20)` 每分钟检查一次：`Idle`/`NotRunning` 视为完成，只有精确
+`Streaming` 才调用统一 `Stop-BilibiliLive.ps1`；过渡态或读取失败不点击 GUI。定时下播不停止游戏、
+Brain、runner、驾驶舱或 Quipper。
 
 ## 它如何"进化"
 
@@ -787,23 +802,24 @@ brain 启动时会启动独立 viewer，`dashboard_launcher.py` 监督其心跳�
 - detached viewer 使用关闭继承句柄的方式启动，不能再持有 OpenCode/selfcheck 的 stdout 捕获管道；
   viewer 存活不会阻止工具调用收到 EOF。
 - 活动局日志持续写入只更新文件签名，不会在统计内容未变化时触发统计卡重绘。
+- HUD 的呼吸灯和时钟最多每 250ms 重绘一次，避免 Tk Canvas 在 33ms 主帧循环里长期删除/新建对象；
+  viewer 每 5 秒检查自身工作集，超过 512 MiB 会写入 `working-set-limit` 后正常退出，由监督器自动重建，
+  不影响游戏、Brain、runner、直播姬或 Quipper。
 
 该升级不改变直播控制边界：开播仍启动完整 sts2-ascend 栈、将杀戮尖塔2置顶后通过本地直播姬开播；
-下播仍只让哔哩哔哩直播姬下播，不停止驾驶舱、智能体、语音服务或游戏。
+开播前验证唯一 Quipper 采用 3328 MiB CUDA allocator 上限和 `staged_cuda` BigVGAN，直播期间 Edge 正文与白绮
+克隆音色都继续。下播仍只让哔哩哔哩直播姬下播，不停止驾驶舱、智能体、游戏或 Quipper。
 
-运行 `.\sts2-ascend\scripts\Install-BilibiliLiveBridge.ps1` 安装受保护直播桥后，会注册每日下播巡检任务
-`\Vivhite\BilibiliLive-DailyStopWatch`。它按北京时间每天 16:20 启动，在半开窗口
-`[16:20, 16:40)` 内按分钟槽检查 20 次（16:20–16:39）；只有本地直播姬
-进程与日志精确报告 `Streaming` 时才复用同一 GUI 下播流程。其余状态及读取异常全部不点击，成功
-下播后仍巡检到 16:40，以便阻止窗口期内重新开播。该任务不访问 Web API、不调用 LLM、不消耗
-token，也不会停止游戏、Agent、TTS、驾驶舱或其他服务。20 个槽分别启动短 worker，避免腾讯电脑
-管家拦截某一分钟的 PowerShell 后连带丢失当天剩余巡检；人工 Start/Stop 与自动下播通过命名 mutex
-串行化，避免同时点击直播姬。
+运行 `.\sts2-ascend\scripts\Install-BilibiliLiveBridge.ps1` 安装受保护直播桥后，会注册两个有限权限窗口任务：
+`\Vivhite\BilibiliLive-DailyStart` 在北京时间 `[23:00, 23:20)` 每分钟检查开播，所有真实游玩和显存
+门禁仍然生效；`\Vivhite\BilibiliLive-DailyStopWatch` 在 `[11:00, 11:20)` 每分钟检查下播，只对精确
+`Streaming` 调统一下播入口。两者都不直接调用受保护 GUI worker；下播任务不会停止训练栈或 Quipper。
 
 ## 语音朗读（ASCEND-VOICE）
 
-默认是两种声音并行：**Edge TTS 读实时复盘正文**，白绮的 **IndexTTS-2.5 GPU** 继续读碎碎念和
-最终结论。两套引擎按用户要求允许同时出声；`quipper.py` 是唯一 IndexTTS 模型 owner，不会为结论
+非直播训练默认是两种声音并行：**Edge TTS 读实时复盘正文**，白绮的 **IndexTTS-2.5 GPU** 继续读
+碎碎念和最终结论。直播时 Quipper 也保持在线：PyTorch CUDA allocator 固定上限为 3328 MiB，最终
+BigVGAN 声码器平时驻留 CPU，只在先卸载 GPT/semantic codec 后短暂进入 CUDA，以避免 6GB 显卡同时承载全部模型权重、Vulkan、显示器捕获、浏览器插件和 NVENC。`quipper.py` 始终是唯一 IndexTTS 模型 owner，不会为结论
 再加载第二份模型：
 
 - 默认配置：`llm.tts_mode=edge`、`tts.clone_engine=indextts`、`device=cuda:0`
@@ -820,7 +836,7 @@ token，也不会停止游戏、Agent、TTS、驾驶舱或其他服务。20 个�
 - `LIVE-START/END` 带唯一 `review_id`；同一 Edge 跨连续复盘时按 id 去重，并由单一 FIFO 保证多场结论顺序
 - Edge 正文队列和白绮结论并行工作；白绮碎碎念也不因 Edge 直播暂停。Index 内部仍严格串行，结论优先于
   等待中的碎碎念，但不会强行打断已经开始的那一句
-- GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；禁用 BF16、
+- GTX 1060 低显存路径：GPT 使用 FP16，codec / S2Mel / BigVGAN 保持 FP32；BigVGAN 使用分阶段 CUDA 驻留，
   FlashAttention、CUDA 自定义 kernel 和 torch.compile
 - 固定参考音色 `tts/reference_voice_15s.wav` 由 `.\sts2-ascend\scripts\prepare_reference_voice.py` 从原始 WAV 的前 15 秒生成：
   只把超过 400ms 的低能量静段缩到 200ms，保留自然停顿并在替换前备份 WAV 和条件缓存；可先运行

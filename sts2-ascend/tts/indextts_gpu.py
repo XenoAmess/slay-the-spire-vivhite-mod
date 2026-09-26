@@ -22,6 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TTS_DIR = BASE_DIR / "tts"
 INDEXTTS_DIR = BASE_DIR / "third_party" / "index-tts"
 CONFIG_PATH = BASE_DIR / "brain" / "config.json"
+DEFAULT_CUDA_ALLOCATOR_LIMIT_MIB = 3328
 REFERENCE_WAV = TTS_DIR / "reference_voice_15s.wav"
 REFERENCE_CACHE = TTS_DIR / "reference_voice_15s.indextts25.cache.pt"
 CACHE_FORMAT = 1
@@ -166,7 +167,7 @@ def worker_port() -> int:
 
 
 class IndexTTSGpuEngine:
-    """One FP32 CUDA model with reference-only encoders kept off the GPU.
+    """One bounded CUDA model with reference encoders and vocoder off GPU.
 
     IndexTTS-2.5 normally places every component on one device.  Its Wav2Vec
     reference encoder alone is about 2.2 GiB and is unused after a fixed voice
@@ -182,10 +183,15 @@ class IndexTTSGpuEngine:
         self.precision = str(cfg.get("precision") or "fp32").lower()
         self.duration_factor = float(cfg.get("duration_factor", 0.9))
         self.num_beams = max(1, int(cfg.get("num_beams", 1)))
+        self.vocoder_device = str(cfg.get("vocoder_device") or "staged_cuda").lower()
         if not self.device.startswith("cuda"):
             raise RuntimeError(f"IndexTTS 已配置为 GPU-only，device 不能是 {self.device!r}")
         if self.precision not in ("fp32", "fp16"):
             raise RuntimeError(f"IndexTTS precision 仅支持 fp32/fp16，收到 {self.precision!r}")
+        if self.vocoder_device not in ("cpu", "cuda", "staged_cuda"):
+            raise RuntimeError(
+                "IndexTTS vocoder_device 仅支持 cpu/cuda/staged_cuda，"
+                f"收到 {self.vocoder_device!r}")
 
         import torch
 
@@ -196,12 +202,27 @@ class IndexTTSGpuEngine:
             raise RuntimeError(f"CUDA 设备不存在：{self.device}")
         self.torch = torch
         self.gpu_name = torch.cuda.get_device_name(index)
-        self.total_vram_gb = torch.cuda.get_device_properties(index).total_memory / 1024 ** 3
+        total_vram_bytes = int(torch.cuda.get_device_properties(index).total_memory)
+        self.total_vram_gb = total_vram_bytes / 1024 ** 3
+        try:
+            self.cuda_allocator_limit_mib = int(
+                cfg.get("max_cuda_allocator_mib", DEFAULT_CUDA_ALLOCATOR_LIMIT_MIB))
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("tts.max_cuda_allocator_mib 必须是整数 MiB") from exc
+        total_vram_mib = total_vram_bytes / 1024 ** 2
+        if (self.cuda_allocator_limit_mib < 1024
+                or self.cuda_allocator_limit_mib >= total_vram_mib):
+            raise RuntimeError(
+                "tts.max_cuda_allocator_mib 必须至少为 1024，且小于显卡总显存")
+        allocator_fraction = float(self.cuda_allocator_limit_mib / total_vram_mib)
+        torch.cuda.set_per_process_memory_fraction(allocator_fraction, index)
+        self.cuda_allocator_limit_fraction = allocator_fraction
         native_bf16 = bool(torch.cuda.is_bf16_supported(including_emulation=False))
         self.log(
             f"CUDA 检查通过：{self.gpu_name} {self.total_vram_gb:.1f}GiB，"
             f"原生 BF16={native_bf16}；使用 {self.precision.upper()} "
-            f"（Pascal 上避免 BF16 模拟）"
+            f"（Pascal 上避免 BF16 模拟）；PyTorch allocator 硬上限 "
+            f"{self.cuda_allocator_limit_mib}MiB；BigVGAN={self.vocoder_device.upper()}"
         )
 
         import sys
@@ -353,10 +374,11 @@ class IndexTTSGpuEngine:
         # Convert on CPU so a transient FP32+FP16 GPT copy never hits the 6GB GPU.
         if self.precision == "fp16":
             tts.gpt = tts.gpt.half()
-        for name in ("gpt", "semantic_codec", "s2mel", "bigvgan"):
+        for name in ("gpt", "semantic_codec", "s2mel"):
             module = getattr(tts, name)
             if next(module.parameters()).device.type != "cuda":
                 setattr(tts, name, module.to(self.device))
+        self._place_vocoder()
         # IndexTTS creates two non-buffer diffusion cache tensors during the
         # CPU constructor.  ``Module.to`` cannot see them; force a rebuild on
         # the estimator's new CUDA device.
@@ -380,6 +402,58 @@ class IndexTTSGpuEngine:
         gc.collect()
         torch.cuda.empty_cache()
         torch.cuda.synchronize(self.device)
+
+    def _place_vocoder(self) -> None:
+        """Place only the independent final waveform stage on its configured device."""
+        tts = self.tts
+        if self.vocoder_device == "cuda":
+            if next(tts.bigvgan.parameters()).device.type != "cuda":
+                tts.bigvgan = tts.bigvgan.to(self.device)
+        elif self.vocoder_device == "cpu":
+            # BigVGAN is the final independent stage. Its ~428 MiB FP32
+            # weights do not need to coexist with the CUDA synthesis stack.
+            # Move only the generated mel to CPU; upstream immediately keeps
+            # the resulting waveform on CPU for saving/playback.
+            tts.bigvgan = tts.bigvgan.to("cpu")
+            original_forward = tts.bigvgan.forward
+
+            def cpu_vocoder_forward(mel, *args, **kwargs):
+                return original_forward(mel.to("cpu"), *args, **kwargs)
+
+            tts.bigvgan.forward = cpu_vocoder_forward
+        else:
+            # The final vocoder must stay fast enough for live commentary, but
+            # its weights do not need to coexist with GPT and semantic codec.
+            # Keep it on CPU between jobs. At the exact BigVGAN boundary,
+            # evacuate the two already-consumed stages, run the vocoder on CUDA,
+            # then restore the steady-state layout for the next utterance.
+            torch = self.torch
+            tts.bigvgan = tts.bigvgan.to("cpu")
+            original_forward = tts.bigvgan.forward
+
+            def staged_cuda_vocoder_forward(mel, *args, **kwargs):
+                offloaded: list[str] = []
+                try:
+                    torch.cuda.synchronize(self.device)
+                    for name in ("gpt", "semantic_codec"):
+                        module = getattr(tts, name)
+                        setattr(tts, name, module.to("cpu"))
+                        offloaded.append(name)
+                    torch.cuda.empty_cache()
+                    tts.bigvgan = tts.bigvgan.to(self.device)
+                    result = original_forward(mel.to(self.device), *args, **kwargs)
+                    torch.cuda.synchronize(self.device)
+                    return result
+                finally:
+                    tts.bigvgan = tts.bigvgan.to("cpu")
+                    torch.cuda.empty_cache()
+                    for name in offloaded:
+                        module = getattr(tts, name)
+                        setattr(tts, name, module.to(self.device))
+                    torch.cuda.synchronize(self.device)
+                    torch.cuda.empty_cache()
+
+            tts.bigvgan.forward = staged_cuda_vocoder_forward
 
     def _memory_summary(self) -> str:
         torch = self.torch
@@ -465,6 +539,8 @@ class SpeechService:
         self._accepting = True
         self._handoff_requested = threading.Event()
         self._handoff_epoch = ""
+        self._broadcast_suspend_requested = threading.Event()
+        self._broadcast_suspend_reason = ""
         self._idle = threading.Event()
         self._idle.set()
         self._busy_lock = threading.Lock()
@@ -493,6 +569,7 @@ class SpeechService:
         with self._admission_lock:
             accepting = self._accepting
             handoff_epoch = self._handoff_epoch
+            suspend_reason = self._broadcast_suspend_reason
         with self._busy_lock:
             source = self._current_source
             phase = self._current_phase
@@ -510,11 +587,21 @@ class SpeechService:
             "owner_created_unix": self.owner_created_unix,
             "owner_creation_filetime": self.owner_creation_filetime,
             "accepting": accepting,
-            "draining": self._handoff_requested.is_set(),
+            "draining": self.exit_requested(),
             "handoff_requested_epoch": handoff_epoch,
+            "broadcast_suspend_requested": self._broadcast_suspend_requested.is_set(),
+            "broadcast_suspend_reason": suspend_reason,
             "device": self.engine.device,
             "precision": self.engine.precision,
             "gpu": self.engine.gpu_name,
+            "cuda_allocator_limit_mib": int(
+                getattr(self.engine, "cuda_allocator_limit_mib", 0)),
+            "vocoder_device": str(getattr(self.engine, "vocoder_device", "unknown")),
+            "broadcast_coexistence_ready": bool(
+                0 < getattr(self.engine, "cuda_allocator_limit_mib", 0)
+                <= DEFAULT_CUDA_ALLOCATOR_LIMIT_MIB
+                and str(getattr(self.engine, "vocoder_device", ""))
+                in ("cpu", "staged_cuda")),
             "queue_size": self.queue.qsize(),
             "busy": source is not None,
             "current_source": source,
@@ -555,15 +642,12 @@ class SpeechService:
             raise RuntimeError("IndexTTS 任务未完成")
         return job.result
 
-    def request_handoff(self, payload: dict) -> dict:
-        """Stop admission for an exactly identified successor generation."""
+    def _validate_owner_identity(self, payload: dict) -> None:
+        """Reject control requests that do not name this exact OS process."""
         if str(payload.get("session_id", "legacy")) != self.session_id:
             raise ValueError("session mismatch")
         if int(payload.get("owner_pid", 0)) != self.owner_pid:
             raise ValueError("owner pid mismatch")
-        requested_epoch = str(payload.get("requested_code_epoch", "")).strip().lower()
-        if not requested_epoch or requested_epoch == self.owner_code_epoch.lower():
-            raise ValueError("successor code epoch must differ")
         if str(payload.get("owner_code_epoch", "")).strip().lower() != self.owner_code_epoch.lower():
             raise ValueError("owner code epoch mismatch")
         supplied_filetime = int(payload.get("owner_creation_filetime", 0))
@@ -575,7 +659,16 @@ class SpeechService:
             if (self.owner_created_unix <= 0 or supplied_unix <= 0
                     or abs(supplied_unix - self.owner_created_unix) > 0.1):
                 raise ValueError("owner creation identity mismatch")
+
+    def request_handoff(self, payload: dict) -> dict:
+        """Stop admission for an exactly identified successor generation."""
+        self._validate_owner_identity(payload)
+        requested_epoch = str(payload.get("requested_code_epoch", "")).strip().lower()
+        if not requested_epoch or requested_epoch == self.owner_code_epoch.lower():
+            raise ValueError("successor code epoch must differ")
         with self._admission_lock:
+            if self._broadcast_suspend_requested.is_set():
+                raise RuntimeError("owner is already draining for a broadcast suspend")
             if self._handoff_epoch and self._handoff_epoch != requested_epoch:
                 raise RuntimeError(
                     f"owner 已在交接给另一代 {self._handoff_epoch[:12]}")
@@ -590,11 +683,51 @@ class SpeechService:
             "draining": not self._idle.is_set(),
         }
 
+    def request_broadcast_suspend(self, payload: dict) -> dict:
+        """Drain and release CUDA for an exactly identified Bilibili stream."""
+        self._validate_owner_identity(payload)
+        reason = str(payload.get("reason", "")).strip().lower()
+        if reason != "bilibili_stream":
+            raise ValueError("unsupported broadcast suspend reason")
+        with self._admission_lock:
+            if self._handoff_requested.is_set():
+                raise RuntimeError("owner is already draining for a code handoff")
+            if (self._broadcast_suspend_reason
+                    and self._broadcast_suspend_reason != reason):
+                raise RuntimeError("owner is already draining for another suspend reason")
+            self._accepting = False
+            self._broadcast_suspend_reason = reason
+            self._broadcast_suspend_requested.set()
+        return {
+            "ok": True,
+            "accepted": True,
+            "owner_code_epoch": self.owner_code_epoch,
+            "reason": reason,
+            "draining": not self._idle.is_set(),
+        }
+
     def handoff_requested(self) -> bool:
         return self._handoff_requested.is_set()
 
+    def broadcast_suspend_requested(self) -> bool:
+        return self._broadcast_suspend_requested.is_set()
+
+    def exit_requested(self) -> bool:
+        return (self._handoff_requested.is_set()
+                or self._broadcast_suspend_requested.is_set())
+
+    def exit_reason(self) -> str:
+        if self._broadcast_suspend_requested.is_set():
+            return f"broadcast:{self._broadcast_suspend_reason}"
+        if self._handoff_requested.is_set():
+            return f"handoff:{self._handoff_epoch}"
+        return ""
+
     def wait_handoff_idle(self, timeout: float) -> bool:
         return self._handoff_requested.is_set() and self._idle.wait(max(0.0, timeout))
+
+    def wait_exit_idle(self, timeout: float) -> bool:
+        return self.exit_requested() and self._idle.wait(max(0.0, timeout))
 
     def close(self) -> None:
         with self._admission_lock:
@@ -752,7 +885,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self._send(HTTPStatus.OK, self.service.status())
 
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
-        if self.path not in ("/speak", "/handoff"):
+        if self.path not in ("/speak", "/handoff", "/suspend"):
             self._send(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not found"})
             return
         try:
@@ -762,6 +895,10 @@ class _RequestHandler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             if self.path == "/handoff":
                 result = self.service.request_handoff(payload)
+                self._send(HTTPStatus.ACCEPTED, result)
+                return
+            if self.path == "/suspend":
+                result = self.service.request_broadcast_suspend(payload)
                 self._send(HTTPStatus.ACCEPTED, result)
                 return
             if str(payload.get("session_id", "legacy")) != self.service.session_id:

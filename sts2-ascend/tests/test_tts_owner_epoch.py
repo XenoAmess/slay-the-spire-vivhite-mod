@@ -65,7 +65,7 @@ class OwnerLockHandoffTests(unittest.TestCase):
         self.temp.cleanup()
 
     @staticmethod
-    def _record(epoch: str, protocol: int = 2) -> dict:
+    def _record(epoch: str, protocol: int = owner_epoch.OWNER_PROTOCOL_VERSION) -> dict:
         return {
             "pid": 4242,
             "session_id": "session-test",
@@ -104,7 +104,6 @@ class OwnerLockHandoffTests(unittest.TestCase):
         record = self._record("b" * 64)
         self.assertTrue(quipper._claim_owner_lock(record))
         self.assertFalse(quipper._claim_owner_lock(record))
-
 
 if __name__ == "__main__":
     unittest.main()

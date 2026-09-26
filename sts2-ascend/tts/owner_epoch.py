@@ -12,8 +12,8 @@ import re
 from pathlib import Path
 
 
-OWNER_PROTOCOL_VERSION = 2
-OWNER_FEATURE_VERSION = "preload-all-then-play-handoff-v1"
+OWNER_PROTOCOL_VERSION = 5
+OWNER_FEATURE_VERSION = "preload-all-then-play-handoff-vram-cap-staged-vocoder-v1"
 OWNER_EPOCH_PATHS = (
     "tts/owner_epoch.py",
     "tts/indextts_gpu.py",

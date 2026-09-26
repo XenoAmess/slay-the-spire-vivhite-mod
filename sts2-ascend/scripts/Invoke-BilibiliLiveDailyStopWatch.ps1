@@ -9,12 +9,11 @@ $ErrorActionPreference = "Stop"
 $modulePath = Join-Path $PSScriptRoot "BilibiliLive.psm1"
 Import-Module $modulePath -Force
 
-if (-not (Test-IsAdministrator)) {
-    throw "The protected Bilibili daily stop watch must run at high integrity."
+if (Test-IsAdministrator) {
+    throw "The Bilibili daily stop coordinator must run at limited integrity."
 }
 
-$livehimeExe = "C:\Program Files\bililive\livehime\livehime.exe"
-$auditDirectory = Join-Path ([Environment]::GetFolderPath("CommonApplicationData")) `
+$auditDirectory = Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) `
     "VivhiteBilibiliLiveBridge"
 $auditPath = Join-Path $auditDirectory "daily-stop-watch.log"
 
@@ -29,11 +28,11 @@ function Write-DailyStopAudit {
             Move-Item -LiteralPath $auditPath `
                 -Destination (Join-Path $auditDirectory "daily-stop-watch.previous.log") -Force
         }
-        $timestamp = [DateTimeOffset]::Now.ToString("o")
-        Add-Content -LiteralPath $auditPath -Encoding UTF8 -Value "$timestamp $Message"
+        Add-Content -LiteralPath $auditPath -Encoding UTF8 -Value `
+            "$([DateTimeOffset]::Now.ToString('o')) $Message"
     }
     catch {
-        # Audit I/O must never prevent a required Livehime state check.
+        # Audit I/O must never become permission to operate Livehime.
     }
 }
 
@@ -43,90 +42,46 @@ if (-not $initialWindow.InWindow) {
     return
 }
 
-Write-DailyStopAudit "slot=$($initialWindow.Slot) check_started"
 $state = "Unknown"
 try {
     $state = Get-LivehimeStreamingState
-    Write-DailyStopAudit "slot=$($initialWindow.Slot) state=$state"
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) state=$state check_started"
 }
 catch {
-    Write-DailyStopAudit "slot=$($initialWindow.Slot) state_probe_error=$($_.Exception.Message)"
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) state_probe_error=$($_.Exception.Message); no action"
+    throw
 }
 
-if (-not (Test-BilibiliDailyStopRequired -State $state)) { return }
+if ($state -in @("Idle", "NotRunning")) {
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) already_stopped"
+    return
+}
+if (-not (Test-BilibiliDailyStopRequired -State $state)) {
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) unsafe_transitional_state=$state; no action"
+    throw "Daily Bilibili stop refused while Livehime state is '$state'."
+}
 
-$bridgeMutex = New-Object Threading.Mutex($false, "Global\VivhiteBilibiliLiveBridge")
-$bridgeLockAcquired = $false
-$stopAttempted = $false
+$preStopWindow = Get-BilibiliDailyStopWindow
+if (-not $preStopWindow.InWindow) {
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) deadline_reached_before_unified_stop; no action"
+    return
+}
+
+$stopScript = Join-Path $ProjectRoot "scripts\Stop-BilibiliLive.ps1"
+if (-not (Test-Path -LiteralPath $stopScript -PathType Leaf)) {
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) unified_stop_missing=$stopScript; no action"
+    throw "Unified Bilibili stop entrypoint was not found: $stopScript"
+}
+
 try {
-    try {
-        $bridgeLockAcquired = $bridgeMutex.WaitOne(0)
+    & $stopScript -GameDir $GameDir
+    $finalState = Get-LivehimeStreamingState
+    if ($finalState -notin @("Idle", "NotRunning")) {
+        throw "Unified stop returned without confirmed stopped state (state=$finalState)."
     }
-    catch [Threading.AbandonedMutexException] {
-        $bridgeLockAcquired = $true
-    }
-    if (-not $bridgeLockAcquired) {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) bridge_busy; next minute will retry"
-        return
-    }
-
-    $lockedWindow = Get-BilibiliDailyStopWindow
-    if (-not $lockedWindow.InWindow) {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) deadline_reached_under_lock; no action"
-        return
-    }
-
-    # Recheck under the shared GUI lock so a concurrent manual Start/Stop cannot race the click.
-    $lockedState = "Unknown"
-    try {
-        $lockedState = Get-LivehimeStreamingState
-    }
-    catch {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) locked_state_probe_error=$($_.Exception.Message)"
-        return
-    }
-    if (-not (Test-BilibiliDailyStopRequired -State $lockedState)) {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) locked_state=$lockedState; no action"
-        return
-    }
-
-    $preStopWindow = Get-BilibiliDailyStopWindow
-    if (-not $preStopWindow.InWindow) {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) deadline_reached_before_stop; no action"
-        return
-    }
-
-    $stopAttempted = $true
-    try {
-        Invoke-LivehimeStop -LivehimeExe $livehimeExe -TimeoutSeconds 30 `
-            -StopBeforeUtc $preStopWindow.WindowEnd
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) stop=confirmed_idle"
-    }
-    catch {
-        Write-DailyStopAudit "slot=$($initialWindow.Slot) stop_error=$($_.Exception.Message)"
-        Write-Warning "Daily Bilibili stop attempt failed; the next minute will retry: $($_.Exception.Message)"
-    }
-
-    if ($stopAttempted) {
-        try {
-            $gameWindow = Get-SlayTheSpireWindow -GameDir $GameDir
-            if ($gameWindow) {
-                Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds 10
-            }
-        }
-        catch {
-            Write-DailyStopAudit "slot=$($initialWindow.Slot) game_window_restore_error=$($_.Exception.Message)"
-        }
-
-        try {
-            [void](Set-AscendViewerTopMost -ProjectRoot $ProjectRoot)
-        }
-        catch {
-            Write-DailyStopAudit "slot=$($initialWindow.Slot) viewer_restore_error=$($_.Exception.Message)"
-        }
-    }
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) unified_stop=confirmed_$($finalState.ToLowerInvariant())"
 }
-finally {
-    if ($bridgeLockAcquired) { $bridgeMutex.ReleaseMutex() }
-    $bridgeMutex.Dispose()
+catch {
+    Write-DailyStopAudit "slot=$($initialWindow.Slot) unified_stop_error=$($_.Exception.Message)"
+    throw
 }

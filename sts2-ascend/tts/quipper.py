@@ -504,9 +504,12 @@ def main() -> int:
 
     try:
         while not stop_requested():
-            if service.handoff_requested():
-                if service.wait_handoff_idle(0.2):
-                    log("已拒绝新请求并完整排空当前语音；旧代码代次协作退出")
+            if service.exit_requested():
+                if service.wait_exit_idle(0.2):
+                    if service.broadcast_suspend_requested():
+                        log("已拒绝新请求并完整排空当前语音；为哔哩哔哩直播释放 CUDA")
+                    else:
+                        log("已拒绝新请求并完整排空当前语音；旧代码代次协作退出")
                     break
                 continue
             if wait_for_stop(3):
@@ -532,10 +535,10 @@ def main() -> int:
                 # 生成→审计 循环：被毙立刻重生成再审，直到出合法句（上限 6 次防 LLM 死循环）
                 text = None
                 for attempt in range(6):
-                    if stop_requested() or service.handoff_requested():
+                    if stop_requested() or service.exit_requested():
                         break
                     cand = _llm_generate(brief)
-                    if service.handoff_requested():
+                    if service.exit_requested():
                         break
                     if not cand:
                         break                          # 生成失败 → 直接走保底
@@ -543,14 +546,14 @@ def main() -> int:
                         text = cand
                         break
                     log(f"审计被毙（第 {attempt + 1} 次），立即重生成：「{cand}」")
-                if stop_requested() or service.handoff_requested():
+                if stop_requested() or service.exit_requested():
                     break
                 if not text:
                     text = rng.choice(FALLBACK_QUIPS)   # 保底句（预置安全文本，无需审计）
                 last_sig = sig
                 log(f"[{screen}] {text}（战况：{brief}）")
 
-                if stop_requested() or service.handoff_requested():
+                if stop_requested() or service.exit_requested():
                     break
                 service.submit(text, "quip", timeout=900.0)
                 last_play_end = time.time()
@@ -559,7 +562,12 @@ def main() -> int:
                 log(f"循环异常（继续）：{exc}")
     finally:
         service.close()
-    log("收到全栈停止请求，碎碎念退出")
+    if service.broadcast_suspend_requested():
+        log("人工应急显存释放已完成，IndexTTS owner 协作退出")
+    elif service.handoff_requested():
+        log("IndexTTS owner 已完成代码代次交接退出")
+    else:
+        log("收到全栈停止请求，碎碎念退出")
     return 0
 
 

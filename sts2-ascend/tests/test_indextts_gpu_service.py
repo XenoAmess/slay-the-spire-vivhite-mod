@@ -22,6 +22,8 @@ class _FakeEngine:
     device = "cuda:0"
     gpu_name = "fake-gpu"
     precision = "fp32"
+    cuda_allocator_limit_mib = 3328
+    vocoder_device = "cpu"
 
     def __init__(self) -> None:
         self.calls: list[str] = []
@@ -85,6 +87,96 @@ class _FailingEngine(_TracingEngine):
         return 0.03
 
 
+class _FakeMel:
+    def __init__(self) -> None:
+        self.moves: list[str] = []
+
+    def to(self, device: str):
+        self.moves.append(device)
+        return self
+
+
+class _FakeVocoder:
+    def __init__(self) -> None:
+        self.moves: list[str] = []
+        self.inputs: list[_FakeMel] = []
+        self.forward = self._forward
+
+    def to(self, device: str):
+        self.moves.append(device)
+        return self
+
+    def _forward(self, mel: _FakeMel, *args, **kwargs):
+        self.inputs.append(mel)
+        return "wave"
+
+
+class _FakeMovable:
+    def __init__(self) -> None:
+        self.moves: list[str] = []
+
+    def to(self, device: str):
+        self.moves.append(device)
+        return self
+
+
+class _FakePlacementCuda:
+    def __init__(self) -> None:
+        self.syncs: list[str] = []
+        self.empty_calls = 0
+
+    def synchronize(self, device: str) -> None:
+        self.syncs.append(device)
+
+    def empty_cache(self) -> None:
+        self.empty_calls += 1
+
+
+class IndexTTSGpuPlacementTests(unittest.TestCase):
+    def test_cpu_vocoder_moves_weights_and_each_mel_off_cuda(self) -> None:
+        engine = gpu.IndexTTSGpuEngine.__new__(gpu.IndexTTSGpuEngine)
+        engine.device = "cuda:0"
+        engine.vocoder_device = "cpu"
+        vocoder = _FakeVocoder()
+        engine.tts = type("FakeTts", (), {"bigvgan": vocoder})()
+
+        engine._place_vocoder()
+        mel = _FakeMel()
+        result = engine.tts.bigvgan.forward(mel)
+
+        self.assertEqual(vocoder.moves, ["cpu"])
+        self.assertEqual(mel.moves, ["cpu"])
+        self.assertEqual(vocoder.inputs, [mel])
+        self.assertEqual(result, "wave")
+
+    def test_staged_cuda_vocoder_swaps_consumed_models_at_boundary(self) -> None:
+        engine = gpu.IndexTTSGpuEngine.__new__(gpu.IndexTTSGpuEngine)
+        engine.device = "cuda:0"
+        engine.vocoder_device = "staged_cuda"
+        fake_cuda = _FakePlacementCuda()
+        engine.torch = type("FakeTorch", (), {"cuda": fake_cuda})()
+        vocoder = _FakeVocoder()
+        gpt = _FakeMovable()
+        codec = _FakeMovable()
+        engine.tts = type("FakeTts", (), {
+            "bigvgan": vocoder,
+            "gpt": gpt,
+            "semantic_codec": codec,
+        })()
+
+        engine._place_vocoder()
+        mel = _FakeMel()
+        result = engine.tts.bigvgan.forward(mel)
+
+        self.assertEqual(vocoder.moves, ["cpu", "cuda:0", "cpu"])
+        self.assertEqual(gpt.moves, ["cpu", "cuda:0"])
+        self.assertEqual(codec.moves, ["cpu", "cuda:0"])
+        self.assertEqual(mel.moves, ["cuda:0"])
+        self.assertEqual(fake_cuda.syncs, ["cuda:0", "cuda:0", "cuda:0"])
+        self.assertEqual(fake_cuda.empty_calls, 3)
+        self.assertEqual(result, "wave")
+
+
 class SpeechServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.engine = _FakeEngine()
@@ -117,6 +209,9 @@ class SpeechServiceTests(unittest.TestCase):
             self.assertEqual(status["owner_pid"], 12345)
             self.assertEqual(status["owner_code_epoch"], self.service.owner_code_epoch)
             self.assertGreaterEqual(status["owner_protocol_version"], 2)
+            self.assertEqual(status["cuda_allocator_limit_mib"], 3328)
+            self.assertEqual(status["vocoder_device"], "cpu")
+            self.assertTrue(status["broadcast_coexistence_ready"])
             result = client.speak("白绮测试", source="conclusion", timeout=10)
         self.assertTrue(result["ok"])
         self.assertEqual(self.engine.calls, ["白绮测试"])
@@ -137,6 +232,18 @@ class SpeechServiceTests(unittest.TestCase):
             "owner_creation_filetime": 133444736002500000,
             "owner_code_epoch": self.service.owner_code_epoch,
             "requested_code_epoch": "b" * 64,
+        }
+        payload.update(changes)
+        return payload
+
+    def _suspend_payload(self, **changes) -> dict:
+        payload = {
+            "session_id": "test-session",
+            "owner_pid": 12345,
+            "owner_created_unix": 1700000000.25,
+            "owner_creation_filetime": 133444736002500000,
+            "owner_code_epoch": self.service.owner_code_epoch,
+            "reason": "bilibili_stream",
         }
         payload.update(changes)
         return payload
@@ -185,6 +292,63 @@ class SpeechServiceTests(unittest.TestCase):
             self.service.request_handoff(
                 self._handoff_payload(owner_creation_filetime=1))
         self.assertTrue(self.service.status()["ready"])
+
+    def test_broadcast_suspend_stops_admission_and_preserves_exact_identity(self) -> None:
+        result = self.service.request_broadcast_suspend(self._suspend_payload())
+
+        self.assertTrue(result["accepted"])
+        self.assertTrue(self.service.wait_exit_idle(0.1))
+        self.assertTrue(self.service.broadcast_suspend_requested())
+        self.assertEqual(self.service.exit_reason(), "broadcast:bilibili_stream")
+        status = self.service.status()
+        self.assertFalse(status["ready"])
+        self.assertTrue(status["draining"])
+        self.assertTrue(status["broadcast_suspend_requested"])
+        with self.assertRaisesRegex(RuntimeError, "停止|交接"):
+            self.service.submit("不能进入直播租约", "quip", timeout=1)
+
+    def test_broadcast_suspend_drains_current_job_without_cutting_playback(self) -> None:
+        blocking = _BlockingEngine()
+        self.service.engine = blocking
+        errors: list[Exception] = []
+
+        def submit() -> None:
+            try:
+                self.service.submit("已接收的语音必须播完", "quip", timeout=10)
+            except Exception as exc:  # pragma: no cover - assertion reports it
+                errors.append(exc)
+
+        thread = threading.Thread(target=submit)
+        thread.start()
+        self.assertTrue(blocking.started.wait(2.0))
+        result = self.service.request_broadcast_suspend(self._suspend_payload())
+        self.assertTrue(result["draining"])
+        self.assertFalse(self.service.wait_exit_idle(0.05))
+        blocking.release.set()
+        thread.join(2.0)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(self.played, [b"fake-wave"])
+        self.assertTrue(self.service.wait_exit_idle(1.0))
+
+    def test_broadcast_suspend_rejects_stale_identity_and_unknown_reason(self) -> None:
+        with self.assertRaisesRegex(ValueError, "creation identity"):
+            self.service.request_broadcast_suspend(
+                self._suspend_payload(owner_creation_filetime=1))
+        with self.assertRaisesRegex(ValueError, "unsupported"):
+            self.service.request_broadcast_suspend(
+                self._suspend_payload(reason="some_other_workload"))
+        self.assertTrue(self.service.status()["ready"])
+
+    def test_client_can_suspend_the_exact_current_owner(self) -> None:
+        with (mock.patch.object(
+                client, "_url", lambda path: f"http://127.0.0.1:{self.port}{path}"),
+              mock.patch.object(client, "code_epoch", return_value=self.service.owner_code_epoch),
+              mock.patch.dict(os.environ, {"STS2_ASCEND_SESSION_ID": "test-session"})):
+            status = client.health()
+            result = client.suspend_for_broadcast(status)
+        self.assertTrue(result["accepted"])
+        self.assertTrue(self.service.broadcast_suspend_requested())
 
     def test_concurrent_callers_are_serialized(self) -> None:
         errors: list[Exception] = []

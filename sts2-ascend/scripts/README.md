@@ -32,7 +32,7 @@ Get-Help .\sts2-ascend\scripts\Start-Agent.ps1 -Full
 Get-Help .\sts2-ascend\scripts\Stop-Agent.ps1 -Full
 ```
 
-`Stack ready` 只表示 Brain 存活且某个 8080–8084 `/health` 就绪；开播/恢复还需要真实对局、有效 run/state_version、驾驶舱心跳、近期 `applied` 回执和连续状态推进。任何 `MAIN_MENU`、`run_unknown`、等待/终局阻塞或动作停滞都保持失败关闭。
+`Stack ready` 只表示 Brain 存活且某个 8080–8084 `/health` 就绪；开播/恢复还需要真实对局、有效 run/state_version、驾驶舱心跳，以及同一局内两个不同 `decision_id` 且时间递增的近期 `applied` 回执。`state_version` 是合法快照标记，不要求逐动作递增；动作间的过渡状态不计作进展，但不会抹掉首个有效回执。开播前遇到 `MAIN_MENU`、`run_unknown`、等待/终局仍失败关闭；已经开播后，正常 `GAME_OVER` → 菜单 → 选角跨局采用两阶段门禁：最多 120 秒取得新局第一条 `applied`，随后独立 30 秒取得同一新局第二条连续回执。期间短暂空、`UNKNOWN`、`WAITING` screen 继承原阶段而不单帧下播，也不能重置计时；任一阶段超时才下播。
 
 ## 部署与诊断脚本
 
@@ -46,18 +46,24 @@ Get-Help .\sts2-ascend\scripts\Stop-Agent.ps1 -Full
 | [`Install-CodexCompat.ps1`](Install-CodexCompat.ps1) | 安装并校验固定版本的 Windows Codex CLI 兼容缓存；不写入密钥。 |
 | `BilibiliLive.psm1`、`Test-BilibiliLive.ps1` | 直播桥接的状态/连接测试模块。 |
 | `Install-BilibiliLiveBridge.ps1`、`Invoke-BilibiliLiveBridge.ps1` | 一次性安装或调用本地直播姬桥接；安装可能需要交互式管理员/UAC 授权，绝不在无人值守任务中执行。 |
-| `Start-BilibiliLive.ps1`、`Stop-BilibiliLive.ps1` | 直播姬开播/下播控制。它们不会被训练脚本自动调用；当前用户要求下播时严禁调用开播入口。 |
-| `Invoke-BilibiliLiveDailyStopWatch.ps1` | 已授权直播期间的每日停止观察；不是自动复播器。 |
+| `Start-BilibiliLive.ps1`、`Stop-BilibiliLive.ps1` | 直播姬开播/下播控制。开播前验证唯一 IndexTTS owner 已启用 3328 MiB CUDA 上限和 `staged_cuda` BigVGAN，直播期间继续提供克隆音色；不会停止游戏、Brain 或 runner。 |
+| `Invoke-BilibiliLiveDailyStart.ps1` | 北京时间 `[23:00, 23:20)` 每分钟检查一次的有限权限协调器；只调用统一开播入口，真实游玩或显存门禁失败时由窗口内下一次检查重试。 |
+| `Invoke-BilibiliLiveDailyStopWatch.ps1` | 北京时间 `[11:00, 11:20)` 每分钟检查一次的有限权限协调器；只有精确 `Streaming` 才调用统一下播入口，且不停止训练栈或 Quipper。 |
+| `Invoke-BilibiliLiveHealthWatch.ps1` | 直播期间并行检查两条互不替代的证据链：显示器捕获错误/预览运动，以及当前 session 的 API、驾驶舱与 `applied` 动作回执。错误爆发与静帧相互印证时快速安全下播，单独低运动仅在连续五分钟后失败关闭；正常跨局按 120 秒首回执 + 30 秒第二回执的两阶段门禁观察，跨局外的 API/驾驶舱短暂不可读等暂态最多宽限 90 秒。同一 run 中只有新的 `decision_id` 且终局回执时间递增才重置语义时钟，预览动画、heartbeat 和 `state_version` 都不能替动作进展续命；watcher 无固定 12/24 小时运行上限，只随 `Streaming` 生命周期退出，下播后恢复 IndexTTS。 |
+
+驾驶舱 `history` 行只保存终局回执的 `decision_id/status/at`，自身不携带 `run_id`。监测器因此只把它绑定到同一采样中 API 与驾驶舱共同确认的当前 run，首次仅建立基线；基线本身不算进展，后续必须在 run 未变化时看到不同 `decision_id` 和更晚的回执时间才会清零 90 秒语义卡死计时。
 
 ## 无人值守与 UAC 边界
 
 脚本不执行需要人工确认的 UAC、原生模组同意弹窗或 Steam Workshop 法律协议。SteamMode `off` 若本地 profile 尚未完成原生同意，脚本必须保持 fail-closed，不能自动点击或把 API 缺失归咎于 Brain。Workshop 发布只复用已登录 Steam 客户端，详见 [`../../tools/workshop/README.md`](../../tools/workshop/README.md)。
 
+直播桥安装器不得在直播中触发 UAC：请求 `RunAs` 前以及提权子进程开始后都必须重新读取直播姬状态，只有明确 `Idle`/`NotRunning` 才能继续。显示器捕获可能把 UAC 安全桌面或冻结画面播满屏，进而触发平台挂机/消极直播处罚；任何其他状态或读取失败均须在 UAC 前失败关闭。
+
 生命周期状态位于 `sts2-ascend/.runtime/`（由 `lifecycle.STACK_ROOT` 解析）；不要手改或删除 `session.json`、PID、lock、stop sentinel、boot marker。停止流程会保留必要 sentinel 防止旧进程复活。
 
 ## 直播脚本的安全顺序
 
-只有用户明确授权开播时，才按“启动/确认真实游玩 → `Start-BilibiliLive.ps1` → 持续巡检”执行；下播只调用 `Stop-BilibiliLive.ps1`，不停止训练栈。直播中断恢复预算仅适用于已证明真实游玩的会话；证据丢失时立即下播，不为守两分钟红线空播或自动复播。
+只有用户明确授权开播时，才按“启动/确认真实游玩 → 验证 Quipper 有界显存共存 → `Start-BilibiliLive.ps1` → 持续巡检”执行；下播只调用 `Stop-BilibiliLive.ps1`，不停止训练栈。直播中断恢复预算仅适用于已证明真实游玩的会话；证据丢失时立即下播，不为守两分钟红线空播或自动复播。
 
 ## 修改脚本后的检查
 

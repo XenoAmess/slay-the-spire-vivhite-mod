@@ -2,8 +2,9 @@
 param(
     [string]$GameDir = "G:\SteamLibrary\steamapps\common\Slay the Spire 2",
     [ValidateRange(5, 600)][int]$ReadyTimeoutSeconds = 120,
-    [ValidateRange(5, 120)][int]$LiveTimeoutSeconds = 30,
-    [ValidateRange(5, 300)][int]$GameplayReadyTimeoutSeconds = 30
+    [ValidateRange(5, 120)][int]$LiveTimeoutSeconds = 120,
+    [ValidateRange(5, 300)][int]$GameplayReadyTimeoutSeconds = 30,
+    [ValidateRange(10, 300)][int]$IndexTtsReadyTimeoutSeconds = 300
 )
 
 Set-StrictMode -Version 2.0
@@ -100,27 +101,70 @@ function New-AscendGameplayProof {
     param(
         [bool]$Ready,
         [string]$Reason,
-        [string]$Signature = "",
-        [string]$ProgressSignature = "",
         [string]$SessionId = "",
         [string]$RunId = "",
         [string]$Screen = "",
         [int]$ApiPort = 0,
         [string]$DecisionId = "",
+        [string]$Action = "",
+        [string]$OutcomeAt = "",
         [string]$StateVersion = ""
     )
     return [pscustomobject]@{
         Ready = [bool]$Ready
         Reason = [string]$Reason
-        Signature = [string]$Signature
-        ProgressSignature = [string]$ProgressSignature
         SessionId = [string]$SessionId
         RunId = [string]$RunId
         Screen = [string]$Screen
         ApiPort = [int]$ApiPort
         DecisionId = [string]$DecisionId
+        Action = [string]$Action
+        OutcomeAt = [string]$OutcomeAt
         StateVersion = [string]$StateVersion
     }
+}
+
+function Test-AscendAppliedActionProgress {
+    <#
+    A state_version is an API freshness/schema marker and is not guaranteed to
+    increment for every game action.  Real forward progress is instead proven
+    by two distinct Brain decisions in the same native run, each with a fresh
+    applied receipt, where the second receipt was observed later than the first.
+    #>
+    param(
+        [AllowNull()][object]$Previous,
+        [AllowNull()][object]$Current
+    )
+    if ($null -eq $Previous -or $null -eq $Current) { return $false }
+    if ((Get-AscendProperty $Previous "Ready") -ne $true -or
+        (Get-AscendProperty $Current "Ready") -ne $true) {
+        return $false
+    }
+    $previousRunId = ([string](Get-AscendProperty $Previous "RunId")).Trim()
+    $currentRunId = ([string](Get-AscendProperty $Current "RunId")).Trim()
+    if (-not (Test-AscendRunId $previousRunId) -or
+        $currentRunId -ne $previousRunId) {
+        return $false
+    }
+    $previousDecisionId = ([string](Get-AscendProperty $Previous "DecisionId")).Trim()
+    $currentDecisionId = ([string](Get-AscendProperty $Current "DecisionId")).Trim()
+    if ([string]::IsNullOrWhiteSpace($previousDecisionId) -or
+        [string]::IsNullOrWhiteSpace($currentDecisionId) -or
+        $currentDecisionId -eq $previousDecisionId) {
+        return $false
+    }
+    $previousAction = ([string](Get-AscendProperty $Previous "Action")).Trim()
+    $currentAction = ([string](Get-AscendProperty $Current "Action")).Trim()
+    if ([string]::IsNullOrWhiteSpace($previousAction) -or
+        [string]::IsNullOrWhiteSpace($currentAction)) {
+        return $false
+    }
+    $previousOutcomeAt = ConvertTo-AscendUtcTimestamp (Get-AscendProperty $Previous "OutcomeAt")
+    $currentOutcomeAt = ConvertTo-AscendUtcTimestamp (Get-AscendProperty $Current "OutcomeAt")
+    if ($null -eq $previousOutcomeAt -or $null -eq $currentOutcomeAt) {
+        return $false
+    }
+    return $currentOutcomeAt -gt $previousOutcomeAt
 }
 
 function Test-AscendLiveGameplayProof {
@@ -157,15 +201,15 @@ function Test-AscendLiveGameplayProof {
     $apiRun = Get-AscendProperty $api "run"
     $stateVersion = ([string](Get-AscendProperty $api "state_version")).Trim()
     if ([string]::IsNullOrWhiteSpace($stateVersion) -or $stateVersion -notmatch '^\d+$') {
-        return New-AscendGameplayProof $false "游戏 state_version 缺失，无法证明状态在推进" -SessionId $sessionId
+        return New-AscendGameplayProof $false "游戏 state_version 缺失，无法绑定当前游戏快照" -SessionId $sessionId
     }
     try {
-        # Keep the progress token an actual non-negative integer.  Merely
-        # alternating arbitrary strings would otherwise look like movement.
-        $stateVersionNumber = [long]$stateVersion
+        # Keep the native freshness marker an actual non-negative integer, but
+        # do not treat it as a per-action monotonic counter.
+        $null = [long]$stateVersion
     }
     catch {
-        return New-AscendGameplayProof $false "游戏 state_version 无效，无法证明状态在推进" -SessionId $sessionId
+        return New-AscendGameplayProof $false "游戏 state_version 无效，无法绑定当前游戏快照" -SessionId $sessionId
     }
     if ([string]::IsNullOrWhiteSpace($apiScreen) -or
         $script:GameplayPassiveScreens -contains $apiScreen) {
@@ -258,29 +302,13 @@ function Test-AscendLiveGameplayProof {
     if ($outcomeAge -lt -5 -or $outcomeAge -gt $MaxAgeSeconds) {
         return New-AscendGameplayProof $false ("Brain action 回执过期（{0:N1}s）" -f $outcomeAge) -SessionId $sessionId -RunId $apiRunId -Screen $apiScreen
     }
+    $outcomeTimestamp = $outcomeAt.ToString("o")
 
-    # Exclude timestamps/revision from the signature: repeated heartbeat writes
-    # without a new decision or state transition must not satisfy the progress
-    # proof.  State fields plus decision/outcome identity are sufficient to show
-    # that the game/Brain is moving rather than parked on a menu.
-    $floor = Get-AscendProperty $apiRun "floor"
-    $turn = Get-AscendProperty $api "turn"
-    $hp = Get-AscendProperty $apiRun "current_hp"
-    $gold = Get-AscendProperty $apiRun "gold"
-    $actionSet = (@($actionValues | Sort-Object) -join ",")
-    $signature = @(
-        $sessionId, $apiRunId, $apiScreen, $stateVersion, $floor, $turn, $hp, $gold,
-        $actionSet, $decisionId, $decisionStatus, $action, $outcomeStatus
-    ) -join "|"
-    $progressSignature = @(
-        $sessionId, $apiRunId, $apiScreen, $stateVersion, $floor, $turn, $hp,
-        $gold, $actionSet
-    ) -join "|"
     return New-AscendGameplayProof $true "真实对局、Brain 决策和近期动作证据均通过" `
-        -Signature $signature -ProgressSignature $progressSignature `
         -SessionId $sessionId -RunId $apiRunId -Screen $apiScreen `
         -ApiPort ([int](Get-AscendProperty $ApiState "Port")) `
-        -DecisionId $decisionId -StateVersion $stateVersion
+        -DecisionId $decisionId -Action $action -OutcomeAt $outcomeTimestamp `
+        -StateVersion $stateVersion
 }
 
 function Get-AscendLiveGameplayProof {
@@ -324,48 +352,29 @@ function Wait-AscendLiveGameplayReady {
         [ValidateRange(5, 300)][int]$MaxAgeSeconds = 5
     )
     $deadline = (Get-Date).ToUniversalTime().AddSeconds($TimeoutSeconds)
-    $previousSignature = ""
-    $previousProgressSignature = ""
-    $previousStateVersion = -1L
-    $previousRunId = ""
-    $validSampleSeen = $false
+    $previousApplied = $null
     $last = New-AscendGameplayProof $false "尚未取得真实对局证据"
     do {
         $last = Get-AscendLiveGameplayProof -ProjectRoot $ProjectRoot -MaxAgeSeconds $MaxAgeSeconds
         if ($last.Ready) {
-            # A fresh heartbeat or a newly-issued decision ID is not enough:
-            # require both an identity change and a state/material change so a
-            # static action cannot be re-proposed to satisfy the preflight.
-            $currentStateVersion = [long]$last.StateVersion
-            if ($validSampleSeen -and
-                $last.RunId -eq $previousRunId -and
-                $last.Signature -ne $previousSignature -and
-                $last.ProgressSignature -ne $previousProgressSignature -and
-                $currentStateVersion -gt $previousStateVersion) {
+            if (Test-AscendAppliedActionProgress -Previous $previousApplied -Current $last) {
                 return $last
             }
-            $validSampleSeen = $true
-            $previousSignature = $last.Signature
-            $previousProgressSignature = $last.ProgressSignature
-            $previousStateVersion = $currentStateVersion
-            $previousRunId = $last.RunId
-        }
-        else {
-            # A menu/blocked sample invalidates the continuity proof; require two
-            # fresh, progressing samples after it recovers.
-            $validSampleSeen = $false
-            $previousSignature = ""
-            $previousProgressSignature = ""
-            $previousStateVersion = -1L
-            $previousRunId = ""
+            # Proposed/reconciling/waiting snapshots are normal between two
+            # applied actions.  Preserve the first receipt across those transient
+            # samples, but never carry it across a native run identity change.
+            if ($null -eq $previousApplied -or $last.RunId -ne $previousApplied.RunId) {
+                $previousApplied = $last
+            }
         }
         Start-Sleep -Milliseconds 500
     } while ((Get-Date).ToUniversalTime() -lt $deadline)
     if ($last.Ready) {
         $last = New-AscendGameplayProof $false "真实对局证据未显示持续的新决策/动作进展" `
-            -ProgressSignature $last.ProgressSignature -SessionId $last.SessionId `
-            -RunId $last.RunId -Screen $last.Screen -ApiPort $last.ApiPort `
-            -DecisionId $last.DecisionId -StateVersion $last.StateVersion
+            -SessionId $last.SessionId -RunId $last.RunId -Screen $last.Screen `
+            -ApiPort $last.ApiPort `
+            -DecisionId $last.DecisionId -Action $last.Action `
+            -OutcomeAt $last.OutcomeAt -StateVersion $last.StateVersion
     }
     return $last
 }
@@ -430,8 +439,13 @@ if (-not $gameplayProof.Ready) {
 }
 Write-Host ("Gameplay preflight passed: run={0}, screen={1}, api_port={2}; " -f
     $gameplayProof.RunId, $gameplayProof.Screen, $gameplayProof.ApiPort +
-    "two progressing Brain/game samples observed.")
+    "two distinct applied Brain actions observed.")
+$ttsReady = Wait-AscendIndexTtsBroadcastReady -ProjectRoot $projectRoot `
+    -TimeoutSeconds $IndexTtsReadyTimeoutSeconds
+Write-Host ("Quipper broadcast preflight passed: owner_pid={0}, allocator_limit={1}MiB, " -f
+    $ttsReady.OwnerPid, $ttsReady.AllocatorMiB +
+    "BigVGAN=$($ttsReady.VocoderDevice); CUDA owner remains online.")
 Invoke-LivehimeBridge -Action Start -TimeoutSeconds $LiveTimeoutSeconds
 Set-SlayTheSpireTopMost -GameDir $GameDir -TimeoutSeconds $ReadyTimeoutSeconds
 Set-AscendViewerTopMost
-Write-Host "Bilibili streaming started through Livehime; Slay the Spire 2 is TOPMOST."
+Write-Host "Bilibili streaming started through Livehime; Slay the Spire 2 is TOPMOST and Quipper remains online."

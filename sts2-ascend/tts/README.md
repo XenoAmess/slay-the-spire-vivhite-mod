@@ -8,7 +8,7 @@ tts/ 是 sts2-ascend 的可选语音层：它把复盘直播流、白绮的短�
 - 所有常驻进程继承 STS2_ASCEND_SESSION_ID、STS2_ASCEND_RUNTIME_DIR、STS2_ASCEND_STOP_FILE，并响应统一 Stop-Agent.ps1 的停止哨兵。不要手工删除 knowledge/ 或 .runtime/ 下的锁、flag、流文件和日志。
 - IndexTTS 服务只监听本机 127.0.0.1（默认端口 17952）。它不是公开 HTTP 服务，也不会替代游戏 API。
 - CUDA/模型/Edge 环境不可用时，克隆音色会记录原因并跳过或按兼容模式降级；不得为了“有声音”再加载第二份 GPU 模型、强行回退到未验收的 CPU 路径，或阻塞游戏动作链。
-- 语音脚本不负责开播。当前保持下播时不要调用任何 Bilibili 开播脚本；停止语音请使用统一栈停止入口。
+- 语音脚本不负责开播。直播入口会等待唯一 owner 完成冷加载，并严格验证它启用了 3328 MiB CUDA allocator 上限和 `staged_cuda` BigVGAN；验证通过后 Quipper 在直播期间继续提供白绮克隆音色。保持下播时不要调用任何 Bilibili 开播脚本，停止整套语音仍使用统一栈停止入口。
 
 ## 数据流
 
@@ -17,7 +17,7 @@ Brain/llm_review
   ├─ review_live.stream ──► edge_speaker.py ──► Edge TTS / SAPI（实时正文）
   └─ quip / LIVE-END 结论 ─► quipper.py ─► IndexTTS-2.5 GPU owner ─► winsound
                                       ▲
-                                      └─ indextts_client.py (/health,/speak,/handoff)
+                                      └─ indextts_client.py (/health,/speak,/handoff,/suspend)
 ~~~
 
 默认配置是 llm.tts_mode=edge、tts.clone_engine=indextts、tts.device=cuda:0。实时复盘正文与白绮短评可以并行出声，但 IndexTTS 模型在一个 quipper.py 进程内严格串行；最终结论先全部预合成再按顺序播放，避免半句失败或乱序。
@@ -33,7 +33,7 @@ Brain/llm_review
 | [indextts_client.py](indextts_client.py) | 无第三方依赖的本地客户端；校验 session、代码 epoch 后调用 owner。 | 作为库导入 |
 | [nano_speaker.py](nano_speaker.py) | MOSS-TTS-Nano 兼容朗读器，允许滞后读完整场流；需要 uv 与本地模型。 | 由配置按需拉起 |
 | [speak_once.py](speak_once.py) | 把一个 UTF-8 文本文件提交给已存在的 IndexTTS owner；绝不另载模型。 | 可手工诊断 |
-| [owner_epoch.py](owner_epoch.py) | 对 owner 的三个实现文件计算稳定代码代次，防止旧进程误接新请求。 | 作为库导入 |
+| [owner_epoch.py](owner_epoch.py) | 对 owner 的小型运行依赖集计算稳定代码代次，防止旧进程误接新请求。 | 作为库导入 |
 
 ### 兼容模式
 
@@ -86,7 +86,9 @@ brain/config.json 的 tts 节控制 owner：
 | --- | --- | --- |
 | clone_engine | indextts | 克隆音色后端选择 |
 | device | cuda:0 | GPU 设备；生产 owner 要求 CUDA |
-| precision | fp16 | GPT 部分精度；低显存路径保持 codec/声码器 FP32 |
+| precision | fp16 | GPT 部分精度；codec、S2Mel 和 BigVGAN 保持 FP32 |
+| max_cuda_allocator_mib | 3328 | PyTorch CUDA caching allocator 的进程硬上限；超限时失败关闭，不向其他进程抢占余量 |
+| vocoder_device | staged_cuda | BigVGAN 平时驻留 CPU；最终波形阶段先卸载 GPT/semantic codec，再短暂进入 CUDA，随后恢复稳态 |
 | worker_port | 17952 | 本地 owner HTTP 端口 |
 | startup_timeout_sec | 240 | Brain 等待 owner /health 的上限 |
 | request_timeout_sec | 900 | 单次 /speak 请求上限 |
@@ -96,6 +98,7 @@ brain/config.json 的 tts 节控制 owner：
 - GET /health：返回 ready、session、PID 创建身份、epoch、设备、队列和当前播放阶段。
 - POST /speak：提交 source=conclusion|review|manual|quip 的文本；输入体和文本长度有界。
 - POST /handoff：代码 epoch 变化时停止接收新任务，排空旧队列后交接；不得用它强杀进程。
+- POST /suspend：仅保留给显存事故诊断/人工应急，且必须绑定当前 session、PID、创建时间和 epoch；正常开播入口禁止调用它，直播期间 Quipper 必须保持在线。
 
 所有朗读器共享 knowledge/voice_volume.json。Ctrl+Shift+Alt+↑/↓ 调整音量（±10%），Ctrl+Shift+Alt+M 切换静音；状态由脚本原子更新，HUD 会显示当前值。
 
