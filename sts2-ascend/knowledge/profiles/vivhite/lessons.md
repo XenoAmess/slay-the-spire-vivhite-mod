@@ -15583,3 +15583,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.717726065862478局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.359176926230331局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/48.04487377263063局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 27.50 → 22.50（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1413 胜，当前目标进阶 3
+
+## 第 1414 局复盘（2026-09-26 21:23）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CHROMATIC_SEQUENCE, PREP_TIME, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CLOSED_PROJECTION
+- 本局遗物：MEAL_TICKET, SHURIKEN
+- 战斗记录：F3 Monster战 掉血15｜自损18（可行动段18/非行动段11，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血21｜自损16（可行动段16/非行动段17，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血1｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合获胜; F12 Monster战 掉血0｜自损10（可行动段10/非行动段11，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血9｜自损14（可行动段14/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损33（可行动段33/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.365754429811541局)，BOLAS(37分/2.2405214583339874局)，STRATAGEM(36分/5.352564032999716局)，FISTICUFFS(35分/8.075072349224092局)，AUTOMATION(34分/4.855780118710829局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.70121402463196局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.347419806988525局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/47.87671671442643局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿8张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1414 胜，当前目标进阶 3
