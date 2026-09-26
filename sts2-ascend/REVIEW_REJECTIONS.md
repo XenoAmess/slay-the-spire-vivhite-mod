@@ -422,4 +422,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260926-134617-1790401577834267000-fa110292 -->
 | 2026-09-26 13:46:17 | 第 1345~1348 局 | `fa110292` | process_exit | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `035858fb` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 035858fb 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260926-163051-1790411451932212500-e0c3d3bc -->
-| 2026-09-26 16:30:51 | 第 1394~1395 局 | `e0c3d3bc` | process_exit | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260926-163051-1790411451932212500-e0c3d3bc` | 复盘进程未成功完成 |
+| 2026-09-26 16:30:51 | 第 1394~1395 局 | `e0c3d3bc` | process_exit | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `4eb971c1` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 4eb971c1 已推送；远端确认后精确清理对应失败包 |
