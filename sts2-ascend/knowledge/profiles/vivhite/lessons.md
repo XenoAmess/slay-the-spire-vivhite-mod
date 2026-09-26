@@ -15748,3 +15748,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.476022547526265局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.187076030491853局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/45.58338811900331局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿17张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.46 → 0.46（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1428 胜，当前目标进阶 3
+
+## 第 1429 局复盘（2026-09-27 01:13）
+- 结果：💀 失败｜进阶 3｜到达层数 6｜当局评分 6
+- 死因：敌人组合 MAWLER
+- 本局拿牌：VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血14｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血17｜自损16（可行动段16/非行动段17，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血41｜自损10（可行动段10/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：REND(37分/5.1178392482296715局)，BOLAS(37分/2.1257326995491757局)，STRATAGEM(36分/5.078335826267372局)，FISTICUFFS(35分/7.661361724575919局)，AUTOMATION(35分/5.562447013883575局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.460356468609923局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.1759212643851313局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/45.4238462605868局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：3/1429 胜，当前目标进阶 3
