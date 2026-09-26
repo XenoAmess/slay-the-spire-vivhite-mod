@@ -3701,44 +3701,6 @@ class Policy:
                     f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
                     f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
                     "（LOW_POOL_BURST_RACE_OBS）")
-                # 低池爆发与火线漂移上下文联结（LOW_POOL_FOCUS_SWITCH_OBS）：
-                # 第1587局 F24 在低池 marker 前经历了两次非击杀换线，旧
-                # LOW_POOL_BURST_RACE_OBS 只能看到血池/意图/HP，无法把纯爆发
-                # 与换线后进入低池区分。只读追加换线次数和当前火线；不参与
-                # 评分、目标、判决或动作，开关关闭时严格只删除本尾缀。
-                try:
-                    _low_pool_focus_switches = max(
-                        int(getattr(self, "_focus_drift_flips", 0) or 0),
-                        int(getattr(self, "_focus_identity_flips", 0) or 0))
-                except (TypeError, ValueError):
-                    _low_pool_focus_switches = 0
-                if (bool(pol.get("low_pool_focus_switch_obs", True))
-                        and _low_pool_focus_switches > 0):
-                    _low_pool_focus_name = "?"
-                    _low_pool_focus_identity = getattr(
-                        self, "_focus_played_identity", None)
-                    try:
-                        if _low_pool_focus_identity:
-                            _low_pool_focus_name = next(
-                                str(_e.get("name") or _e.get("enemy_id")
-                                    or "敌人")
-                                for _e in enemies
-                                if self._focus_enemy_identity(_e)
-                                == _low_pool_focus_identity)
-                        else:
-                            _low_pool_focus_name = next(
-                                str(_e.get("name") or _e.get("enemy_id")
-                                    or "敌人")
-                                for _e in enemies
-                                if _e.get("index")
-                                == getattr(self, "_focus_played_index", None))
-                    except StopIteration:
-                        pass
-                    danger_note += (
-                        f"；低池火线上下文：此前非击杀换线"
-                        f"{_low_pool_focus_switches}次，当前火线="
-                        f"{_low_pool_focus_name}"
-                        "（LOW_POOL_FOCUS_SWITCH_OBS）")
             if enemy_hp_total >= _race_pool_gate or esc_gate:
                 # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
                 # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的

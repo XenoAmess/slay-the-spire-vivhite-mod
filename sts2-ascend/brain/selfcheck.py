@@ -11391,45 +11391,6 @@ def main() -> int:
             and not low_pool_pol._krace_latch), \
         f"low-pool observation switch changed action or remained latched: {d_low_pool_off.action}/{d_low_pool_off.reason}"
 
-    # 3br-low-pool-focus-context：第1587局 F24 在低池爆发前经历两次非击杀换线；
-    # 低池 marker 应补上换线次数/当前火线，但只读观测不得改变动作或参数，
-    # low_pool_focus_switch_obs=False 时严格删除新尾缀而保留旧低池 marker。
-    low_pool_focus_know = knowledge.Knowledge(
-        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-low-pool-focus-")))
-    low_pool_focus_pol = policy.Policy(low_pool_focus_know, random.Random(19))
-    low_pool_focus_ctx = SimpleNamespace(
-        combat={"comp_id": "LOW_POOL_FOCUS", "node_type": "Monster"},
-        current_combat_is_hard=False, credit_tags=[])
-    low_pool_focus_state = json.loads(json.dumps(low_pool_state))
-    low_pool_focus_state["combat"]["hand"] = [{
-        "index": 0, "card_id": "LOW_POOL_BLOCK", "name": "test block",
-        "playable": True, "energy_cost": 1, "requires_target": False,
-        "dynamic_values": [{"name": "Block", "current_value": 8}],
-        "rules_text": "获得8点格挡。"}]
-    d_low_focus_base = low_pool_focus_pol.decide(
-        low_pool_focus_state, low_pool_focus_ctx)
-    low_pool_focus_pol._focus_drift_flips = 2
-    low_pool_focus_pol._focus_identity_flips = 2
-    low_pool_focus_pol._focus_played_index = 1
-    low_pool_focus_pol._focus_played_identity = "AXE_RUBY_RAIDER"
-    d_low_focus = low_pool_focus_pol.decide(
-        low_pool_focus_state, low_pool_focus_ctx)
-    assert ("LOW_POOL_BURST_RACE_OBS" in d_low_focus.reason
-            and "LOW_POOL_FOCUS_SWITCH_OBS" in d_low_focus.reason
-            and "此前非击杀换线2次" in d_low_focus.reason
-            and "当前火线=axe" in d_low_focus.reason
-            and d_low_focus.action == d_low_focus_base.action
-            and d_low_focus.params == d_low_focus_base.params), \
-        f"低池火线上下文观测缺失或改变动作: {d_low_focus.action}/{d_low_focus.params}/{d_low_focus.reason}"
-    low_pool_focus_pol.know.policy["low_pool_focus_switch_obs"] = False
-    d_low_focus_off = low_pool_focus_pol.decide(
-        low_pool_focus_state, low_pool_focus_ctx)
-    assert ("LOW_POOL_BURST_RACE_OBS" in d_low_focus_off.reason
-            and "LOW_POOL_FOCUS_SWITCH_OBS" not in d_low_focus_off.reason
-            and d_low_focus_off.action == d_low_focus.action
-            and d_low_focus_off.params == d_low_focus.params), \
-        f"低池火线上下文开关未严格回滚: {d_low_focus_off.action}/{d_low_focus_off.params}/{d_low_focus_off.reason}"
-
     class _PerComboNative:
         available = True
         pools: dict = {}
