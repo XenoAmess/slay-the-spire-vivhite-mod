@@ -3900,6 +3900,27 @@ class Policy:
                         _boss_gap = _boss_net_dpt - _boss_projected
                         _boss_ratio = (_boss_net_dpt / _boss_projected
                                        if _boss_projected > 0.0 else None)
+                        # 按遭遇实例保留 DPT 对账的身份与血池端点：1578-F17
+                        # WATERFALL_GIANT 的后段低比值可能来自 Boss 自身的
+                        # 压力/回血阶段，不能只凭净降比把它归因成通用投影高估。
+                        # 这是纯观测上下文，不改变评分、判决或动作；缺少
+                        # comp_id 时退回当前敌人键，避免静默丢失分层身份。
+                        _boss_encounter = str(
+                            cctx.get("comp_id") or "").strip()
+                        if not _boss_encounter:
+                            _boss_encounter = "+".join(sorted({
+                                str(_e.get("enemy_id") or _e.get("name")
+                                    or "").strip()
+                                for _e in enemies
+                                if isinstance(_e, dict)
+                                and (_e.get("enemy_id") or _e.get("name"))
+                            }))
+                        if not _boss_encounter:
+                            _boss_encounter = "unknown"
+                        _boss_encounter_tail = (
+                            f"；Boss遭遇={_boss_encounter}，血池"
+                            f"{_boss_start_hp:.1f}→{_boss_end_hp:.1f}"
+                            "（BOSS_RACE_EFFECTIVE_DPT_ENCOUNTER_OBS）")
                         _boss_ratio_tail = ""
                         if _boss_ratio is not None:
                             _boss_ratio_tail = (
@@ -3933,6 +3954,7 @@ class Policy:
                             f" vs 投影{_boss_projected:.1f}/回合"
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
+                            + _boss_encounter_tail
                             + _boss_ratio_tail + _boss_focus_tail)
                     # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                     # F21 OVICOPTER 现场已有长战 TTK 投影与迟滞锁，但普通/精英大血池

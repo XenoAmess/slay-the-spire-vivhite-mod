@@ -10817,6 +10817,8 @@ def main() -> int:
     assert ("BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_effective.reason
             and "敌血净降10.0/回合" in d_combat_boss_effective.reason
             and "vs 投影" in d_combat_boss_effective.reason
+            and "Boss遭遇=CAP_BOSS" in d_combat_boss_effective.reason
+            and "血池185.0→175.0" in d_combat_boss_effective.reason
             and "实际/投影比" in d_combat_boss_effective.reason
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             in d_combat_boss_effective.reason), \

@@ -11630,3 +11630,45 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   与在线 prompt，未直接整合污染文件；本批独立实现并验证了同一目标的最小观测。
 - `retry_resolution: 20260926-133153-1790400713195762400-55d4a47e integrated`
 
+## 2026-09-26｜第 1578 局复盘（Boss 有效火力遭遇分层观测）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1578 局 F17 的 Boss 有效火力比在 T3~T8 曾为 1.34~2.40，
+  随后 T9/T10 降至 0.57/0.12；该后段低比值可能主要来自
+  `WATERFALL_GIANT` 的压力阶段与原生回血/非伤害状态变化，而非所有 Boss 的
+  竞速投影都系统性高估。假设可证伪。
+- **EVIDENCE**：完整 run `W40B79RV9RX2` 含 237 条决策；F17 D209、D211、
+  D215、D219、D221、D224、D228、D232 已产生
+  `BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS`，比值依次为 1.48、1.60、2.40、1.34、
+  0.93、1.88、0.57、0.12，D236 `GAME_OVER`。原生 v0.111.0 mechanics 的
+  `WATERFALL_GIANT` 含 `SiphonMove`（回血）及压力递增攻击；旧 marker 只有
+  净降/投影，没有遭遇键或血池两端，无法按 Boss/阶段复核。
+- **EXPECTED_SIGNAL**：未来 3~10 个 Boss 竞速窗口的 marker 应带
+  `BOSS_RACE_EFFECTIVE_DPT_ENCOUNTER_OBS`、稳定 encounter id 与 HP 起止值。
+  低比值若集中在 Waterfall 且伴随非单调血池/阶段变化，支持遭遇特性假设；
+  若跨多个 Boss 仍重复低于 0.80，则转向通用投影校准。观测关闭后不得留下
+  新上下文，action/params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `brain/policy.py`：在既有 Boss DPT 对账 marker 后追加 `cctx.comp_id`，缺失时
+  退回当前敌人键，并追加上一回合首到本回合首的敌方血池起止值；仅增加
+  `BOSS_RACE_EFFECTIVE_DPT_ENCOUNTER_OBS` 观测，不改变评分、TTK/TSURV、判决、
+  目标或动作。
+- `brain/knowledge.py`：同步默认策略注释，明确 encounter/HP 端点属于纯观测。
+- `brain/selfcheck.py`：Boss 跨回合夹具断言 `CAP_BOSS` 与 `185.0→175.0`；
+  既有开关关闭对照继续断言 action/params 不变且 DPT marker 消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 encounter id、HP 起止、回合跨度、比值及原生
+  阶段/回血机制分层；至少 3 个独立 Boss 窗口的中位比值低于 0.80 且不由
+  阶段变化解释时，才评估竞速投影消费端校准，之前不改行为。
+- **撤回**：若 encounter 键错配、HP 端点与回合首快照不一致、非 Boss 误挂，
+  或关闭开关无法保持 action/params 不变，则移除上下文尾缀，保留失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  目标 diff 检查无本批空白错误；未修改 `.runtime/`、runs、archive、stats、
+  progression、policy.json、lessons 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
