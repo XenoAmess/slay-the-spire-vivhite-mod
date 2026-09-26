@@ -622,7 +622,8 @@ class Policy:
         self._terminal_life_lock_stall = 0
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
-        self._reward_instance_key = None  # exact live reward payload; repeated rewards may share text
+        self._reward_instance_key = None  # root reward list, retained while its card overlay is open
+        self._reward_card_offer_key = None  # card failures belong to one child offer only
         self._reward_tried: set = set()  # (index, reward_type, description) accepted on this payload
         self._reward_cooldowns: dict[tuple, int] = {}  # transient 409 rotation, never permanent
         self._reward_card_cooldowns: dict[tuple, int] = {}
@@ -1641,6 +1642,7 @@ class Policy:
             self._shop_done_floor = -1
             self._reward_floor = -1
             self._reward_instance_key = None
+            self._reward_card_offer_key = None
             self._reward_tried = set()
             self._reward_cooldowns = {}
             self._reward_card_cooldowns = {}
@@ -1683,6 +1685,14 @@ class Policy:
             self._sync_combat_play_successes(ctx)
             self._sync_action_handshakes(ctx)
             self._reconcile_uncertain_action(state, ctx)
+        # A later reward screen may repeat the same payload on the same floor.
+        # Only a real room/menu boundary ends its lifetime; UNKNOWN/WAITING and
+        # child selection/unlock/modal screens do not establish a new reward set.
+        if screen in {"MAIN_MENU", "CHARACTER_SELECT", "MAP", "COMBAT", "SHOP",
+                      "REST", "CHEST", "EVENT", "GAME_OVER", "TIMELINE"}:
+            self._reward_floor = -1
+            self._reward_instance_key = None
+            self._reward_card_offer_key = None
         # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
         # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
         if not self._state_has_explicit_card_offer(state):
@@ -1765,9 +1775,6 @@ class Policy:
                 # Display-only instrumentation must never alter the chosen action.
                 decision.trace = None
             return ensure_decision_trace(state, decision)
-            exception_obs = (
-                f"POLICY_DECISION_EXCEPTION_OBS screen={screen}"
-                f" type={type(exc).__name__}")
         except Exception as exc:  # never crash the loop on a policy bug
             self._decide_errors = getattr(self, "_decide_errors", 0) + 1
             # 连续异常（如代码/知识库版本错位的 AttributeError）会每 tick 空转僵死，
@@ -1781,18 +1788,16 @@ class Policy:
                 for safe in recovery_actions:
                     if safe in actions:
                         return ensure_decision_trace(
-                            state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}；{exception_obs}）", wait=1.0))
+                            state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0))
                 for indexed in ("select_deck_card", "choose_reward_card", "choose_rest_option",
                                 "choose_event_option", "choose_treasure_relic", "choose_bundle",
                                 "claim_reward", "resolve_rewards", "choose_map_node"):
                     if indexed in actions:
                         return ensure_decision_trace(
                             state, Decision(indexed, {"option_index": 0},
-                                            f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}；{exception_obs}）", wait=1.0))
+                                            f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}）", wait=1.0))
             return ensure_decision_trace(
-                state, Decision(action=None,
-                                reason=f"决策异常({screen}): {exc}；{exception_obs}",
-                                wait=1.0))
+                state, Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0))
         finally:
             self._active_trace_builder = None
 
@@ -9844,21 +9849,34 @@ class Policy:
         pol = self.know.policy
         floor = run.get("floor", 0)
 
-        # 以完整奖励载荷区分同层连续奖励屏。领取后列表会变化/重排，此时清掉
-        # 旧 payload 的 suppression，避免两个同文案奖励因 index 重用发生碰撞。
-        reward_instance_key = (
-            state.get("run_id"), floor,
-            tuple((o.get("index"), o.get("reward_type"), o.get("description"),
-                   bool(o.get("claimable"))) for o in (r.get("rewards") or [])),
-            tuple((c.get("index"), c.get("card_id"), c.get("name"),
-                   bool(c.get("upgraded"))) for c in (r.get("card_options") or [])),
-            bool(r.get("pending_card_choice")),
-        )
-        if floor != self._reward_floor or reward_instance_key != self._reward_instance_key:
+        # The native card overlay hides the root list (rewards=[]).  Opening and
+        # skipping it must retain accepted reward_attempt receipts, otherwise the
+        # root screen immediately reopens the card reward forever.  Only compare
+        # root payloads while that root is actually visible.  A real list change
+        # still releases old indices, which may now name an identical sibling.
+        reward_scope = (state.get("run_id") or run.get("run_id")
+                        or getattr(ctx, "run_id", None), floor)
+        reward_instance_key = self._reward_instance_key
+        if reward_instance_key is None or reward_instance_key[:2] != reward_scope:
+            reward_instance_key = (*reward_scope, None)
+        if not r.get("pending_card_choice"):
+            reward_instance_key = (*reward_scope, tuple(
+                (o.get("index"), o.get("reward_type"), o.get("description"),
+                 bool(o.get("claimable"))) for o in (r.get("rewards") or [])))
+        if reward_instance_key != self._reward_instance_key:
             self._reward_floor = floor
             self._reward_instance_key = reward_instance_key
             self._reward_tried = set()
             self._reward_cooldowns = {}
+
+        # Card-target failures/cooldowns belong to the visible child offer, not
+        # its parent reward set.  Closing it releases them for the next offer.
+        card_offer_key = ((reward_instance_key, tuple(
+            (c.get("index"), c.get("card_id"), c.get("name"), bool(c.get("upgraded")))
+            for c in (r.get("card_options") or [])))
+            if r.get("pending_card_choice") else None)
+        if card_offer_key != self._reward_card_offer_key:
+            self._reward_card_offer_key = card_offer_key
             self._reward_card_cooldowns = {}
 
         # card choice pending?

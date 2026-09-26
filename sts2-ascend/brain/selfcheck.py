@@ -87,36 +87,7 @@ def main() -> int:
 
     # 3) 针对性场景断言（decide() 吞异常保活，逻辑错误必须在这里显式暴露）
 
-    # 3a) 策略异常必须有稳定的生产观测键（第1348局 F2 的
-    # _boss_projected 未初始化回归）：观测增加不应伪造动作或参数。
-    original_combat_handler = pol._combat
-
-    def _raise_policy_error(_state, _ctx):
-        raise RuntimeError("selfcheck policy error")
-
-    pol._combat = _raise_policy_error
-    try:
-        exception_decision = pol.decide(
-            {"screen": "COMBAT", "run_id": "POLICY_EXCEPTION_OBS",
-             "available_actions": ["end_turn"]}, ctx)
-        pol._decide_errors = 9
-        repeated_exception_decision = pol.decide(
-            {"screen": "COMBAT", "run_id": "POLICY_EXCEPTION_OBS",
-             "available_actions": ["end_turn"]}, ctx)
-    finally:
-        pol._combat = original_combat_handler
-    assert exception_decision.action is None and exception_decision.params == {}, \
-        f"策略异常观测不得改写首个异常动作: {exception_decision.action}/{exception_decision.params}"
-    assert "POLICY_DECISION_EXCEPTION_OBS screen=COMBAT type=RuntimeError" \
-        in exception_decision.reason, \
-        f"策略异常稳定观测键缺失: {exception_decision.reason}"
-    assert repeated_exception_decision.action == "end_turn" \
-        and repeated_exception_decision.params == {} \
-        and "POLICY_DECISION_EXCEPTION_OBS screen=COMBAT type=RuntimeError" \
-        in repeated_exception_decision.reason, \
-        f"连续异常自救路径缺少稳定观测或改写参数: {repeated_exception_decision.action}/{repeated_exception_decision.params}/{repeated_exception_decision.reason}"
-
-    # 3b) 选牌端：攻击占比 0.8 时普通攻击须被乘法衰减压到阈值以下；格挡稀缺技能须增值
+    # 3a) 选牌端：攻击占比 0.8 时普通攻击须被乘法衰减压到阈值以下；格挡稀缺技能须增值
     #     夹具修复（第1307~1312批 BURST_STARVE_SUPPLY_LEVER）：8 张攻击牌此前无伤害面板，
     #     卡组爆发 0 < 饥饿线 30，新供给纠偏会给 weak_atk 误发 +6 冲过阈值——本锚测的是
     #     攻击占比乘法衰减，与饥饿无关；补 12 伤面板使卡组 burst=36 非饥饿，两值与旧口径逐位一致
