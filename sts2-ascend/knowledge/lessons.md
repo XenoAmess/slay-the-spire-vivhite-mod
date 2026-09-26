@@ -13053,3 +13053,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.784025210464338局)，BASH(14分/3.201867485777519局)，BODY_SLAM(15分/2.3084521981301807局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）
 - 生涯战绩：0/1587 胜，当前目标进阶 0
+
+## 第 1588 局复盘（2026-09-27 01:10）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：MOLTEN_FIST, BREAKTHROUGH, MOLTEN_FIST, HEADBUTT, PACTS_END, WHIRLWIND, RUPTURE, CRUELTY, EVIL_EYE, SHRUG_IT_OFF, RAMPAGE
+- 本局遗物：PEAR
+- 战斗记录：F8 Monster战 掉血2｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血13｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血22｜自损1（可行动段1/非行动段22，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血15｜自损1（可行动段1/非行动段17，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血27｜自损1（可行动段1/非行动段26，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血44｜自损1（可行动段1/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.021464170361591局)，ASHEN_STRIKE(26分/2.2190386318335937局)，PERFECTED_STRIKE(25分/3.621722051073043局)，PACTS_END(25分/70.30677931706289局)，FEED(25分/36.04344201550464局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.7707811222277132局)，BASH(14分/3.190660949577298局)，BODY_SLAM(15分/2.300372615436725局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1588 胜，当前目标进阶 0
