@@ -10768,6 +10768,7 @@ def main() -> int:
                           effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
                           boss_focus_switch_obs=True, focus_switches=0,
+                          boss_state_obs=True, boss_state_powers=None,
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
@@ -10844,10 +10845,14 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_focus_switch_obs"] = boss_focus_switch_obs
         cap_pol.know.policy[
+            "boss_race_effective_dpt_state_obs"] = boss_state_obs
+        cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
         cap_pol.know.policy["vivhite_hp_pay_phase_audit_obs"] = (
             hp_pay_audit_obs)
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
+        if boss_state_powers is not None:
+            cap_state["combat"]["enemies"][0]["powers"] = boss_state_powers
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         decision = cap_pol.decide(cap_state, cap_ctx)
@@ -10925,10 +10930,36 @@ def main() -> int:
             and "血池185.0→175.0" in d_combat_boss_effective.reason
             and "实际/投影比" in d_combat_boss_effective.reason
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
-            in d_combat_boss_effective.reason), \
+            in d_combat_boss_effective.reason
+            and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS"
+            in d_combat_boss_effective.reason
+            and "hittable=1" in d_combat_boss_effective.reason
+            and "block=0" in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
+    # 3br-boss-effective-dpt-state：1583-F17 的 CEREMONIAL_BEAST 在相邻
+    # 回合出现 43.0→0.0 的净降跳变；原生 PlowPower/第二阶段状态必须跟随
+    # 零样本留痕，才能区分原生阶段/不可命中与竞速投影高估。状态观测只读
+    # powers、alive/hittable、block，独立开关关闭时严格删除自身尾缀。
+    d_combat_boss_state = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "PLOW_POWER", "amount": 150}])
+    assert ("BOSS_RACE_EFFECTIVE_DPT_STATE_OBS" in
+            d_combat_boss_state.reason
+            and "powers=PLOW_POWER×150" in d_combat_boss_state.reason), \
+        f"Boss 有效火力状态上下文缺失: {d_combat_boss_state.reason}"
+    d_combat_boss_state_off = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "PLOW_POWER", "amount": 150}],
+        boss_state_obs=False)
+    assert (d_combat_boss_state_off.action == d_combat_boss_state.action
+            and d_combat_boss_state_off.params == d_combat_boss_state.params
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in
+            d_combat_boss_state_off.reason
+            and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS" not in
+            d_combat_boss_state_off.reason), \
+        f"Boss 有效火力状态观测开关未严格回滚: {d_combat_boss_state_off.reason}"
     # 3br-vivhite-hp-pay-phase-audit：Boss 续航观测同时披露可行动段、非行动段
     # 的累计扣血与 HP 起止快照；只读观测，开关关闭时严格删除自身尾缀。
     assert knowledge.DEFAULT_POLICY["vivhite_hp_pay_phase_audit_obs"] is True

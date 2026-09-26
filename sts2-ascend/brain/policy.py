@@ -1165,6 +1165,57 @@ class Policy:
                 return value
         return None
 
+    @staticmethod
+    def _boss_effective_dpt_state(enemies: list[dict]) -> str:
+        """Format bounded enemy state for Boss DPT observations only.
+
+        A zero HP delta can be a native phase/targetability transition rather
+        than a bad output projection. Keep this formatter read-only and
+        deterministic so it cannot influence scoring or action selection.
+        """
+        parts = []
+        for enemy in (enemies or [])[:8]:
+            if not isinstance(enemy, dict):
+                continue
+
+            def value_text(key: str) -> str:
+                if key not in enemy or enemy.get(key) is None:
+                    return "?"
+                value = enemy.get(key)
+                if isinstance(value, bool):
+                    return "1" if value else "0"
+                return str(value)
+
+            powers = []
+            for power in (enemy.get("powers") or [])[:8]:
+                if not isinstance(power, dict):
+                    continue
+                power_id = str(power.get("power_id") or power.get("id")
+                                or power.get("name") or "?").strip()
+                amount = power.get("amount")
+                if amount is None:
+                    amount_text = "∅"
+                else:
+                    try:
+                        amount_text = f"{float(amount):g}"
+                    except (TypeError, ValueError):
+                        amount_text = str(amount)
+                powers.append(f"{power_id}×{amount_text}")
+            powers.sort()
+            power_text = ",".join(powers) if powers else "none"
+            label = str(enemy.get("enemy_id") or enemy.get("name")
+                        or "敌人")
+            try:
+                block_text = (f"{float(enemy.get('block')):g}"
+                              if enemy.get("block") is not None else "?")
+            except (TypeError, ValueError):
+                block_text = str(enemy.get("block"))
+            parts.append(
+                f"{label}[alive={value_text('is_alive')},"
+                f"hittable={value_text('is_hittable')},block={block_text},"
+                f"powers={power_text}]")
+        return "、".join(parts)
+
     def _record_focus_identity_flip(self, target_enemy: dict | None,
                                     enemies: list[dict], why: str) -> bool:
         """Record non-kill fire-line changes without changing scoring state."""
@@ -4213,6 +4264,14 @@ class Policy:
                                     f"；竞速火线已换线{_boss_focus_switches}次"
                                     f"至{_boss_focus_name}"
                                     "（BOSS_RACE_FOCUS_SWITCH_OBS）")
+                        _boss_state_tail = ""
+                        if bool(pol.get(
+                                "boss_race_effective_dpt_state_obs", True)):
+                            _boss_state = self._boss_effective_dpt_state(enemies)
+                            if _boss_state:
+                                _boss_state_tail = (
+                                    f"；Boss状态={_boss_state}"
+                                    "（BOSS_RACE_EFFECTIVE_DPT_STATE_OBS）")
                         danger_note += (
                             f"；Boss竞速有效火力对账：采样{_boss_prev_round}→"
                             f"{round_no}回合，敌血净降{_boss_net_dpt:.1f}/回合"
@@ -4220,7 +4279,8 @@ class Policy:
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
                             + _boss_encounter_tail
-                            + _boss_ratio_tail + _boss_focus_tail)
+                            + _boss_ratio_tail + _boss_focus_tail
+                            + _boss_state_tail)
                     # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                     # F21 OVICOPTER 现场已有长战 TTK 投影与迟滞锁，但普通/精英大血池
                     # 没有 Boss 对等的实际敌血净降读数。沿用既有 power_commit_pool_min

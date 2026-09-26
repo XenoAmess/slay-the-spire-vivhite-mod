@@ -11758,3 +11758,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；已完成目标三文件 diff 复核，未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1583 局复盘（Boss DPT 原生状态上下文观测）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F17 `CEREMONIAL_BEAST` 的 Boss 有效火力可能受原生阶段/不可命中状态影响；现有 DPT marker 没有状态字段，无法把阶段停顿与投影高估区分开。该假设可证伪。
+- **EVIDENCE**：精确 run `KZH4F6HC2WPB` 的完整链为 183 条决策。F17 D167 记录 `231→188`、实际 43.0/回合 vs 投影 23.0；D169 变为 `188→188`、实际 0.0 vs 投影 25.8；D173/D177/D181 又分别为 31.0/30.0/20.0。原生 v0.111.0 mechanics 的 `CEREMONIAL_BEAST` 有 `PlowPower`、`IsInSecondPhase`、`IsStunnedByPlowRemoval`，且 `PLOW_POWER` 在受击后可能触发阶段/眩晕；现有 marker 只有 encounter、HP 端点和 ratio。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 竞速窗口应在 `BOSS_RACE_EFFECTIVE_DPT_OBS` 同条 marker 追加 `BOSS_RACE_EFFECTIVE_DPT_STATE_OBS`，记录 `alive/hittable/block/powers`。零/低比值若集中伴随 `PLOW_POWER`、不可命中或格挡，支持原生状态解释；若在 `hittable=1`、无相关能力时跨至少 3 个窗口仍低于 0.80，则支持投影高估。期间不改动作或评分。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `boss_race_effective_dpt_state_obs`。
+- `sts2-ascend/brain/policy.py`：新增有界、确定性的只读 formatter；在 Boss DPT marker 后追加采样敌人的 `is_alive/is_hittable/block/powers`，不改变评分、TTK/TSURV、判决、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入 `PLOW_POWER×150` 夹具及开关关闭对照，断言 action/params 严格一致。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 run_id、Boss encounter、DPT ratio、阶段/能力、hittable、block、回合跨度分层；至少 3 个独立窗口前不调整竞速判决。达到样本后，只有状态无关的低比值稳定复现才另立投影校准假设。
+- **撤回**：若状态字段与采样回合错配、输出失控、非 Boss 误挂，或 `boss_race_effective_dpt_state_obs=False` 仍改变 action/params/旧 DPT marker，则关闭该键并移除状态尾缀。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；scoped `git diff --check` 无空白错误（仅已有换行风格警告）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
