@@ -770,6 +770,12 @@ class Policy:
         self._boss_effective_dpt_round = None
         self._boss_effective_dpt_start_hp = None
         self._boss_effective_dpt_projected = 0.0
+        # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
+        # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
+        self._longfight_effective_dpt_combat = None
+        self._longfight_effective_dpt_round = None
+        self._longfight_effective_dpt_start_hp = None
+        self._longfight_effective_dpt_projected = 0.0
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
@@ -3923,6 +3929,76 @@ class Policy:
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
                             + _boss_ratio_tail + _boss_focus_tail)
+                    # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
+                    # F21 OVICOPTER 现场已有长战 TTK 投影与迟滞锁，但普通/精英大血池
+                    # 没有 Boss 对等的实际敌血净降读数。沿用既有 power_commit_pool_min
+                    # 长战门槛，只在判死/入锁后绑定上一回合首血池，于下一回合首披露
+                    # 净降、投影和实际/投影比；召唤、回血等非伤害变化如实留在净值中。
+                    # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
+                    _longfight_effective_dpt_pending = None
+                    if (bool(pol.get("longfight_race_effective_dpt_obs", True))
+                            and cctx.get("node_type") in ("Monster", "Elite")
+                            and race_lost
+                            and enemy_hp_total >= float(
+                                pol.get("power_commit_pool_min", 90.0))
+                            and round_no is not None):
+                        if self._longfight_effective_dpt_combat is not cctx:
+                            self._longfight_effective_dpt_combat = cctx
+                            self._longfight_effective_dpt_round = None
+                            self._longfight_effective_dpt_start_hp = None
+                            self._longfight_effective_dpt_projected = 0.0
+                        if (self._longfight_effective_dpt_round != round_no):
+                            _longfight_prev_round = (
+                                self._longfight_effective_dpt_round)
+                            _longfight_prev_start_hp = (
+                                self._longfight_effective_dpt_start_hp)
+                            _longfight_span = 0
+                            if _longfight_prev_round is not None:
+                                try:
+                                    _longfight_span = int(round_no) - int(
+                                        _longfight_prev_round)
+                                except (TypeError, ValueError):
+                                    _longfight_span = 0
+                            if (_longfight_prev_start_hp is not None
+                                    and _longfight_span > 0
+                                    and self._longfight_effective_dpt_projected
+                                    > 0.0):
+                                _longfight_effective_dpt_pending = (
+                                    _longfight_prev_round, _longfight_span,
+                                    float(_longfight_prev_start_hp),
+                                    float(enemy_hp_total),
+                                    float(
+                                        self._longfight_effective_dpt_projected))
+                            self._longfight_effective_dpt_round = round_no
+                            self._longfight_effective_dpt_start_hp = (
+                                float(enemy_hp_total))
+                        if dpt > 0.0:
+                            self._longfight_effective_dpt_projected = float(dpt)
+                    if _longfight_effective_dpt_pending is not None:
+                        (_longfight_prev_round, _longfight_span,
+                         _longfight_start_hp, _longfight_end_hp,
+                         _longfight_projected) = (
+                            _longfight_effective_dpt_pending)
+                        _longfight_net_dpt = (
+                            _longfight_start_hp - _longfight_end_hp
+                        ) / _longfight_span
+                        _longfight_gap = (
+                            _longfight_net_dpt - _longfight_projected)
+                        _longfight_ratio = (
+                            _longfight_net_dpt / _longfight_projected
+                            if _longfight_projected > 0.0 else None)
+                        _longfight_ratio_tail = ""
+                        if _longfight_ratio is not None:
+                            _longfight_ratio_tail = (
+                                f"；实际/投影比{_longfight_ratio:.2f}"
+                                "（LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS）")
+                        danger_note += (
+                            f"；长战竞速有效火力对账：采样{_longfight_prev_round}→"
+                            f"{round_no}回合，敌血净降{_longfight_net_dpt:.1f}/回合"
+                            f" vs 投影{_longfight_projected:.1f}/回合"
+                            f"（差{_longfight_gap:+.1f}，"
+                            "LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）"
+                            + _longfight_ratio_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，
@@ -4245,6 +4321,10 @@ class Policy:
             self._boss_effective_dpt_round = None
             self._boss_effective_dpt_start_hp = None
             self._boss_effective_dpt_projected = 0.0
+            self._longfight_effective_dpt_combat = ctx.combat
+            self._longfight_effective_dpt_round = None
+            self._longfight_effective_dpt_start_hp = None
+            self._longfight_effective_dpt_projected = 0.0
             self._self_harm_potion_paid = 0.0
             self._incoming_ema = 0.0
             self._esc_rounds = 0

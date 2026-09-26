@@ -10644,7 +10644,8 @@ def main() -> int:
                           intangible=False, intangible_obs=True,
                           effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
-                          boss_focus_switch_obs=True, focus_switches=0):
+                          boss_focus_switch_obs=True, focus_switches=0,
+                          longfight_effective_dpt_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10712,6 +10713,8 @@ def main() -> int:
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
         cap_pol.know.policy[
             "boss_race_focus_switch_obs"] = boss_focus_switch_obs
+        cap_pol.know.policy[
+            "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
@@ -10799,6 +10802,33 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+    # 3br-longfight-effective-dpt：非 Boss 大血池长战也必须对账实际敌血净降
+    # 与投影 dpt。1577-F21 OVICOPTER 只有长战投影/迟滞标签，没有实际火力比值；
+    # 观测只读两个回合首快照，不改变动作/评分/判决，开关关闭严格回滚。
+    d_combat_longfight_effective = combat_flip_probe(
+        1.5, node_type="Monster", longfight_cap=1.5,
+        sample_effective_round=True)
+    assert ("LONGFIGHT_RACE_EFFECTIVE_DPT_OBS"
+            in d_combat_longfight_effective.reason
+            and "敌血净降10.0/回合"
+            in d_combat_longfight_effective.reason
+            and "实际/投影比"
+            in d_combat_longfight_effective.reason
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS"
+            in d_combat_longfight_effective.reason), \
+        f"非 Boss 长战跨回合有效火力对账缺失: {d_combat_longfight_effective.reason}"
+    d_combat_longfight_effective_off = combat_flip_probe(
+        1.5, node_type="Monster", longfight_cap=1.5,
+        sample_effective_round=True, longfight_effective_dpt_obs=False)
+    assert (d_combat_longfight_effective_off.action
+            == d_combat_longfight_effective.action
+            and d_combat_longfight_effective_off.params
+            == d_combat_longfight_effective.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_OBS"
+            not in d_combat_longfight_effective_off.reason
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS"
+            not in d_combat_longfight_effective_off.reason), \
+        f"非 Boss 长战有效火力对账开关未严格回滚: {d_combat_longfight_effective_off.reason}"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，

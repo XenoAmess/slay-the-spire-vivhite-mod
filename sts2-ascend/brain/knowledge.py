@@ -487,6 +487,10 @@ DEFAULT_POLICY = {
     "boss_race_focus_switch_obs": True,  # Boss 竞速有效火力对账的换线上下文（BOSS_RACE_FOCUS_SWITCH_OBS）：
                                          # 在已有跨回合净降/投影标记旁披露此前实际非击杀换线次数
                                          # 与当前火线，纯观测不改评分、判决或动作；False=严格回滚
+    "longfight_race_effective_dpt_obs": True,  # 非 Boss 大血池长战回合首对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
+                                               # F21 OVICOPTER 暴露长战投影有 TTK、无实测敌血净降；
+                                               # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，
+                                               # 纯观测不改评分、判决或动作；False=严格回滚
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否

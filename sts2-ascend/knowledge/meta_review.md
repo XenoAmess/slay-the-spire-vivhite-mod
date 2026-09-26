@@ -11582,3 +11582,51 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - `py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改在线状态、runs、archive、stats、policy.json、lessons 或 prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1577 局复盘（exact run FP8AM7ZG9GPH；非 Boss 长战有效火力对账观测）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非 Boss 大血池长战已有 `RACE_UPSHIFT_STALE` 与
+  `LONGFIGHT_JOINT_FLIP_TTK_CAP` 的投影/闸门留痕，但没有回合首敌血池净降
+  对账；因此目标切换与爪牙标签无法判断投影是否系统性高估。该假设可证伪。
+- **EVIDENCE**：第 1577 局 F21 的完整链为 258 个决策；决策 247 在
+  `TOUGH_EGG` 集火后仍投影击杀 54 回合、决策 249 转击 `LARVA` 后投影
+  11 回合，决策 251~255 继续出现 `RACE_UPSHIFT_STALE`，决策 257
+  `GAME_OVER`。原生 runtime 记录 `OVICOPTER` 初始 124~130 HP、
+  `TOUGH_EGG` 14~18 HP；原生 mechanics 记录 OVICOPTER 可产卵至多 3 个
+  `TOUGH_EGG`，并给卵施加 `MINION_POWER`，其语义是领导者死亡时放弃。
+- **EXPECTED_SIGNAL**：未来 3~10 场独立的 Monster/Elite 长战窗口应出现
+  `LONGFIGHT_RACE_EFFECTIVE_DPT_OBS`、敌血净降/回合、投影和
+  `LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS`。至少 3 个窗口的中位实际/投影比
+  < 0.80 支持“投影高估”；中位落在 0.90~1.10 则削弱假设。若窗口不满足既有
+  `power_commit_pool_min` 或开关关闭，不应出现该 marker；action/params 应保持不变。
+
+### MINIMUM_CHANGE
+
+- `brain/knowledge.py`：新增默认开启、可回滚的
+  `longfight_race_effective_dpt_obs`，限定为非 Boss 且达到既有长战血池门槛。
+- `brain/policy.py`：按战斗实例隔离上一回合首血池，在下一回合首追加净降、
+  投影、差值和实际/投影比；召唤/回血等变化保留在“净降”语义中。纯观测，
+  不改评分、TTK/TSURV、判决、目标或动作。
+- `brain/selfcheck.py`：新增 Monster 长战跨回合夹具，并验证关闭开关时 marker
+  消失且 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 场按 run_id、node_type、回合跨度、敌血净降、投影、
+  比值及 `MINION_POWER`/换线分层；未达到至少 3 个独立窗口前不调整行为。
+  若达到 3 个窗口且中位比 < 0.80，再单独评估 dpt 投影校准；若中位比接近
+  1.0，保留观测而不改策略。
+- **撤回**：若回合边界错配、净降与血池快照不一致、非长战误挂，或开关关闭
+  改变 action/params，则将 `longfight_race_effective_dpt_obs` 设为 False，
+  并保留本批失败链；不把单局死亡直接转成策略改动。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  目标文件 `git diff --check` → **DIFF_CHECK_OK**。未修改在线状态、runs、
+  stats、progression、policy.json、lessons 或 prompt。
+- **回放目标处置**：已读取并核对
+  `20260926-133153-1790400713195762400-55d4a47e` 的完整 evidence index、
+  manifest、model output、inventory、report、candidate patch、wip patch 和变更文件；
+  其候选 patch 为空、accepted candidate paths 为空，仅含临时 selfcheck bootstrap
+  与在线 prompt，未直接整合污染文件；本批独立实现并验证了同一目标的最小观测。
+- `retry_resolution: 20260926-133153-1790400713195762400-55d4a47e integrated`
+
