@@ -11822,24 +11822,3 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
-## 2026-09-26｜第 1585 局复盘（RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS）
-
-### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：败局竞速中“严格余量<0、宽松余量≥0”的买活边界，若只保留当 tick 的余量和旧版“买活可翻盘” verdict，就无法在带内机械区分“下一回合存活”与“紧接终局”；该假设可证伪。
-- **EVIDENCE**：精确 run `2MF3L1SEGSQU`（第 1585 局）完整链 188 个决策。F17 VANTOM 的 D184（T9、HP5、敌意图11）同时记录旧 verdict“买活可翻盘”、严格余量 `-0.8`、宽松余量 `+0.2`；随后 D185 打出防御、D186 结束回合，D187 `GAME_OVER`。D183 同类覆盖样本为严格 `-1.8`/宽松 `-0.8`，说明同场可见边界层与非边界层。原生 v0.111.0 证据显示该 Boss 状态为 `alive=1,hittable=1,block=0`，不应把终局归因于不可命中状态。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 `RACE_ALLIN_LETHAL_COVER_OBS` 窗口中，只要严格余量<0≤宽松余量，后续权威状态应追加 `RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS`，结局为 `next_turn=N`、`GAME_OVER(victory=0/1)` 或战斗正常退出。严格负/宽松正层的结局分布将直接证伪或支持“+1 容差掩盖失败”假设；关闭 `race_allin_buyback_margin_obs` 时新旧余量/结局 marker 同灭，action/params 不变。
-
-### MINIMUM_CHANGE
-
-- `brain/policy.py`：当现有余量观测命中严格负/宽松正边界时，按 run/combat/turn 保存一个待结算样本；在下一回合或 `GAME_OVER` handler 前消费，并在当前 decision reason 追加实际结局。新观测只读、单样本、有界，不参与评分、竞速判决、目标或动作；新回合先结算旧样本，避免同回合边界竞态覆盖。
-- `brain/knowledge.py`：把结局尾缀和严格回滚条件登记在既有观测键说明中。
-- `brain/selfcheck.py`：覆盖同回合不提前结算、下一回合存活、终局失败和观测关闭；断言 action/params 不漂移。
-
-### CONTINUE / ADJUST / ROLLBACK / VALIDATION
-
-- **继续/调整**：未来 3~10 局按 `run_id`、Boss、严格/宽松余量符号、结局类型和实测 DPT 分层；至少 3 个严格负且宽松正的独立窗口前不收紧 race_allin 行为。若该层重复 `GAME_OVER`，另立“收紧 +1 容差/扩展生还线”行为批；若稳定跨入下一回合或正常退出，则削弱假设并保留观测。
-- **撤回**：若结局与下一权威状态错配、跨战斗/跨 run 串样本、同回合提前结算，或关闭键改变 action/params/旧 verdict，则关闭 `race_allin_buyback_margin_obs` 或移除 outcome 尾缀；不改写本局失败证据。
-- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **DIFF_CHECK_OK**。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
-- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
-

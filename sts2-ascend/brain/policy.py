@@ -703,7 +703,6 @@ class Policy:
         self._race_rounds = 0       # 完成的回合边界采样数
         self._race_tick_round = None  # 上一个逐 tick HP 观测所属回合
         self._race_tick_hp = None     # 上一个逐 tick HP 观测值
-        self._race_allin_margin_pending = None  # 严格负/宽松正余量的后续结局待观测
         self._race_same_round_heal = 0.0  # 本场同回合内已观察到的净回血
         self._race_same_round_loss = 0.0  # 本场同回合内已观察到的自损/费用净扣血
         # SELF_LOSS_MAIN_OWN_ONLY（第1270~1274局批复盘行为化）：主账只采可行动段
@@ -1910,7 +1909,6 @@ class Policy:
             self._vivhite_vspark_audit_scope = None
             self._vivhite_vspark_audit_pending = None
             self._vivhite_vspark_audit_note = ""
-            self._race_allin_margin_pending = None
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -1944,13 +1942,6 @@ class Policy:
         self._sync_potion_inventory_identity(state)
         self._sync_ui_cooldown_scope(state)
         self._tick_action_cooldowns()
-        pending_margin = self._race_allin_margin_pending
-        current_combat = getattr(ctx, "combat", None)
-        if (screen == "COMBAT" and pending_margin
-                and pending_margin.get("combat") is not None
-                and current_combat is not None
-                and pending_margin["combat"] is not current_combat):
-            self._race_allin_margin_pending = None
         handler = {
             "MAIN_MENU": self._main_menu,
             "CHARACTER_SELECT": self._character_select,
@@ -1975,13 +1966,9 @@ class Policy:
         trace_builder = DecisionTraceBuilder(state)
         self._active_trace_builder = trace_builder
         try:
-            margin_outcome_note = self._race_allin_margin_outcome_note(
-                state, ctx, run_key)
             if screen == "COMBAT":
                 self._observe_vivhite_vspark_hit(state, ctx)
             decision = handler(state, ctx)
-            if margin_outcome_note:
-                decision.reason = f"{decision.reason or ''}{margin_outcome_note}"
             if screen == "COMBAT":
                 if self._vivhite_vspark_audit_note:
                     decision.reason = (f"{decision.reason or ''}"
@@ -2057,64 +2044,6 @@ class Policy:
                                 wait=1.0))
         finally:
             self._active_trace_builder = None
-
-    def _race_allin_margin_outcome_note(self, state: dict, ctx,
-                                        run_key) -> str:
-        """Close one strict-negative buyback-margin sample from a later state.
-
-        ``RACE_ALLIN_BUYBACK_MARGIN_OBS`` is intentionally still audit-only:
-        this records whether the combat reached the next turn or GAME_OVER
-        after the boundary sample.  It never feeds back into the decision.
-        """
-        pending = self._race_allin_margin_pending
-        if not pending:
-            return ""
-        try:
-            enabled = bool(self.know.policy.get(
-                "race_allin_buyback_margin_obs", True))
-        except Exception:
-            enabled = True
-        if not enabled:
-            self._race_allin_margin_pending = None
-            return ""
-        pending_run = str(pending.get("run_key") or "")
-        current_run = str(run_key or "")
-        if pending_run and current_run and pending_run != current_run:
-            self._race_allin_margin_pending = None
-            return ""
-        pending_combat = pending.get("combat")
-        current_combat = getattr(ctx, "combat", None)
-        if (pending_combat is not None and current_combat is not None
-                and pending_combat is not current_combat):
-            self._race_allin_margin_pending = None
-            return ""
-
-        screen = str(state.get("screen") or "")
-        outcome = None
-        if screen == "GAME_OVER":
-            game_over = state.get("game_over") or {}
-            outcome = ("GAME_OVER(victory=1)" if game_over.get("is_victory")
-                       else "GAME_OVER(victory=0)")
-        elif screen == "COMBAT":
-            try:
-                current_turn = int(state.get("turn"))
-                pending_turn = int(pending.get("turn"))
-            except (TypeError, ValueError):
-                return ""
-            if current_turn <= pending_turn:
-                return ""
-            outcome = f"next_turn={current_turn}"
-        elif screen in {"REWARD", "MAP", "REST", "SHOP", "CHEST", "EVENT"}:
-            outcome = f"combat_exit={screen}"
-        else:
-            return ""
-
-        self._race_allin_margin_pending = None
-        return (
-            f"；买活余量边界结局：严格{pending['strict']:+.1f}/"
-            f"宽松{pending['tolerant']:+.1f}回合→{outcome}"
-            "（RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS）")
-
 
     # ------------------------------------------------------------------
     # menu / character select / timeline
@@ -5400,23 +5329,6 @@ class Policy:
                                 f"宽松{_ralc_tolerant_margin:+.1f}回合"
                                 f"→严格{_ralc_strict_verdict}"
                                 "（RACE_ALLIN_BUYBACK_MARGIN_OBS）")
-                            if (_ralc_strict_margin < 0.0
-                                    and _ralc_tolerant_margin >= 0.0):
-                                try:
-                                    _ralc_turn = int(state.get("turn") or 0)
-                                except (TypeError, ValueError):
-                                    _ralc_turn = 0
-                                self._race_allin_margin_pending = {
-                                    "run_key": str(
-                                        state.get("run_id")
-                                        or (state.get("run") or {}).get("run_id")
-                                        or getattr(ctx, "run_id", None)
-                                        or ""),
-                                    "turn": _ralc_turn,
-                                    "combat": getattr(ctx, "combat", None),
-                                    "strict": _ralc_strict_margin,
-                                    "tolerant": _ralc_tolerant_margin,
-                                }
                     else:
                         danger_note += (
                             "；买活对账：无实测输出口径，买活后约可存活"

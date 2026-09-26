@@ -1189,11 +1189,8 @@ DEFAULT_POLICY = {
                                         # 败局竞速买活余量旁观（RACE_ALLIN_BUYBACK_MARGIN_OBS）：
                                         # 现有买活对账为保留一个完整回合的宽松容差；同时披露
                                         # 严格余量（买活可存活回合-击杀所需回合）与宽松余量，
-                                        # 供后续区分“严格可翻盘”和仅靠容差命中的样本；
-                                        # 严格负/宽松正时，在下一回合或 GAME_OVER 再补一个
-                                        # 实际结局（RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS）。
-                                        # 全部仍是纯观测，不改变 race_allin 判决、评分或动作；
-                                        # 置 False 严格回滚全部余量观测。
+                                        # 供后续区分“严格可翻盘”和仅靠容差命中的样本。纯观测，
+                                        # 不改变 race_allin 判决、评分或动作；置 False 严格回滚。
      # --- 滚雪球入锁锁持（第271~294局批复盘新增，静态键） ---
      "race_esc_latch_hold": True,    # esc（滚雪球）局实测口径竞速入锁后，不再被静态联合
                                       # 复核逐 tick 翻案解锁（RACE_ESC_LATCH_HOLD）：294-F11
