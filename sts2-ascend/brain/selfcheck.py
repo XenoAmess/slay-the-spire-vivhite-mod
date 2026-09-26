@@ -4747,6 +4747,11 @@ def main() -> int:
     d_lc_obs = vpol_lc_obs.decide(
         _vmargin_sel_state("RUN_VLCTAX_OBS", _lc_offer, _lc_obs_deck),
         _lc_obs_ctx)
+    assert ("VIVHITE_LIFE_COST_PICK_AUDIT" in d_lc_obs.reason
+            and "forced=1" in d_lc_obs.reason
+            and "offer_life=1/1" in d_lc_obs.reason
+            and "best_nonlife=NONE" in d_lc_obs.reason), \
+        f"life-cost pick audit missing: {d_lc_obs.reason}"
     assert (d_lc_obs.action == "select_deck_card"
             and d_lc_obs.params.get("option_index") == 0
             and "謦欬血税密度扣分" in d_lc_obs.reason
@@ -4775,6 +4780,19 @@ def main() -> int:
             and d_lc_obs_off.params == d_lc_obs.params
             and "VIVHITE_LIFE_COST_DECK_TAX" not in d_lc_obs_off.reason), \
         f"回滚键下留痕未消失或选择漂移: {d_lc_obs_off.reason}"
+
+    vknow_lc_pick_off = _vivhite_know("sts2-selfcheck-vlcpick-off-")
+    vknow_lc_pick_off.policy["vivhite_life_cost_pick_obs"] = 0
+    vpol_lc_pick_off = policy.Policy(vknow_lc_pick_off, random.Random(19))
+    _lc_pick_off_ctx = DummyCtx()
+    _lc_pick_off_ctx.run_id = "RUN_VLCPICK_OFF"
+    d_lc_pick_off = vpol_lc_pick_off.decide(
+        _vmargin_sel_state("RUN_VLCPICK_OFF", _lc_offer, _lc_obs_deck),
+        _lc_pick_off_ctx)
+    assert (d_lc_pick_off.action == d_lc_obs.action
+            and d_lc_pick_off.params == d_lc_obs.params
+            and "VIVHITE_LIFE_COST_PICK_AUDIT" not in d_lc_pick_off.reason), \
+        f"life-cost pick audit rollback changed action or left note: {d_lc_pick_off.reason}"
 
     # Vivhite recursion selection must execute the same child exclusion used by
     # _recovery_copy_projection.  Otherwise Conserved Recurrence can copy itself

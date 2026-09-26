@@ -4815,3 +4815,35 @@ production_code_commit: pending local commit（最终 SHA 见交接）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1425~1427批：生命支付选牌供给审计（最小观测改动）
+
+日期：2026-09-27
+production_code_commit: 584e86b39164c69fffb58b3d4ecd955f57c427a5
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1425~1427 的生命支付牌堆积主要来自强制入组或 offer 中缺少非生命支付替代，而不是现有血税软顶完全压不住；若未来每次实际选中生命支付牌都能按 `forced`、offer 生命支付数/总数、最佳非生命候选及分差稳定分层，且大量样本是强制/全生命支付或生命牌不优于非生命候选，则假设成立；若自愿选中且非生命候选分数更高仍普遍出现，或审计字段缺失/误分类，则证伪。
+- **EVIDENCE**：1425 `AAYFY1QYZB1W` 与 1426 `KYXN76LD2HYS` 均在 F33 失败；1427 `DHTZ73PKT7M0` 在 F17 Boss LAGAVULIN_MATRIARCH 失败，完整链有 234 条 decision。1427 已选 8 张生命支付牌（LOCAL_HOMEOMORPHISM×2、TERMINATION_CONDITION×2、GOLDEN_RATIO、TRICHROMATIC_WALTZ、TANGENT_STARLIGHT、CRIMSON_AREA）；F6 目录血税 28/软顶25，F14 为 40/25，F15 为 44/25。既有 `VIVHITE_LIFE_COST_DECK_TAX` 只说明目录密度，不能区分强制入组、offer 供给和非生命替代。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 run 中，实际选中生命支付牌的 reason 应带 `VIVHITE_LIFE_COST_PICK_AUDIT`，记录 `source`、`forced`、`offer_life`、`best_nonlife`、`selected_minus_nonlife`、`deck_tax` 与 `over`；关闭开关后标记消失，action/params 逐项保持不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_life_cost_pick_obs`，值为 0 时仅关闭审计注记。
+- `sts2-ascend/brain/policy.py`：在 REWARD 和 CARD_SELECTION 的真实选牌返回前追加只读供给审计；只读取既有生命支付目录值与已计算候选分，不改变评分、排序、阈值、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增审计字段断言和开关关闭时 action/params 不变的断言；未修改 runs、stats、progression、policy.json、lessons 或运行态文件。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；生产代码最终 diff 已复核并提交。
+- 生产代码 commit：`584e86b39164c69fffb58b3d4ecd955f57c427a5`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 个独立 run 按 source/run/floor 对账 `forced`、offer 生命支付比例、最佳非生命候选、分差、目录血税超额，并关联后续 free-turn payment、self-loss、terminal lock 与胜负；同一战斗多条 tick 不算独立样本。
+- 若审计缺失、误分类、字段与候选分不符或 action/params 漂移，将 `vivhite_life_cost_pick_obs` 设为 `0`，必要时回滚 commit `584e86b39164c69fffb58b3d4ecd955f57c427a5`；保留原有血税评分行为。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

@@ -987,6 +987,89 @@ class Policy:
         return (f"；余裕供给稀缺加分（卡组无条件余裕源{have}张，"
                 f"+{bonus * scarce:.1f}）")
 
+    def _vivhite_life_cost_pick_note(
+            self, pick: dict, deck: list, candidate_rows=None,
+            *, forced: bool = False, selected_score=None,
+            source: str = "CARD_SELECTION") -> str:
+        """Record LifeCost offer context without changing card-pick behavior."""
+        try:
+            enabled = bool(int(float(
+                self.know.policy.get("vivhite_life_cost_pick_obs", 1) or 0)))
+        except (TypeError, ValueError):
+            enabled = False
+        if (not enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or not isinstance(pick, dict)):
+            return ""
+
+        def _life_cost(card) -> float:
+            if not isinstance(card, dict):
+                return 0.0
+            entry = self._strategy_card(card)
+            if entry is None:
+                return 0.0
+            try:
+                return max(0.0, float(entry.mechanics.life_calculation_cost))
+            except (TypeError, ValueError):
+                return 0.0
+
+        selected_life = _life_cost(pick)
+        if selected_life <= 0.0:
+            return ""
+        deck_tax = sum(_life_cost(card) for card in (deck or ()))
+        try:
+            cap = max(1.0, float(
+                self.know.policy.get("vivhite_life_cost_deck_cap", 60.0)
+                or 60.0))
+        except (TypeError, ValueError):
+            cap = 60.0
+
+        rows = []
+        for row in candidate_rows or ():
+            card = None
+            score = None
+            if isinstance(row, (tuple, list)):
+                if len(row) < 2 or not isinstance(row[1], dict):
+                    continue
+                card = row[1]
+                try:
+                    score = float(row[0])
+                except (TypeError, ValueError):
+                    score = None
+            elif isinstance(row, dict):
+                card = row
+            if card is not None:
+                rows.append((score, card, _life_cost(card)))
+
+        life_count = sum(1 for _score, _card, life in rows if life > 0.0)
+        nonlife = [row for row in rows if row[2] <= 0.0]
+        nonlife.sort(key=lambda row: (
+            row[0] is None,
+            -(row[0] if row[0] is not None else 0.0),
+            str(row[1].get("card_id") or "")))
+        best_nonlife = "NONE"
+        gap_note = ""
+        if nonlife:
+            best_score, best_card, _life = nonlife[0]
+            best_nonlife = str(best_card.get("card_id")
+                               or best_card.get("name") or "?")
+            try:
+                selected_value = (float(selected_score)
+                                  if selected_score is not None else None)
+                if best_score is not None and selected_value is not None:
+                    gap_note = (f",selected_minus_nonlife="
+                                f"{selected_value - best_score:.1f}")
+            except (TypeError, ValueError):
+                gap_note = ""
+        offer_note = f"{life_count}/{len(rows)}" if rows else "UNKNOWN"
+        return (
+            f";VIVHITE_LIFE_COST_PICK_AUDIT:source={source},"
+            f"card={pick.get('card_id') or pick.get('name') or '?'},"
+            f"life={selected_life:g},deck_tax={deck_tax:.0f}/{cap:.0f},"
+            f"over={max(0.0, deck_tax - cap):.0f},forced={int(bool(forced))},"
+            f"offer_life={offer_note},best_nonlife={best_nonlife}{gap_note}")
+
     def _is_basic_card(self, card: dict) -> bool:
         """基础牌统一判定：角色静态目录 rarity=="basic" 优先；无目录角色
         （Ironclad）回退 STRIKE/DEFEND 子串。旧实现只认子串，对白绮基础牌
@@ -10723,6 +10806,10 @@ class Policy:
                 explore_note += self._card_pick_burst_audit(
                     deck, best, max_hp=_mh, act=_act,
                     offer=[c for _v, c, _d in all_scored])
+                explore_note += self._vivhite_life_cost_pick_note(
+                    best, deck, all_scored,
+                    forced="skip_reward_cards" not in actions,
+                    selected_score=best_v, source="REWARD")
                 return Decision("choose_reward_card", {"option_index": best["index"]},
                                 f"奖励选牌：【{best.get('name')}】（价值 {best_v:.1f}，{gate_note}）"
                                 f"{_det_note}{explore_note}；候选：{', '.join(vals)}",
@@ -11265,6 +11352,9 @@ class Policy:
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
             # outcome 账与「本局拿牌」榜此前被此类强制屏系统性灌水
+            explore_note += self._vivhite_life_cost_pick_note(
+                pick, deck, scored, forced=not _has_skip,
+                selected_score=best_v, source="CARD_SELECTION")
             if top_of_pile:
                 tag = "card_top_pick"
             elif not _has_skip and best_v < pick_line:

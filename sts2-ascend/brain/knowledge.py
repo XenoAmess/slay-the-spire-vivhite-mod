@@ -1084,6 +1084,7 @@ DEFAULT_POLICY = {
                                       # （权重触底 -2.98、余量门顶格 3.00，证据停止吸收）。卡组目录
                                       # 血税合计超软顶后，新增生命支付牌按 超出比例×自身血税×此值
                                       # 线性扣分；0=关闭（一键回滚旧行为零差异），非白绮角色零改动
+    "vivhite_life_cost_pick_obs": 1,  # Read-only audit for selected LifeCost offers; 0 rolls back only the note
     "vivhite_life_cost_deck_cap": 60.0, # 血税密度扣分的软顶：卡组目录生命支付合计低于此值零差异
                                       # （约起始卡组 20 的 3 倍，对应一幕中后段开始计价）；密度超出
                                       # 比例以此值为分母并 clamp 到 1.0，与扣分同键启停。
