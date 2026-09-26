@@ -11102,6 +11102,37 @@ def main() -> int:
         identity_enemies[0], identity_enemies, "可击杀合法转火")
     assert identity_pol._focus_identity_flips == 0, \
         "击杀型合法转火不应污染实体换线观测计数"
+    # 3br-focus-identity-ambiguity：同类敌人缺少实例键时，显式记录回退键歧义；
+    # 只追加实际定向攻击的观测尾缀，开关关闭或存在稳定实例键时严格无尾缀。
+    ambiguity_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-focus-identity-ambiguity-"))),
+        random.Random(11))
+    ambiguity_enemies = [
+        {"index": 0, "enemy_id": "MYTE", "name": "异螨"},
+        {"index": 1, "enemy_id": "MYTE", "name": "异螨"},
+    ]
+    ambiguity_pol._focus_played_identity = "MYTE"
+    assert not ambiguity_pol._record_focus_identity_flip(
+        ambiguity_enemies[0], ambiguity_enemies, "普通非击杀换线", True)
+    assert ("FOCUS_IDENTITY_AMBIGUITY_OBS"
+            in ambiguity_pol._focus_identity_ambiguity_note
+            and "来源enemy_id" in ambiguity_pol._focus_identity_ambiguity_note
+            and "在场2个同类实例" in ambiguity_pol._focus_identity_ambiguity_note
+            and "索引[0,1]" in ambiguity_pol._focus_identity_ambiguity_note), \
+        f"同类敌人回退键歧义观测缺失: {ambiguity_pol._focus_identity_ambiguity_note}"
+    ambiguity_pol._record_focus_identity_flip(
+        ambiguity_enemies[0], ambiguity_enemies, "普通非击杀换线", False)
+    assert ambiguity_pol._focus_identity_ambiguity_note == "", \
+        "关闭同类敌人身份歧义观测时应严格删除尾缀"
+    stable_enemies = [
+        {"index": 0, "instance_id": "MYTE#A", "enemy_id": "MYTE"},
+        {"index": 1, "instance_id": "MYTE#B", "enemy_id": "MYTE"},
+    ]
+    ambiguity_pol._record_focus_identity_flip(
+        stable_enemies[0], stable_enemies, "普通非击杀换线", True)
+    assert ambiguity_pol._focus_identity_ambiguity_note == "", \
+        "存在稳定实例键时不应误报回退键歧义"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，

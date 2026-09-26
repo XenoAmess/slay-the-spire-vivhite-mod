@@ -695,6 +695,7 @@ class Policy:
         self._focus_played_identity = None  # 上一张实际火线的稳定敌人身份（长战上下文观测）
         self._focus_drift_flips = 0  # 本场实际打出火线的非击杀翻线次数（FOCUS_DRIFT_LOCK，阻尼升级依据）
         self._focus_identity_flips = 0  # 按敌人身份补记的非击杀换线次数（纯观测，不改阻尼）
+        self._focus_identity_ambiguity_note = ""  # 同类回退键歧义观测（纯观测）
         self._focus_drift_multi_scaler_obs_emitted = False  # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
@@ -1155,15 +1156,22 @@ class Policy:
         return (card.get("index"), str(identity))
 
     @staticmethod
-    def _focus_enemy_identity(enemy: dict | None) -> str | None:
-        """Return an identity that survives an enemy-list index reordering."""
+    def _focus_enemy_identity_source(
+            enemy: dict | None) -> tuple[str | None, str | None]:
+        """Return the first available focus identity field and its value."""
         if not isinstance(enemy, dict):
-            return None
+            return None, None
         for key in ("instance_id", "uuid", "spawn_id", "enemy_id", "name"):
             value = str(enemy.get(key) or "").strip()
             if value:
-                return value
-        return None
+                return key, value
+        return None, None
+
+    @staticmethod
+    def _focus_enemy_identity(enemy: dict | None) -> str | None:
+        """Return an identity that survives an enemy-list index reordering."""
+        _, identity = Policy._focus_enemy_identity_source(enemy)
+        return identity
 
     @staticmethod
     def _boss_effective_dpt_state(enemies: list[dict]) -> str:
@@ -1217,9 +1225,27 @@ class Policy:
         return "、".join(parts)
 
     def _record_focus_identity_flip(self, target_enemy: dict | None,
-                                    enemies: list[dict], why: str) -> bool:
+                                    enemies: list[dict], why: str,
+                                    ambiguity_obs: bool = True) -> bool:
         """Record non-kill fire-line changes without changing scoring state."""
-        target_identity = self._focus_enemy_identity(target_enemy)
+        self._focus_identity_ambiguity_note = ""
+        target_source, target_identity = self._focus_enemy_identity_source(
+            target_enemy)
+        if (ambiguity_obs
+                and "可击杀" not in why
+                and target_source in ("enemy_id", "name")
+                and target_identity):
+            same_identity = [
+                enemy for enemy in enemies
+                if self._focus_enemy_identity(enemy) == target_identity]
+            if len(same_identity) > 1:
+                indices = sorted(
+                    str(enemy.get("index")) for enemy in same_identity
+                    if isinstance(enemy, dict) and enemy.get("index") is not None)
+                self._focus_identity_ambiguity_note = (
+                    f"；火线身份歧义：键{target_identity}来源{target_source}、"
+                    f"在场{len(same_identity)}个同类实例、索引[{','.join(indices)}]"
+                    "（FOCUS_IDENTITY_AMBIGUITY_OBS）")
         previous_identity = self._focus_played_identity
         flipped = (
             previous_identity is not None
@@ -4755,6 +4781,7 @@ class Policy:
             self._focus_played_identity = None
             self._focus_drift_flips = 0
             self._focus_identity_flips = 0
+            self._focus_identity_ambiguity_note = ""
             self._focus_drift_multi_scaler_obs_emitted = False
 
         if not enemies:
@@ -6213,7 +6240,10 @@ class Policy:
                     self._focus_drift_flips += 1
                 self._record_focus_identity_flip(
                     next((e for e in enemies if e.get("index") == target), None),
-                    enemies, why)
+                    enemies, why,
+                    bool(pol.get("focus_identity_ambiguity_obs", True)))
+                if self._focus_identity_ambiguity_note:
+                    why += self._focus_identity_ambiguity_note
                 self._focus_played_index = target
             if _hp_gate_stall_break:
                 _hp_gate_esc_note = (

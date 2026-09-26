@@ -11822,3 +11822,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1586 局复盘（FOCUS_IDENTITY_AMBIGUITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1586 局 F29 的两个同类异螨在观测载荷中没有可区分的稳定实例键；集火身份回退到 `enemy_id/name` 后，数字索引换线可能被记录成“异螨→异螨”，从而无法确认实际实体换线。该假设可证伪。
+- **EVIDENCE**：精确 run `UV37NLP37W77`（第 1586 局）完整链为 446 条决策。D431~D432、D435~D437 的定向攻击使用 `target_index=0`，D433 为无目标防守、D434 为结束回合；D439 的 `FOCUS_DRIFT_FLUSH_OBS` 明确记录“异螨→异螨”；D441 转为 `target_index=1` 并记录本场已翻线 1 次。原生 `MYTES_NORMAL` mechanics 生成两个 `Myte`，槽位为 `first/second`；runtime 记录只提供 `MYTE/异螨` 和 61~67 HP，当前身份优先级在缺少 `instance_id/uuid/spawn_id` 时回退 `enemy_id/name`。
+- **EXPECTED_SIGNAL**：未来 3~10 个含重复同类敌人的窗口中，实际定向攻击若只能使用回退键，应出现 `FOCUS_IDENTITY_AMBIGUITY_OBS`，并带来源、同类实例数量和索引；与 `FOCUS_DRIFT_FLUSH_OBS`、目标索引及后续实体字段对照。若后续出现稳定实例键且无歧义尾缀，假设被削弱；若歧义反复出现并伴随索引换线，假设得到支持。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：拆出身份来源读取；在实际定向攻击收口时，仅对非“可击杀”换线追加回退键歧义观测。开关关闭、存在稳定实例键或无重复身份时不追加；不改评分、阻尼、目标、判决、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `focus_identity_ambiguity_obs`。
+- `sts2-ascend/brain/selfcheck.py`：覆盖重复 `MYTE` 回退键、关闭开关和稳定 `instance_id` 三种情况，断言既有实体换线计数语义不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 局，按 run_id、遭遇键、身份字段、目标索引、歧义 marker 和终局结果分层；至少 3 个独立重复同类窗口前不调整集火行为。若稳定键普遍出现，则保留观测但削弱假设。
+- **撤回**：若歧义尾缀在单实例/稳定键/合法击杀转火中误挂，或 `focus_identity_ambiguity_obs=False` 改变 action/params，则关闭该键并删除尾缀，保留本次失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff 空白检查通过。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
