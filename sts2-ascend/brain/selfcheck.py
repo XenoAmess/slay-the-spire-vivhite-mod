@@ -3853,6 +3853,7 @@ def main() -> int:
         and "VIVHITE_HP_FUNCTION_GATE_OBS" in d_hfg.reason \
         and "综合色序:type=skill" in d_hfg.reason \
         and "cost=1" in d_hfg.reason \
+        and "playable=yes,unavailable=no,native=none,block=0,gap=22" in d_hfg.reason \
         and "energy=3/incoming=22" in d_hfg.reason, \
         f"斩杀竞速功能牌门拦观测缺失或动作漂移: {d_hfg}"
 
@@ -3874,12 +3875,14 @@ def main() -> int:
     _zero_energy_state = _krh_state(
         3, 45, _krh_hand_function_free_energy())
     _zero_energy_state["combat"]["player"]["energy"] = 0
+    _zero_energy_state["combat"]["player"]["block"] = 22
     d_hfg_zero = vpol_hfg_zero.decide(
         _zero_energy_state, vctx_hfg_zero)
     assert d_hfg_zero.action == "end_turn" \
         and d_hfg_zero.params == {} \
         and "VIVHITE_HP_FUNCTION_GATE_OBS" in d_hfg_zero.reason \
         and "综合色序:type=skill,cost=0" in d_hfg_zero.reason \
+        and "playable=yes,unavailable=no,native=none,block=22,gap=0" in d_hfg_zero.reason \
         and "energy=0/incoming=22" in d_hfg_zero.reason, \
         f"能量耗尽时零费功能牌门拦观测缺失或动作漂移: {d_hfg_zero}"
 

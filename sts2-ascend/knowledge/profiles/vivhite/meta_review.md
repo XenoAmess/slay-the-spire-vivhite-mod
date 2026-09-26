@@ -4911,3 +4911,36 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1444~1446 批：功能牌生命支付门的原生可用性与防御缺口观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：斩杀竞速中的生命支付门可能把“原生可执行、0费、且当前敌方伤害已被格挡覆盖”的功能牌压成空过；若这是后续 Boss 战损的可重复因果信号，未来 3~10 个独立白绮 Boss 战应出现 `VIVHITE_HP_FUNCTION_GATE_OBS` 的 `cost=0/playable=yes/unavailable=no/gap=0`，并能按同一战斗对账后续正意图掉血或 `GAME_OVER`。若该组合不出现、只出现在真实不可用牌上，或空过后没有可区分的战损关联，则假设被证伪。
+- **EVIDENCE**：exact batch 为 1444~1446，三局均失败；完整失败链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-043045_KPL2EJDC4A17.json` 的 1446-F33 04:43:30 记录 `负空间` 被门拦，`cost=0`、候选分约 2.72、实付1血、HP20、能量0、敌意图11，而当时已有12甲。既有观测只有类型/费用/分数/支付和资源，不能区分原生不可用与“缺口已覆盖仍被拦”。该链为完整文件但任务书 packet 仍标注 kept=114/omitted=346、`complete_persisted_chain=false`，本次只使用可回读的原始切片与聚合，不把裁剪包当完整链。
+- **EXPECTED_SIGNAL**：按 run/floor/combat 聚合功能牌门拦行，分别统计 `gap=0` 与 `gap>0`、`playable/unavailable/native` 组合，以及其后的 end-turn、下一次正意图掉血、`SELF_LOSS_PHASE_OBS`、`GAME_OVER` 与胜负；同一战斗多条 tick 不算独立样本。还应确认观测开关关闭时 action/params 逐参一致。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：扩展既有 `VIVHITE_HP_FUNCTION_GATE_OBS` 行，追加原生 `playable`、`unavailable`、`native`，以及当前 `block/gap`；仅追加 end-turn 理由，不改变评分、候选资格、放行、目标、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：同步默认键说明，明确新增字段仍是只读观测。
+- `sts2-ascend/brain/selfcheck.py`：增加普通缺口和“0费、能量0、当前 gap=0”夹具断言，并保留观测关闭时 action/params 不变的回滚断言。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过；仅有仓库既有 LF/CRLF 警告。
+- 最终生产 diff 与提交 SHA 在本地收口步骤补写。
+
+## FOLLOW-UP / ROLLBACK
+
+- 若未来 3~10 个独立 Boss 战出现可执行且 `gap=0` 的 0费功能牌门拦，并稳定接随后战损，再单独立项行为门；本批不凭单条观测改变动作。
+- 若字段与原生 payload 不符、观测误触发、action/params 漂移，或 `gap=0` 组合与战损没有可重复区分，将 `vivhite_hp_function_gate_obs` 设为 `0`；必要时回滚本地 commit，保留既有评分和其他生命支付审计。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

@@ -7112,7 +7112,9 @@ class Policy:
                 # 1398-F33-T3 的综合色序属于「可执行、正分、需付血」的功能牌，
                 # 但最终与攻击牌一样只留下泛化门拦账。把 Skill/Power/Ability
                 # 的候选分、实付血和当前资源单独切片，验证“能量空漏来自功能牌
-                # 生命支付门”是否在后续 Boss 战重复出现；只追加理由，不改决策。
+                # 生命支付门”是否在后续 Boss 战重复出现；同时记录原生可用性与
+                # 当前未覆盖缺口，区分真实不可用和「已覆盖伤害仍被门拦」；只追加
+                # 理由，不改决策。
                 _function_gate_rows = []
                 if (getattr(self.character_strategy, "profile_id", None)
                         == VIVHITE_PROFILE_ID
@@ -7146,9 +7148,28 @@ class Policy:
                                 _blocked_card.get("energy_cost") or 0)
                         except (TypeError, ValueError):
                             _blocked_cost = 0.0
+                        _blocked_native_reason = (
+                            self._native_card_unplayable_reason(_blocked_card)
+                            or "none")
+                        _blocked_native_reason = (
+                            _blocked_native_reason.replace(";", "/")
+                            .replace(",", "/"))
+                        _blocked_playable = (
+                            "yes" if bool(_blocked_card.get("playable"))
+                            else "no")
+                        _blocked_unavailable = (
+                            "yes" if self._card_unavailable(_blocked_card)
+                            else "no")
+                        _blocked_gap = max(
+                            0.0, float(incoming) - float(my_block))
                         _function_gate_rows.append(
                             f"{_blocked_card.get('name') or _blocked_row[1]}"
                             f":type={_blocked_type},cost={_blocked_cost:g}"
+                            f",playable={_blocked_playable}"
+                            f",unavailable={_blocked_unavailable}"
+                            f",native={_blocked_native_reason}"
+                            f",block={float(my_block):g}"
+                            f",gap={_blocked_gap:g}"
                             f",score={float(_blocked_row[4]):.2f}"
                             f",pay={float(_blocked_row[2]):g}")
                 if _function_gate_rows:
