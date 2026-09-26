@@ -4594,6 +4594,38 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 retry_resolution: none (no failed_review_replay packages requested)
 
+# 1452~1454 批：Boss 零意图生命支付低血安全下沿行为闸门
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1447~1451 已把 Boss 意图0的已应用生命支付连到终端锁；1454-F33 的完整链又显示，低血阶段仍可在无来袭伤害时连续支付：决策 497~499 在约 24/20 HP 反复实付4血，随后进入正伤害与 GAME_OVER。假设是：现有自由回合减免会让“支付后仍高于终端带、但已跌破相对最大生命安全线”的非击杀牌继续放行。该假设可证伪：未来 3~10 个独立 Boss 战中，若闸门在过滤条件外触发、拦下合法击杀，或低血零意图连续支付/随后自损与终局不下降，则本行为边界不成立。
+- **EVIDENCE**：exact batch 为 1452~1454，无缺口；完整失败运行是 `runs/20260927-061516_6N42B0BEVQ4W.json`。1454-F33 共 510 条决策、packet 只保留123条，故使用完整 runs 文件核对；F33 在决策476先出现 incoming=0、实付4血的高血 setup，决策497~499 又在约24/20 HP连续实付4血，之后承受正意图并在F33阵亡。1452~1454 的 Boss 零意图支付重复出现，支持“低血阶段需要窄行为门”，但不证明每次支付都是单独死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 战按 run/floor/combat 统计 `VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE` 次数；每次都应满足白绮、Boss、incoming=0、非击杀、`post_hp < max_hp * ratio` 且仍高于终端观测带，并能对账实际支付、前后 HP、下一次正意图、self-loss、GAME_OVER/胜负。高血 setup 与支付后进入 `hp<=vivhite_hp_terminal_pay_floor` 的既有终端观测不得被新闸门误伤；ratio=0 时 action/params 应回到旧行为。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认 `vivhite_boss_free_turn_hp_floor_ratio=0.25`。该键只约束现有白绮生命支付余量门的 Boss 零意图、非击杀、高分候选；终端观测带内仍交给既有终端支付观测；设为0可一键回滚。
+- `sts2-ascend/brain/policy.py`：在候选已越过普通 play threshold、且实付后低于最大生命25%但仍高于终端观测带时，写入现有 `_hp_gate_blocked` 并走既有 end-turn/stall/rescue 语义，追加 `VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE`；击杀牌、来袭伤害回合、非 Boss、非白绮与低于普通阈值候选不受此门影响。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认键、高血仍出牌、低血 gate、ratio=0 回滚，并保留终端支付 7→3 的既有边界。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过；最终生产 diff 已回读，仅包含上述三个静态 brain 文件后再追加本报告。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 个独立 Boss 战只核对 gate 命中与实际回执、支付前后 HP、终端带例外、下一次正意图、self-loss、GAME_OVER/胜负；同一战斗多条 tick 不算独立样本。
+- 若 gate 在过滤条件外触发、误拦合法击杀、导致高血 setup/action 参数漂移，或低血零意图支付链仍不改善，先将 `vivhite_boss_free_turn_hp_floor_ratio` 设为 `0` 回滚行为，再基于新证据调整；必要时回滚本地 commit，保留本批观测与审计。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
+
 # 第1400~1401批：感染棱柱多段污染税命中对账
 
 日期：2026-09-26

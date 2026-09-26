@@ -876,6 +876,10 @@ DEFAULT_POLICY = {
                                                     # combat_play_commit 回执累计零意图实际支付，并在后续终端锁收口披露
                                                     # 累计血量/牌数，避免把未应用的 proposed 决策算入链。只追加观测，
                                                     # 不改评分、候选、动作或参数；0=关闭（严格回滚），非白绮角色零改动
+    "vivhite_boss_free_turn_hp_floor_ratio": 0.25,  # Boss 零意图非击杀生命支付安全下沿：若实付后 HP 低于最大生命比例，
+                                                      # 进入生命支付闸门并保留 VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE；仅作用于
+                                                      # 白绮、Boss、incoming=0、非击杀候选；终端观测带内仍交给终端支付观测；
+                                                      # 0=关闭并回滚旧行为。
     "vivhite_hp_terminal_pay_obs": 1,  # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，
                                         # 1428~1432 批复盘新增）：1432-F17 T11 选中实付4血后
                                         # 7→3，T12 又实付2血后3→1；现有直接致死守卫只拦

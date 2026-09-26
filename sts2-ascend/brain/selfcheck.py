@@ -3697,6 +3697,33 @@ def main() -> int:
     assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh_nonboss.reason, \
         f"非 Boss 回合不得误挂 Boss 自付注记: {d_bfh_nonboss.reason}"
 
+    # 3bfloor) Boss 零意图生命支付安全下沿：只拦支付后跌破最大生命比例的非击杀牌，
+    #           并验证高 HP 仍保留旧出牌、ratio=0 可一键回滚。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_free_turn_hp_floor_ratio"]) == 0.25, \
+        "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_hp_floor_ratio 或默认值被改"
+    vknow_bfloor = _vivhite_know("sts2-selfcheck-vboss-freeturn-hpfloor-")
+    vknow_bfloor.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_bfloor = policy.Policy(vknow_bfloor, random.Random(11))
+    d_bfloor_high = vpol_bfloor.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfloor_high.action == "play_card", \
+        f"Boss 零意图高 HP 不应被安全下沿误拦: {d_bfloor_high}"
+    d_bfloor_low = vpol_bfloor.decide(
+        _krh_state(1, 19, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfloor_low.action == "end_turn" \
+        and "VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE" in d_bfloor_low.reason, \
+        f"Boss 零意图低 HP 非击杀支付缺少安全下沿闸门: {d_bfloor_low}"
+    vknow_bfloor_off = _vivhite_know("sts2-selfcheck-vboss-freeturn-hpfloor-off-")
+    vknow_bfloor_off.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_bfloor_off.policy["vivhite_boss_free_turn_hp_floor_ratio"] = 0.0
+    vpol_bfloor_off = policy.Policy(vknow_bfloor_off, random.Random(11))
+    d_bfloor_off = vpol_bfloor_off.decide(
+        _krh_state(1, 19, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfloor_off.action == "play_card" \
+        and "VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE" not in d_bfloor_off.reason, \
+        f"安全下沿 ratio=0 必须恢复旧出牌行为: {d_bfloor_off}"
+
     # 3btp) Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，1428~1432
     #      批复盘）：只切出「最终选中牌实付后 hp<=3」的边界，不改评分、动作
     #      或参数；开关关闭与非 Boss 均不得留下注记。
