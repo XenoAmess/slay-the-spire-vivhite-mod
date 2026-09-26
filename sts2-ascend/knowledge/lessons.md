@@ -13031,3 +13031,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8106531016755714局)，BASH(14分/3.2243987783408703局)，BODY_SLAM(15分/2.32469659677429局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1585 胜，当前目标进阶 0
+
+## 第 1586 局复盘（2026-09-26 23:07）
+- 结果：💀 失败｜进阶 0｜到达层数 29｜当局评分 29
+- 死因：敌人组合 MYTE
+- 本局拿牌：DISMANTLE, TRUE_GRIT, RAMPAGE, CINDER, COLOSSUS, RAMPAGE, AGGRESSION, INFLAME, FEEL_NO_PAIN, THUNDERCLAP, PYRE, IRON_WAVE, BATTLE_TRANCE, INFLAME, INFLAME, SWORD_BOOMERANG, INFLAME, SPITE, HEADBUTT, INFLAME
+- 本局遗物：GORGET, SPARKLING_ROUGE, KUSARIGAMA
+- 战斗记录：F20 Monster战 掉血1; F21 Monster战 掉血4; F22 Monster战 掉血12; F25 Monster战 掉血6｜竞速审计：T3判死→实战6回合获胜; F27 Monster战 掉血42｜竞速审计：T4判死→实战6回合获胜; F29 Unknown战 掉血16｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.035689056566614局)，ASHEN_STRIKE(26分/2.2346538341632676局)，PERFECTED_STRIKE(25分/3.6472078275701456局)，PACTS_END(25分/69.79448573475592局)，FEED(25分/36.29707691471544局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.797315815819707局)，BASH(14分/3.2131133826166773局)，BODY_SLAM(15分/2.31656015868558局)
+- 策略进化：block_safety: 2.00 → 2.05（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.38 → 0.39（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F29——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1586 胜，当前目标进阶 0
