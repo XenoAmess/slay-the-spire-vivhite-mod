@@ -417,3 +417,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-20 08:16:34 | 第 1345~1348 局 | `aaedd43b` | stall | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260920-081634-1789863394721693300-aaedd43b` | 复盘 CLI/工具调用无进展挂起 |
 <!-- rejection:20260926-125350-1790398430610495000-cc2ff672 -->
 | 2026-09-26 12:53:50 | 第 1345~1348 局 | `cc2ff672` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260926-125350-1790398430610495000-cc2ff672` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
+<!-- rejection:20260926-133153-1790400713195762400-55d4a47e -->
+| 2026-09-26 13:31:53 | 第 1577 局 | `55d4a47e` | 维护中断/取消（lifecycle_stop） | luna-max (codex/gpt-5.6-luna@max) | 维护中断/取消（非 luna-max (codex/gpt-5.6-luna@max) 提交失败；待原后端恢复） | `knowledge/code_backups/review_salvage/20260926-133153-1790400713195762400-55d4a47e` | 维护停机取消 luna-max (codex/gpt-5.6-luna@max) 复盘并全量保全；非模型提交失败 |
