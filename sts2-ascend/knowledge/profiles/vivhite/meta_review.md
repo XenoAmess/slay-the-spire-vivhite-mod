@@ -4784,3 +4784,34 @@ production_code_commit: pending local commit（最终 SHA 见交接）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1423~1424批：能量耗尽时零费功能牌生命门拦观测补全
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `VIVHITE_HP_FUNCTION_GATE_OBS` 仅在 `energy > 0` 时切片生命门拦功能牌，因此会漏掉「当前能量已耗尽、但手中仍有可执行 0 费功能牌」的空过证据；若放宽为能量为 0 也记录，并出现正确的牌型/费用/实付字段而 action/params 不变，则假设成立；若仍漏记、把不可执行牌记为可执行或动作漂移，则假设证伪。
+- **EVIDENCE**：exact batch 为 1423~1424。1424 完整运行文件 `runs/20260926-234834_F30GM1C1P2JN.json` 有 512 条决策；F33-T7 结束回合时生命 30、格挡22、敌方意图30、能量0，`星图检索` 在 `turn_end_state` 中 `energy_cost=0` 且 `playable=true`，候选状态为生命门拒绝、实付2血，但旧观测因 `energy > 0` 未切片。白绮牌目录 `brain/character_strategy.py` 将 `ASTRAL_SEARCH` 定义为 Skill、0费、生命2、抽4；同目录的 `CHROMATIC_SEQUENCE` 保留既有 1费正例。1423 同为 F33 Knowledge Demon 阵亡，但未触发本次零费/能量0形态，作为批内阴性对照。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 斩杀竞速样本中，能量为0且有被生命门拦的 0 费 Skill/Power/Ability 时，`VIVHITE_HP_FUNCTION_GATE_OBS` 应记录 `cost=0`、牌型、候选分、实付、hp/energy/incoming；没有该形态时不新增标记。观测关闭后标记消失，action/params 逐项保持不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：将功能牌门拦观测的能量边界扩展到 `energy >= 0`，并在切片中追加实际 `energy_cost`；仍只追加 reason，不改变评分、候选资格、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：保留原有 1 费综合色序夹具，新增能量0/0费功能牌夹具，断言标记出现且 `end_turn/{}` 不变。
+- 未修改 `knowledge.py` 默认开关、runs、stats、progression、policy.json、lessons、`.runtime`、归档或本批原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过；报告写入前生产代码 diff 仅包含上述两个 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 个独立 Boss 样本按 run/floor/战斗实例核对 `cost=0` 标记、原始 `playable`、实际生命支付、敌方意图、空过后的应用回执与终局；不把观测本身当作因果结论，也不把同一战斗多条 tick 当作独立样本。
+- 若出现标记缺失、把 `blocked_by_hook`/超费牌误记为可执行、费用或实付错配，或 action/params 漂移，将现有 `vivhite_hp_function_gate_obs` 设为 `0` 并按本地 commit 回滚；保留既有泛化生命门拦与竞速自付观测。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

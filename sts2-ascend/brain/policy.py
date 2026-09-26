@@ -6839,7 +6839,11 @@ class Policy:
                         == VIVHITE_PROFILE_ID
                         and bool(pol.get("vivhite_hp_function_gate_obs", True))
                         and (kill_race or race_allin)
-                        and energy > 0
+                        # A zero-energy function card is still an executable
+                        # candidate at the end of a spent-energy turn.  Keep
+                        # this audit visible at energy=0; the observation does
+                        # not authorize the card or change the selected action.
+                        and energy >= 0
                         and incoming > 0):
                     for _blocked_row in _hp_gate_blocked:
                         _blocked_card = next(
@@ -6858,9 +6862,15 @@ class Policy:
                             else _blocked_observed_type)
                         if _blocked_type not in ("skill", "power", "ability"):
                             continue
+                        try:
+                            _blocked_cost = float(
+                                _blocked_card.get("energy_cost") or 0)
+                        except (TypeError, ValueError):
+                            _blocked_cost = 0.0
                         _function_gate_rows.append(
                             f"{_blocked_card.get('name') or _blocked_row[1]}"
-                            f":type={_blocked_type},score={float(_blocked_row[4]):.2f}"
+                            f":type={_blocked_type},cost={_blocked_cost:g}"
+                            f",score={float(_blocked_row[4]):.2f}"
                             f",pay={float(_blocked_row[2]):g}")
                 if _function_gate_rows:
                     _gate_note += (

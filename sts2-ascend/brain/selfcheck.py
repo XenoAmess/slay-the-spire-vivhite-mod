@@ -3794,8 +3794,36 @@ def main() -> int:
         and d_hfg.params == {} \
         and "VIVHITE_HP_FUNCTION_GATE_OBS" in d_hfg.reason \
         and "综合色序:type=skill" in d_hfg.reason \
+        and "cost=1" in d_hfg.reason \
         and "energy=3/incoming=22" in d_hfg.reason, \
         f"斩杀竞速功能牌门拦观测缺失或动作漂移: {d_hfg}"
+
+    def _krh_hand_function_free_energy():
+        hand = _krh_hand_function()
+        hand[0]["energy_cost"] = 0
+        return hand
+
+    vknow_hfg_zero = _vivhite_know(
+        "sts2-selfcheck-vhp-function-gate-zero-energy-")
+    vknow_hfg_zero.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_hfg_zero.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+    vpol_hfg_zero = policy.Policy(vknow_hfg_zero, random.Random(11))
+    vctx_hfg_zero = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_hfg_zero.decide(
+            _krh_state(_turn, _hp, _krh_hand_vivhite()), vctx_hfg_zero)
+        vctx_hfg_zero.credit_tags.extend(_d.tags)
+    _zero_energy_state = _krh_state(
+        3, 45, _krh_hand_function_free_energy())
+    _zero_energy_state["combat"]["player"]["energy"] = 0
+    d_hfg_zero = vpol_hfg_zero.decide(
+        _zero_energy_state, vctx_hfg_zero)
+    assert d_hfg_zero.action == "end_turn" \
+        and d_hfg_zero.params == {} \
+        and "VIVHITE_HP_FUNCTION_GATE_OBS" in d_hfg_zero.reason \
+        and "综合色序:type=skill,cost=0" in d_hfg_zero.reason \
+        and "energy=0/incoming=22" in d_hfg_zero.reason, \
+        f"能量耗尽时零费功能牌门拦观测缺失或动作漂移: {d_hfg_zero}"
 
     vknow_hfg0 = _vivhite_know("sts2-selfcheck-vhp-function-gate-off-")
     vknow_hfg0.policy["vivhite_hp_cost_play_margin"] = 1.0
