@@ -3491,12 +3491,54 @@ class Policy:
                         1 for _card in non_curse_cards
                         if self._native_card_unplayable_reason(
                             _card).casefold().startswith("blocked_by_hook"))
+                    _terminal_rows = []
+                    _terminal_margin = max(0.0, character_power_amount(
+                        player.get("powers") or [], VIVHITE_MARGIN_POWER_ID))
+                    _terminal_ritual_phase, _terminal_ritual_damage = (
+                        vivhite_crimson_ritual_totals(
+                            self.character_strategy,
+                            player.get("powers") or []))
+                    for _card in non_curse_cards:
+                        _card_id = str(
+                            _card.get("card_id") or "").upper().rstrip("+")
+                        _entry = self.character_strategy.card(_card_id)
+                        try:
+                            _life_cost = max(0.0, float(card_dynamic_value(
+                                _card, "LifeCost", 0) or 0.0))
+                        except (TypeError, ValueError, OverflowError):
+                            _life_cost = 0.0
+                        if (_entry is not None
+                                and _entry.card_type == "attack"
+                                and not _card_dynamic_preview_includes_modifier(
+                                    _card, "LifeCost")):
+                            _life_cost += _terminal_ritual_phase
+                        _effective_cost = max(
+                            0.0, _life_cost - _terminal_margin)
+                        _native_reason = self._native_card_unplayable_reason(
+                            _card) or "none"
+                        _playable = "yes" if bool(_card.get("playable")) else "no"
+                        _unavailable = (
+                            "yes" if self._card_unavailable(_card) else "no")
+                        try:
+                            _energy_cost = float(
+                                _card.get("energy_cost") or 0.0)
+                        except (TypeError, ValueError, OverflowError):
+                            _energy_cost = 0.0
+                        _terminal_rows.append(
+                            f"{_card_id}:life={_life_cost:g}"
+                            f"/margin={_terminal_margin:g}"
+                            f"/effective={_effective_cost:g}"
+                            f"/playable={_playable}"
+                            f"/unavailable={_unavailable}"
+                            f"/energy={_energy_cost:g}"
+                            f"/native={_native_reason}")
                     _terminal_lock_note = (
                         f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
                         f"native_blocked_by_hook={_hook_blocked}/"
                         f"{len(non_curse_cards)}/hp={my_hp}/energy={energy}"
                         f"/incoming={incoming}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+                        f"/cards={'|'.join(_terminal_rows)}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},

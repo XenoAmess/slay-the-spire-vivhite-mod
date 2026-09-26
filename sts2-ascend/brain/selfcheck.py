@@ -3800,6 +3800,8 @@ def main() -> int:
     assert d_tll.action == "end_turn" \
         and "VIVHITE_HP_TERMINAL_LOCK_OBS" in d_tll.reason \
         and "native_blocked_by_hook=2/2" in d_tll.reason \
+        and "cards=VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook|" in d_tll.reason \
+        and "VIVHITE_CARD_CLOSED_PROJECTION:life=3/margin=0/effective=3/playable=no/unavailable=no/energy=1/native=blocked_by_hook" in d_tll.reason \
         and "/hp=2/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
         f"终端生命锁缺稳定观测字段: {d_tll.reason}"
 

@@ -4880,3 +4880,34 @@ production_code_commit: 7a5e262fcdbd577c524b299b210329f046da3404
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1433~1443 批：终端生命锁逐牌成本观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1443-F5-T6 的五张非诅咒牌全部进入生命支付终端锁，可能是真实的“每张牌支付后都会低于 1 HP”，也可能混入了原生 hook/资源状态导致的不可玩；现有总数观测无法区分。逐牌记录 LifeCost、Margin 后实际 HP 成本、可玩性、能量和原生拒绝原因后，未来样本可以证伪该判断；若存在 `current_hp - effective_cost >= 1` 且目标/能量均有效的牌，则当前终端锁解释不成立。
+- **EVIDENCE**：本批 exact batch 覆盖 1433~1443、无缺口。完整链 `runs/20260927-035801_8T480X6YHMNH.json` 的 1443 局有 92 条决策，但 packet 仅保留 51 条、遗漏 41 条，`complete_persisted_chain=false`；选取的 F5-T5/T6 片段显示 HP 由 4/2 降至 2，T6 为 `energy=3/incoming=15`，5 张非诅咒牌均 `native_blocked_by_hook`，随后 `end_turn_lethal=yes` 并 GAME_OVER。该证据只支持新增切片，不把聚合或截断链当完整因果链。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮战斗中，终端锁 reason 应带 `cards=<card_id>:life=.../margin=.../effective=.../playable=.../unavailable=.../energy=.../native=...`；应能按 run/floor/combat 对账真实支付、下一回合状态、GAME_OVER/胜负。若出现安全可执行牌未被识别、字段与原生状态不符或 action/params 漂移，则假设被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 只读观测中追加逐牌成本、payload 可玩性、本地 unavailable 状态和原生原因切片；不改变终端锁、评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：固定两张终端锁样例的逐牌字段，并保留观测开关关闭时 action/params 不变的断言。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；代码 diff 仅包含上述两个 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 个独立样本只核对逐牌 effective cost、原生 `playable`/拒绝原因、真实支付、下一回合存活或终局及胜负；同一战斗多条 tick 不算独立样本。
+- 若观测误报、字段失真或 action/params 漂移，将 `vivhite_hp_terminal_lock_obs` 设为 `0`（仅移除本切片）；若证实存在安全可执行牌，则另开行为修复批次，并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
