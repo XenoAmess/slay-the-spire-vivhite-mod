@@ -12965,3 +12965,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.891666329258228局)，BASH(14分/3.292948432449272局)，BODY_SLAM(15分/2.374118879367343局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1579 胜，当前目标进阶 0
+
+## 第 1580 局复盘（2026-09-26 16:48）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：MOLTEN_FIST, EQUILIBRIUM, CINDER, UNMOVABLE, SHRUG_IT_OFF, RAMPAGE, MOLTEN_FIST, SWORD_BOOMERANG, THUNDERCLAP, ANGER, HEMOKINESIS, PACTS_END, DEMON_FORM, CINDER, CINDER, SWORD_BOOMERANG
+- 本局遗物：BAG_OF_PREPARATION, CENTENNIAL_PUZZLE
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血28｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血26｜自损2（可行动段2/非行动段15，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血16｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F23 Unknown战 掉血48｜自损4（可行动段4/非行动段50，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战7回合获胜; F28 Elite战 掉血63｜自损2（可行动段2/非行动段39，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0789671342154663局)，ASHEN_STRIKE(26分/2.282161837333622局)，PERFECTED_STRIKE(25分/3.7247462625555463局)，PACTS_END(25分/71.27829347216401局)，FEED(25分/37.06874079337815局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8780454971058247局)，BASH(14分/3.2814231129356997局)，BODY_SLAM(15分/2.3658094632895574局)
+- 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.36（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.03 → 2.02（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F28——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1580 胜，当前目标进阶 0
