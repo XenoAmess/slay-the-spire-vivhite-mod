@@ -838,12 +838,6 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
-    "vivhite_hp_terminal_endturn_obs": 1,  # 能量耗尽终端收口观测（VIVHITE_HP_TERMINAL_ENDTURN_OBS，1399局
-                                           # F48-T6 复盘新增，静态键）：生命支付长战后，白绮可能已无能量、
-                                           # 手牌无可执行牌且下一次敌方意图致死；这与全部牌被 blocked_by_hook 的
-                                           # 生命锁是不同终点。仅在白绮 Boss/斩杀回合的致死 end_turn 收口处记录
-                                           # 回合、hp/block/energy/incoming 与原生锁定原因；不改评分或动作。
-                                           # 0=关闭（严格回滚注记），非白绮角色零改动
     "vivhite_hp_function_gate_obs": 1,  # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
                                         # 在白绮有能量、存在敌方意图且生命支付门拦下可执行的
                                         # Skill/Power/Ability 牌时，披露牌型、候选分、实付血与

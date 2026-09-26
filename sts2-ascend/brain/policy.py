@@ -3248,39 +3248,6 @@ class Policy:
                     f"/预算{_settle_budget}/lethal={'yes' if _settle_lethal else 'no'}"
                     f"/latent={','.join(_latent)}"
                     f"/hp={my_hp}/block={my_block}/incoming={incoming}")
-            # 能量耗尽终端收口观测（VIVHITE_HP_TERMINAL_ENDTURN_OBS，第1399局
-            # F48-T6）：与全部牌被 blocked_by_hook 的终端生命锁分开，切片「生命支付
-            # 长战→能量归零→无可执行牌→下一击致死」是否反复出现。只追加稳定字段，
-            # 不改变 end_turn 或任何决策输入；静态键=0 严格回滚注记。
-            _terminal_endturn_note = ""
-            try:
-                _terminal_endturn_obs = bool(int(float(pol.get(
-                    "vivhite_hp_terminal_endturn_obs", 1) or 0)))
-            except (TypeError, ValueError):
-                _terminal_endturn_obs = False
-            _ctx_combat = getattr(ctx, "combat", {}) or {}
-            if (_terminal_endturn_obs
-                    and getattr(self.character_strategy, "profile_id", None)
-                    == VIVHITE_PROFILE_ID
-                    and _ctx_combat.get("node_type") == "Boss"
-                    and bool(combat.get("end_turn_will_kill_player"))
-                    and energy <= 0
-                    and incoming > 0
-                    and not affordable_playable):
-                _terminal_reason_counts = {}
-                for _terminal_card in hand:
-                    _terminal_reason = self._native_card_unplayable_reason(
-                        _terminal_card).casefold() or "unknown"
-                    _terminal_reason_counts[_terminal_reason] = (
-                        _terminal_reason_counts.get(_terminal_reason, 0) + 1)
-                _terminal_reason_summary = "|".join(
-                    f"{_reason}:{_terminal_reason_counts[_reason]}"
-                    for _reason in sorted(_terminal_reason_counts)) or "none"
-                _terminal_endturn_note = (
-                    f"；终端耗尽收口：round={round_no},hp={my_hp},"
-                    f"block={my_block},energy={energy},incoming={incoming},"
-                    f"playable=0/{len(hand)},locked={_terminal_reason_summary}"
-                    "（VIVHITE_HP_TERMINAL_ENDTURN_OBS）")
             if self._saw_playable_this_turn:
                 if self._end_stall < 2:
                     return Decision(None, {}, f"战斗：本回合已无牌可出，确认结束（{hand_desc}）", wait=0.5)
@@ -3291,8 +3258,7 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}"
-                    f"{_terminal_endturn_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
