@@ -11926,3 +11926,44 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`git diff --check` 通过；`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1591 局复盘（INTANGIBLE_RACE_OUTPUT_GUARD）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：在 `kill_race` 的非致死回合中，`INTANGIBLE_POWER` 会把多段攻击的每
+  次命中压到 1；即使 `_attack_outcome` 已折算有效伤害，旧竞速提速仍可能让低于牌面
+  总伤害一半的单体攻击抢走能量。若此时存在合格格挡候选，应让该攻击让位；无格挡、
+  可击杀或全押时不应改变旧行为。这一假设可证伪。
+- **EVIDENCE**：精确 run `20NY5YM3TJE9`（第 1591 局）F17 Boss
+  `SOUL_FYSH` 的 T5，HP=49、敌意图=13；`巨石` 与 `余烬+` 的实际有效伤害均约为
+  1，决策理由带 `ENEMY_INTANGIBLE_CAP_OBS`，该段 DPT 观测为实际 2、投影 22.8，
+  随后回合结束时无格挡并降至 HP=30。该局对应手牌没有合格格挡，因此本改动不宣称
+  追溯改变 T5；它针对未来同型且确有格挡候选的窗口。原生 `INTANGIBLE_POWER` 规则
+  与既有第 1589 局 DPT 状态窗口观测共同支持“牌面输出与有效输出脱钩”的风险。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `INTANGIBLE_POWER` 竞速窗口中，满足非致死、
+  非击杀、有格挡缺口且有效伤害低于牌面一半时，应出现
+  `INTANGIBLE_RACE_OUTPUT_GUARD` 并压低该攻击；无格挡、`race_allin`、合法击杀、
+  AOE 或关闭开关时 marker、action、params 均不应变化。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在单体攻击竞速评分收口加入可回滚闸门；只在无实体、
+  非致死、非击杀、已有合格格挡候选且有效伤害低于牌面一半时将该攻击压到
+  `floor_score`，并追加 `INTANGIBLE_RACE_OUTPUT_GUARD`。AOE、合法击杀、
+  `race_allin`、无格挡和普通战斗不变。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `intangible_race_output_guard` 静态键，设为 `False` 可严格回滚旧竞速评分。
+- `sts2-ascend/brain/selfcheck.py`：加入真实 `INTANGIBLE_POWER` 夹具，验证默认闸门、
+  关闭回滚、无格挡保留唯一输出和 `race_allin` 不误拦。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 个独立窗口，按 run_id、敌方能力、牌面/有效伤害、
+  格挡候选、最终选牌和 GAME_OVER 分层；不因单个历史窗口宣称已改善生存率。
+- **撤回**：若闸门在无格挡、合法击杀或全押窗口触发，或改变了预期范围外的 action/params，
+  将 `intangible_race_output_guard` 设为 `False`，保留本次失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、
+  `policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+

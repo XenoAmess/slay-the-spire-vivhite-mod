@@ -8034,6 +8034,30 @@ class Policy:
                 else:
                     why += ("｜减员成本随附（去除减员分后中标不变，"
                             "REMOVAL_COST_FLIP_AUDIT）")
+            # 无实体竞速低效攻击让位格挡（INTANGIBLE_RACE_OUTPUT_GUARD，
+            # 第1591局 SOUL_FYSH）：_attack_outcome 已把每 hit 的有效伤害
+            # 压到1，但 kill_race 的攻击提速仍可能让一张牌以低有效输出抢走
+            # 本回合能量。仅在非致死、非击杀、确有缺口且已有合格格挡候选时
+            # 压低该单体攻击；无格挡时仍保留抢斩杀的唯一动作，race_allin、
+            # AOE、合法击杀和普通战斗完全不变。False 严格回滚旧评分。
+            if (bool(pol.get("intangible_race_output_guard", True))
+                    and kill_race and not race_allin
+                    and not lethal and not best_kill
+                    and best_t is not None and reserve_for_block
+                    and incoming > my_block and best_s > floor_score):
+                _guard_enemy = next(
+                    (e for e in _pool if e.get("index") == best_t), None)
+                if _guard_enemy is not None:
+                    _guard_layers = self._enemy_intangible_stack(_guard_enemy)
+                    _guard_eff, _guard_killed, _ = _attack_outcome(_guard_enemy)
+                    if (_guard_layers > 0 and not _guard_killed
+                            and float(_guard_eff) < float(total) * 0.5):
+                        best_s = floor_score
+                        why += (
+                            f"｜无实体竞速低效攻击让位格挡：有效伤害"
+                            f"{float(_guard_eff):g}/{float(total):g}、"
+                            f"无实体{_guard_layers:g}层、缺口{incoming - my_block:g}"
+                            "（INTANGIBLE_RACE_OUTPUT_GUARD）")
             # 沉睡保期禁攻收口：全部打击候选都指向沉睡者时，攻击面压到禁玩线，
             # 混合牌仍可由下方 _hybrid_defense 按格挡面放行（能量让给铺垫）。
             if best_t is None and _sleep_veto is not None:

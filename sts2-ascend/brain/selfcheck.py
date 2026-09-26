@@ -7187,6 +7187,47 @@ def main() -> int:
             and "｜零意图回合" in why_aoe, \
         f"AOE 烧墙审计注缺失或口径漂移: {why_aoe}"
 
+    # 3xg-guard（第1591局 SOUL_FYSH）：INTANGIBLE_POWER 将每 hit 压到1，
+    # kill_race 非致死回合若有合格格挡，不应再让低有效输出攻击抢走能量；
+    # 没有格挡或关闭开关时必须严格保留旧竞速评分。
+    assert knowledge.DEFAULT_POLICY["intangible_race_output_guard"] is True, \
+        "DEFAULT_POLICY 缺少无实体竞速低效攻击闸门或默认值被改"
+    ir_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-intangible-race-"))
+    ir_pol = policy.Policy(knowledge.Knowledge(ir_dir), random.Random(5))
+    ir_enemy = sl_enemy(hp=100, layers=1, intent=16)
+    ir_enemy["powers"] = [{
+        "power_id": "INTANGIBLE_POWER", "name": "无实体", "amount": 1,
+    }]
+    ir_on = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    assert ir_on[0] < ir_pol.know.policy["play_threshold"] \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" in ir_on[2], \
+        f"无实体低效竞速攻击未让位格挡: {ir_on}"
+    ir_pol.know.policy["intangible_race_output_guard"] = False
+    ir_off = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, run_deck=[])
+    assert ir_off[0] >= ir_pol.know.policy["play_threshold"] \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" not in ir_off[2], \
+        f"无实体竞速闸门关闭后未严格回滚: {ir_off}"
+    ir_no_block = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=False,
+        min_blk_cost=99, kill_race=True, run_deck=[])
+    assert ir_no_block[0] >= ir_pol.know.policy["play_threshold"] \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" not in ir_no_block[2], \
+        f"无格挡时不应误拦唯一输出: {ir_no_block}"
+    ir_allin = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=True,
+        min_blk_cost=1, kill_race=True, hopeless_race=True, run_deck=[])
+    assert ir_allin[0] >= ir_pol.know.policy["play_threshold"] \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" not in ir_allin[2], \
+        f"race_allin 不应被无实体竞速闸门误拦: {ir_allin}"
+
     # 现有集火粘性不因结算重构丢失。
     sl_pol._focus_index = 1
     sticky_enemies = [
