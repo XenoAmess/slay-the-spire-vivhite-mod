@@ -993,6 +993,29 @@ def read_run_evidence(root: Path, filename: str) -> bytes:
     return raw
 
 
+def read_archived_run(root: Path, run_id: str) -> dict | None:
+    """Recover an exact run identity from verified ZIP evidence only.
+
+    This is a cold-load fallback; active files remain the caller's priority.
+    In particular it retains manual-control and in-progress flags so a later
+    native Continue cannot silently turn an archived excluded run into a new
+    learnable run.
+    """
+    root = Path(root).resolve()
+    rows = [row for row in _archived_run_map(_load_manifest(root)).values()
+            if row.get("run_id") == run_id]
+    if not rows:
+        return None
+    row = max(rows, key=lambda item: item["file"])
+    raw = read_catalog_storage_evidence(root, dict(
+        row, storage={"kind": "zip", "archive": row["archive"],
+                      "member": row["member"]}))
+    data = json.loads(raw.decode("utf-8"))
+    if not isinstance(data, dict) or data.get("run_id") != run_id:
+        raise RuntimeError(f"archived run identity verification failed: {row['file']}")
+    return data
+
+
 def _verify_sources_unchanged(plan: CompactionPlan) -> None:
     for record in plan.archive_new + plan.archive_duplicates:
         if not record.path.exists() or _sha256(record.path.read_bytes()) != record.sha256:

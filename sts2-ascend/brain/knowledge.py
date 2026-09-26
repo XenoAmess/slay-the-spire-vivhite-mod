@@ -3247,7 +3247,10 @@ class Knowledge:
         """读取同 run_id 的既有对局日志（断线重连续接局史用）；无则 None。"""
         p = self._run_log_path(run_id)
         if p is None:
-            return None
+            from compact_knowledge import read_archived_run
+            # A corrupt archive must fail closed, not erase the existing run's
+            # identity or permanent excluded-from-learning status.
+            return read_archived_run(self.root, run_id)
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
