@@ -4381,3 +4381,50 @@ below，撤销“高分越门”归因。任何观测格式或动作异常可把
 ## REPLAY
 
 retry_resolution: 20260920-081634-1789863394721693300-aaedd43b integrated
+
+# 第 1345~1348 局重试闭环：策略异常稳定观测
+
+日期：2026-09-26
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1348 局 F2-T3 至 T8 的连续 `end_turn` 来自
+  `_boss_projected` 未初始化触发的策略异常，而不是一次正常的白绮生命支付门拦；
+  在异常回退入口增加稳定的 `screen/type` 观测，应能定位同类故障，同时保持既有
+  回退动作和参数不变。
+- **EVIDENCE**：完整运行
+  `sts2-ascend/knowledge/profiles/vivhite/runs/20260920-072425_WF8HT0TFKCKZ.json`
+  的 13 条决策已逐条回读。F2-T3 至 T8 的生命为 60→7，意图伤害为 13/7 交替，
+  `available_actions` 仍含 `play_card` 且 `end_turn` 被连续返回；6 条理由均包含
+  `cannot access local variable '_boss_projected'`。失败 replay 的完整 index、target
+  manifest/report/inventory、候选 patch/wip.patch 与四个 changed files 已按 SHA-256
+  核对；候选 patch 的观测变量位于 `return` 之后、`except` 之前，未直接重放。
+- **EXPECTED_SIGNAL**：未来 3~10 局按战斗统计
+  `POLICY_DECISION_EXCEPTION_OBS screen=<screen> type=<ExceptionType>` 的首次异常、
+  第 10 次安全回退及异常类型，并核对标记前后的 action/params、动作就绪状态和终局。
+  健康决策不应出现该标记；若标记缺失、误报或动作/参数漂移，假设即被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在 `decide()` 的 `except` 入口生成稳定观测键，追加到
+  空动作、既有安全动作和索引盲选三条回退理由；未改变评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：注入 `RuntimeError`，验证首次异常返回空动作、第 10
+  次异常仍返回 `end_turn`，两次参数均为 `{}` 且包含相同稳定观测键；测试结束恢复处理器
+  和异常计数。
+- 未修改 `runs/`、stats、progression、`policy.json`、`lessons.md`、`.runtime` 或复盘提示词。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标 `git diff --check`：退出码 0；最终代码 diff 仅为上述两个 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局按独立战斗核对异常标记局数、首次/连续回退次数、异常类型、标记前后
+  action/params、下一状态是否仍可行动及最终胜负；标记本身不作为死亡因果。
+- 若标记缺失、无异常误报或动作参数改变，回滚本地提交即可移除本批观测；既有异常吞吐
+  与当前 HEAD 的 Boss 观测排列修复保持不变。
+
+## REPLAY
+
+retry_resolution: 20260926-134617-1790401577834267000-fa110292 integrated

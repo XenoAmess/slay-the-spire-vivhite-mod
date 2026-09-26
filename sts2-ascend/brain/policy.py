@@ -1783,6 +1783,9 @@ class Policy:
             return ensure_decision_trace(state, decision)
         except Exception as exc:  # never crash the loop on a policy bug
             self._decide_errors = getattr(self, "_decide_errors", 0) + 1
+            exception_obs = (
+                f"POLICY_DECISION_EXCEPTION_OBS screen={screen}"
+                f" type={type(exc).__name__}")
             # 连续异常（如代码/知识库版本错位的 AttributeError）会每 tick 空转僵死，
             # 看门狗的 abandon_run 在 MAP 等屏幕上又不可用——连续异常时改发安全动作自救：
             if self._decide_errors >= 10:
@@ -1794,16 +1797,18 @@ class Policy:
                 for safe in recovery_actions:
                     if safe in actions:
                         return ensure_decision_trace(
-                            state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}）", wait=1.0))
+                            state, Decision(safe, {}, f"决策连续异常×{self._decide_errors}，尝试 {safe} 自救（{exc}；{exception_obs}）", wait=1.0))
                 for indexed in ("select_deck_card", "choose_reward_card", "choose_rest_option",
                                 "choose_event_option", "choose_treasure_relic", "choose_bundle",
                                 "claim_reward", "resolve_rewards", "choose_map_node"):
                     if indexed in actions:
                         return ensure_decision_trace(
                             state, Decision(indexed, {"option_index": 0},
-                                            f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}）", wait=1.0))
+                                            f"决策连续异常×{self._decide_errors}，盲选 {indexed}[0] 自救（{exc}；{exception_obs}）", wait=1.0))
             return ensure_decision_trace(
-                state, Decision(action=None, reason=f"决策异常({screen}): {exc}", wait=1.0))
+                state, Decision(action=None,
+                                reason=f"决策异常({screen}): {exc}；{exception_obs}",
+                                wait=1.0))
         finally:
             self._active_trace_builder = None
 
