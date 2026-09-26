@@ -15975,6 +15975,65 @@ def main() -> int:
                                                   "current_value": 10}]}
                              for i in range(4)]}}
 
+    def ringing_survival_state():
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {
+                "player": {
+                    "current_hp": 10, "max_hp": 80, "block": 0,
+                    "energy": 2,
+                    "powers": [{"id": "RINGING_POWER", "amount": 1}],
+                },
+                "hand": [
+                    {
+                        "index": 0, "card_id": "RS_DEF", "name": "防御",
+                        "playable": True, "energy_cost": 1,
+                        "requires_target": False,
+                        "dynamic_values": [{"name": "Block", "current_value": 5}],
+                    },
+                    {
+                        "index": 1, "card_id": "RS_HEAD", "name": "头槌",
+                        "playable": True, "energy_cost": 1,
+                        "requires_target": True, "valid_target_indices": [0],
+                        "dynamic_values": [{"name": "Damage", "current_value": 13}],
+                    },
+                ],
+                "enemies": [{
+                    "index": 0, "enemy_id": "PCAP_RACE_COMP", "name": "仪式兽",
+                    "current_hp": 100, "max_hp": 100, "block": 0,
+                    "is_alive": True, "is_hittable": True, "powers": [],
+                    "intents": [{"total_damage": 15}],
+                }],
+            },
+            "run": {
+                "current_hp": 10, "max_hp": 80, "gold": 0, "floor": 17,
+                "deck": [{
+                    "card_id": "RS_DECK", "card_type": "Attack", "energy_cost": 1,
+                    "dynamic_values": [{"name": "Damage", "current_value": 10}],
+                }],
+            },
+        }
+
+    def ringing_policy():
+        p = policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ringing-"))),
+            random.Random(13))
+        accepted_combat(p, ringing_survival_state(), pcap_ctx)
+        return p
+
+    def ringing_defense_score(p):
+        state = ringing_survival_state()
+        combat = state["combat"]
+        return p._score_play(
+            combat["hand"][0], combat["enemies"], 15, 0, 2,
+            p.know.policy,
+            my_hp=10, my_max_hp=80, stance={}, forced_kill=False,
+            reserve_for_block=False, min_blk_cost=99, cur_energy=2,
+            player_powers=combat["player"]["powers"],
+            observed_hand_count=2)
+
     def pcap_policy():
         p = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-pcap-"))),
@@ -16045,6 +16104,27 @@ def main() -> int:
     #      无换挡上浮校准文本；② 入锁当回合（age=0<窗）：同口径保留
     #      ×(1+换挡上浮0.35) 校准、无 STALE 注记；③ 键=0：锁后超窗也
     #      严格回滚旧口径（保留上浮、无注记）。
+    # 3rsp_survival) 昏眩单卡下，5 格挡后仍会吃满当前 10 HP；默认优先 13 伤输出。
+    # 键=0 必须恢复旧评分，避免把回滚开关伪装成只读观测。
+    pol_rsp4 = ringing_policy()
+    d_rsp4 = pol_rsp4.decide(ringing_survival_state(), pcap_ctx)
+    assert (d_rsp4.action == "play_card"
+            and d_rsp4.params.get("card_index") == 1
+            and "RINGING_SINGLE_PLAY_SURVIVAL_VETO" in d_rsp4.reason), \
+        f"昏眩生还闸未优先唯一输出: {d_rsp4.action}（{d_rsp4.params}；{d_rsp4.reason}）"
+    pol_rsp5 = ringing_policy()
+    pol_rsp5.know.policy["ringing_single_play_survival_veto"] = 0
+    d_rsp5 = pol_rsp5.decide(ringing_survival_state(), pcap_ctx)
+    rsp4_score, _, rsp4_why = ringing_defense_score(pol_rsp4)
+    rsp5_score, _, rsp5_why = ringing_defense_score(pol_rsp5)
+    assert (d_rsp5.action == "play_card"
+            and d_rsp5.params.get("card_index") == 1
+            and "RINGING_SINGLE_PLAY_SURVIVAL_VETO" not in d_rsp5.reason
+            and rsp4_score < rsp5_score
+            and "RINGING_SINGLE_PLAY_SURVIVAL_VETO" in rsp4_why
+            and "RINGING_SINGLE_PLAY_SURVIVAL_VETO" not in rsp5_why), \
+        f"键=0 未恢复昏眩旧行为: {d_rsp5.action}（{d_rsp5.params}；{d_rsp5.reason}）"
+
     pol_stale1 = pcap_policy()
     pol_stale1._krace_latch = True
     pol_stale1._krace_latch_round = 1

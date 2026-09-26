@@ -11843,3 +11843,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff 空白检查通过。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1588 局复盘（RINGING_SINGLE_PLAY_SURVIVAL_VETO）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **假设**：`RINGING_POWER` 使本回合只能出一张牌；若当前生命不高于敌方意图伤害，纯格挡牌即使能减伤也不能生还，仍可能压过唯一输出牌。可证伪信号是后续同型窗口出现真实可生还的格挡牌，或唯一输出牌被合法阻断而不是被单卡评分压低。
+- **证据**：ironclad 的 run `HEBV8U29URK7`（第 1588 局）F17 Boss T6 为 HP=10、敌意图=15；【防御】仅 5 格挡，【头槌】期望伤害 13。旧动作选防守，随后 `RINGING_POWER` 使其他牌 `blocked_by_hook`，HP=0 终局；第 1513 局已有同型“昏眩单卡选防守、当回合 0 伤”的证据。原生 runtime `RINGING_POWER` 语义为本回合只能打出 1 张牌。
+- **预期**：未来 3~10 个含 `RINGING_POWER` 且当前回合致死的窗口中，记录 `selected_card`、格挡后剩余伤害、marker 与终局；默认不再选“格挡后剩余伤害 ≥ 当前生命”的无伤格挡牌。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ringing_single_play_survival_veto`；设为 `0` 可恢复该候选的旧分数。
+- `sts2-ascend/brain/policy.py`：仅当 `RINGING_POWER` 生效、卡牌无伤害、当前缺口致死且格挡后仍会死亡时，将纯格挡候选压到 `floor_score`；同时在最终决策 reason 留下 `RINGING_SINGLE_PLAY_SURVIVAL_VETO`。可生还格挡、攻击牌和混合伤害牌不受此闸影响。
+- `sts2-ascend/brain/selfcheck.py`：加入 HP=10/意图15/格挡5/攻击13 的夹具，验证默认选输出并记录 marker，关闭键后候选分数与 marker 回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 个相同语义窗口，按 `run_id`、敌意图、当前 HP、格挡后剩余伤害、选牌与 `GAME_OVER` 分层。若被闸候选后来证明能严格存活，或攻击牌在实际消费中被合法阻断，收紧条件或关闭键。
+- **撤回**：将 `ringing_single_play_survival_veto` 设为 `0`；selfcheck 已验证候选分数恢复且 marker 消失。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+

@@ -6595,6 +6595,13 @@ class Policy:
                     player.get("powers") or [], RINGING_POWER_ID) > 0:
                 _rsp_best_name = ""
                 _rsp_best_est = 0.0
+                try:
+                    _rsp_survival_veto = bool(int(float(pol.get(
+                        "ringing_single_play_survival_veto", 1) or 0)))
+                except (TypeError, ValueError):
+                    _rsp_survival_veto = False
+                _rsp_vetoed_defense = False
+                _rsp_vetoed_remaining = 0.0
                 for _rc in hand:
                     if _rc is card or not _rc.get("playable"):
                         continue
@@ -6604,7 +6611,17 @@ class Policy:
                               else (_rc.get("energy_cost") or 0))
                     if _rcost > energy:
                         continue
-                    _rd, _, _rh = card_numbers(_rc)
+                    _rd, _rb, _rh = card_numbers(_rc)
+                    if (_rsp_survival_veto
+                            and _est > 0.0
+                            and _rd <= 0
+                            and _rb > 0
+                            and lethal_now):
+                        _rc_remaining = max(
+                            0.0, float(incoming - my_block - _rb))
+                        if _rc_remaining >= float(my_hp):
+                            _rsp_vetoed_defense = True
+                            _rsp_vetoed_remaining = _rc_remaining
                     if _rd <= 0:
                         continue
                     _rest = float(_rd * _rh)
@@ -6623,6 +6640,11 @@ class Policy:
                 else:
                     why += ("｜昏眩单卡抉择：手牌无其他可出攻击备选"
                             "（RINGING_SINGLE_PLAY_OBS）")
+                if _rsp_vetoed_defense:
+                    why += (
+                        f"RINGING single-play survival veto observed: "
+                        f"remaining={_rsp_vetoed_remaining:g} >= hp={my_hp:g} "
+                        "(RINGING_SINGLE_PLAY_SURVIVAL_VETO)")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
@@ -7112,6 +7134,11 @@ class Policy:
         # 买命——「必败局的伤害会流到打死为止」的直接执行层病灶；判死局的
         # 唯一翻盘路径是把每一分能量押进输出，让实测 dpt 有机会上修推翻投影。
         desperate = lethal and not reserve_for_block and not hopeless_race
+        try:
+            _ringing_survival_veto = bool(int(float(pol.get(
+                "ringing_single_play_survival_veto", 1) or 0)))
+        except (TypeError, ValueError):
+            _ringing_survival_veto = False
         # 败局竞速：整场被判负但单回合尚不致死——desperate 只救"当场必死"，
         # 这里救的是"两回合内必死"；二者互斥计提速，保证任何局面只放大一次
         race_allin = hopeless_race and not desperate
@@ -8160,6 +8187,19 @@ class Policy:
                 why += f"/抽牌{dr}"
             if cost == 0:
                 score += pol["free_card_bonus"]
+            if (_ringing_survival_veto
+                    and dmg <= 0
+                    and character_power_amount(
+                        player_powers or [], RINGING_POWER_ID) > 0
+                    and lethal):
+                _ringing_remaining = max(
+                    0.0, float(incoming - my_block - block))
+                if _ringing_remaining >= float(my_hp):
+                    score = floor_score
+                    why += (
+                        f"RINGING single-play survival veto: block={block:g}, "
+                        f"remaining={_ringing_remaining:g} >= hp={my_hp:g} "
+                        "(RINGING_SINGLE_PLAY_SURVIVAL_VETO)")
             return score, None, why
 
         # --- 功能牌（抽牌/回能/特殊效果） ---

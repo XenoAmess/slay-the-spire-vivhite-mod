@@ -954,6 +954,7 @@ DEFAULT_POLICY = {
                                         # 攻击牌；现有留痕无法按「硬上限回合单卡抉择」切片
                                         # 复核。不改评分/放行/动作（纯观测锚）。0=关闭
                                         # （注记消失，旧行为零差异）
+    "ringing_single_play_survival_veto": 1,  # 昏眩单卡生还闸：纯格挡后仍会死亡时优先唯一输出牌；0=回滚
     "kill_race_hopeless_hp_pay_margin": 1.0,  # 竞速判死自付压价门（KILL_RACE_HOPELESS_HP_PAY_MARGIN，
                                         # 第 927~944 局批复盘新增，静态键）：上批观测键结算——
                                         # 判死投影下同帧自付在首个可观测窗口（939~944 局，异步
