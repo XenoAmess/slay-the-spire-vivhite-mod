@@ -52,7 +52,7 @@ health ready → state/available_actions → policy candidate → final action g
        └──────────── applied/rejected 回执与状态推进 ────┘
 ```
 
-`applied` 动作回执、递增 `state_version`、非 `MAIN_MENU` 的 `run` 和驾驶舱 `connected` 心跳共同构成训练/直播可用证据。看到 `MAIN_MENU/run_unknown` 时应停止动作和直播判断，读取日志与原生 Continue 证据；不能用 dashboard 心跳、缓存或“Stack ready”替代实际对局。
+合法的 `state_version` 快照标记、非 `MAIN_MENU` 的 `run`、驾驶舱 `connected` 心跳，以及同一局内两个不同 `decision_id` 且时间递增的 `applied` 动作回执，共同构成训练/直播可用证据。`state_version` 不保证逐动作递增；动作间的 `proposed`/`reconciling`/`waiting` 只是不计作进展，不会抹掉首个有效回执。看到 `MAIN_MENU/run_unknown` 时应停止动作和直播判断，读取日志与原生 Continue 证据；不能用 dashboard 心跳、缓存或“Stack ready”替代实际对局。
 
 ## 学习与复盘
 
@@ -90,6 +90,6 @@ py -3 -B -m unittest discover -s .\sts2-ascend\tests -p "test_*.py"
 | Brain 反复重启 | `runner` 启动握手、review marker、失败包 | 让 runner 在预算内回滚/保全；不要手改 marker。 |
 | 统计或局号异常 | 对应 Profile 的 checkpoint 与 `character_rotation` 审计 | 停止后按专项恢复工具处理，不直接改 `knowledge`。 |
 | TTS 没声音 | owner epoch、17952 `/health`、GPU/Edge 日志 | 维持游戏动作链独立运行，按 [`../tts/README.md`](../tts/README.md) 诊断。 |
-| 训练没有新动作 | `connected`、最近 `applied`、state_version 是否推进 | 进入修复/复核循环；不能把“进程存活”当成训练完成。 |
+| 训练没有新动作 | `connected`、合法 `state_version`、最近两个 `decision_id`/`outcome.at` 是否形成递增的 `applied` 回执 | 进入修复/复核循环；不能把“进程存活”当成训练完成。 |
 
 更高层的启动、部署、轮换和发布说明见 [`../README.md`](../README.md)。

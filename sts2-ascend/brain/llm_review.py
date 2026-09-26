@@ -51,6 +51,7 @@ from pathlib import Path, PurePosixPath
 
 from lifecycle import stop_requested
 from review_packet import enforce_packet_budget
+from review_context import read_text_tail
 from review_runners import (
     CodexJsonTranslator,
     OpencodeJsonTranslator,
@@ -1232,12 +1233,12 @@ def _review_closure_state(know, cfg: dict) -> dict:
 def _recent_review_context(max_chars: int = 12000) -> str:
     """Bounded recent reports let the model count repeated evidence explicitly."""
     try:
-        text = _current_profile_paths().report.read_text(encoding="utf-8")
+        text, truncated = read_text_tail(_current_profile_paths().report, max_chars)
     except OSError:
         return ""
-    if len(text) <= max_chars:
+    if not truncated:
         return text
-    return "[较早内容已截断]\n" + text[-max_chars:]
+    return "[较早内容已截断]\n" + text
 
 
 def _batch_description(batch_runs) -> str:

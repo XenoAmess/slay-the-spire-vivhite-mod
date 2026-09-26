@@ -1752,7 +1752,8 @@ class Knowledge:
         missing_floor_sum_raw = "floor_sum_raw" not in global_stats
         missing_best_floor_raw = "best_floor_raw" not in global_stats
         for k, v in DEFAULT_POLICY.items():
-            self.policy.setdefault(k, v)
+            if k not in self.policy:
+                self.policy[k] = copy.deepcopy(v)
         for k, v in progression_defaults.items():
             self.progression.setdefault(k, v)
         for k, v in DEFAULT_STATS["global"].items():
@@ -1790,7 +1791,7 @@ class Knowledge:
         for e in self.stats.get("cards", {}).values():
             e.setdefault("offered", 0)
         # 三方合并写盘的基准点（第 90~91 批复盘）：加载即快照，save 时逐键对比
-        self._policy_sync = dict(self.policy)
+        self._policy_sync = copy.deepcopy(self.policy)
         # 迁移：旧版 rooms 条目只有 {visits, outcome_sum}，补齐掉血维度
         for e in self.stats["rooms"].values():
             e.setdefault("hp_lost_sum", 0.0)
@@ -1821,10 +1822,10 @@ class Knowledge:
         self.stats.setdefault("rooms_band", {})
         # 迁移：跨局重生召唤物名册与进幕快照（第 506~508 局批复盘新增）。
         # 纯增量结构：旧库无此键即从空累积，不回填、读取端 .get 兜底
-        self.stats.setdefault("respawn_adds", {})
         # 迁移：名册原生白名单否决观测（第 1441~1446 局批复盘新增）。纯增量结构：
         # 旧库无此键即从空累积，读取端 .get 兜底，不回填
         self.stats.setdefault("respawn_native_vetoes", {})
+        self.stats.setdefault("respawn_adds", {})
         self.stats.setdefault("act_entries", [])
         # 迁移：LEAK_DEATH_GUARD 留痕（第 801 局批复盘新增）。纯增量结构：
         # 旧库无此键即从空累积，读取端 .get 兜底，不回填
@@ -2144,7 +2145,7 @@ class Knowledge:
                 raise ValueError(f"policy.json root must be an object: {path}")
             self._adopt_disk_policy(loaded)
             _save_json(path, self.policy)
-            self._policy_sync = dict(self.policy)
+            self._policy_sync = copy.deepcopy(self.policy)
 
     def _adopt_disk_policy(self, disk: dict) -> list[str]:
         """按三方合并语义把磁盘 policy 并入内存，返回被采纳的键名（供留痕）。
@@ -2193,8 +2194,12 @@ class Knowledge:
                 if k not in self.policy:
                     self.policy[k] = copy.deepcopy(v)
                     added.append(k)
-            if adopted or added:
-                self._policy_sync = dict(self.policy)
+            # A refresh only synchronizes the keys it actually adopted.  Local
+            # edits remain dirty until a successful save; acknowledging all of
+            # them here would let the next refresh restore stale disk values.
+            # Nested values need independent snapshots for the same comparison.
+            for k in adopted + added:
+                self._policy_sync[k] = copy.deepcopy(self.policy[k])
             return adopted + added
 
     # ---------- value estimates (shrunk toward prior) ----------

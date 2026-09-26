@@ -1849,13 +1849,24 @@ class Agent:
 
     # ---------------- game process management ----------------
 
-    def _game_process_count(self) -> int:
+    def _game_process_count(self) -> int | None:
+        """Return the visible game count, or ``None`` when the probe is inconclusive.
+
+        A timeout is not evidence that the game is absent. Treating it as zero
+        can launch a second Vulkan process precisely while Windows is under
+        memory or I/O pressure, making the original outage worse.
+        """
         try:
-            out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"],
-                                 capture_output=True, text=True, timeout=10).stdout
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode != 0:
+                return None
+            out = result.stdout
             return sum(1 for line in out.splitlines() if "SlayTheSpire2" in line)
-        except Exception:
-            return 0
+        except (OSError, subprocess.SubprocessError):
+            return None
 
     def _wait_for_game_api(self, timeout_s: float = 300.0, poll_s: float = 4.0) -> bool:
         """Wait for the mod API while remaining responsive to Stop-Agent.ps1."""
@@ -1875,9 +1886,18 @@ class Agent:
             return False
         if self.client.discover():
             return True
-        if self._game_process_count() > 0:
+        process_count = self._game_process_count()
+        if process_count is None:
+            # Fail closed. A slow/failed process probe must never be promoted
+            # into authorization to start a duplicate game process.
+            log("[agent] 游戏进程探针不可用；拒绝启动第二实例，等待 API 或下轮复核…")
+            return self._wait_for_game_api(timeout_s=300.0, poll_s=4.0)
+        if process_count > 0:
             # game process exists but API not up yet (still booting / mod loading) — wait, don't relaunch
-            log("[agent] 游戏进程已存在但 API 未就绪，等待加载…")
+            if process_count > 1:
+                log(f"[agent] 检测到 {process_count} 个游戏进程；拒绝继续拉起，等待统一生命周期入口清理…")
+            else:
+                log("[agent] 游戏进程已存在但 API 未就绪，等待加载…")
             if not self._wait_for_game_api(timeout_s=300.0, poll_s=4.0):
                 return False
             log(f"[agent] 游戏已就绪：{self.client.base_url}")

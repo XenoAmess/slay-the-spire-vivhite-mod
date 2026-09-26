@@ -85,6 +85,66 @@ def main() -> int:
         d = pol.decide(st, ctx)
         assert d is not None, f"decide returned None for {st['screen']}"
 
+    # Deck-enchant grids report min_select=0/can_confirm=true before they expose a
+    # usable confirm control. Fill max_select, survive a restart with preselected
+    # cards, and only then confirm. Other optional grids retain zero-choice behavior.
+    enchant_cards = [
+        {"index": i, "card_id": f"ENCHANT_{i}", "name": f"Enchant {i}",
+         "card_type": "Attack", "selected": False,
+         "dynamic_values": [{"name": "Damage", "current_value": 8 + i}]}
+        for i in range(4)
+    ]
+
+    def enchant_state(selected_count: int) -> dict:
+        cards = json.loads(json.dumps(enchant_cards))
+        for card in cards[:selected_count]:
+            card["selected"] = True
+        return {
+            "screen": "CARD_SELECTION",
+            "available_actions": ["select_deck_card", "confirm_selection"],
+            "selection": {
+                "kind": "deck_enchant_select",
+                "prompt": "Choose 3 cards to enchant.",
+                "min_select": 0,
+                "max_select": 3,
+                "selected_count": selected_count,
+                "can_confirm": True,
+                "cards": cards,
+            },
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                    "floor": 27, "deck": json.loads(json.dumps(enchant_cards))},
+        }
+
+    zero_enchant_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-enchant0-"))))
+    zero_enchant = zero_enchant_pol.decide(enchant_state(0), DummyCtx())
+    assert zero_enchant.action == "select_deck_card", \
+        f"empty enchant grid confirmed without selecting: {zero_enchant}"
+    assert any(tag[0] == "card_enchant" for tag in zero_enchant.tags) \
+        and not any(tag[0] == "card_pick" for tag in zero_enchant.tags), \
+        f"enchant selection polluted card-pick credit: {zero_enchant.tags}"
+
+    partial_enchant_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-enchant2-"))))
+    partial_enchant = partial_enchant_pol.decide(enchant_state(2), DummyCtx())
+    assert partial_enchant.action == "select_deck_card" \
+        and partial_enchant.params.get("option_index") not in {0, 1}, \
+        f"partial enchant grid did not select a remaining card: {partial_enchant}"
+
+    full_enchant_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-enchant3-"))))
+    full_enchant = full_enchant_pol.decide(enchant_state(3), DummyCtx())
+    assert full_enchant.action == "confirm_selection", \
+        f"full enchant grid did not confirm: {full_enchant}"
+
+    optional_state = enchant_state(0)
+    optional_state["selection"]["kind"] = "optional_deck_select"
+    optional_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-optional0-"))))
+    optional_decision = optional_pol.decide(optional_state, DummyCtx())
+    assert optional_decision.action == "confirm_selection", \
+        f"non-enchant optional zero-choice semantics changed: {optional_decision}"
+
     # 3) 针对性场景断言（decide() 吞异常保活，逻辑错误必须在这里显式暴露）
 
     # 3a) 选牌端：攻击占比 0.8 时普通攻击须被乘法衰减压到阈值以下；格挡稀缺技能须增值
@@ -6936,6 +6996,13 @@ def main() -> int:
         f"滑溜击杀边界错误: hp1={why_hp1} hp20={why_hp20} twin/hp2={why_hp2_twin}"
 
     # AOE 中普通敌人仍按旧口径，滑溜敌人按逐段口径；理由留下可观测明细。
+    int_hemo = {
+        "index": 4, "card_id": "HEMOKINESIS", "name": "HEMOKINESIS", "playable": True,
+        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
+        "resolved_rules_text": "lose 2 hp. Deal 15 damage.",
+        "dynamic_values": [{"name": "Damage", "current_value": 15}],
+    }
+
     sl_aoe = {
         "index": 3, "card_id": "CLEAVE", "name": "顺劈斩", "playable": True,
         "energy_cost": 1, "requires_target": False,
@@ -6996,12 +7063,20 @@ def main() -> int:
             dict(card), [enemy], incoming, 0, 2, use.know.policy,
             my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
 
-    int_hemo = {
-        "index": 4, "card_id": "HEMOKINESIS", "name": "HEMOKINESIS", "playable": True,
-        "energy_cost": 1, "requires_target": True, "valid_target_indices": [0],
-        "resolved_rules_text": "lose 2 hp. Deal 15 damage.",
-        "dynamic_values": [{"name": "Damage", "current_value": 15}],
-    }
+    _, _, why_int_hemo = int_score(int_hemo, int_enemy(layers=2))
+    assert ("INTANGIBLE_HP_COST_AUDIT" in why_int_hemo
+            and "eff=1/self=2/net=-1" in why_int_hemo), \
+        f"intangible self-cost audit missing: {why_int_hemo}"
+    _, _, why_int_hemo_kill = int_score(int_hemo, int_enemy(hp=1, layers=2))
+    assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_kill, \
+        f"intangible self-cost audit flagged a lethal play: {why_int_hemo_kill}"
+    int_pol.know.policy["intangible_hp_cost_obs"] = False
+    try:
+        _, _, why_int_hemo_off = int_score(int_hemo, int_enemy(layers=2))
+        assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_off, \
+            f"intangible_hp_cost_obs=False did not roll back: {why_int_hemo_off}"
+    finally:
+        int_pol.know.policy["intangible_hp_cost_obs"] = True
 
     # 身份三字段合并识别（与滑溜同口径）；零层/无层严格保留旧牌面计分。
     assert int_pol._enemy_intangible_stack(int_enemy(layers=2)) == 2, \
@@ -7017,20 +7092,6 @@ def main() -> int:
     #    中标单体攻击携带纯观测注记。
     s_int_bludgeon, _, why_int_bludgeon = int_score(sl_bludgeon, int_enemy(layers=2))
     s_int_twin, _, why_int_twin = int_score(sl_twin, int_enemy(layers=2))
-    _, _, why_int_hemo = int_score(int_hemo, int_enemy(layers=2))
-    assert ("INTANGIBLE_HP_COST_AUDIT" in why_int_hemo
-            and "eff=1/self=2/net=-1" in why_int_hemo), \
-        f"intangible self-cost audit missing: {why_int_hemo}"
-    _, _, why_int_hemo_kill = int_score(int_hemo, int_enemy(hp=1, layers=2))
-    assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_kill, \
-        f"intangible self-cost audit flagged a lethal play: {why_int_hemo_kill}"
-    int_pol.know.policy["intangible_hp_cost_obs"] = False
-    try:
-        _, _, why_int_hemo_off = int_score(int_hemo, int_enemy(layers=2))
-        assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_off, \
-            f"intangible_hp_cost_obs=False did not roll back: {why_int_hemo_off}"
-    finally:
-        int_pol.know.policy["intangible_hp_cost_obs"] = True
     assert math.isclose(s_int_bludgeon, 1.0) and math.isclose(s_int_twin, 2.0), \
         f"无实体逐hit封顶计分失效: hammer={s_int_bludgeon} twin={s_int_twin}"
     assert not why_int_bludgeon.startswith("可击杀") \
@@ -10697,6 +10758,11 @@ def main() -> int:
         cap_pol._race_loss_rate = 20.0
         cap_pol._incoming_ema = 20.0
         cap_pol._esc_rounds = esc_rounds
+        cap_pol.know.policy[
+            "boss_race_focus_switch_obs"] = boss_focus_switch_obs
+        if focus_switches:
+            cap_pol._focus_drift_flips = focus_switches
+            cap_pol._focus_played_index = 0
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
         cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
         cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
@@ -10710,16 +10776,11 @@ def main() -> int:
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
         cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
-        cap_pol.know.policy[
-            "boss_race_focus_switch_obs"] = boss_focus_switch_obs
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
         decision = cap_pol.decide(cap_state, cap_ctx)
         if sample_effective_round:
-            if focus_switches:
-                cap_pol._focus_drift_flips = focus_switches
-                cap_pol._focus_played_index = 0
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
             return cap_pol.decide(cap_state, cap_ctx)
@@ -10734,6 +10795,24 @@ def main() -> int:
         and "防守线复核：联合能量对账" not in d_combat_cap.reason, \
         f"Boss 战斗端超限联合复核未被否决: {d_combat_cap.action}（{d_combat_cap.reason}）"
     d_combat_cap_rb = combat_flip_probe(0.0)
+    # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
+    # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
+    # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
+    # 独立开关关闭时严格只删该尾缀。
+    d_combat_boss_focus = combat_flip_probe(
+        1.5, sample_effective_round=True, focus_switches=2)
+    assert ("BOSS_RACE_FOCUS_SWITCH_OBS" in d_combat_boss_focus.reason
+            and "竞速火线已换线2次至攻坚巨兽" in d_combat_boss_focus.reason), \
+        f"Boss 竞速有效火力对账缺少换线上下文: {d_combat_boss_focus.reason}"
+    d_combat_boss_focus_off = combat_flip_probe(
+        1.5, sample_effective_round=True, focus_switches=2,
+        boss_focus_switch_obs=False)
+    assert (d_combat_boss_focus_off.action == d_combat_boss_focus.action
+            and d_combat_boss_focus_off.params == d_combat_boss_focus.params
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_focus_off.reason
+            and "BOSS_RACE_FOCUS_SWITCH_OBS"
+            not in d_combat_boss_focus_off.reason), \
+        f"Boss 竞速换线观测开关未严格回滚: {d_combat_boss_focus_off.reason}"
     d_combat_slippery_rb = combat_flip_probe(
         0.0, slippery=True, slippery_guard=False)
     assert "SLIPPERY_RACE_GUARD" not in d_combat_slippery_rb.reason, \
@@ -10799,24 +10878,6 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
-    # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
-    # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
-    # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
-    # 独立开关关闭时严格只删该尾缀。
-    d_combat_boss_focus = combat_flip_probe(
-        1.5, sample_effective_round=True, focus_switches=2)
-    assert ("BOSS_RACE_FOCUS_SWITCH_OBS" in d_combat_boss_focus.reason
-            and "竞速火线已换线2次至攻坚巨兽" in d_combat_boss_focus.reason), \
-        f"Boss 竞速有效火力对账缺少换线上下文: {d_combat_boss_focus.reason}"
-    d_combat_boss_focus_off = combat_flip_probe(
-        1.5, sample_effective_round=True, focus_switches=2,
-        boss_focus_switch_obs=False)
-    assert (d_combat_boss_focus_off.action == d_combat_boss_focus.action
-            and d_combat_boss_focus_off.params == d_combat_boss_focus.params
-            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in d_combat_boss_focus_off.reason
-            and "BOSS_RACE_FOCUS_SWITCH_OBS"
-            not in d_combat_boss_focus_off.reason), \
-        f"Boss 竞速换线观测开关未严格回滚: {d_combat_boss_focus_off.reason}"
 
     # 3br-ttk-break-est（SLIPPERY_TTK_BREAK_EST，第1349~1355局批复盘）：
     # 破层期量化读数挂在同一观测键内。1354/1355-F17 VANTOM 共 18 条注记的
@@ -12940,6 +13001,56 @@ def main() -> int:
                                     reward_reject_ctx).action == "proceed", \
         "显式拒绝的奖励请求丢失原有防空转行为"
 
+    # 2026-09-18 第1300局 F13 死循环回归：卡牌奖励 claim 成功→选牌屏 skip→
+    # 回主屏后卡牌奖励仍 claimable 留在 rewards 里；若把“主屏↔选牌屏”往返
+    # 误判成新奖励屏而清空 tried，同一奖励会被无限重开（13.5 小时约 2.7 万次
+    # skip）。两侧都非选牌中的真实换屏/重排才允许重置去重账。
+    loop_know = knowledge.Knowledge(receipt_dir / "reward_loop")
+    loop_pol = policy.Policy(loop_know, random.Random(0))
+    loop_ctx = DummyCtx()
+    loop_ctx.run_id = "RUN_REWARD_LOOP"
+    loop_ctx.credit_tags = []
+    loop_card_reward = {"index": 0, "reward_type": "Card",
+                        "description": "将一张牌添加到你的牌组。",
+                        "claimable": True}
+    loop_main = {
+        "screen": "REWARD", "run_id": loop_ctx.run_id,
+        "available_actions": ["claim_reward", "choose_reward_card",
+                              "skip_reward_cards", "proceed"],
+        "reward": {"rewards": [dict(loop_card_reward)],
+                   "card_options": [], "can_proceed": True},
+        "run": {"current_hp": 79, "max_hp": 84, "gold": 82,
+                "floor": 13, "deck": [], "potions": []}}
+    loop_overlay = json.loads(json.dumps(loop_main))
+    loop_overlay["reward"]["pending_card_choice"] = True
+    loop_overlay["reward"]["card_options"] = [
+        {"index": i, "card_id": f"LOOP_CURSE_{i}", "name": f"循环诅咒{i}",
+         "card_type": "Curse", "energy_cost": 0, "dynamic_values": []}
+        for i in range(3)]
+    d_loop_claim = loop_pol.decide(loop_main, loop_ctx)
+    assert d_loop_claim.action == "claim_reward" \
+        and d_loop_claim.params == {"option_index": 0}, \
+        f"卡牌奖励未被正常打开: {d_loop_claim.action}（{d_loop_claim.reason}）"
+    loop_ctx.credit_tags.extend(d_loop_claim.tags)  # 服务端已接受，选牌屏打开
+    d_loop_skip = loop_pol.decide(loop_overlay, loop_ctx)
+    assert d_loop_skip.action == "skip_reward_cards", \
+        f"全负价值选牌屏未跳过: {d_loop_skip.action}（{d_loop_skip.reason}）"
+    d_loop_back = loop_pol.decide(loop_main, loop_ctx)
+    assert d_loop_back.action == "proceed" \
+        and (0, "Card", "将一张牌添加到你的牌组。") in loop_pol._reward_tried, \
+        ("skip 回主屏后 tried 被清空，同一卡牌奖励被无限重开: "
+         f"{d_loop_back.action}（{d_loop_back.reason}）")
+    assert loop_pol.decide(loop_main, loop_ctx).action == "proceed", \
+        "同屏再次决策仍试图重开已跳过的卡牌奖励"
+    # 真实换屏（下一层新奖励屏，两侧均非选牌中）仍重置去重账，不误抑制新奖励。
+    loop_next = json.loads(json.dumps(loop_main))
+    loop_next["run"]["floor"] = 14
+    loop_next["reward"]["rewards"] = [
+        {"index": 0, "reward_type": "Gold", "description": "42金币",
+         "claimable": True}]
+    assert loop_pol.decide(loop_next, loop_ctx).action == "claim_reward", \
+        "两侧均非选牌中的真实换屏未重置奖励去重账"
+
     potion_know = knowledge.Knowledge(receipt_dir / "potion")
     potion_pol = policy.Policy(potion_know, random.Random(0))
     potion_ctx = DummyCtx()
@@ -14885,6 +14996,33 @@ def main() -> int:
     s_doom, _, why_doom = hcu_pol._score_play(
         hcu_offering, hcu_enemies, 40, 0, 6, hcu_pol.know.policy,
         my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+    # ⑥a 原生生命支付先于攻击结算：HP1 不能在 race_allin/kill_race 中
+    #     通过「豁免疫价」打出自残攻击；否则 Hemokinesis 会先把玩家打死，
+    #     根本没有机会结算其伤害。保护键关闭时保留旧口径作可逆对照。
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
+    s_lethal_guard, _, why_lethal_guard = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+    assert s_lethal_guard <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_lethal_guard, \
+        f"竞速自残直死未被保护: {s_lethal_guard}（{why_lethal_guard}）"
+    s_lethal_guard_aoe, _, why_lethal_guard_aoe = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        hopeless_race=True)
+    assert s_lethal_guard_aoe <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_lethal_guard_aoe, \
+        f"竞速 AOE 自残直死未被保护: {s_lethal_guard_aoe}（{why_lethal_guard_aoe}）"
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = False
+    s_lethal_guard_off, _, why_lethal_guard_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
+        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+    assert "HP_COST_LETHAL_GUARD" not in why_lethal_guard_off \
+        and s_lethal_guard_off > s_lethal_guard, \
+        f"hp_cost_lethal_guard=False 未回滚直死保护: {s_lethal_guard_off}（{why_lethal_guard_off}）"
+    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
     assert "耗血6计价（HP_COST_UTILITY_PRICING）" in why_doom and s_doom > -50.0, \
         f"判死竞速语境耗血功能牌未按半价留痕放行: {s_doom}（{why_doom}）"
     hcu_pol.know.policy["hp_cost_utility_pricing"] = 0
@@ -14995,33 +15133,6 @@ def main() -> int:
     assert "自残" not in why_allin_off and abs(s_allin_off - s_allin) < 1e-9, \
         f"全攻豁免披露非纯观测: {s_allin_off}vs{s_allin}（{why_allin_off}）"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
-    # ⑥a 原生生命支付先于攻击结算：HP1 不能在 race_allin/kill_race 中
-    #     通过「豁免疫价」打出自残攻击；否则 Hemokinesis 会先把玩家打死，
-    #     根本没有机会结算其伤害。保护键关闭时保留旧口径作可逆对照。
-    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
-    s_lethal_guard, _, why_lethal_guard = hcat_pol._score_play(
-        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
-        reserve_for_block=True, min_blk_cost=1, kill_race=True)
-    assert s_lethal_guard <= -50.0 \
-        and "HP_COST_LETHAL_GUARD" in why_lethal_guard, \
-        f"竞速自残直死未被保护: {s_lethal_guard}（{why_lethal_guard}）"
-    s_lethal_guard_aoe, _, why_lethal_guard_aoe = hcat_pol._score_play(
-        hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
-        hopeless_race=True)
-    assert s_lethal_guard_aoe <= -50.0 \
-        and "HP_COST_LETHAL_GUARD" in why_lethal_guard_aoe, \
-        f"竞速 AOE 自残直死未被保护: {s_lethal_guard_aoe}（{why_lethal_guard_aoe}）"
-    hcat_pol.know.policy["hp_cost_lethal_guard"] = False
-    s_lethal_guard_off, _, why_lethal_guard_off = hcat_pol._score_play(
-        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=1, my_max_hp=80, cur_energy=3, run_deck=[],
-        reserve_for_block=True, min_blk_cost=1, kill_race=True)
-    assert "HP_COST_LETHAL_GUARD" not in why_lethal_guard_off \
-        and s_lethal_guard_off > s_lethal_guard, \
-        f"hp_cost_lethal_guard=False 未回滚直死保护: {s_lethal_guard_off}（{why_lethal_guard_off}）"
-    hcat_pol.know.policy["hp_cost_lethal_guard"] = True
     # ⑦ 自残旁观（HP_COST_ATK_PRICING 手侧扩展，第1331~1335局批复盘）：
     #    孤注/全攻中标时手牌内其他可出单体自残攻击须随中标理由入链——
     #    「豁免疫价」首验 5 局零出现的归属（语境回避 vs 手中无牌）只能靠

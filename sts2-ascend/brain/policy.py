@@ -616,6 +616,7 @@ class Policy:
         self.strategy_parameters = self.character_strategy.parameters
         self.card_catalog = self.character_strategy.card_catalog
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
+        self._empty_hand_end_turn_stall = 0  # bounded recovery when Agent hides end_turn after counter drift
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
@@ -1663,6 +1664,7 @@ class Policy:
             self._cur_turn = None
             self._recursive_selection_block_scope = None
             self._end_stall = 0
+            self._empty_hand_end_turn_stall = 0
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
@@ -3005,6 +3007,7 @@ class Policy:
         #   - 已进入过 → 现在没的出 = 真的出完了，短确认即结束回合（不拖节奏）
         #   - 从未进入 → 还在抽牌/开局触发动画里，必须长耐心等待（15 次≈9 秒）
         if can_end:
+            self._empty_hand_end_turn_stall = 0
             self._end_stall += 1
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             affordable_playable = False
@@ -3246,6 +3249,44 @@ class Policy:
                 wait=1.2)
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
+        readiness = combat.get("action_readiness") or {}
+        # 2026-09-17 F35 incident: native card effects had emptied the hand and
+        # spent all energy, while the Agent's process-local play counter read zero.
+        # Its opening-draw guard consequently hid both play_card and end_turn for
+        # hours.  Recover only from the exact, contradictory native evidence:
+        # settled player-action phase, empty hand, zero energy, every player ready,
+        # and no modal/selection/action transition.  A 15-tick confirmation keeps
+        # the normal opening draw window untouched and is still bounded (~9 s).
+        empty_hand_end_turn_recovery = (
+            not hand
+            and int(energy or 0) == 0
+            and str(readiness.get("reason") or "") == "local_turn_not_ready"
+            and readiness.get("actions_settled") is True
+            and readiness.get("player_action_phase") is True
+            and readiness.get("combat_in_progress") is True
+            and readiness.get("combat_over_or_ending") is False
+            and readiness.get("modal_open") is False
+            and readiness.get("player_actions_disabled") is False
+            and readiness.get("hand_in_card_play") is False
+            and readiness.get("hand_in_card_selection") is False
+            and str(readiness.get("hand_mode") or "") == "Play"
+            and readiness.get("all_players_ready_to_end_turn") is True
+            and int(player.get("cards_played_this_turn") or 0) == 0)
+        if empty_hand_end_turn_recovery:
+            self._empty_hand_end_turn_stall += 1
+            if self._empty_hand_end_turn_stall < 15:
+                return Decision(
+                    None, {},
+                    "战斗：空手零能量但接口隐藏结束回合，等待原生状态自愈"
+                    f"（{self._empty_hand_end_turn_stall}/15）",
+                    wait=0.6)
+            self._empty_hand_end_turn_stall = 0
+            return Decision(
+                "end_turn", {},
+                "战斗：空手零能量且全员已就绪，接口仍隐藏结束回合，"
+                "执行有界恢复（EMPTY_HAND_END_TURN_RECOVERY）",
+                wait=1.2)
+        self._empty_hand_end_turn_stall = 0
         return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
 
 
@@ -3795,6 +3836,35 @@ class Policy:
                     # 于下一回合首记录敌血净降/回合与当时投影 dpt；回血、召唤或
                     # 其他非伤害变化会如实反映为净值，故不冒充逐卡伤害。
                     # 纯观测，不改 ttk/tsurv/判决/评分；False 严格回滚无该账。
+                        _boss_ratio = (_boss_net_dpt / _boss_projected
+                                       if _boss_projected > 0.0 else None)
+                        _boss_ratio_tail = ""
+                        if _boss_ratio is not None:
+                            _boss_ratio_tail = (
+                                f"；实际/投影比{_boss_ratio:.2f}"
+                                "（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）")
+                        _boss_focus_tail = ""
+                        if bool(pol.get("boss_race_focus_switch_obs", True)):
+                            try:
+                                _boss_focus_switches = int(
+                                    getattr(self, "_focus_drift_flips", 0) or 0)
+                            except (TypeError, ValueError):
+                                _boss_focus_switches = 0
+                            if _boss_focus_switches > 0:
+                                _boss_focus_name = "?"
+                                try:
+                                    _boss_focus_name = next(
+                                        str(_e.get("name") or _e.get("enemy_id")
+                                            or "敌人")
+                                        for _e in enemies
+                                        if _e.get("index")
+                                        == getattr(self, "_focus_played_index", None))
+                                except StopIteration:
+                                    pass
+                                _boss_focus_tail = (
+                                    f"；竞速火线已换线{_boss_focus_switches}次"
+                                    f"至{_boss_focus_name}"
+                                    "（BOSS_RACE_FOCUS_SWITCH_OBS）")
                     _boss_effective_dpt_pending = None
                     if (bool(pol.get("boss_race_effective_dpt_obs", True))
                             and cctx.get("node_type") == "Boss"
@@ -3836,35 +3906,6 @@ class Policy:
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
                         _boss_gap = _boss_net_dpt - _boss_projected
-                        _boss_ratio = (_boss_net_dpt / _boss_projected
-                                       if _boss_projected > 0.0 else None)
-                        _boss_ratio_tail = ""
-                        if _boss_ratio is not None:
-                            _boss_ratio_tail = (
-                                f"；实际/投影比{_boss_ratio:.2f}"
-                                "（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）")
-                        _boss_focus_tail = ""
-                        if bool(pol.get("boss_race_focus_switch_obs", True)):
-                            try:
-                                _boss_focus_switches = int(
-                                    getattr(self, "_focus_drift_flips", 0) or 0)
-                            except (TypeError, ValueError):
-                                _boss_focus_switches = 0
-                            if _boss_focus_switches > 0:
-                                _boss_focus_name = "?"
-                                try:
-                                    _boss_focus_name = next(
-                                        str(_e.get("name") or _e.get("enemy_id")
-                                            or "敌人")
-                                        for _e in enemies
-                                        if _e.get("index")
-                                        == getattr(self, "_focus_played_index", None))
-                                except StopIteration:
-                                    pass
-                                _boss_focus_tail = (
-                                    f"；竞速火线已换线{_boss_focus_switches}次"
-                                    f"至{_boss_focus_name}"
-                                    "（BOSS_RACE_FOCUS_SWITCH_OBS）")
                         danger_note += (
                             f"；Boss竞速有效火力对账：采样{_boss_prev_round}→"
                             f"{round_no}回合，敌血净降{_boss_net_dpt:.1f}/回合"
@@ -4128,6 +4169,7 @@ class Policy:
             self._failed_hand_len = -1
             self._saw_playable_this_turn = False
             self._end_stall = 0
+            self._empty_hand_end_turn_stall = 0
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
         # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
@@ -4386,6 +4428,7 @@ class Policy:
                 state, ctx, combat, player, hand, energy, round_no, pol,
                 can_end, my_hp, my_block, incoming)
         self._end_stall = 0
+        self._empty_hand_end_turn_stall = 0
         self._saw_playable_this_turn = True
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
@@ -6362,6 +6405,10 @@ class Policy:
         # 致死回合豁免：买命延长输出窗口在当场仍是合法战术，原价保留
         if race_allin and not lethal:
             blk_boost *= float(pol.get("race_allin_blk_damp", 0.45))
+        # 原生生命支付先于攻击结算（v0.111.0 Hemokinesis：CreatureCmd.Damage
+        # 后才执行 DamageCmd.Attack）。竞速/孤注/「击杀最后一个敌人」豁免都不能
+        # 让自付额把玩家先降到 0；该保护可用静态键回滚，供自检与审计对照。
+        _hp_cost_lethal_guard = bool(pol.get("hp_cost_lethal_guard", True))
         # 斩杀竞速失败（第 90~91 批复盘）：与孤注一掷/败局竞速互斥放大——
         # 已在提速的局面不再叠加，只补「奢侈格挡贬值」这半边
         if kill_race and not desperate and not race_allin:
@@ -6405,10 +6452,6 @@ class Policy:
         # 4 血败局全攻两次打出均无痕迹），与 AOE 同语境半价计价+留痕不
         # 对称——豁免语境追加「豁免疫价」披露注记，计价行为不变。
         _hp_atk_trace = float(pol.get("hp_cost_atk_pricing_trace", 1)) > 0
-        # 原生生命支付先于攻击结算（v0.111.0 Hemokinesis：CreatureCmd.Damage
-        # 后才执行 DamageCmd.Attack）。竞速/孤注/「击杀最后一个敌人」豁免都不能
-        # 让自付额把玩家先降到 0；该保护可用静态键回滚，供自检与审计对照。
-        _hp_cost_lethal_guard = bool(pol.get("hp_cost_lethal_guard", True))
         # VIVHITE_RACE_SELF_LOSS_PAYBACK_GATE：第362局 VANTOM F17 观测到
         # 可行动段自付速率 13/回合、敌方净损 5/回合；在 SLIPPERY 逐 hit
         # 限伤时，判死竞速豁免仍可能把「支付血量 > 实际移除」的单体攻击
@@ -6977,6 +7020,19 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    _intangible_layers = 0.0
+                    if (slippery <= 0
+                            and bool(pol.get("enemy_intangible_dmg_cap", True))):
+                        _intangible_layers = self._enemy_intangible_stack(e)
+                    if (bool(pol.get("intangible_hp_cost_obs", True))
+                            and _intangible_layers > 0
+                            and self_cost > 0
+                            and float(eff) < float(self_cost)
+                            and not killed):
+                        why += (
+                            f"| INTANGIBLE_HP_COST_AUDIT eff={float(eff):g}"
+                            f"/self={self_cost:g}/net={float(eff) - float(self_cost):+g}"
+                            f"/layers={_intangible_layers:g}")
                     if _rem_cost > 0.0:
                         why += (f"｜减员成本加分+{_rem_cost:.1f}"
                                 f"（{_rem_pool:.0f}池≤峰值{_pool_peak:.0f}一半，"
@@ -6999,6 +7055,17 @@ class Policy:
                                 f"预计破{slippery_broken}层")
                         # SLIPPERY_BURN_AUDIT（第760~765批复盘补合失败包
                         # 5274ccbe 新增，纯观测不改分）：765-F17 全链实证——
+                        # 原生 IllusionPower.AfterDeath 会把 Parafright 送入复生/状态
+                        # 切换路径；它同时由 IllusionPower 自动获得 MinionPower。若只
+                        # 留下上面的泛化文案，复盘会把这条路径误并入领袖狂暴样本。纯
+                        # 观测，不改评分、目标或动作；关闭主键时连同本附加标记一并回滚。
+                        _minion_illusion_layers = self._enemy_power_stack(
+                            e, "illusion", "幻象")
+                        if _minion_illusion_layers > 0:
+                            why += (
+                                f"；目标另携ILLUSION_POWER×{_minion_illusion_layers:g}，"
+                                "原生死亡后进入幻象复生/状态切换路径，"
+                                "与领袖狂暴分开归因（MINION_ILLUSION_FOCUS_OBS）")
                         # T1~T5 烧墙期 13 费只换 7 点输出（每费 0.54），重锤
                         # (3费)与打击(1费)的逐段折算产出完全相同，高价单发
                         # 烧层在零意图蓄力回合白费 2~3 费能量；765 局把 Boss
@@ -7020,19 +7087,6 @@ class Policy:
                     # 「无实体窗口攻击折价」在产频率，并核对「可击杀」不再穿透
                     # 无实体（1440 局前 SOUL_FYSH 被误判重生体入册的污染源）。
                     # 键=False 与击杀穿透（hp≤hits 的合法击杀）均不留痕。
-                    _intangible_layers = 0.0
-                    if (slippery <= 0
-                            and bool(pol.get("enemy_intangible_dmg_cap", True))):
-                        _intangible_layers = self._enemy_intangible_stack(e)
-                    if (bool(pol.get("intangible_hp_cost_obs", True))
-                            and _intangible_layers > 0
-                            and self_cost > 0
-                            and float(eff) < float(self_cost)
-                            and not killed):
-                        why += (
-                            f"| INTANGIBLE_HP_COST_AUDIT eff={float(eff):g}"
-                            f"/self={self_cost:g}/net={float(eff) - float(self_cost):+g}"
-                            f"/layers={_intangible_layers:g}")
                     if (slippery <= 0 and not killed
                             and bool(pol.get("enemy_intangible_dmg_cap", True))
                             and _intangible_layers > 0):
@@ -7055,17 +7109,6 @@ class Policy:
                         why += ("｜爪牙集火在账：目标携MINION_POWER且主场敌存活，"
                                 "其死亡可能触发主场敌行为切换/狂暴"
                                 "（MINION_FOCUS_OBS）")
-                        # 原生 IllusionPower.AfterDeath 会把 Parafright 送入复生/状态
-                        # 切换路径；它同时由 IllusionPower 自动获得 MinionPower。若只
-                        # 留下上面的泛化文案，复盘会把这条路径误并入领袖狂暴样本。纯
-                        # 观测，不改评分、目标或动作；关闭主键时连同本附加标记一并回滚。
-                        _minion_illusion_layers = self._enemy_power_stack(
-                            e, "illusion", "幻象")
-                        if _minion_illusion_layers > 0:
-                            why += (
-                                f"；目标另携ILLUSION_POWER×{_minion_illusion_layers:g}，"
-                                "原生死亡后进入幻象复生/状态切换路径，"
-                                "与领袖狂暴分开归因（MINION_ILLUSION_FOCUS_OBS）")
                     if _thorns_suicide:
                         why += (f"｜荆棘反伤≈{_thorns_reflect:g}≥支付后余血"
                                 f"{max(0.0, float(my_hp) - _thorns_hp_pay):g}，"
@@ -9807,11 +9850,20 @@ class Policy:
             bool(r.get("pending_card_choice")),
         )
         if floor != self._reward_floor or reward_instance_key != self._reward_instance_key:
+            # “主屏 ↔ 选牌屏”往返只翻转 pending_card_choice / rewards / card_options
+            # 载荷，并不是新奖励屏：此时必须保留去重账。否则卡牌奖励 claim(成功)→
+            # skip→回主屏后 tried 被清空，同一奖励会被无限重开（2026-09-18 第1300局
+            # F13 实证：skip 后卡牌奖励仍 claimable 留在 rewards 里，13.5 小时
+            # 约 2.7 万次 skip 死循环）。两侧都非选牌中才是真实换屏/重排。
+            old_pending = bool(self._reward_instance_key[4]) \
+                if self._reward_instance_key else False
+            new_pending = bool(r.get("pending_card_choice"))
             self._reward_floor = floor
             self._reward_instance_key = reward_instance_key
-            self._reward_tried = set()
-            self._reward_cooldowns = {}
-            self._reward_card_cooldowns = {}
+            if not (old_pending or new_pending):
+                self._reward_tried = set()
+                self._reward_cooldowns = {}
+                self._reward_card_cooldowns = {}
 
         # card choice pending?
         cards = self._enrich_cards(r.get("card_options", []))
@@ -9992,8 +10044,29 @@ class Policy:
         removing = self._sel_mode == "remove"
 
         # 已达选择数量且可确认 → 先确认（升级/删除等分支也必须走这里，否则永远循环）
-        min_sel = sel.get("min_select", 1)
-        if (sel.get("can_confirm") and sel.get("selected_count", 0) >= min_sel
+        # Deck-enchant grids expose min_select=0 even though the initial confirm
+        # action has no effective UI target. Fill the advertised enchant capacity
+        # before confirming; preserve true zero-choice semantics elsewhere.
+        try:
+            min_sel = max(0, int(sel.get("min_select", 1) or 0))
+        except (TypeError, ValueError):
+            min_sel = 1
+        try:
+            reported_selected = max(0, int(sel.get("selected_count", 0) or 0))
+        except (TypeError, ValueError):
+            reported_selected = 0
+        enchanting = kind == "deck_enchant_select"
+        selection_target = min_sel
+        if enchanting:
+            try:
+                max_sel = max(0, int(sel.get("max_select", 0) or 0))
+            except (TypeError, ValueError):
+                max_sel = 0
+            selection_target = max(
+                min_sel,
+                min(max_sel, len(cards)) if max_sel > 0 else 1,
+            )
+        if (sel.get("can_confirm") and reported_selected >= selection_target
                 and "confirm_selection" in actions):
             if self._ui_action_cooled(state, "confirm_selection", {}):
                 return self._cooldown_wait("选牌界面")
@@ -10034,19 +10107,25 @@ class Policy:
         # turn a one-card Prefetch/discard/recovery choice into a visible roll
         # across candidates.  Wait for that accepted outcome to become observable;
         # failed requests never enter credit_tags and remain immediately retryable.
-        try:
-            reported_selected = int(sel.get("selected_count", 0) or 0)
-        except (TypeError, ValueError):
-            reported_selected = 0
         accepted_clicks = len(self._sel_tried)
         if (accepted_clicks > reported_selected
-                or (accepted_clicks > 0 and reported_selected >= min_sel)):
+                or (accepted_clicks > 0
+                    and reported_selected >= selection_target)):
             return Decision(
                 None, {},
                 f"选牌界面（{kind}）：选择已被服务端接受，等待结果刷新，避免连续点选",
                 wait=0.5)
 
-        live_candidates = [c for c in cards if c["index"] not in self._sel_tried]
+        # A Brain restart may resume a partially completed grid with no local click
+        # ledger. Do not click selected cards again and accidentally deselect them.
+        selected_indices = {
+            c.get("index") for c in cards if c.get("selected") is True
+        }
+        live_candidates = [
+            c for c in cards
+            if c["index"] not in self._sel_tried
+            and c["index"] not in selected_indices
+        ]
         if not live_candidates:
             return Decision(
                 None, {},
@@ -10412,13 +10491,16 @@ class Policy:
             # 拾取门槛——选什么都非本意（知识恶魔战 F33 三连「瓦解/懒惰」屏
             # 实证，529 局被灌进 3 张瓦解），不得记 card_pick 学分：picked/
             # outcome 账与「本局拿牌」榜此前被此类强制屏系统性灌水
-            if top_of_pile:
+            if enchanting:
+                tag = "card_enchant"
+            elif top_of_pile:
                 tag = "card_top_pick"
             elif not _has_skip and best_v < pick_line:
                 tag = "card_forced_add"
             else:
                 tag = "card_pick"
-            verb = "牌堆顶选择" if top_of_pile else "选择卡牌"
+            verb = ("附魔卡牌" if enchanting else
+                    "牌堆顶选择" if top_of_pile else "选择卡牌")
             detail = " / ".join(f"{c.get('name')}={v:.1f}" for v, c in scored)
             reason = (f"{verb}：【{pick.get('name')}】（价值 {best_v:.1f}）"
                       f"{explore_note}；候选：{detail}")

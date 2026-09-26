@@ -99,6 +99,9 @@ END_LINGER_SEC = 30       # 直播/演示：结束后停留秒数再淡出
 ATTACH_LINGER_SEC = 600   # 捞取回放：已结束的会话多留 10 分钟（人要看）
 FADE_SEC = 2.0
 VIEWER_Z_ORDER_INTERVAL_SEC = 0.5
+VIEWER_HUD_INTERVAL_SEC = 0.25
+VIEWER_MEMORY_CHECK_INTERVAL_SEC = 5.0
+VIEWER_WORKING_SET_LIMIT_BYTES = 512 * 1024 * 1024
 DASHBOARD_SCHEMA = "sts2.ascend-live/v1"
 DASHBOARD_STALE_SEC = 5.0
 DECISION_ANIMATION_SEC = 0.65
@@ -107,6 +110,47 @@ VIEW_PAGES = ("LIVE", "TREND", "REVIEW")
 STATS_PROFILE_IDS = frozenset(("ironclad", "vivhite"))
 PROFILE_DISPLAY_LABELS = {"ironclad": "战士", "vivhite": "白绮"}
 PROFILE_COMPARISON_WINDOW = 20
+
+
+class _ProcessMemoryCounters(ctypes.Structure):
+    _fields_ = [
+        ("cb", ctypes.c_ulong),
+        ("page_fault_count", ctypes.c_ulong),
+        ("peak_working_set_size", ctypes.c_size_t),
+        ("working_set_size", ctypes.c_size_t),
+        ("quota_peak_paged_pool_usage", ctypes.c_size_t),
+        ("quota_paged_pool_usage", ctypes.c_size_t),
+        ("quota_peak_non_paged_pool_usage", ctypes.c_size_t),
+        ("quota_non_paged_pool_usage", ctypes.c_size_t),
+        ("pagefile_usage", ctypes.c_size_t),
+        ("peak_pagefile_usage", ctypes.c_size_t),
+    ]
+
+
+def _current_process_working_set_bytes() -> int | None:
+    """Read this viewer's working set without adding a runtime dependency."""
+    if os.name != "nt":
+        return None
+    try:
+        kernel32 = ctypes.windll.kernel32
+        psapi = ctypes.windll.psapi
+        get_current_process = kernel32.GetCurrentProcess
+        get_current_process.restype = ctypes.c_void_p
+        get_process_memory_info = psapi.GetProcessMemoryInfo
+        get_process_memory_info.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(_ProcessMemoryCounters),
+            ctypes.c_ulong,
+        ]
+        get_process_memory_info.restype = ctypes.c_int
+        counters = _ProcessMemoryCounters()
+        counters.cb = ctypes.sizeof(counters)
+        if not get_process_memory_info(
+                get_current_process(), ctypes.byref(counters), counters.cb):
+            return None
+        return int(counters.working_set_size)
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
 
 
 def dashboard_path(runtime_dir: Path | None = None, session_id: str | None = None) -> Path:
@@ -575,6 +619,8 @@ class Viewer:
         self._drag = None
         self._viewer_hwnd = 0
         self._last_viewer_reassert = 0.0
+        self._last_hud_render = 0.0
+        self._last_memory_check = 0.0
         self._broadcast_window_patrol = (
             BroadcastWindowPatrol()
             if mode == "live" and BroadcastWindowPatrol is not None else None
@@ -895,6 +941,9 @@ class Viewer:
                 self._quit()
                 return
         try:
+            if self._viewer_memory_limit_reached(now):
+                self._quit()
+                return
             self._poll_source(now)
             self._poll_dashboard(now)
             self._update_rain(dt)
@@ -915,7 +964,7 @@ class Viewer:
             else:
                 self.canvas.delete("txt")
                 self._render_dashboard(now)
-            self._render_hud(now)
+            self._render_hud_if_due(now)
             self._check_end(now)
         except Exception as exc:
             self._debug_exc(exc)
@@ -927,6 +976,27 @@ class Viewer:
                 return
             self.root.attributes("-alpha", max(0.0, 0.92 * (1 - t)))
         self.root.after(33, self._frame)
+
+    def _viewer_memory_limit_reached(self, now: float) -> bool:
+        """Recycle a leaking overlay before it can exhaust system commit."""
+        if now - self._last_memory_check < VIEWER_MEMORY_CHECK_INTERVAL_SEC:
+            return False
+        self._last_memory_check = now
+        working_set = _current_process_working_set_bytes()
+        if working_set is None or working_set <= VIEWER_WORKING_SET_LIMIT_BYTES:
+            return False
+        self._boot(
+            "working-set-limit "
+            f"bytes={working_set} limit={VIEWER_WORKING_SET_LIMIT_BYTES}"
+        )
+        return True
+
+    def _render_hud_if_due(self, now: float) -> None:
+        """Bound delete/create churn while keeping the HUD visually responsive."""
+        if now - self._last_hud_render < VIEWER_HUD_INTERVAL_SEC:
+            return
+        self._last_hud_render = now
+        self._render_hud(now)
 
     def _poll_dashboard(self, now: float) -> None:
         if self.mode == "demo":

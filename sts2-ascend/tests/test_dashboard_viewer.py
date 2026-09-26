@@ -354,6 +354,45 @@ class DashboardSourceTests(unittest.TestCase):
         self.assertEqual(
             review_viewer.Viewer._status_color("paused"), review_viewer.GOLD)
 
+    def test_hud_redraw_is_rate_limited(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer._last_hud_render = 0.0
+        viewer._render_hud = mock.Mock()
+
+        viewer._render_hud_if_due(10.0)
+        viewer._render_hud_if_due(10.1)
+        viewer._render_hud_if_due(10.26)
+
+        self.assertEqual(
+            viewer._render_hud.call_args_list,
+            [mock.call(10.0), mock.call(10.26)],
+        )
+
+    def test_working_set_limit_requests_supervised_recycle(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer._last_memory_check = 0.0
+        viewer._boot = mock.Mock()
+        over_limit = review_viewer.VIEWER_WORKING_SET_LIMIT_BYTES + 1
+
+        with mock.patch.object(
+                review_viewer, "_current_process_working_set_bytes",
+                return_value=over_limit) as working_set:
+            self.assertTrue(viewer._viewer_memory_limit_reached(10.0))
+            self.assertFalse(viewer._viewer_memory_limit_reached(12.0))
+
+        working_set.assert_called_once_with()
+        self.assertIn("working-set-limit", viewer._boot.call_args.args[0])
+
+    def test_working_set_limit_fail_opens_when_probe_is_unavailable(self) -> None:
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer._last_memory_check = 0.0
+        viewer._boot = mock.Mock()
+        with mock.patch.object(
+                review_viewer, "_current_process_working_set_bytes",
+                return_value=None):
+            self.assertFalse(viewer._viewer_memory_limit_reached(10.0))
+        viewer._boot.assert_not_called()
+
     def test_auto_page_is_state_driven_and_never_rotates(self) -> None:
         viewer = object.__new__(review_viewer.Viewer)
         viewer.interactive = False
