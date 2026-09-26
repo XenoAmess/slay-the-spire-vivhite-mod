@@ -15528,3 +15528,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.801160283588153局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.418584847574091局)，VIVHITE_CARD_COLOR_CONSERVATION(24分/2.30922544276314局)
 - 策略进化：kill_race_prior_eff: 0.48 → 0.51（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F28——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F28——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.50 → 2.25（行至 F28——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 25.00 → 27.50（行至 F28——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1408 胜，当前目标进阶 3
+
+## 第 1409 局复盘（2026-09-26 20:33）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_EVENT_LOOP, VIVHITE_CARD_ASTRAL_MEASURE
+- 本局遗物：ODDLY_SMOOTH_STONE
+- 战斗记录：F9 Monster战 掉血0｜自损12（可行动段12/非行动段11，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血18｜自损8（可行动段8/非行动段25，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损18（可行动段18/非行动段14，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损10（可行动段10/非行动段7，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0｜自损12（可行动段12/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血95｜自损32（可行动段32/非行动段42，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.442963937220092局)，BOLAS(37分/2.2801456655397336局)，STRATAGEM(36分/5.447225525991312局)，FISTICUFFS(35分/8.217882112896234局)，AUTOMATION(34分/4.941655858420285局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.784356222595595局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.4066198006075816局)，VIVHITE_CARD_COLOR_CONSERVATION(24分/2.3011431537134692局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.49（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：3/1409 胜，当前目标进阶 3
