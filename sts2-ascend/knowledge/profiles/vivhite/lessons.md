@@ -15627,3 +15627,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.652023845424179局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.3123947731724286局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/47.375768605549986局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（97%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.43（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：3/1417 胜，当前目标进阶 3
+
+## 第 1418 局复盘（2026-09-26 22:22）
+- 结果：💀 失败｜进阶 3｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_OPEN_SET_SHELTER, RESTLESSNESS, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_HEURISTIC_SHIELD
+- 本局遗物：SPARKLING_ROUGE, CENTENNIAL_PUZZLE, GREMLIN_HORN, STONE_CRACKER, KUSARIGAMA
+- 战斗记录：F23 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F24 Elite战 掉血37｜自损19（可行动段19/非行动段26，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血7｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）; F30 Elite战 掉血41｜自损9（可行动段9/非行动段53，SELF_LOSS_PHASE_OBS）; F31 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血56｜自损24（可行动段24/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.304954002673022局)，BOLAS(37分/2.2093184523312877局)，STRATAGEM(36分/5.278020632832634局)，FISTICUFFS(35分/7.962613470489481局)，AUTOMATION(35分/5.781167514849984局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.635741761965195局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.3008013914663255局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/47.20995341543056局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.40 → 0.42（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：3/1418 胜，当前目标进阶 3
