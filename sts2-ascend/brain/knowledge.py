@@ -506,6 +506,11 @@ DEFAULT_POLICY = {
                                                # 换线次数按敌人身份（instance/uuid/spawn/id/name）补记，
                                                # 避免敌人列表重排把同一数字索引误报为未换线；
                                                # 纯观测不改评分、判决或动作；False=严格回滚
+    "longfight_joint_survival_margin_obs": True,  # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
+                                                   # 联合能量复核放行攻防节奏时，披露当前回合
+                                                   # 手牌在现有能量下的最大可得格挡、剩余受击缺口
+                                                   # 与是否能撑过本次意图；只观测，不改评分、判决、目标或动作；
+                                                   # False=严格回滚该注记
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否

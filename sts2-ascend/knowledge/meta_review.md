@@ -11672,6 +11672,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、policy.json、lessons 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+### 2026-09-27 / RUN 1592 / ironclad / LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS
+
+- **HYPOTHESIS（可证伪）**：F25 的静态 `_race_joint_feasible` 可能只验证长战的总体攻防分配，未披露当前回合手牌在现有能量下的最大格挡；因此“防守线复核：联合能量对账”可能在本回合实际上无法生还时仍放行攻防节奏。
+- **EVIDENCE**：run `GTWVH46FXTJ2`（第 1592 局）F25 T8 在 HP=7、来袭=24 时出现该联合复核；随后实际打出 `耸肩无视` 与 `防御+`，形成 16 格挡并进入终局。该窗口支持缺少“即时生还缺口”观测，但不单独证明评分因果。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立窗口中，联合复核样本应记录 `hand_block_cap`、`post_block_gap` 与 `survives=yes|no`；若反复出现 `survives=no` 且随后同局 GAME_OVER/未能取得下一条有效动作，假设增强；若该信号不出现或与终局无关，假设削弱。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在已有联合能量复核注记后追加 `LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS`，按当前回合可播放手牌和整数能量计算最大格挡、受击缺口及即时生还布尔值；不改变评分、判决、目标或动作。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `longfight_joint_survival_margin_obs`；设为 `False` 即移除该注记并回滚观测行为。
+- `sts2-ascend/brain/selfcheck.py`：加入 HP=7、来袭=24、能量=2、最大格挡=16 的正反夹具，验证注记字段及关闭开关下 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立窗口，按 run_id、节点、HP/来袭、hand_block_cap、post_block_gap、最终选牌和 GAME_OVER 分层；先验证观测与终局的关联，不据单个窗口改评分。
+- **撤回**：若注记在联合复核之外出现，或开关关闭仍改变 action/params，将 `longfight_joint_survival_margin_obs` 设为 `False` 并保留本次证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 无空白错误；报告前未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
 ## 2026-09-26｜第 1580 局复盘（DECIMILLIPEDE 重接窗口时序观测）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL

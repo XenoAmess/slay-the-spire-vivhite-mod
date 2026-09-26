@@ -5220,6 +5220,66 @@ class Policy:
                 my_block, round_no, stance, stance_defensive_tone, race_allin,
                 danger_note))
 
+        # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
+        # _race_joint_feasible 只回答「跨回合是否存在攻防分配」，而第1592局
+        # F25-T8 的生产链还需要一个同帧证据：当前手牌/能量最多能提供多少格挡，
+        # 扣掉当前意图后是否连本回合都能活。这个观测只在非 Boss 长战的联合复核
+        # 实际放行分支记录；动态规划按整数能量枚举当前可出格挡组合，绝不回写
+        # 评分、判决、目标或动作。开关为 False 时严格不产生任何尾缀。
+        try:
+            _joint_survival_obs = bool(int(float(pol.get(
+                "longfight_joint_survival_margin_obs", True) or 0)))
+        except (TypeError, ValueError):
+            _joint_survival_obs = False
+        if (_joint_survival_obs
+                and cctx.get("node_type") in ("Monster", "Elite")
+                and "防守线复核：联合能量对账" in danger_note):
+            try:
+                _joint_energy = max(0, int(float(energy or 0)))
+            except (TypeError, ValueError):
+                _joint_energy = 0
+            _joint_block_by_energy = [0.0] * (_joint_energy + 1)
+            _joint_block_cards = []
+            if not block_locked:
+                for _joint_card in hand:
+                    if (not _joint_card.get("playable")
+                            or self._card_unavailable(_joint_card)):
+                        continue
+                    try:
+                        _joint_cost = float(
+                            energy if _joint_card.get("costs_x")
+                            else (_joint_card.get("energy_cost") or 0))
+                        _joint_block = float(card_numbers(_joint_card)[1])
+                    except (TypeError, ValueError):
+                        continue
+                    if (_joint_cost < 0.0
+                            or not _joint_cost.is_integer()
+                            or _joint_block <= 0.0):
+                        continue
+                    _joint_cost_i = int(_joint_cost)
+                    if _joint_cost_i > _joint_energy:
+                        continue
+                    _joint_block_cards.append(
+                        f"{_joint_card.get('name') or _joint_card.get('card_id') or '?'}"
+                        f":{_joint_block:g}@{_joint_cost_i:g}")
+                    for _spent in range(_joint_energy, _joint_cost_i - 1, -1):
+                        _joint_block_by_energy[_spent] = max(
+                            _joint_block_by_energy[_spent],
+                            _joint_block_by_energy[_spent - _joint_cost_i]
+                            + _joint_block)
+            _joint_block_cap = max(_joint_block_by_energy, default=0.0)
+            _joint_post_gap = max(
+                0.0, float(incoming) - float(my_block) - _joint_block_cap)
+            _joint_survives = _joint_post_gap < float(my_hp)
+            danger_note += (
+                f"；长战联合复核即时生还对账：hp={float(my_hp):g}"
+                f"/block={float(my_block):g}/incoming={float(incoming):g}"
+                f"/energy={float(energy):g}/hand_block_cap={_joint_block_cap:g}"
+                f"/post_block_gap={_joint_post_gap:g}"
+                f"/survives={'yes' if _joint_survives else 'no'}"
+                f"/cards={'|'.join(_joint_block_cards) if _joint_block_cards else 'none'}"
+                "（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）")
+
         # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第 560~576 局批复盘新增，
         # 静态键）：SLEEP_GUARD 沉睡保期禁攻（b485c249 起在产）在 541/545/548/559/
         # 563/568/574/575/576 共 9 场族母遭遇零留痕、T1 全部提前唤醒，而同一

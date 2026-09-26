@@ -11011,7 +11011,10 @@ def main() -> int:
                           boss_state_obs=True, boss_state_powers=None,
                           boss_state_powers_next=None,
                           longfight_effective_dpt_obs=True,
-                          hp_pay_audit_fixture=False, hp_pay_audit_obs=True):
+                          hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
+                          longfight_joint_survival_obs=True,
+                          joint_player_hp=None, joint_incoming=None,
+                          joint_energy=None):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -11054,6 +11057,14 @@ def main() -> int:
                         Path(tempfile.mkdtemp(
                             prefix="sts2-selfcheck-combat-cap-"))))
         cap_pol = policy.Policy(cap_know, random.Random(11))
+        if joint_player_hp is not None:
+            cap_state["combat"]["player"]["current_hp"] = joint_player_hp
+            cap_state["run"]["current_hp"] = joint_player_hp
+        if joint_incoming is not None:
+            cap_state["combat"]["enemies"][0]["intents"] = [
+                {"total_damage": joint_incoming}]
+        if joint_energy is not None:
+            cap_state["combat"]["player"]["energy"] = joint_energy
         # First tick establishes the combat identity; the following values isolate
         # the already-observed, latched race-loss branch from card ranking details.
         cap_pol.decide(cap_state, cap_ctx)
@@ -11089,6 +11100,8 @@ def main() -> int:
             "boss_race_effective_dpt_state_obs"] = boss_state_obs
         cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
+        cap_pol.know.policy[
+            "longfight_joint_survival_margin_obs"] = longfight_joint_survival_obs
         cap_pol.know.policy["vivhite_hp_pay_phase_audit_obs"] = (
             hp_pay_audit_obs)
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
@@ -11301,6 +11314,45 @@ def main() -> int:
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS"
             not in d_combat_longfight_effective_off.reason), \
         f"非 Boss 长战有效火力对账开关未严格回滚: {d_combat_longfight_effective_off.reason}"
+    # 3br-longfight-joint-survival：第1592局 F25-T8 的联合复核放行发生在
+    # hp=7、incoming=24 的即时致死边界；当前两张1费格挡各8点时，2费上限只能
+    # 形成16格挡，故应显式记录 survives=no。该夹具只验证观测尾缀，开关关闭
+    # 时 action/params 严格一致。
+    _joint_survival_hand = [
+        {"index": 0, "card_id": "CAP_HIT", "name": "速攻",
+         "playable": True, "energy_cost": 1, "requires_target": True,
+         "valid_target_indices": [0],
+         "dynamic_values": [{"name": "Damage", "current_value": 12}]},
+        {"index": 1, "card_id": "CAP_BLOCK_A", "name": "格挡甲",
+         "playable": True, "energy_cost": 1, "requires_target": False,
+         "rules_text": "获得8点格挡",
+         "dynamic_values": [{"name": "Block", "current_value": 8}]},
+        {"index": 2, "card_id": "CAP_BLOCK_B", "name": "格挡乙",
+         "playable": True, "energy_cost": 1, "requires_target": False,
+         "rules_text": "获得8点格挡",
+         "dynamic_values": [{"name": "Block", "current_value": 8}]},
+    ]
+    d_joint_survival = combat_flip_probe(
+        0.0, node_type="Monster", enemy_hp=185, longfight_cap=0.0,
+        hand_override=_joint_survival_hand, joint_player_hp=7,
+        joint_incoming=24, joint_energy=2)
+    d_joint_survival_off = combat_flip_probe(
+        0.0, node_type="Monster", enemy_hp=185, longfight_cap=0.0,
+        hand_override=_joint_survival_hand, joint_player_hp=7,
+        joint_incoming=24, joint_energy=2,
+        longfight_joint_survival_obs=False)
+    assert ("LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS" in d_joint_survival.reason
+            and "hp=7" in d_joint_survival.reason
+            and "incoming=24" in d_joint_survival.reason
+            and "hand_block_cap=16" in d_joint_survival.reason
+            and "post_block_gap=8" in d_joint_survival.reason
+            and "survives=no" in d_joint_survival.reason), \
+        f"长战联合即时生还观测缺失或夹具未命中: {d_joint_survival.reason}"
+    assert (d_joint_survival_off.action == d_joint_survival.action
+            and d_joint_survival_off.params == d_joint_survival.params
+            and "LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS"
+            not in d_joint_survival_off.reason), \
+        f"长战联合即时生还观测开关未严格回滚: {d_joint_survival_off.reason}"
     # 3br-longfight-focus-identity：敌人列表重排后，数字索引可能保持不变，
     # 但稳定实体身份已变化；长战上下文应补记非击杀换线，且不把合法击杀转火计入。
     identity_pol = policy.Policy(
