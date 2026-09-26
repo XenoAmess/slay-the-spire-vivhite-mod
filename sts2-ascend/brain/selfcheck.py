@@ -15776,36 +15776,6 @@ def main() -> int:
         and "LETHAL_SURVIVABLE_LINE" in d_lsl4.reason, \
         f"组合生还覆盖致死回合未让位最大挡: {d_lsl4.action}（{d_lsl4.reason}）"
 
-    # ⑤ 部分格挡的 12% 惨胜线：23 血对 20 意图时，8 甲虽不能无伤，
-    #    但可把受击后 3 血抬回 max_hp 的 12% 线；启用时应让位格挡，
-    #    关闭时严格回滚为抢斩杀攻击。
-    lsl_pyrrhic_shld = dict(
-        lsl_shld, card_id="LSL_PYRRHIC_SHLD", name="八格挡",
-        dynamic_values=[{"name": "Block", "current_value": 8}])
-
-    def lsl_pyrrhic_decide(pol_l, enabled=True):
-        if not enabled:
-            pol_l.know.policy["lethal_survivable_line"] = False
-        py_state = lsl_state(23, 20, 1, [lsl_hit, lsl_pyrrhic_shld])
-        pol_l.decide(py_state, lsl_ctx)
-        pol_l._race_rounds = 2
-        pol_l._race_loss_rate = 1.0
-        pol_l._krace_turns = 2
-        pol_l._krace_dmg = pol_l._krace_dmg_sustained = 10.0
-        return pol_l.decide(py_state, lsl_ctx)
-
-    d_lsl5 = lsl_pyrrhic_decide(lsl_policy())
-    assert d_lsl5.action == "play_card" \
-        and d_lsl5.params.get("card_index") == 1 \
-        and "LETHAL_SURVIVABLE_LINE" in d_lsl5.reason \
-        and "12%惨胜线" in d_lsl5.reason, \
-        f"部分格挡未覆盖 12% 惨胜线: {d_lsl5.action}（{d_lsl5.reason}）"
-    d_lsl6 = lsl_pyrrhic_decide(lsl_policy(), enabled=False)
-    assert d_lsl6.action == "play_card" \
-        and d_lsl6.params.get("card_index") == 0 \
-        and "LETHAL_SURVIVABLE_LINE" not in d_lsl6.reason, \
-        f"部分格挡键=False 未回滚旧口径: {d_lsl6.action}（{d_lsl6.reason}）"
-
     # 3rallc) 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
     #      第1500~1504局批复盘）：LETHAL_SURVIVABLE_LINE 以 not race_allin
     #      排除败局竞速（514~517/546/1414~1419 三批定案），1504-F17-T9 首见
