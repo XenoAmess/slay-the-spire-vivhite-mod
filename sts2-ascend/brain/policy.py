@@ -692,7 +692,9 @@ class Policy:
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
         self._focus_drift_pending = []  # 评分侧静默换线挂账（FOCUS_DRIFT_FLUSH_OBS，第 852~856 局批复盘）
         self._focus_played_index = None  # 上一张实际打出定向攻击牌的目标索引（FOCUS_DRIFT_LOCK，第 857~872 局批复盘）
+        self._focus_played_identity = None  # 上一张实际火线的稳定敌人身份（长战上下文观测）
         self._focus_drift_flips = 0  # 本场实际打出火线的非击杀翻线次数（FOCUS_DRIFT_LOCK，阻尼升级依据）
+        self._focus_identity_flips = 0  # 按敌人身份补记的非击杀换线次数（纯观测，不改阻尼）
         self._focus_drift_multi_scaler_obs_emitted = False  # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）
         self._race_round = None     # 已采样的回合号
         self._race_prev_hp = None   # 上一个回合开始时的观测血量
@@ -1150,6 +1152,35 @@ class Policy:
         identity = (card.get("instance_id") or card.get("uuid")
                     or card.get("card_id") or card.get("name") or "")
         return (card.get("index"), str(identity))
+
+    @staticmethod
+    def _focus_enemy_identity(enemy: dict | None) -> str | None:
+        """Return an identity that survives an enemy-list index reordering."""
+        if not isinstance(enemy, dict):
+            return None
+        for key in ("instance_id", "uuid", "spawn_id", "enemy_id", "name"):
+            value = str(enemy.get(key) or "").strip()
+            if value:
+                return value
+        return None
+
+    def _record_focus_identity_flip(self, target_enemy: dict | None,
+                                    enemies: list[dict], why: str) -> bool:
+        """Record non-kill fire-line changes without changing scoring state."""
+        target_identity = self._focus_enemy_identity(target_enemy)
+        previous_identity = self._focus_played_identity
+        flipped = (
+            previous_identity is not None
+            and target_identity is not None
+            and target_identity != previous_identity
+            and "可击杀" not in why
+            and any(self._focus_enemy_identity(enemy) == previous_identity
+                    for enemy in enemies))
+        if flipped:
+            self._focus_identity_flips += 1
+        if target_identity is not None:
+            self._focus_played_identity = target_identity
+        return flipped
 
     def _card_unavailable(self, card: dict) -> bool:
         index = card.get("index")
@@ -4226,18 +4257,29 @@ class Policy:
                         if not _longfight_encounter:
                             _longfight_encounter = "unknown"
                         try:
-                            _longfight_focus_switches = int(
-                                getattr(self, "_focus_drift_flips", 0) or 0)
+                            _longfight_focus_switches = max(
+                                int(getattr(self, "_focus_drift_flips", 0) or 0),
+                                int(getattr(self, "_focus_identity_flips", 0) or 0))
                         except (TypeError, ValueError):
                             _longfight_focus_switches = 0
                         _longfight_focus_name = "?"
                         try:
-                            _longfight_focus_name = next(
-                                str(_e.get("name") or _e.get("enemy_id")
-                                    or "敌人")
-                                for _e in enemies
-                                if _e.get("index")
-                                == getattr(self, "_focus_played_index", None))
+                            _focus_identity = getattr(
+                                self, "_focus_played_identity", None)
+                            if _focus_identity:
+                                _longfight_focus_name = next(
+                                    str(_e.get("name") or _e.get("enemy_id")
+                                        or "敌人")
+                                    for _e in enemies
+                                    if self._focus_enemy_identity(_e)
+                                    == _focus_identity)
+                            else:
+                                _longfight_focus_name = next(
+                                    str(_e.get("name") or _e.get("enemy_id")
+                                        or "敌人")
+                                    for _e in enemies
+                                    if _e.get("index")
+                                    == getattr(self, "_focus_played_index", None))
                         except StopIteration:
                             pass
                         _longfight_context_tail = (
@@ -4609,7 +4651,9 @@ class Policy:
             self._focus_index = None
             self._focus_drift_pending = []
             self._focus_played_index = None
+            self._focus_played_identity = None
             self._focus_drift_flips = 0
+            self._focus_identity_flips = 0
             self._focus_drift_multi_scaler_obs_emitted = False
 
         if not enemies:
@@ -6033,6 +6077,9 @@ class Policy:
                         self._focus_drift_multi_scaler_obs_emitted = True
                 if _actual_focus_flip:
                     self._focus_drift_flips += 1
+                self._record_focus_identity_flip(
+                    next((e for e in enemies if e.get("index") == target), None),
+                    enemies, why)
                 self._focus_played_index = target
             if _hp_gate_stall_break:
                 _hp_gate_esc_note = (

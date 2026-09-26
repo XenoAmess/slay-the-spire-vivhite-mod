@@ -11737,3 +11737,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1582 局复盘（LONGFIGHT_RACE_FOCUS_IDENTITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1581 局新增的长战上下文按数字目标索引读取换线状态；当敌人列表重排而实体身份改变时，它会低估非击杀实体换线次数。该假设可证伪：若后续同类窗口的稳定身份计数仍与实际换线一致，则假设被削弱。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260926-183434_GD1SDYMQ1352.json` 共 306 条决策，F21 为 `BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE`。D289 的长战样本为第 1→2 次回合、血池 173→141；D290 出现 `FOCUS_DRIFT_FLUSH_OBS`，记录丝虫→熟睡甲虫，但目标数字索引仍为 1，长战上下文继续写 `火线已换线0次`。D294 的第 2→3 次样本仍写 0 次；D297 的第 3→4 次样本再次出现 `FOCUS_DRIFT_FLUSH_OBS`（熟睡甲虫→石虫）而上下文仍写 0 次。随后 D299~305 出现 `RACE_UPSHIFT_STALE`，HP 21→1，D306 终局失败。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Monster/Elite 长战窗口中，若列表重排且旧实体仍存活，`LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS` 的换线次数应至少增加 1，并显示稳定身份对应的当前火线；同一数字索引不变不应再抹掉该信号。`可击杀` 合法转火不计入；关闭既有观测开关时 marker、action、params 均应保持严格回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：按 `instance_id/uuid/spawn_id/enemy_id/name` 的优先级记录实际火线身份，在实际定向攻击收口时补记非击杀实体换线；按战斗重置，并在长战上下文中与既有索引计数取较大值。只增加观测，不改变评分、阻尼、目标、判决或动作。
+- `sts2-ascend/brain/knowledge.py`：说明长战换线计数采用稳定实体身份，仍为纯观测并沿用严格回滚开关。
+- `sts2-ascend/brain/selfcheck.py`：增加“同一数字索引、不同实体身份”的换线夹具，以及合法击杀转火不计数断言；既有长战 action/params 与关闭开关断言保留。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 run_id、遭遇键、敌人身份字段、列表重排、换线 marker、血池端点和终局结果分层；至少 3 个独立窗口确认身份计数与 `FOCUS_DRIFT_FLUSH_OBS` 对齐前，不调整任何集火或竞速行为。若无重排窗口或计数稳定为零，则削弱本假设。
+- **撤回**：若身份字段缺失/重复造成虚假换线、当前火线误报、与旧计数不一致，或关闭开关改变 action/params，则关闭 `longfight_race_effective_dpt_obs` 或移除身份补记，并保留本次失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；已完成目标三文件 diff 复核，未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

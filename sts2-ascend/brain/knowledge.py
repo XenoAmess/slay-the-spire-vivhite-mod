@@ -498,6 +498,8 @@ DEFAULT_POLICY = {
                                                # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，
                                                # 并携带遭遇键、血池端点和实际换线次数/当前火线
                                                # （LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS），
+                                               # 换线次数按敌人身份（instance/uuid/spawn/id/name）补记，
+                                               # 避免敌人列表重排把同一数字索引误报为未换线；
                                                # 纯观测不改评分、判决或动作；False=严格回滚
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，

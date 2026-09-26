@@ -10855,6 +10855,8 @@ def main() -> int:
             if focus_switches:
                 cap_pol._focus_drift_flips = focus_switches
                 cap_pol._focus_played_index = 0
+                cap_pol._focus_identity_flips = focus_switches
+                cap_pol._focus_played_identity = "CAP_BOSS"
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
             return cap_pol.decide(cap_state, cap_ctx)
@@ -10997,6 +10999,27 @@ def main() -> int:
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS"
             not in d_combat_longfight_effective_off.reason), \
         f"非 Boss 长战有效火力对账开关未严格回滚: {d_combat_longfight_effective_off.reason}"
+    # 3br-longfight-focus-identity：敌人列表重排后，数字索引可能保持不变，
+    # 但稳定实体身份已变化；长战上下文应补记非击杀换线，且不把合法击杀转火计入。
+    identity_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-longfight-focus-"))), random.Random(11))
+    identity_enemies = [
+        {"index": 0, "enemy_id": "NEW_TARGET", "name": "新目标"},
+        {"index": 1, "enemy_id": "OLD_TARGET", "name": "旧目标"},
+    ]
+    identity_pol._focus_played_index = 0
+    identity_pol._focus_played_identity = "OLD_TARGET"
+    assert identity_pol._record_focus_identity_flip(
+        identity_enemies[0], identity_enemies, "普通非击杀换线")
+    assert identity_pol._focus_identity_flips == 1, \
+        "敌人列表重排后的实体换线未进入长战观测计数"
+    identity_pol._focus_played_identity = "OLD_TARGET"
+    identity_pol._focus_identity_flips = 0
+    assert not identity_pol._record_focus_identity_flip(
+        identity_enemies[0], identity_enemies, "可击杀合法转火")
+    assert identity_pol._focus_identity_flips == 0, \
+        "击杀型合法转火不应污染实体换线观测计数"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，
     # 有效净输出随后从投影上方跌到投影下方；把既有火力对账与换线次数/当前火线
     # 联结，供未来 3~10 局直接按换线次数分层比较。只读观测，评分/动作不变，
