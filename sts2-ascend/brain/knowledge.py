@@ -855,6 +855,15 @@ DEFAULT_POLICY = {
                                               # 为0且实际扣除生命>0时记录牌名/支付/血量/能量/回合，检验自由回合
                                               # 减免是否把生命透支提前到首个正伤害回合之前。不改评分、候选、动作或
                                               # 参数；0=关闭（旧行为与留痕一键回滚），非白绮角色零改动
+    "vivhite_hp_terminal_pay_obs": 1,  # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，
+                                        # 1428~1432 批复盘新增）：1432-F17 T11 选中实付4血后
+                                        # 7→3，T12 又实付2血后3→1；现有直接致死守卫只拦
+                                        # post-hp<=0，无法把支付后进入终端带与后续阵亡切片对账。
+                                        # 仅在白绮 Boss 选中生命支付牌且支付后 hp<=floor 时记录
+                                        # pre/pay/post、意图、回合与昏眩/竞速状态；不改评分、候选、动作或
+                                        # 参数；0=关闭（旧行为与留痕一键回滚），非白绮角色零改动
+    "vivhite_hp_terminal_pay_floor": 3.0,  # 终端生命支付观测带下沿（含边界）：默认3血，
+                                           # 只供 VIVHITE_HP_TERMINAL_PAY_OBS 切片，非行为门。
     "vivhite_hp_function_gate_obs": 1,  # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
                                         # 在白绮有能量、存在敌方意图且生命支付门拦下可执行的
                                         # Skill/Power/Ability 牌时，披露牌型、候选分、实付血与

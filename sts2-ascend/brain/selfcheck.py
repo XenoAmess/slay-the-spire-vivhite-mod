@@ -3697,6 +3697,62 @@ def main() -> int:
     assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh_nonboss.reason, \
         f"非 Boss 回合不得误挂 Boss 自付注记: {d_bfh_nonboss.reason}"
 
+    # 3btp) Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，1428~1432
+    #      批复盘）：只切出「最终选中牌实付后 hp<=3」的边界，不改评分、动作
+    #      或参数；开关关闭与非 Boss 均不得留下注记。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_terminal_pay_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_terminal_pay_obs 静态键或默认值被改"
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_terminal_pay_floor"]) == 3.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_terminal_pay_floor 静态键或默认值被改"
+
+    def _terminal_pay_hand():
+        return [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+            "name": "递推星芒+", "card_type": "Attack", "playable": True,
+            "energy_cost": 1, "requires_target": True,
+            "valid_target_indices": [0],
+            "dynamic_values": [
+                {"name": "Damage", "current_value": 17},
+                {"name": "Hits", "current_value": 1},
+                {"name": "LifeCost", "current_value": 4}],
+        }]
+
+    vknow_tpay = _vivhite_know("sts2-selfcheck-vterminal-pay-")
+    vknow_tpay.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_tpay = policy.Policy(vknow_tpay, random.Random(11))
+    vctx_tpay = _krh_ctx()
+    d_tpay = vpol_tpay.decide(
+        _krh_state(11, 7, _terminal_pay_hand(), incoming=0), vctx_tpay)
+    assert d_tpay.action == "play_card" \
+        and "VIVHITE_HP_TERMINAL_PAY_OBS" in d_tpay.reason \
+        and "实付4血" in d_tpay.reason \
+        and "hp=7→3/floor=3" in d_tpay.reason \
+        and "/incoming=0/" in d_tpay.reason, \
+        f"Boss 终端生命支付观测缺失或字段不完整: {d_tpay}"
+
+    vknow_tpay0 = _vivhite_know("sts2-selfcheck-vterminal-pay-off-")
+    vknow_tpay0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_tpay0.policy["vivhite_hp_terminal_pay_obs"] = 0
+    vpol_tpay0 = policy.Policy(vknow_tpay0, random.Random(11))
+    d_tpay0 = vpol_tpay0.decide(
+        _krh_state(11, 7, _terminal_pay_hand(), incoming=0), _krh_ctx())
+    assert d_tpay0.action == d_tpay.action \
+        and d_tpay0.params == d_tpay.params, \
+        f"终端生命支付观测关闭不得改变动作: on={d_tpay} off={d_tpay0}"
+    assert "VIVHITE_HP_TERMINAL_PAY_OBS" not in d_tpay0.reason, \
+        f"终端生命支付观测关闭后不得出现注记: {d_tpay0.reason}"
+
+    vctx_tpay_nonboss = _krh_ctx()
+    vctx_tpay_nonboss.combat["node_type"] = "Monster"
+    d_tpay_nonboss = vpol_tpay.decide(
+        _krh_state(11, 7, _terminal_pay_hand(), incoming=0),
+        vctx_tpay_nonboss)
+    assert "VIVHITE_HP_TERMINAL_PAY_OBS" not in d_tpay_nonboss.reason, \
+        f"非 Boss 回合不得误挂终端生命支付注记: {d_tpay_nonboss.reason}"
+
     # 3tll) 生命支付终端锁观测（VIVHITE_HP_TERMINAL_LOCK_OBS，第1202~1204局批
     #      复盘）：1203-F33 与 1204-F48 收口时，全部非诅咒手牌均被原生
     #      blocked_by_hook，白绮仍有能量却只能结束回合；现有逐张审计没有稳定

@@ -6575,6 +6575,48 @@ class Policy:
                         f"实付{_boss_free_turn_pay:g}血，"
                         f"hp={my_hp:g}/energy={energy:g}/round={round_no}"
                         "（VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS）")
+            # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS）：1432-F17
+            # T11 的实付4血把 hp 从7推到3，T12 又实付2血到1；既有
+            # HP_COST_LETHAL_GUARD 只禁止 post-hp<=0，无法把「已进入终端带」
+            # 与下一回合的来袭伤害/终局对账。只在最终选中牌收口追加 pre/pay/post
+            # 切片，绝不改评分、候选资格、目标、动作或参数；floor=0 或 obs=0
+            # 严格关闭本观测。
+            try:
+                _terminal_pay_obs = bool(int(float(pol.get(
+                    "vivhite_hp_terminal_pay_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _terminal_pay_obs = False
+            if (_terminal_pay_obs
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and cctx.get("node_type") == "Boss"):
+                try:
+                    _terminal_pay_floor = max(0.0, float(pol.get(
+                        "vivhite_hp_terminal_pay_floor", 3.0) or 0.0))
+                except (TypeError, ValueError):
+                    _terminal_pay_floor = 0.0
+                try:
+                    _terminal_pay = float(self._vivhite_hp_pay(
+                        card, player.get("powers") or []) or 0.0)
+                except (TypeError, ValueError, AttributeError):
+                    _terminal_pay = 0.0
+                _terminal_post_hp = max(0.0, float(my_hp) - _terminal_pay)
+                if (_terminal_pay > 0.0
+                        and _terminal_pay_floor > 0.0
+                        and _terminal_post_hp <= _terminal_pay_floor):
+                    _terminal_card_name = (
+                        card.get("name") or card.get("card_id") or "?")
+                    _terminal_ringing = character_power_amount(
+                        player.get("powers") or [], RINGING_POWER_ID) > 0
+                    why += (
+                        f"｜终端生命支付：{_terminal_card_name}实付"
+                        f"{_terminal_pay:g}血，hp={float(my_hp):g}→"
+                        f"{_terminal_post_hp:g}/floor={_terminal_pay_floor:g}"
+                        f"/incoming={float(incoming):g}/energy={float(energy):g}"
+                        f"/round={round_no}/lethal={'yes' if lethal_now else 'no'}"
+                        f"/kill_race={'yes' if kill_race else 'no'}"
+                        f"/ringing={'yes' if _terminal_ringing else 'no'}"
+                        "（VIVHITE_HP_TERMINAL_PAY_OBS）")
             # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
             # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
             # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，

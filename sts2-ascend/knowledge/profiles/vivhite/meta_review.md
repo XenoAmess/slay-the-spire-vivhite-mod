@@ -4847,3 +4847,36 @@ production_code_commit: 584e86b39164c69fffb58b3d4ecd955f57c427a5
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1428~1432 批：Boss 终端生命支付进入危险生命带的观测
+
+日期：2026-09-27
+production_code_commit: 7a5e262fcdbd577c524b299b210329f046da3404
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `HP_COST_LETHAL_GUARD` 只阻止支付后 `hp<=0`；因此，最终选中的生命支付牌若把白绮推进 `hp<=3`，可能形成“仍可执行但已进入终端带”的危险交接，并在随后正伤害回合或终局前复现。该假设可被证伪：未来 3~10 个独立白绮 Boss 战中，若该事件稳定出现却不与后续正意图、`SELF_LOSS_PHASE_OBS` 或 `GAME_OVER` 相关，或观测字段/动作参数不一致，则不支持扩大行为门。
+- **EVIDENCE**：本批 exact batch 覆盖 1428~1432，失败队列无缺口；完整证据为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-012954_WTQJ8UWHCBCT.json`。1432-F17 的决策 234 在 T11 以 hp=7 实付4血到3，敌方意图为0；T12 决策236 又以 hp=3 实付2血到1，随后面对 incoming=21，昏眩限制下结束回合并在下一 tick GAME_OVER。该链条支持“终端带交接值得切片”，但不能单独证明支付是阵亡因果。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 战按 run/floor/combat 计数，最终选中的生命支付牌在 `hp_after<=3` 时应带 `VIVHITE_HP_TERMINAL_PAY_OBS`，并可对账 pre/pay/post、incoming、energy、round、lethal、kill_race、ringing、下一次正意图、self-loss、终局与胜负；同一战斗多条 tick 不算独立样本。若事件不再出现、字段失真，或与终局无可重复区分，则假设证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_terminal_pay_obs` 与 `vivhite_hp_terminal_pay_floor=3.0`；开关为0或 floor 为0 时关闭观测。
+- `sts2-ascend/brain/policy.py`：仅在白绮 Boss 最终选中生命支付牌且支付后 hp<=3 时追加 `VIVHITE_HP_TERMINAL_PAY_OBS`，记录支付前后生命、实付、敌方意图及回合状态；不改变评分、候选、目标、动作或参数，非白绮/非 Boss 不触发。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认键、正例、关闭开关 action/params 不变及非 Boss 过滤。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime` 或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；最终生产 diff 已复核。
+- 生产代码本地 commit：`7a5e262f`（未 push）。
+
+## FOLLOW-UP / ROLLBACK
+
+- 未来 3~10 个独立 Boss 战只做上述事件与原生回执、下一回合存活/终局和胜负对账，不把观测本身当作因果证明。
+- 若出现误触发、实际支付不符、action/params 漂移或事件与终局没有可重复区分，将 `vivhite_hp_terminal_pay_obs` 设为 `0`；必要时回滚本地 commit `7a5e262fcdbd577c524b299b210329f046da3404`，保留既有生命支付审计。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
