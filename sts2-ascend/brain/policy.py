@@ -3433,10 +3433,36 @@ class Policy:
                 _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
                 _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
                                 f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
+                _end_turn_lethal_note = ""
+                try:
+                    _end_turn_lethal_obs = bool(int(float(pol.get(
+                        "vivhite_end_turn_lethal_obs", 1) or 0)))
+                except (TypeError, ValueError):
+                    _end_turn_lethal_obs = False
+                if (_end_turn_lethal_obs
+                        and getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID
+                        and _settle_lethal):
+                    _native_end_turn_lethal = combat.get(
+                        "end_turn_will_kill_player")
+                    _native_projection = (
+                        "yes" if _native_end_turn_lethal is True
+                        else "no" if _native_end_turn_lethal is False
+                        else "unknown")
+                    _end_turn_gap = max(0.0, float(incoming) - float(my_block))
+                    _end_turn_lethal_note = (
+                        f"｜结束回合致死观测：hp={float(my_hp):g}"
+                        f"/block={float(my_block):g}"
+                        f"/incoming={float(incoming):g}"
+                        f"/gap={_end_turn_gap:g}"
+                        f"/energy={float(energy):g}"
+                        f"/native={_native_projection}"
+                        "（VIVHITE_END_TURN_LETHAL_OBS）")
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}"
+                    f"{_end_turn_lethal_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)

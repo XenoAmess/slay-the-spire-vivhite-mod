@@ -10962,6 +10962,62 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+
+    # 3br-end-turn-lethal-obs：1407-F33-T5 的 payload 没有提供可信的
+    # end_turn_will_kill_player（原始值为 null），但 hp=3、block=0、incoming=14
+    # 已足以证明结束回合会致死。观测只在白绮「已看过本回合可出牌」后的收口
+    # 追加本地 gap 与 native 三态；关闭时 action/params 必须严格不变。
+    def lethal_end_turn_probe(enabled=True):
+        lethal_ctx = type("LETHAL_END_TURN_CTX", (), {
+            "combat": {"comp_id": "LETHAL_END_TURN_BOSS", "node_type": "Boss"},
+            "current_combat_is_hard": False, "credit_tags": []})()
+        lethal_state = {
+            "screen": "COMBAT",
+            "available_actions": ["end_turn"],
+            "turn": 5,
+            "combat": {
+                "player": {"current_hp": 3, "max_hp": 85,
+                            "block": 0, "energy": 0},
+                "hand": [{"index": 0, "card_id": "CAP_LOCKED",
+                           "name": "锁定牌", "card_type": "Skill",
+                           "playable": False, "energy_cost": 1,
+                           "unplayable_reason": "not_enough_energy",
+                           "unplayable_reason_raw": "EnergyCostTooHigh"}],
+                "enemies": [{"index": 0, "enemy_id": "LETHAL_END_TURN_BOSS",
+                              "name": "致死测试 Boss", "current_hp": 100,
+                              "max_hp": 100, "block": 0, "is_alive": True,
+                              "is_hittable": True,
+                              "intents": [{"total_damage": 14}]}],
+            },
+            "run": {"current_hp": 3, "max_hp": 85, "gold": 0,
+                    "floor": 33, "deck": []},
+        }
+        lethal_pol = policy.Policy(
+            _vivhite_know("sts2-selfcheck-vh-end-turn-lethal-"),
+            random.Random(11))
+        lethal_pol.know.policy["vivhite_end_turn_lethal_obs"] = int(enabled)
+        # Seed the exact post-play, no-play-card close so this fixture reaches
+        # the production end_turn commit path on its first decision.
+        lethal_pol._turn_combat = lethal_ctx.combat
+        lethal_pol._cur_turn = 5
+        lethal_pol._saw_playable_this_turn = True
+        lethal_pol._end_stall = 1
+        return lethal_pol.decide(lethal_state, lethal_ctx)
+
+    assert knowledge.DEFAULT_POLICY["vivhite_end_turn_lethal_obs"] == 1
+    d_end_turn_lethal = lethal_end_turn_probe()
+    d_end_turn_lethal_off = lethal_end_turn_probe(False)
+    assert (d_end_turn_lethal.action == "end_turn"
+            and d_end_turn_lethal.params == {}
+            and "hp=3/block=0/incoming=14/gap=14/energy=0/native=unknown"
+            in d_end_turn_lethal.reason
+            and "VIVHITE_END_TURN_LETHAL_OBS" in d_end_turn_lethal.reason), \
+        f"结束回合致死观测缺失或数值错误: {d_end_turn_lethal.reason}"
+    assert (d_end_turn_lethal_off.action == d_end_turn_lethal.action
+            and d_end_turn_lethal_off.params == d_end_turn_lethal.params
+            and "VIVHITE_END_TURN_LETHAL_OBS"
+            not in d_end_turn_lethal_off.reason), \
+        f"结束回合致死观测开关未严格回滚: {d_end_turn_lethal_off.reason}"
     # 3br-longfight-effective-dpt：非 Boss 大血池长战也必须对账实际敌血净降
     # 与投影 dpt。1577-F21 OVICOPTER 只有长战投影/迟滞标签，没有实际火力比值；
     # 观测只读两个回合首快照，不改变动作/评分/判决，开关关闭严格回滚。
