@@ -7569,6 +7569,57 @@ def main() -> int:
     sl_pol._focus_drift_flips = 0
     sl_pol._focus_drift_multi_scaler_obs_emitted = False
 
+    # 3fdml) FOCUS_DRIFT_MULTI_SCALER_LOCK 多强化体火线保持（第 1409~1415 批）：
+    #       白绮在已经发生一次非击杀实际换线后，当前火线与另一名力量体仍存活时，
+    #       保持当前火线；击杀候选仍可越过锁，非白绮与键=False 严格回滚旧路径。
+    vsl_pol = policy.Policy(_vivhite_know("sts2-selfcheck-vh-focus-"), random.Random(5))
+    assert vsl_pol.know.policy.get("focus_drift_multi_scaler_lock") is True, \
+        "白绮多强化体火线锁默认键缺失或未开启"
+    vsl_pol._focus_index = 1
+    vsl_pol._focus_played_index = 1
+    vsl_pol._focus_drift_flips = 1
+    vsl_pol._focus_drift_multi_scaler_obs_emitted = False
+    d_vsl_lock = vsl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+    assert d_vsl_lock.action == "play_card" \
+            and d_vsl_lock.params.get("target_index") == 1 \
+            and vsl_pol._focus_drift_flips == 1 \
+            and "FOCUS_DRIFT_MULTI_SCALER_LOCK" in d_vsl_lock.reason \
+            and "FOCUS_DRIFT_MULTI_SCALER_OBS" not in d_vsl_lock.reason, \
+        f"白绮多强化体火线未保持: {d_vsl_lock.params}（{d_vsl_lock.reason}）"
+    vsl_pol._focus_index = 1
+    vsl_pol._focus_played_index = 1
+    vsl_pol._focus_drift_flips = 1
+    vsl_pol._focus_drift_multi_scaler_obs_emitted = False
+    vsl_pol.know.policy["focus_drift_multi_scaler_lock"] = False
+    try:
+        d_vsl_rb = vsl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+        assert d_vsl_rb.action == "play_card" \
+                and d_vsl_rb.params.get("target_index") == 0 \
+                and vsl_pol._focus_drift_flips == 2 \
+                and "FOCUS_DRIFT_MULTI_SCALER_OBS" in d_vsl_rb.reason \
+                and "FOCUS_DRIFT_MULTI_SCALER_LOCK" not in d_vsl_rb.reason, \
+            f"focus_drift_multi_scaler_lock=False 未严格回滚: {d_vsl_rb.params}（{d_vsl_rb.reason}）"
+    finally:
+        vsl_pol.know.policy["focus_drift_multi_scaler_lock"] = True
+    vsl_pol._focus_index = 1
+    vsl_pol._focus_played_index = 1
+    vsl_pol._focus_drift_flips = 1
+    vsl_pol._focus_drift_multi_scaler_obs_emitted = False
+    d_vsl_kill = vsl_pol.decide(fdl_state([dict(fdf_atk_hi)], [
+        sl_str_enemy(12, hp=1, layers=None, index=0, intent=5, name="甲"),
+        sl_str_enemy(1, hp=80, layers=None, index=1, intent=5, name="乙"),
+    ]), ctx)
+    assert d_vsl_kill.action == "play_card" \
+            and d_vsl_kill.params.get("target_index") == 0 \
+            and vsl_pol._focus_drift_flips == 1 \
+            and "可击杀甲" in d_vsl_kill.reason \
+            and "FOCUS_DRIFT_MULTI_SCALER_LOCK" not in d_vsl_kill.reason, \
+        f"击杀候选未越过多强化体火线锁: {d_vsl_kill.params}（{d_vsl_kill.reason}）"
+    vsl_pol._focus_index = None
+    vsl_pol._focus_played_index = None
+    vsl_pol._focus_drift_flips = 0
+    vsl_pol._focus_drift_multi_scaler_obs_emitted = False
+
     # 3tr) THORNS_REFLECT_PRICING 荆棘反伤计价与自杀式斩杀闸（第784~789局批
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
     # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——

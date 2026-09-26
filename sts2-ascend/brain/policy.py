@@ -7429,6 +7429,44 @@ class Policy:
             _drift_damp_eff = (_drift_damp
                                + _drift_lock_step * self._focus_drift_flips
                                if _drift_damp > 0.0 else 0.0)
+            # 多强化体火线保持（FOCUS_DRIFT_MULTI_SCALER_LOCK，第 1409~1415
+            # 批复盘）：1415-F33 先碾碎爪→火箭，随后两名仍带力量的敌人存活时又
+            # 火箭→碾碎爪；已有阻尼/翻线账只记录，不能阻止同一模式复发。只在白绮、
+            # 已有至少一次实际非击杀换线、实际火线仍存活且带力量、场上至少两名
+            # 存活力量体时压低其他力量体候选；击杀候选、无效火线、单敌和非白绮
+            # 严格保留旧路径。键=False 是逐行为回滚。
+            _multi_scaler_lock_target = None
+            _multi_scaler_lock_blocked = False
+            if (self.character_strategy is not None
+                    and self.character_strategy.profile_id == VIVHITE_PROFILE_ID
+                    and bool(pol.get("focus_drift_multi_scaler_lock", True))
+                    and self._focus_drift_flips > 0
+                    and len(enemies) > 1):
+                _focus_target = self._focus_played_index
+                if _focus_target is None:
+                    _focus_target = _sticky_t
+                _focus_enemy = next(
+                    (e for e in _pool
+                     if e.get("index") == _focus_target
+                     and e.get("is_alive") is not False
+                     and not _is_invuln_target(e)),
+                    None)
+                _live_scalers = [
+                    e for e in enemies
+                    if e.get("is_alive") is not False
+                    and not (self._is_respawn_add(e) and not all_respawn)
+                    and self._enemy_strength_stack(e) > 0
+                ]
+                if (_focus_enemy is not None
+                        and not (self._is_respawn_add(_focus_enemy)
+                                 and not all_respawn)
+                        and self._enemy_strength_stack(_focus_enemy) > 0
+                        and len(_live_scalers) >= 2
+                        and (_sg_min <= 0
+                             or self._enemy_asleep_stack(_focus_enemy) < _sg_min
+                             or float(total) <= max(
+                                 0.0, float(_focus_enemy.get("block") or 0)))):
+                    _multi_scaler_lock_target = _focus_target
             _doctrine_present = False
             _sleep_veto = None
             _invuln_veto = None
@@ -7572,6 +7610,13 @@ class Policy:
                     and not killed)
                 if _payback_blocked:
                     s = floor_score
+                if (_multi_scaler_lock_target is not None
+                        and e.get("index") != _multi_scaler_lock_target
+                        and not killed and not resp
+                        and e.get("is_alive") is not False
+                        and self._enemy_strength_stack(e) > 0):
+                    s = floor_score - 1.0
+                    _multi_scaler_lock_blocked = True
                 # 去分对照分：减员分剔除；粘性曾被该候选的减员分休眠时复活
                 # （_doctrine_present 全局休眠口径与减员分无关，两边一致）。
                 if _payback_blocked:
@@ -7701,6 +7746,19 @@ class Policy:
                         why += (f"｜蒸汽喷发×{self._enemy_steam_eruption_stack(e):g}"
                                 "在账：死亡将被拦截转自爆相，击杀口径撤销"
                                 "（STEAM_ERUPTION_KILL_VETO_OBS）")
+            if (_multi_scaler_lock_blocked
+                    and best_t == _multi_scaler_lock_target
+                    and not best_kill):
+                _locked_enemy = next(
+                    (e for e in enemies
+                     if e.get("index") == _multi_scaler_lock_target),
+                    None)
+                _locked_name = ((_locked_enemy or {}).get("name")
+                                or (_locked_enemy or {}).get("enemy_id")
+                                or "当前火线")
+                why += (f"｜多强化体火线锁：保持{_locked_name}，"
+                        f"已发生{self._focus_drift_flips}次非击杀换线"
+                        "（FOCUS_DRIFT_MULTI_SCALER_LOCK）")
             # 减员成本翻案对账收口（REMOVAL_COST_FLIP_AUDIT）：Winner 定论后
             # 对账一次——去分口径的胜者与本口径胜者不同则记翻案（杠杆独立
             # 改写了火线），相同则记随附（加分只放大既有选择）。

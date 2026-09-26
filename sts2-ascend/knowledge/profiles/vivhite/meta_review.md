@@ -4687,3 +4687,35 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1409~1415批：多强化体火线二次换线行为闸
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮在 CRUSHER+ROCKET 中已经发生一次非击杀实际换线后，若继续在两名带力量敌人之间换线，会给 Boss 额外输出窗口。若仅在当前火线仍存活且带力量、场上至少两名存活力量体时保持当前火线，后续二次非击杀换线与敌方净伤应下降；击杀候选仍可越过。若锁标记出现却不能减少复发换线/敌方净伤，或误拦击杀，假设被证伪。
+- **EVIDENCE**：exact batch 覆盖 1409~1415 局，失败队列无缺口。完整运行文件 `sts2-ascend/knowledge/profiles/vivhite/runs/20260926-212428_10853QKZP4NR.json` 的 1415-F33 有 511 条决策：493 由碾碎爪转火箭，507 在碾碎爪与火箭均有力量层且仍存活时又转回碾碎爪；既有 `FOCUS_DRIFT_DAMP/LOCK/MULTI_SCALER_OBS` 只留痕或渐进加分，未阻止复发，最终敌方伤害 85、白绮自付 28、F33 阵亡。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮双强化体战斗中，满足条件的保留动作应带 `FOCUS_DRIFT_MULTI_SCALER_LOCK`，同场不再因该路径产生第二次 `FOCUS_DRIFT_MULTI_SCALER_OBS`；应用回执、敌方净伤、自付、战斗楼层与胜负可按同一 run/floor 对账。锁后动作参数漂移、击杀被拦、单敌/无效目标误触发，或二次换线与伤亡不下降，均证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `focus_drift_multi_scaler_lock`。
+- `sts2-ascend/brain/policy.py`：仅对白绮在已有实际非击杀换线、当前火线有效且带力量、场上至少两名存活力量体时，将其他力量体的非击杀候选压到禁玩线；击杀、无效火线、单敌、非白绮路径不变，并在保留火线的 why 追加 `FOCUS_DRIFT_MULTI_SCALER_LOCK`。
+- `sts2-ascend/brain/selfcheck.py`：覆盖白绮锁定、`False` 严格回滚、非白绮旧行为与击杀越锁例外。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；报告追加前代码 diff 仅包含上述三个 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局核对锁标记、应用回执、二次非击杀换线、敌方净伤/白绮自付、楼层与胜负，至少取得 3 个独立双强化体样本后再决定是否扩大范围；不把标记本身当作因果证据。
+- 若出现非法目标、击杀受阻、单敌误触发、动作参数漂移或生存指标无改善，将 `focus_drift_multi_scaler_lock` 设为 `False` 并按本地 commit 回滚；保留既有漂移观测与翻线账。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

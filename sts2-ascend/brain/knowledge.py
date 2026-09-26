@@ -1435,6 +1435,10 @@ DEFAULT_POLICY = {
                                   # 终局对账。开启时每场首次命中在实际出牌 why 追加一次力量体及层数；
                                   # 不参与评分、目标或放行，False=注记消失且动作/评分逐字回滚。
 
+    "focus_drift_multi_scaler_lock": True,  # 多强化体火线保持（第 1409~1415 批复盘，FOCUS_DRIFT_MULTI_SCALER_LOCK）：
+                                          # 1415-F33 CRUSHER+ROCKET 已先碾碎爪→火箭，随后在两名力量体仍存活时
+                                          # 又火箭→碾碎爪；白绮仅在已有一次非击杀实际换线、当前火线仍带力量且场上
+                                          # 至少两名存活力量体时压住其他力量体候选。击杀/无效目标/单敌路径不改；False 回滚。
     "hp_pool_native_clamp_factor": 1.5,  # 血池观测写入侧原生上限钳制（第 187~196 局批复盘，HP_POOL_NATIVE_CLAMP）：
                                           # 在线 hp_pool 台账实证虚高 4~20 倍（KNOWLEDGE_DEMON 2254 vs 原生 379），
                                           # 竞速预演 ttk 同倍率高估、前夜系统性误判必败弃疗；超限样本封顶到
