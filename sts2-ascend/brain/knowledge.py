@@ -498,10 +498,6 @@ DEFAULT_POLICY = {
                                                  # 追加到同一条 DPT marker，区分原生阶段/不可命中造成的
                                                  # 零净降与投影高估；同时追加区间起始状态（BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS），
                                                  # 使跨回合净降与瞬态能力按同一窗口对齐；纯观测不改评分、判决或动作；False=严格回滚
-    "boss_race_end_turn_lethal_obs": True,  # Boss 竞速终端收口观测（BOSS_RACE_END_TURN_LETHAL_OBS）：
-                                             # 在已入竞速锁且结束回合会致死的无出牌收口，披露
-                                             # HP/格挡/意图/能量与可负担牌数量，区分资源耗尽、接口
-                                             # 锁定和普通无牌空过；纯观测不改动作；False=严格回滚
     "longfight_race_effective_dpt_obs": True,  # 非 Boss 大血池长战回合首对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                                                # F21 OVICOPTER 暴露长战投影有 TTK、无实测敌血净降；
                                                # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，

@@ -3635,59 +3635,10 @@ class Policy:
                 _ff_tax_total, _ff_tax_detail = hand_end_turn_tax(hand)
                 _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
                                 f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
-                # Boss 竞速终端收口观测（BOSS_RACE_END_TURN_LETHAL_OBS）：1589-F17
-                # D164 在 HP17、敌意图24、竞速已入锁且手牌/能量均无法再出牌时，
-                # 旧文案与普通「无牌可出」相同，无法按局统计最后一个致死行动窗口。
-                # 这里只披露已经存在的状态，不改变 end_turn、评分、候选或参数；
-                # 观测键置 0 严格回滚旧理由。
-                _boss_race_lethal_note = ""
-                try:
-                    _boss_race_lethal_obs = bool(int(float(pol.get(
-                        "boss_race_end_turn_lethal_obs", 1) or 0)))
-                except (TypeError, ValueError):
-                    _boss_race_lethal_obs = False
-                _boss_ctx = getattr(ctx, "combat", None) or {}
-                _end_turn_lethal = bool(
-                    combat.get("end_turn_will_kill_player"))
-                try:
-                    _end_turn_lethal = _end_turn_lethal or float(incoming) >= (
-                        float(my_hp) + float(my_block))
-                except (TypeError, ValueError):
-                    pass
-                if (_boss_race_lethal_obs
-                        and isinstance(_boss_ctx, dict)
-                        and _boss_ctx.get("node_type") == "Boss"
-                        and bool(getattr(self, "_krace_latch", False))
-                        and _end_turn_lethal):
-                    _boss_race_affordable = 0
-                    for _boss_card in hand:
-                        if (not _boss_card.get("playable")
-                                or self._card_unavailable(_boss_card)):
-                            continue
-                        try:
-                            _boss_cost = (
-                                energy if _boss_card.get("costs_x")
-                                else (_boss_card.get("energy_cost") or 0))
-                            if float(_boss_cost) <= float(energy):
-                                _boss_race_affordable += 1
-                        except (TypeError, ValueError):
-                            continue
-                    _boss_latch_round = getattr(
-                        self, "_krace_latch_round", None)
-                    _boss_latch_text = (
-                        str(_boss_latch_round)
-                        if _boss_latch_round is not None else "?")
-                    _boss_race_lethal_note = (
-                        f"｜Boss竞速致死收口：hp={my_hp}/block={my_block}"
-                        f"/incoming={incoming}/energy={energy}"
-                        f"/cards={len(hand)}/affordable={_boss_race_affordable}"
-                        f"/round={round_no}/latch_round={_boss_latch_text}"
-                        "（BOSS_RACE_END_TURN_LETHAL_OBS）")
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}"
-                    f"{_ff_tax_note}{_boss_race_lethal_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)

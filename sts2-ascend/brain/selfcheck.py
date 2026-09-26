@@ -15250,65 +15250,6 @@ def main() -> int:
         and "结算超时收口观测" not in d_conc_off.reason, \
         f"观测键关闭后标记仍出现: {d_conc_off and d_conc_off.reason}"
 
-    # 3z-4) Boss 竞速终端致死收口观测（BOSS_RACE_END_TURN_LETHAL_OBS）：
-    #       1589-F17-D164 的 HP17/意图24/竞速已入锁终端帧，旧的通用
-    #       「确认无牌可出」无法按局区分最后一个致死窗口；只追加状态留痕，
-    #       action/params 与能量收口语义不变，开关关闭严格回滚。
-    boss_end_know = knowledge.Knowledge(tmp)
-    boss_end_pol = policy.Policy(boss_end_know)
-    boss_end_ctx = _SettleCtx()
-    boss_end_ctx.combat = {"node_type": "Boss"}
-
-    def _boss_end_state():
-        s = _settle_state(False)
-        s["combat"]["player"].update({"current_hp": 17, "energy": 0})
-        s["combat"]["enemies"][0]["intents"] = [{"total_damage": 24}]
-        s["combat"]["end_turn_will_kill_player"] = True
-        s["run"]["current_hp"] = 17
-        return s
-
-    boss_end_warm = _settle_state(True)
-    boss_end_warm["combat"]["player"].update({"current_hp": 17, "energy": 3})
-    boss_end_warm["run"]["current_hp"] = 17
-    assert boss_end_pol.decide(boss_end_warm, boss_end_ctx) is not None, \
-        "Boss 竞速终端收口夹具热身帧无决策"
-    boss_end_pol._krace_latch = True
-    boss_end_pol._krace_latch_round = 2
-    d_boss_end = None
-    for _ in range(6):
-        d_be = boss_end_pol.decide(_boss_end_state(), boss_end_ctx)
-        if d_be.action == "end_turn":
-            d_boss_end = d_be
-            break
-    assert d_boss_end is not None \
-        and "BOSS_RACE_END_TURN_LETHAL_OBS" in d_boss_end.reason \
-        and "hp=17" in d_boss_end.reason \
-        and "incoming=24" in d_boss_end.reason \
-        and "energy=0" in d_boss_end.reason \
-        and "affordable=0" in d_boss_end.reason, \
-        f"Boss 竞速致死收口观测缺失: {d_boss_end and d_boss_end.reason}"
-
-    boss_end_off_know = knowledge.Knowledge(tmp)
-    boss_end_off_know.policy["boss_race_end_turn_lethal_obs"] = 0
-    boss_end_off_pol = policy.Policy(boss_end_off_know)
-    boss_end_off_ctx = _SettleCtx()
-    boss_end_off_ctx.combat = {"node_type": "Boss"}
-    assert boss_end_off_pol.decide(boss_end_warm, boss_end_off_ctx) is not None, \
-        "Boss 竞速终端收口关闭夹具热身帧无决策"
-    boss_end_off_pol._krace_latch = True
-    boss_end_off_pol._krace_latch_round = 2
-    d_boss_end_off = None
-    for _ in range(6):
-        d_be_off = boss_end_off_pol.decide(_boss_end_state(), boss_end_off_ctx)
-        if d_be_off.action == "end_turn":
-            d_boss_end_off = d_be_off
-            break
-    assert d_boss_end_off is not None \
-        and d_boss_end_off.action == d_boss_end.action \
-        and d_boss_end_off.params == d_boss_end.params \
-        and "BOSS_RACE_END_TURN_LETHAL_OBS" not in d_boss_end_off.reason, \
-        f"Boss 竞速终端观测关闭未严格回滚: {d_boss_end_off and d_boss_end_off.reason}"
-
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
