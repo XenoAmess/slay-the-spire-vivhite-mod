@@ -3555,6 +3555,22 @@ class Policy:
                             self._race_loss_rate
                             if self._race_rounds and self._race_loss_rate >= 1.0
                             else max(1.0, self._incoming_ema))
+                    if (_boss_sustain_net_hp
+                            and bool(pol.get(
+                                "vivhite_hp_pay_phase_audit_obs", True))):
+                        _hp_pay_audit_start_hp = (
+                            float(self._race_prev_hp)
+                            if self._race_prev_hp is not None
+                            else float(my_hp))
+                        danger_note += (
+                            f";hp-pay-audit round={round_no},"
+                            f"boundaries={self._race_rounds},"
+                            f"own_total={self._race_same_round_loss_own:.1f},"
+                            f"enemy_total={self._race_same_round_loss_enemy:.1f},"
+                            f"heal_total={self._race_same_round_heal:.1f},"
+                            f"hp_start={_hp_pay_audit_start_hp:.1f},"
+                            f"hp_now={float(my_hp):.1f};"
+                            "VIVHITE_HP_PAY_PHASE_AUDIT")
                     if esc_gate and not _boss_sustain_net_hp:
                         # 滚雪球修正：EMA 按权重滞后于下一轮真实火力（93 局 T5 EMA≈16
                         # 而当轮意图已 25），持续升级时存活分母至少取当前意图

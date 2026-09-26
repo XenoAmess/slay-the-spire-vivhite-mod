@@ -10675,7 +10675,8 @@ def main() -> int:
                           effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
                           boss_focus_switch_obs=True, focus_switches=0,
-                          longfight_effective_dpt_obs=True):
+                          longfight_effective_dpt_obs=True,
+                          hp_pay_audit_fixture=False, hp_pay_audit_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -10727,6 +10728,12 @@ def main() -> int:
         cap_pol._race_rounds = 2
         cap_pol._race_loss_rate = 20.0
         cap_pol._incoming_ema = 20.0
+        if vivhite and hp_pay_audit_fixture:
+            cap_pol._race_same_round_heal = 12.0
+            cap_pol._race_same_round_loss = 28.0
+            cap_pol._race_same_round_loss_own = 8.0
+            cap_pol._race_same_round_loss_enemy = 20.0
+            cap_pol._race_zero_intent_rounds = 2
         cap_pol._esc_rounds = esc_rounds
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
         cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
@@ -10745,6 +10752,8 @@ def main() -> int:
             "boss_race_focus_switch_obs"] = boss_focus_switch_obs
         cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
+        cap_pol.know.policy["vivhite_hp_pay_phase_audit_obs"] = (
+            hp_pay_audit_obs)
         cap_pol.know.policy["intangible_ttk_obs"] = intangible_obs
         cap_pol._race_joint_feasible = lambda *args, **kwargs: (
             True, "固定可行点")
@@ -10825,6 +10834,28 @@ def main() -> int:
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
+    # 3br-vivhite-hp-pay-phase-audit：Boss 续航观测同时披露可行动段、非行动段
+    # 的累计扣血与 HP 起止快照；只读观测，开关关闭时严格删除自身尾缀。
+    assert knowledge.DEFAULT_POLICY["vivhite_hp_pay_phase_audit_obs"] is True
+    d_combat_hp_pay = combat_flip_probe(
+        1.5, vivhite=True, hp_pay_audit_fixture=True)
+    d_combat_hp_pay_off = combat_flip_probe(
+        1.5, vivhite=True, hp_pay_audit_fixture=True,
+        hp_pay_audit_obs=False)
+    assert ("BOSS_SUSTAIN_NET_HP" in d_combat_hp_pay.reason
+            and "VIVHITE_HP_PAY_PHASE_AUDIT" in d_combat_hp_pay.reason
+            and "own_total=8.0" in d_combat_hp_pay.reason
+            and "enemy_total=20.0" in d_combat_hp_pay.reason
+            and "heal_total=12.0" in d_combat_hp_pay.reason
+            and "hp_start=46.0" in d_combat_hp_pay.reason
+            and "hp_now=46.0" in d_combat_hp_pay.reason), \
+        f"白绮 Boss 续航 HP 分相对账观测缺失: {d_combat_hp_pay.reason}"
+    assert (d_combat_hp_pay_off.action == d_combat_hp_pay.action
+            and d_combat_hp_pay_off.params == d_combat_hp_pay.params
+            and "BOSS_SUSTAIN_NET_HP" in d_combat_hp_pay_off.reason
+            and "VIVHITE_HP_PAY_PHASE_AUDIT" not
+            in d_combat_hp_pay_off.reason), \
+        f"白绮 Boss 续航 HP 分相观测开关未严格回滚: {d_combat_hp_pay_off.reason}"
     assert (d_combat_boss_effective_off.action
             == d_combat_boss_effective.action
             and d_combat_boss_effective_off.params

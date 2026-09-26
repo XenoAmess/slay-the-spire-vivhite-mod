@@ -384,6 +384,7 @@ DEFAULT_POLICY = {
     "potion_exploration_max_price": 60,
     "potion_exploration_gold_reserve": 60,
     "potion_exploration_min_hp_pct": 0.55,
+    "vivhite_hp_pay_phase_audit_obs": True,
     "potion_self_harm_gate": True,  # 自伤型攻击药水计价门（第 315~319 局批复盘新增）：
                                     # 描述含「所有玩家」/"all players" 的药水（v0.111.0
                                     # 原生词表仅 FOUL_POTION 污浊药水命中）对自己同额扣血，

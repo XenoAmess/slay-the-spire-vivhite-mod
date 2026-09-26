@@ -4428,3 +4428,51 @@ retry_resolution: 20260920-081634-1789863394721693300-aaedd43b integrated
 ## REPLAY
 
 retry_resolution: 20260926-134617-1790401577834267000-fa110292 integrated
+
+# 第 1349~1390 批：Boss 生命支付分相对账
+
+日期：2026-09-26
+production_code_commit: `fc89d936`
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮 Boss 竞速进入 `BOSS_SUSTAIN_NET_HP` 时，现有单一
+  `_race_same_round_loss` 只报告累计扣血，无法直接区分可行动段的生命支付、
+  非行动段的敌方伤害、同回合回血以及当前回合 HP 是否真的推进。新增分相快照
+  后，若这些字段能与原始状态逐次对上，假设成立；若仍无法对账或出现错误归类，
+  假设被证伪，不能据此继续扩大策略改动。
+- **EVIDENCE**：本批 exact batch 覆盖 1349~1390 局，无缺失 replay 包。完整原始链
+  `sts2-ascend/knowledge/profiles/vivhite/runs/20260926-143100_Y46619EA4NHA.json`
+  的第 1390 局在 F48 Boss 以 `129` 点受伤、`42` 点自身损失，T8 预测却拖到
+  实战 T15 阵亡；决策 838、843、847 同时出现 `BOSS_SUSTAIN_NET_HP`、
+  `RACE_SAME_ROUND_HP_LOSS_OBS`，部分决策还出现
+  `BOSS_RACE_EFFECTIVE_DPT_OBS`，但原理由未给出可行动/非行动分相与 HP 起止快照。
+- **EXPECTED_SIGNAL**：未来 3~10 个确认的 Boss 续航样本中，只要已有
+  `BOSS_SUSTAIN_NET_HP`，就应追加 `VIVHITE_HP_PAY_PHASE_AUDIT`，包含
+  `own_total`、`enemy_total`、`heal_total`、`hp_start`、`hp_now` 与回合边界数；
+  开关前后 action/params 必须完全一致。缺少标记、数值与原始状态不符或动作漂移，
+  都是可证伪失败信号。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启的
+  `vivhite_hp_pay_phase_audit_obs`。
+- `sts2-ascend/brain/policy.py` 仅在既有 `BOSS_SUSTAIN_NET_HP` 分支追加
+  `VIVHITE_HP_PAY_PHASE_AUDIT` 分相与 HP 起止快照；不改评分、候选、翻盘门或动作。
+- `sts2-ascend/brain/selfcheck.py` 新增白绮 Boss 夹具，验证观测内容及关闭开关后
+  action/params 保持不变。
+- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`
+  或本批原始证据。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 目标代码 `git diff --check`：通过；代码提交：`fc89d936`。
+- 本批 `failed_review_replay.requested_packages=[]`，无 replay 重放；
+  `retry_resolution: none (no failed_review_replay packages requested)`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只在后续真实 Boss 续航样本中核对分相字段；在信号不足前不把观测升级为策略调整。
+- 若出现标记缺失、分相误归类或 action/params 漂移，将
+  `vivhite_hp_pay_phase_audit_obs` 设为 `False`，并回滚 `fc89d936` 的观测提交。
