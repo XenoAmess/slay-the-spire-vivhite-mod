@@ -9881,6 +9881,20 @@ def _save_review_salvage(
         return None
 
 
+def _export_review_patch(sandbox_repo: Path, pre_head: str, accepted, *, env):
+    """Keep insertion anchors when applying a checked clone to a newer HEAD.
+
+    Zero-context insertions retain only old line numbers. Concurrent changes
+    earlier in the same file can therefore move a checked insertion into a
+    different block without making ``git apply`` fail (2026-09-26 incident).
+    Context lets Git relocate disjoint changes or report a real conflict.
+    """
+    return _sandbox_git(
+        sandbox_repo,
+        ["diff", "--cached", "--binary", "--unified=3", pre_head, "--", *accepted],
+        binary=True, env=env)
+
+
 def _run_review_sandbox(
     cmd: list[str], prompt: str, pre_head: str, timeout_seconds: int,
     translator, *, runner: str = "opencode", stall_warn_seconds: float = 0,
@@ -10091,10 +10105,8 @@ def _run_review_sandbox(
         stage = _sandbox_git(
             sandbox_repo, ["add", "--all", "--force", "--", *accepted],
             env=validation_env)
-        patch = _sandbox_git(
-            sandbox_repo,
-            ["diff", "--cached", "--binary", "--unified=0", pre_head, "--", *accepted],
-            binary=True, env=validation_env)
+        patch = _export_review_patch(
+            sandbox_repo, pre_head, accepted, env=validation_env)
         if (read_patch_base.returncode != 0 or stage.returncode != 0
                 or patch.returncode != 0 or not patch.stdout):
             result = SandboxReviewResult(
