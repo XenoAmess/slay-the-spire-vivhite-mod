@@ -16012,3 +16012,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.1147886994868825局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.9298655883494376局)，IMPATIENCE(22分/4.226246413898241局)
 - 策略进化：精英战阵亡但满血线进场（98%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿13张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.38（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.01 → 2.00（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F31——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F31——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F31——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1452 胜，当前目标进阶 3
+
+## 第 1453 局复盘（2026-09-27 06:14）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, EQUILIBRIUM, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：CANDELABRA, LASTING_CANDY, SHOVEL
+- 战斗记录：F6 Monster战 掉血2｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损14（可行动段14/非行动段7，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血18｜自损18（可行动段18/非行动段12，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血2｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血6｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血68｜自损29（可行动段29/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战15回合阵亡（阵亡）
+- 当前高价值卡牌：REND(37分/4.704808092632231局)，FISTICUFFS(35分/7.043057605773007局)，AUTOMATION(35分/5.113534141348825局)，ROLLING_BOULDER(34分/7.148401244658697局)，THRUMMING_HATCHET(34分/13.27524749524266局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.100386939038678局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.9196110587902147局)，IMPATIENCE(22分/4.211454551449597局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（87%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：3/1453 胜，当前目标进阶 3
