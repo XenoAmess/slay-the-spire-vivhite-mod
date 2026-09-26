@@ -6384,6 +6384,46 @@ class Policy:
                                      and row[6] == "LETHAL_CAP_GATE" else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
+                # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
+                # 1398-F33-T3 的综合色序属于「可执行、正分、需付血」的功能牌，
+                # 但最终与攻击牌一样只留下泛化门拦账。把 Skill/Power/Ability
+                # 的候选分、实付血和当前资源单独切片，验证“能量空漏来自功能牌
+                # 生命支付门”是否在后续 Boss 战重复出现；只追加理由，不改决策。
+                _function_gate_rows = []
+                if (getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID
+                        and bool(pol.get("vivhite_hp_function_gate_obs", True))
+                        and (kill_race or race_allin)
+                        and energy > 0
+                        and incoming > 0):
+                    for _blocked_row in _hp_gate_blocked:
+                        _blocked_card = next(
+                            (h for h in hand
+                             if h.get("index") == _blocked_row[0]), None)
+                        if _blocked_card is None:
+                            continue
+                        _blocked_cid = str(
+                            _blocked_card.get("card_id") or "").upper().rstrip("+")
+                        _blocked_entry = self.character_strategy.card(_blocked_cid)
+                        _blocked_observed_type = str(
+                            _blocked_card.get("card_type") or "").casefold()
+                        _blocked_type = (
+                            _blocked_entry.card_type
+                            if _blocked_entry is not None
+                            else _blocked_observed_type)
+                        if _blocked_type not in ("skill", "power", "ability"):
+                            continue
+                        _function_gate_rows.append(
+                            f"{_blocked_card.get('name') or _blocked_row[1]}"
+                            f":type={_blocked_type},score={float(_blocked_row[4]):.2f}"
+                            f",pay={float(_blocked_row[2]):g}")
+                if _function_gate_rows:
+                    _gate_note += (
+                        "；斩杀竞速生命支付功能牌被门拦："
+                        + ",".join(_function_gate_rows)
+                        + f"；hp={float(my_hp):g}/energy={float(energy):g}"
+                        f"/incoming={float(incoming):g}"
+                        "（VIVHITE_HP_FUNCTION_GATE_OBS）")
                 if _hp_relief_hard_suppressed and incoming <= 0:
                     # 普通战意图0回合被压回门带的直接证据（第 512~529 局批）：
                     # 供复盘核对硬仗限定接线与普通战自损回落（纯注记）

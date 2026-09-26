@@ -4561,3 +4561,35 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: 20260926-163051-1790411451932212500-e0c3d3bc integrated
+
+# 第1396~1398批：斩杀竞速功能牌门拦可证伪观测
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1398 局 F33-T3 的 `end_turn` 可能不是单纯无牌可出，而是白绮有能量、敌方有意图时，正分且可执行的生命支付功能牌被 `VIVHITE_HP_PLAY_MARGIN_GATE` 拦下，造成能量空漏。若后续同型 Boss 回合反复出现该交集，假设得到支持；若标记缺失、无门拦仍标记或动作/参数漂移，则假设证伪。
+- **EVIDENCE**：本批 exact batch 覆盖1396~1398局；最新失败局 `T26F4RUPRQLJ` 的 packet 保留104条、裁剪371条，已逐条核对保留切片并按 `full_chain_available_in` 识别裁剪边界。F33-T3 生命62、能量1、敌意图28，`综合色序` 候选分4.74却被謦欬门拒；随后继续进入斩杀长战并于F33阵亡。既有 `VIVHITE_HP_PLAY_MARGIN_GATE` 只汇总门拦牌，无法稳定区分功能牌与攻击牌。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Boss 战斗样本中，统计 `VIVHITE_HP_FUNCTION_GATE_OBS` 的牌名/牌型、候选分、实付血、hp/energy/incoming，并与同 tick 的 `end_turn`、下一状态、终局和胜负对账。仅在白绮、斩杀/孤注竞速、有能量、有敌方意图且功能牌确被生命支付门拦下时出现；关闭键后注记消失而 action/params 不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_function_gate_obs`。
+- `sts2-ascend/brain/policy.py`：在既有最终 `end_turn` 门拦收口中，按策略目录识别 Skill/Power/Ability，追加 `VIVHITE_HP_FUNCTION_GATE_OBS` 及牌型、分数、实付血、hp/energy/incoming；不进入评分、候选资格、放行、目标或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 T1/T2 攻击建立竞速账、T3 综合色序被门拦的夹具，并验证关闭键后 action/params 逐项一致。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或本批原始证据；本批 `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；报告写入前目标代码 diff 仅为上述三个 brain 文件，宿主预置素材删除与 `.review-cache/` 未纳入。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续3~10局只做真实 Boss 对账，不把观测本身当作死亡因果；达到至少3个独立样本后，再比较带标记与不带标记的空过率、后续意图、终局回合和胜率。
+- 若标记缺失、误把攻击/未知牌归为功能牌、非白绮触发或 action/params 改变，将 `vivhite_hp_function_gate_obs` 设为 `0`；必要时回滚本地提交，保留既有 `VIVHITE_HP_PLAY_MARGIN_GATE`。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

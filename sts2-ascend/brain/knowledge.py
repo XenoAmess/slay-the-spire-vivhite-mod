@@ -838,6 +838,12 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
+    "vivhite_hp_function_gate_obs": 1,  # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
+                                        # 在白绮有能量、存在敌方意图且生命支付门拦下可执行的
+                                        # Skill/Power/Ability 牌时，披露牌型、候选分、实付血与
+                                        # hp/energy/incoming；只在最终 end_turn 理由中留痕，不改
+                                        # 评分、候选资格、放行或动作。0=关闭（严格回滚注记），
+                                        # 非白绮角色零改动
     "ritual_window_skip_obs": 1,        # 引擎仪式窗口空过观测（VIVHITE_RITUAL_WINDOW_SKIP_OBS，第1243~1275局
                                         # 批复盘新增，静态键）：0费、自身零血税的猩红转化仪式被无上限长线估值
                                         # 压在出牌线下——1275 局 F33 T1（77/84血、意图0）可出未出空过，全场

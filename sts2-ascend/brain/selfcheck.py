@@ -3719,6 +3719,60 @@ def main() -> int:
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
 
+    # 3tlf) 斩杀竞速功能牌生命支付门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
+    #      1398-F33-T3 的综合色序是正分、可执行但需付血的 Skill；只新增
+    #      功能牌切片，不能改变最终 end_turn 或参数，键=0 时注记同灭。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_function_gate_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_function_gate_obs 静态键或默认值被改"
+
+    def _krh_hand_function():
+        return [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_CHROMATIC_SEQUENCE",
+            "name": "综合色序", "card_type": "Skill", "playable": True,
+            "energy_cost": 1, "requires_target": False,
+            "rules_text": "抽4张牌。获得临时能量。",
+            "dynamic_values": [
+                {"name": "Cards", "current_value": 4},
+                {"name": "LifeCost", "current_value": 4}],
+        }]
+
+    vknow_hfg = _vivhite_know("sts2-selfcheck-vhp-function-gate-")
+    vknow_hfg.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_hfg.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+    vpol_hfg = policy.Policy(vknow_hfg, random.Random(11))
+    vctx_hfg = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_hfg.decide(
+            _krh_state(_turn, _hp, _krh_hand_vivhite()), vctx_hfg)
+        vctx_hfg.credit_tags.extend(_d.tags)
+    d_hfg = vpol_hfg.decide(
+        _krh_state(3, 45, _krh_hand_function()), vctx_hfg)
+    assert d_hfg.action == "end_turn" \
+        and d_hfg.params == {} \
+        and "VIVHITE_HP_FUNCTION_GATE_OBS" in d_hfg.reason \
+        and "综合色序:type=skill" in d_hfg.reason \
+        and "energy=3/incoming=22" in d_hfg.reason, \
+        f"斩杀竞速功能牌门拦观测缺失或动作漂移: {d_hfg}"
+
+    vknow_hfg0 = _vivhite_know("sts2-selfcheck-vhp-function-gate-off-")
+    vknow_hfg0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_hfg0.policy["kill_race_hopeless_hp_pay_margin"] = 50.0
+    vknow_hfg0.policy["vivhite_hp_function_gate_obs"] = 0
+    vpol_hfg0 = policy.Policy(vknow_hfg0, random.Random(11))
+    vctx_hfg0 = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = vpol_hfg0.decide(
+            _krh_state(_turn, _hp, _krh_hand_vivhite()), vctx_hfg0)
+        vctx_hfg0.credit_tags.extend(_d.tags)
+    d_hfg0 = vpol_hfg0.decide(
+        _krh_state(3, 45, _krh_hand_function()), vctx_hfg0)
+    assert d_hfg0.action == d_hfg.action \
+        and d_hfg0.params == d_hfg.params \
+        and "VIVHITE_HP_FUNCTION_GATE_OBS" not in d_hfg0.reason, \
+        f"功能牌门拦观测关闭不得改变动作/参数且应清除注记: on={d_hfg} off={d_hfg0}"
+
     # ① 白绮判死竞速下实付謦欬攻击：注记显形且带实付额
     vknow_krh = _vivhite_know("sts2-selfcheck-krhopeless-")
     vpol_krh = policy.Policy(vknow_krh, random.Random(11))
