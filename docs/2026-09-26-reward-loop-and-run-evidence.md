@@ -43,4 +43,7 @@ Git 中两份历史原件如下；“历史版本”指两次提交保存的完�
 - 统一开播入口再次确认连续动作，Quipper owner PID 23276 通过 3328 MiB / `staged_cuda` 门禁，之后独立读取直播姬为 `Streaming`、HealthWatch 为 `Running`。
 - 错位合入批次保全为 `20260926-134617-1790401577834267000-fa110292`，通过既有原子保全入口设置 `replay_enqueue_pending`，交给运行中的复盘 worker 恢复原 Luna 亲和性任务。原成功 clone 已清理，因此包中明确说明四文件和前后差异来自 Git 提交字节重建，不冒充原始完整 clone。
 
-远端推送结果在接入未发布历史后补入；本地准备完成不算推送成功。
+- 最终在 autogit 仓库锁内接入 220 个未发布提交的改写，旧 HEAD `66a8fa6d7fa33d10f83fdfc598b249b0364ffb42` 保留于 `refs/backup/pre-compressed-evidence-20260926`，新 HEAD `6b5adb7dcf0a9f2fc882dae2d30a25273d4f079b`。仅最终树增加两份 gzip 和 manifest；其他实时工作区变动原样保留。
+- 两份历史 gzip 分别 1,034,147 / 1,080,451 字节，合计 2,114,598 字节；原始 271,821,993 字节全部可以还原。待推送区间 LFS 指针为 0，超过 100 MiB 普通 blob 为 0，最大普通 blob 为 3,883,824 字节。
+- 移除本次临时安装且已无用途的本地 LFS hook（原 hook 备份在 `.tmp/`）后，普通 `git push origin master` 成功：远端由 `78b590f49` 前进到 `6b5adb7dc`；随后 `git ls-remote` 独立确认一致。未强推、未修改账单、未丢弃旧原件。
+- 最终集成代码再次完整自检：`SELFCHECK OK`，退出码 0。自动 JSON 保存过程中的 `.*.json.*.tmp` 已精确 ignore；运行中的正式对局 JSON 继续正常跟踪和自动存档。
