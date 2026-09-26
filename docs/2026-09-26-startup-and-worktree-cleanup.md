@@ -1,5 +1,7 @@
 # 2026-09-26 全栈启动与工作区整理
 
+后续更正：下文 LFS 阻塞是当时的阶段结论。进一步调查确认大记录来自奖励页循环，现已修复，并通过无损 ZIP/gzip 保留两版原始证据，移除该路径的 LFS 依赖；无需修改账户预算。完整证据及后续验收见 [奖励页循环与原始证据归档](2026-09-26-reward-loop-and-run-evidence.md)。
+
 ## 起因与分类
 
 启动时 Steam 客户端未运行，游戏报告 `k_ESteamAPIInitResult_NoSteamClient`。启动客户端后通过统一 Stop/Start 入口重试，Steam auto 模式正常进入真实对局。
