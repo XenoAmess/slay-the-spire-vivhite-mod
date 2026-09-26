@@ -4656,3 +4656,34 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1408局：僵局门误判可执行攻击牌
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F28-T100 的自动僵局门把“敌方总血量连续无下降”错误等同于“没有伤害手段”，导致仍有可执行攻击牌时连续 `end_turn`，最终把 HP 交给千足虫的意图；若在同一门限下优先强攻，决策链应出现可验证的恢复动作，且不改变异步明确 `force_giveup` 的保护语义。
+- **EVIDENCE**：第1408局精确失败链 `19HVTZAVXDD4` 含 893 条决策；F28-T100 的 `turn_end_state` 明确有 `play_card`，手牌含弦光投影、切线星光等可出攻击牌，但生产 `_combat_stall_check` 直接返回“93回合无进展”的 `end_turn`。原生 `REATTACH_POWER` 说明千足虫体节会在 2 回合后以 25 HP 复活，因此总血量不下降不能单独证明没有输出路径。
+- **EXPECTED_SIGNAL**：未来 3~10 局中，自动僵局门触发且存在合法攻击牌时记录 `STALL_ATTACK_RECOVERY` 并提交 `play_card`；`stall_giveup_with_playable_attack` 应为 0，恢复动作的应用回执、后续敌方最低血量/击杀与终局楼层应可按同一战斗对账。合法目标缺失、攻击牌不可负担或异步 `force_giveup` 时仍允许 `end_turn`。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：新增当前手牌的可负担伤害牌与合法目标检查；自动僵局门命中时设置仅限当前回合的强攻闩锁，跳过普通评分阈值，沿用已有“最低血敌人”强攻出口，并在 reason/tags 写入 `STALL_ATTACK_RECOVERY`。新战斗会清除闩锁；`force_giveup` 与无合法攻击牌路径不变。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或任务书；本批 `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 只读最小门禁回归：合法攻击牌返回恢复闩锁；`force_giveup` 返回 `end_turn`；输出 `STALL RECOVERY GATE OK`。
+- `git diff --check`：通过；本批生产改动仅为 `sts2-ascend/brain/policy.py`，报告文件为本次交付记录。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局记录每局 `STALL_ATTACK_RECOVERY` 次数、动作应用率、恢复后 3 回合内敌方血量最低值/击杀、`stall_giveup_with_playable_attack`、战斗回合数、到达层数与胜负；至少 3 个独立样本后再判断千足虫等重生型敌人的总血量口径是否还需单独改造。
+- 若恢复标记对应非法目标、连续动作失败/重复提交，或无僵局门条件仍触发，立即关闭该恢复分支或回滚本地提交；保留 `force_giveup` 保护和既有僵局审计。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

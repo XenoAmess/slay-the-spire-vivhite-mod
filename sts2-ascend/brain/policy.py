@@ -731,6 +731,7 @@ class Policy:
         self._stall_min_hp = 99999  # 本场敌人总血量的历史最低值
         self._stall_no_progress = 0  # 连续无进展回合数
         self._stall_turn_seen = None
+        self._stall_force_attack_round = None  # 自动僵局恢复本回合闩锁
         self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
         self._hp_gate_stall = 0        # 謦欬门连续低危拦截回合数（VIVHITE_HP_GATE_STALL_BREAK 账）
         self._hp_gate_stall_round = None  # 上次计入/清零的回合号（同回合多 tick 只动一次）
@@ -3140,8 +3141,34 @@ class Policy:
             changed = True
         return "斜率反转：成长型组合，解除攻击压制" if changed else ""
 
+    def _has_playable_attack(self, hand: list[dict], enemies: list[dict],
+                             energy) -> bool:
+        """Return whether the current hand has a legal, affordable damage card."""
+        enemy_indexes = {e.get("index") for e in (enemies or [])
+                         if isinstance(e, dict)}
+        for card in hand or []:
+            if not isinstance(card, dict) or not card.get("playable"):
+                continue
+            if self._card_unavailable(card):
+                continue
+            cost = energy if card.get("costs_x") else (card.get("energy_cost") or 0)
+            if cost > energy:
+                continue
+            damage, _block, _hits = card_numbers(card)
+            if damage <= 0:
+                continue
+            if card.get("requires_target"):
+                valid = card.get("valid_target_indices") or []
+                if valid and not any(index in enemy_indexes for index in valid):
+                    continue
+                if not valid and not enemy_indexes:
+                    continue
+            return True
+        return False
+
     def _combat_stall_check(self, ctx, enemy_hp_total: float, round_no: int,
-                            can_end: bool) -> Decision | None:
+                            can_end: bool, *, hand=None, enemies=None,
+                            energy=0) -> Decision | None:
         """战斗僵局检测与升级（从 _combat 提取，行为与原内联实现严格等价）。
 
         实证（第 107 局）：坚毅(True Grit)每回合消耗随机牌，360+ 回合后攻击牌
@@ -3158,6 +3185,7 @@ class Policy:
             self._stall_min_hp = enemy_hp_total
             self._stall_no_progress = 0
             self._stall_turn_seen = round_no
+            self._stall_force_attack_round = None
             self._exhaust_plays = 0
             self._hp_gate_stall = 0
             self._hp_gate_stall_round = None
@@ -3178,14 +3206,27 @@ class Policy:
             else:
                 self._stall_no_progress += 1
             self._stall_turn_seen = round_no
+        if self._stall_force_attack_round != round_no:
+            self._stall_force_attack_round = None
 
         if round_no >= 60 and not getattr(ctx, "stall_analysis_asked", False):
             ctx.stall_analysis_asked = True
             ctx.stall_analysis_needed = True   # agent 主循环拾取并启动 AI 死循环分析
 
-        giveup = (getattr(ctx, "force_giveup", False)
-                  or (round_no >= 100 and self._stall_no_progress >= 20
-                      and not getattr(ctx, "stall_grind_grace", False)))
+        force_giveup = bool(getattr(ctx, "force_giveup", False))
+        automatic_giveup = (
+            round_no >= 100
+            and self._stall_no_progress >= 20
+            and not getattr(ctx, "stall_grind_grace", False))
+        # A zero-progress counter can be caused by a linked multi-body enemy
+        # replacing a killed segment.  Do not call that "no damage method" while
+        # the live hand still contains a legal attack; enter the existing forced
+        # attack path so the next action is observable and reversible.
+        if (automatic_giveup and not force_giveup
+                and self._has_playable_attack(hand or [], enemies or [], energy)):
+            self._stall_force_attack_round = round_no
+            automatic_giveup = False
+        giveup = force_giveup or automatic_giveup
         if giveup:
             ctx.stall_giveup = True   # 复盘归因标记：摆烂死不得喂给攻防旋钮（reflect 消费）
             if can_end:
@@ -4676,10 +4717,12 @@ class Policy:
 
         # ---- 战斗僵局检测与升级（提取为 _combat_stall_check）----
         enemy_hp_total = sum(e.get("current_hp", 0) for e in enemies)
-        stall_dec = self._combat_stall_check(ctx, enemy_hp_total, round_no,
-                                             can_end)
+        stall_dec = self._combat_stall_check(
+            ctx, enemy_hp_total, round_no, can_end,
+            hand=hand, enemies=enemies, energy=energy)
         if stall_dec is not None:
             return stall_dec
+        stall_force_attack = self._stall_force_attack_round == round_no
 
         incoming = sum((it.get("total_damage") or 0) for e in enemies for it in e.get("intents", []))
         my_block = player.get("block", 0)
@@ -6021,8 +6064,9 @@ class Policy:
                     marginal_best = (immediate_score, c, target, why, mode)
 
         choice_mode = ""
-        chosen = best if best and best[0] > pol["play_threshold"] else None
-        if chosen is None and marginal_best is not None:
+        chosen = (None if stall_force_attack
+                  else best if best and best[0] > pol["play_threshold"] else None)
+        if not stall_force_attack and chosen is None and marginal_best is not None:
             immediate_score, card, target, why, choice_mode = marginal_best
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
@@ -6356,8 +6400,10 @@ class Policy:
                                    self._card_key(card)[1]),
                                   ("combat_play_commit", commit_cid, commit_trial,
                                    commit_exhaust, _est, round_no, commit_kill_id)], wait=0.6)
-        # 僵局强攻（turn≥120 或 AI 判 offense）：绕过评分阈值，任何伤害牌打最低血敌人
-        if round_no >= 120 or getattr(ctx, "force_offense", False):
+        # 僵局强攻（自动恢复、turn≥120 或 AI 判 offense）：绕过评分阈值，
+        # 任何伤害牌打最低血敌人。自动恢复只在触发僵局门的当前回合生效。
+        if (stall_force_attack or round_no >= 120
+                or getattr(ctx, "force_offense", False)):
             for c in hand:
                 if not c.get("playable") or self._card_unavailable(c):
                     continue
@@ -6371,11 +6417,20 @@ class Policy:
                 params = {"card_index": c["index"]}
                 if c.get("requires_target"):
                     params["target_index"] = tgt.get("index")
-                return Decision("play_card", params,
-                                f"战斗：僵局强攻（回合{round_no}）打出【{c.get('name')}】→{tgt.get('name')}",
-                                tags=[("play_card", c.get("card_id")),
-                                      ("play_card_index", c.get("index"),
-                                       self._card_key(c)[1])], wait=0.6)
+                recovery_note = (
+                    f"，连续{self._stall_no_progress}回合无进展，"
+                    "STALL_ATTACK_RECOVERY"
+                    if stall_force_attack else "")
+                recovery_tags = (
+                    [("stall_force_attack", round_no)]
+                    if stall_force_attack else [])
+                return Decision(
+                    "play_card", params,
+                    f"战斗：僵局强攻（回合{round_no}{recovery_note}）"
+                    f"打出【{c.get('name')}】→{tgt.get('name')}",
+                    tags=[("play_card", c.get("card_id")),
+                          ("play_card_index", c.get("index"),
+                           self._card_key(c)[1]), *recovery_tags], wait=0.6)
         cooling_affordable = [c for c in hand
                               if c.get("playable")
                               and self._card_cooldowns.get(self._card_key(c), 0) > 0
