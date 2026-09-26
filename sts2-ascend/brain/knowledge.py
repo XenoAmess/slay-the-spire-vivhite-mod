@@ -737,6 +737,10 @@ DEFAULT_POLICY = {
     "kill_race_enabled": True,
     "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
+    "low_pool_focus_switch_obs": True,  # 低池爆发观测的火线上下文（LOW_POOL_FOCUS_SWITCH_OBS）：
+                                         # 当同一战斗此前已有非击杀换线时，在低池 marker
+                                         # 中追加换线次数与当前火线，区分纯爆发和换线后进入低池；
+                                         # 纯观测不改评分、目标、判决或动作；False=严格回滚新尾缀
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，
                                # 第1349~1355局批复盘）；False 关闭全部留痕

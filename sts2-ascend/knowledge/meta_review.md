@@ -11843,3 +11843,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff 空白检查通过。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1587 局复盘（LOW_POOL_FOCUS_SWITCH_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：低血多敌近致死窗口中的既有非击杀火线换线，可能是进入低池并最终阵亡的关键分层；现有 `LOW_POOL_BURST_RACE_OBS` 只记录血池、敌数、意图和我方血甲，无法区分纯爆发与换线后进入低池。该假设可证伪。
+- **EVIDENCE**：精确 run `F2MEYP689V3E`（第 1587 局）完整链 286 条决策。F24 D275 记录 `寄生惧魔→胧光怪`，D280 又记录 `胧光怪→寄生惧魔`，均为非击杀火线变化；D280 时我方 5 HP、敌意图 25，竞速投影为击杀还需 2 回合而可存活 0 回合。随后 D282 在两敌、血池 26、我方 5/86 HP、意图 25 时产生 `LOW_POOL_BURST_RACE_OBS`，D285 `GAME_OVER`。现有 `FOCUS_DRIFT_*` 与低池 marker 分散，不能在持久 reason 中直接对账。
+- **EXPECTED_SIGNAL**：未来 3~10 局低池窗口应在旧 marker 后追加 `LOW_POOL_FOCUS_SWITCH_OBS`、此前非击杀换线次数和当前火线；按换线次数分层后与下一动作/`GAME_OVER` 对账。若低池样本普遍无此前换线或后续稳定存活，则削弱假设；若换线次数升高与终局失败重复相伴，则支持假设。关闭开关不得删除旧低池 marker，且 action/params 必须不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `low_pool_focus_switch_obs`。
+- `sts2-ascend/brain/policy.py`：在既有低池多敌爆发 marker 后，只读追加此前非击杀换线次数与当前火线；不改变评分、目标、判决、竞速锁或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入低池 block 夹具，验证默认 marker、动作/参数一致，以及关闭新开关仅删除新尾缀并保留旧 marker。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 run_id、遭遇键、低池血量、敌数、意图、此前换线次数、当前火线和后续终局分层；至少 3 个独立低池换线窗口前不调整集火或竞速行为。若换线层重复伴随 `GAME_OVER`，再另立行为复盘；若没有换线或与终局无关，保留观测并削弱假设。
+- **撤回**：若低池条件外误挂、当前火线与最后一次实际出牌不一致、身份回退造成虚假计数，或 `low_pool_focus_switch_obs=False` 改变 action/params/旧 marker，则关闭该键并保留失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
