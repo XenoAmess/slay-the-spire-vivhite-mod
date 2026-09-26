@@ -15682,3 +15682,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.571181309983126局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.254832215295958局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/46.552475909768006局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血61，每回合15≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿19张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.45 → 0.45（行至 F35（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F35（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F35——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F35——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F35——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F35——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1422 胜，当前目标进阶 3
+
+## 第 1423 局复盘（2026-09-26 23:48）
+- 结果：💀 失败｜进阶 3｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：CENTENNIAL_PUZZLE, GORGET, LUCKY_FYSH, RED_MASK, VEXING_PUZZLEBOX
+- 战斗记录：F20 Monster战 掉血7｜自损17（可行动段17/非行动段0，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血0｜自损14（可行动段14/非行动段26，SELF_LOSS_PHASE_OBS）; F24 Elite战 掉血9｜自损19（可行动段19/非行动段14，SELF_LOSS_PHASE_OBS）｜竞速审计：T5判死→实战7回合获胜; F27 Monster战 掉血2｜自损27（可行动段27/非行动段20，SELF_LOSS_PHASE_OBS）; F28 Unknown战 掉血0｜自损20（可行动段20/非行动段0，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血78｜自损47（可行动段47/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：REND(37分/5.226642821970344局)，BOLAS(37分/2.1709250753371343局)，STRATAGEM(36分/5.186299570291633局)，FISTICUFFS(35分/7.8242397469057945局)，AUTOMATION(35分/5.680702802019754局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.555182175398186局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/3.2434403025424223局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/46.38954224408382局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（高速失血爆毙（5回合掉血78，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿14张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Boss战实测自损47/掉血78（60%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.45 → 0.48（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F33——药水交药线部分胜利回收）；行至 F33 但致命战自损47/掉血78≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：3/1423 胜，当前目标进阶 3
