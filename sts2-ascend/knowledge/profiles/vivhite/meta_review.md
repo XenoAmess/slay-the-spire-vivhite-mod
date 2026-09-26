@@ -4719,3 +4719,35 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1416~1419批：严格买活余量驱动的败局竞速致死覆盖行为门
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：败局竞速致死回合中，只有通过謦欬锁链执行模拟、且覆盖后的严格买活余量（买活后可存活回合-击杀所需回合）>=0 的格挡，才是真正能把当前死亡线改成可执行翻盘线的生还动作；若该门放行后仍选攻击、覆盖后仍立即死亡，或严格负余量也改变动作，则假设被证伪。既有宽松 +1 回合容差只保留为审计信号，不足以授权行为切换。
+- **EVIDENCE**：exact batch 覆盖 1416~1419 局。1416 局 `EPKTGW4BZ36B` 有 2 条覆盖旁观但无执行模拟；1417 局 `CUD9PYWJS8LY` 与 1418 局 `VUY9C4MVDZCD` 无该型覆盖。1419 局 `4RE4J6E7LGUQ` F33 无厌沙虫 T6 有 3 条独立 tick 的 `[1费14甲]` 覆盖，均通过执行模拟并实付 2 血，但严格余量分别为 -2.7、-2.1、-1.0 回合，仍在 F33 阵亡；三条属于同一战斗，不能冒充三局独立证据。历史 1234/1235 局提供了可执行覆盖仍全攻阵亡的先例，1212~1242 局的幻影/可执行分离已是前置审计基础。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立败局竞速致死战斗中，执行模拟通过且严格余量>=0时应出现 `RACE_ALLIN_LETHAL_COVER_BEHAVIOR`，并优先提交覆盖格挡；严格余量<0、幻影组合、无血池或非致死回合不得出现该标记，动作/参数保持旧口径。按 run/floor/战斗实例统计执行覆盖数、严格余量、行为标记、应用回执、下一回合存活/终局与胜负。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_allin_lethal_cover_behavior`，作为独立回滚门。
+- `sts2-ascend/brain/policy.py`：复用既有执行模拟与敌方血池/实测输出对账；仅当严格买活余量非负时把 `race_lethal_cover` 接入既有 `LETHAL_SURVIVABLE_LINE` 格挡优先评分。1419 型严格负余量不改变全攻行为，宽松 verdict 不参与行为决策。
+- `sts2-ascend/brain/selfcheck.py`：新增已入锁严格正余量正例（格挡中标）与行为键=False 回滚例；既有幻影、严格负余量和观测关闭夹具保留。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或任务书；本批 `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；生产代码目标 diff 仅为上述三个 brain 文件，宿主预置素材删除与 `.review-cache/` 未纳入。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 局只核对真实执行模拟、严格余量、行为动作应用和下一回合生存/胜负；至少取得 3 个独立正例后再扩大门控范围，不把同一战斗的多条 tick 当作独立证据。
+- 若正余量未选格挡、负余量误触发、幻影漏过、出现非法动作/参数漂移或生存结果不改善，将 `race_allin_lethal_cover_behavior` 设为 `False`，必要时回滚本地提交；保留覆盖审计与严格/宽松余量观测。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

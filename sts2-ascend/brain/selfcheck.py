@@ -16071,19 +16071,20 @@ def main() -> int:
     #      第1500~1504局批复盘）：LETHAL_SURVIVABLE_LINE 以 not race_allin
     #      排除败局竞速（514~517/546/1414~1419 三批定案），1504-F17-T9 首见
     #      「覆盖成立仍全攻阵亡」（3 血对 11 意图，防御5+坚毅7 可覆盖缺口
-    #      8，全攻 24 伤后硬吃 11 阵亡）——单批 1 例 <3 局阈值，纯观测不改
-    #      行为。夹具复用 lsl：首个 decide 绑定战斗身份后注入已采样净损
+    #      8，全攻 24 伤后硬吃 11 阵亡）——先保留执行模拟与严格余量门，只有
+    #      真正严格可翻盘时才改变行为。夹具复用 lsl：首个 decide 绑定战斗身份后注入已采样净损
     #      EMA 武装 race_allin，并注入两回合实测输出（dpt=20）喂饱买活
     #      对账口径。① 致死覆盖成立：攻击仍中标（行为零差异）、
     #      无 LETHAL_SURVIVABLE_LINE、观测注记在产，且买活对账披露击杀
     #      约需回合/买活后可存活/裁决（池253、dpt20→约13回合；买活后
     #      3血÷净损15≈0.2回合→买活仍必败）；② 无覆盖（手牌零格挡）
-    #      ：无注记；③ 键=False：观测同灭。
-    def rallc_policy(margin_obs=True):
+    #      ：无注记；③ 行为键=False：正例回滚全攻，旁观仍保留。
+    def rallc_policy(margin_obs=True, behavior=True):
         pol_r = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rallc-"))),
             random.Random(13))
         pol_r.know.policy["race_allin_buyback_margin_obs"] = margin_obs
+        pol_r.know.policy["race_allin_lethal_cover_behavior"] = behavior
         return pol_r
 
     def rallc_decide(pol_r, hp_now, incoming, energy_now, hand,
@@ -16165,19 +16166,28 @@ def main() -> int:
                     {"name": "Block", "current_value": blk},
                     {"name": "LifeCost", "current_value": 2}]}
 
-    def rallc_v_policy():
-        return policy.Policy(_vivhite_know("sts2-selfcheck-rallc-viv-"),
-                             random.Random(13))
+    def rallc_v_policy(behavior=True):
+        pol_r = policy.Policy(_vivhite_know("sts2-selfcheck-rallc-viv-"),
+                              random.Random(13))
+        pol_r.know.policy["race_allin_lethal_cover_behavior"] = behavior
+        return pol_r
 
-    def rallc_v_decide(pol_r, hp_now, incoming, energy_now, hand):
+    def rallc_v_decide(pol_r, hp_now, incoming, energy_now, hand,
+                       measured_damage=40.0, measured_turns=2,
+                       enemy_hp=253, latched=False):
         # 同 rallc_decide：首 tick 绑定战斗身份后注入净损 EMA 与实测输出
-        pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
+        state = lsl_state(hp_now, incoming, energy_now, hand)
+        state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
+        pol_r.decide(state, lsl_ctx)
         pol_r._race_rounds = 2
         pol_r._race_loss_rate = 15.0
-        pol_r._krace_turns = 2
-        pol_r._krace_dmg = pol_r._krace_dmg_sustained = 40.0
-        return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
-                            lsl_ctx)
+        pol_r._krace_turns = measured_turns
+        pol_r._krace_dmg = pol_r._krace_dmg_sustained = measured_damage
+        if latched:
+            pol_r._krace_latch = True
+            pol_r._krace_latch_round = 1
+        return pol_r.decide(state, lsl_ctx)
 
     d_rallcv1 = rallc_v_decide(rallc_v_policy(), 3, 23, 3,
                                [rallc_v_atk, _rallc_v_blk(1, 9),
@@ -16198,6 +16208,27 @@ def main() -> int:
         and "买活后约可存活0.3回合（净损15/回合）→买活仍必败" in d_rallcv2.reason \
         and "RACE_ALLIN_COVER_PHANTOM_OBS" not in d_rallcv2.reason, \
         f"可执行覆盖未过模拟披露或买活口径未扣实付: {d_rallcv2.action}（{d_rallcv2.reason}）"
+    # ④ 严格余量为正时才扩展到行为：80 血池/400 伤每回合的已入锁竞速，
+    #     10 血、13 意图、9 甲支付2后余4，严格买活余量约+0.1回合，防御中标。
+    d_rallcv4 = rallc_v_decide(
+        rallc_v_policy(), 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=800.0, measured_turns=2, enemy_hp=80, latched=True)
+    assert d_rallcv4.action == "play_card" \
+        and d_rallcv4.params.get("card_index") == 1 \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv4.reason \
+        and "买活余量：严格+0.1/宽松+1.1回合→严格可翻盘" in d_rallcv4.reason, \
+        f"严格可翻盘覆盖未切换到格挡行为: {d_rallcv4.action}（{d_rallcv4.reason}）"
+    pol_rallcv4_rb = rallc_v_policy(False)
+    d_rallcv4_rb = rallc_v_decide(
+        pol_rallcv4_rb, 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=800.0, measured_turns=2, enemy_hp=80, latched=True)
+    assert d_rallcv4_rb.action == "play_card" \
+        and d_rallcv4_rb.params.get("card_index") == 0 \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" not in d_rallcv4_rb.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallcv4_rb.reason, \
+        f"行为键=False 未回滚败局竞速覆盖行为: {d_rallcv4_rb.action}（{d_rallcv4_rb.reason}）"
     pol_rallcv3 = rallc_v_policy()
     pol_rallcv3.know.policy["race_allin_lethal_cover_obs"] = False
     d_rallcv3 = rallc_v_decide(pol_rallcv3, 3, 23, 3,

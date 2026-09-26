@@ -5305,6 +5305,20 @@ class Policy:
                         _ralc_dpt = 0.0
                     if _ralc_dpt > 0.0:
                         _ralc_ttk = _ralc_pool / _ralc_dpt
+                        _ralc_strict_margin = _ralc_surv - _ralc_ttk
+                        # 行为门（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）：
+                        # 现有宽松 verdict 允许「买活可翻盘」只因 +1 回合容差命中，
+                        # 这不足以把 race_allin 从全攻改回格挡优先。只有执行模拟已过
+                        # 謦欬锁链、敌方血池有可计价对象，且严格余量>=0时才接入
+                        # LETHAL_SURVIVABLE_LINE；1419 型严格负余量不改变动作。
+                        if (bool(pol.get("race_allin_lethal_cover_behavior", True))
+                                and _ralc_pool > 0
+                                and _ralc_strict_margin >= 0.0):
+                            race_lethal_cover = True
+                            danger_note += (
+                                f"；败局竞速致死生还线：执行覆盖后严格买活余量"
+                                f"{_ralc_strict_margin:+.1f}回合，恢复格挡优先"
+                                "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
                         _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
                                          else "买活仍必败")
                         danger_note += (
@@ -5319,7 +5333,6 @@ class Policy:
                         # "买活可翻盘" with only 0.1 survivable turns. This is
                         # audit-only and must never feed back into selection.
                         if bool(pol.get("race_allin_buyback_margin_obs", True)):
-                            _ralc_strict_margin = _ralc_surv - _ralc_ttk
                             _ralc_tolerant_margin = _ralc_surv + 1.0 - _ralc_ttk
                             _ralc_strict_verdict = (
                                 "可翻盘" if _ralc_strict_margin >= 0.0
@@ -6960,8 +6973,10 @@ class Policy:
         kill_race_lethal = bool(kill_race and lethal and not race_lethal_cover)
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         # 败局竞速豁免（第514~517批复盘）：判死局的致死回合不再压攻击抬格挡——
-        # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留
-        if lethal and not race_allin and not kill_race_lethal:
+        # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留。
+        # 但 RACE_ALLIN_LETHAL_COVER_BEHAVIOR 已证明严格买活余量非负时，当前
+        # 回合存在可验证的生还线，恢复普通致死守卫；无该门的 race_allin 仍全攻。
+        if lethal and (not race_allin or race_lethal_cover) and not kill_race_lethal:
             atk_damp, blk_boost = 0.55, 1.8
         elif urgent and not kill_race_lethal:
             atk_damp, blk_boost = 0.75, 1.4

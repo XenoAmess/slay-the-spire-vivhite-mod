@@ -1191,6 +1191,13 @@ DEFAULT_POLICY = {
                                         # 严格余量（买活可存活回合-击杀所需回合）与宽松余量，
                                         # 供后续区分“严格可翻盘”和仅靠容差命中的样本。纯观测，
                                         # 不改变 race_allin 判决、评分或动作；置 False 严格回滚。
+      "race_allin_lethal_cover_behavior": True,
+                                        # 败局竞速致死覆盖行为门（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）：
+                                        # 仅在謦欬锁链执行模拟已通过、且买活后的严格余量（不含
+                                        # 既有宽松+1回合容差）>=0时，把 race_allin 致死回合接入
+                                        # LETHAL_SURVIVABLE_LINE 的格挡优先评分；1419局三例严格
+                                        # 负余量因此保持全攻。行为键=False 严格回滚为旁观口径，
+                                        # 不影响 COVER/买活审计本身。
      # --- 滚雪球入锁锁持（第271~294局批复盘新增，静态键） ---
      "race_esc_latch_hold": True,    # esc（滚雪球）局实测口径竞速入锁后，不再被静态联合
                                       # 复核逐 tick 翻案解锁（RACE_ESC_LATCH_HOLD）：294-F11
