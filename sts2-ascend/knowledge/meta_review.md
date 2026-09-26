@@ -11986,3 +11986,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   `policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1593 局复盘（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非致死 `kill_race` 中，0费纯回能牌可能被固定功能牌分数与耗血计价共同压低；即使它能解锁本回合攻击，也会在结束回合路径被漏掉。该假设可证伪。
+- **EVIDENCE**：run `7HZ34HUZ3EEU` 的 F17 T2（D160-D163）为 HP74、格挡8、来袭18、能量0；`BLOODLETTING` 可出且0费，原生语义为实付3血/回能2，手牌有1费 `MOLTEN_FIST`，但候选留痕约为 -1.963，最终选择 `end_turn`，且结束回合并非致死。随后该局在 F17 D184 `GAME_OVER`。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Ironclad 非致死 `kill_race` 窗口中，若同类牌未入选且回能新解锁攻击，应出现 `KILL_RACE_FREE_ENERGY_FUNCTION_OBS`，记录 `gain/pay/unlock/hp/energy/incoming`，并按下一回合进展与 `GAME_OVER` 分层；若无同类 marker，或关闭键改变 action/params，则削弱假设并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在结束回合理由中追加一个仅观测 helper，限定非致死 `kill_race`、可出0费纯回能牌和新增可解锁攻击；不进入评分、候选排序或动作选择。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_free_energy_function_obs` 静态键；设为 `False` 时关闭注记并保留旧行为。
+- `sts2-ascend/brain/selfcheck.py`：新增 `BLOODLETTING`/`MOLTEN_FIST` 夹具，验证 marker、关闭开关和致死边界，以及默认键迁移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集3~10个独立窗口，按 run_id、回合、HP/来袭、回能与新增可解锁攻击数、下一回合进展和终局结果核对；在样本门槛前不调整回能牌评分或竞速行为。
+- **撤回**：将 `kill_race_free_energy_function_obs` 设为 `False`；若 marker 错挂、字段与快照不一致，或 action/params 改变，保留失败证据并回滚本批注记。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

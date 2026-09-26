@@ -16623,6 +16623,44 @@ def main() -> int:
         and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallcv3.reason, \
         f"键=False 白绮两型观测未同灭或动作漂移: {d_rallcv3.action}（{d_rallcv3.reason}）"
 
+    # 3kfe) 竞速0费回能牌观测（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）：
+    #       1593-F17-T2 放血可出但未入选：0费、实付3血、回能2，恰好解锁熔融之拳。
+    #       这里只验证观测命中与开关/致死边界，不改变任何出牌动作或参数。
+    kfe_energy_card = {
+        "card_id": "BLOODLETTING",
+        "name": "放血",
+        "playable": True,
+        "energy_cost": 0,
+        "resolved_rules_text": "失去3点生命。获得2点能量。",
+        "dynamic_values": [{"name": "Energy", "current_value": 2}],
+    }
+    kfe_attack = {
+        "card_id": "MOLTEN_FIST",
+        "name": "熔融之拳",
+        "playable": True,
+        "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 10}],
+    }
+    kfe_note = policy.kill_race_free_energy_function_note(
+        [kfe_energy_card, kfe_attack], 0, 18, 74, True,
+        is_unavailable=lambda _card: False)
+    assert "KILL_RACE_FREE_ENERGY_FUNCTION_OBS" in kfe_note \
+        and "BLOODLETTING:gain=2,pay=3,unlock=1" in kfe_note \
+        and "hp=74/energy=0/incoming=18" in kfe_note, \
+        f"竞速0费回能盲区观测未命中: {kfe_note}"
+    assert policy.kill_race_free_energy_function_note(
+        [kfe_energy_card, kfe_attack], 0, 18, 74, True,
+        is_unavailable=lambda _card: False, enabled=False) == "", \
+        "竞速0费回能观测关闭后仍有注记"
+    assert policy.kill_race_free_energy_function_note(
+        [kfe_energy_card, kfe_attack], 0, 18, 74, True,
+        lethal_now=True, is_unavailable=lambda _card: False) == "", \
+        "致死竞速不应挂非致死0费回能观测"
+    kfe_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kfe-")))
+    assert kfe_know.policy.get("kill_race_free_energy_function_obs") is True, \
+        "竞速0费回能观测默认键未迁移"
+
 
     print("SELFCHECK OK")
     return 0

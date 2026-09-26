@@ -160,6 +160,10 @@ DEFAULT_POLICY = {
                                    # 可行动段自损 18，非致死回合白烧 8 血把可存活分母烧穿。
                                    # 与攻击分支同一把血价尺扣分，判死语境半价，自付归零直死
                                    # 禁玩；0 = 关闭（严格回滚旧口径）
+    "kill_race_free_energy_function_obs": True,  # 竞速0费回能盲区观测（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）：
+                                                   # 非致死 kill_race 结束回合时，记录可出但未入选的
+                                                   # 0费纯回能牌、实付生命与其新增可解锁攻击数；只写
+                                                   # 观测，不改变评分、候选资格或动作。False=关闭注记。
     "hp_cost_atk_pricing_trace": 1,  # 攻击通道血价留痕（HP_COST_ATK_PRICING，第1302~1306局批复盘）：
                                      # 单体攻击分支全语境计价、AOE 分支仅致死语境计价，两侧
                                      # 此前零留痕（1303 自损 27 / 1305 御血术+×14 / 1306-F17

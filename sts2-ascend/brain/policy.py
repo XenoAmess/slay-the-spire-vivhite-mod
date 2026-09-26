@@ -144,6 +144,93 @@ def card_numbers(card: dict) -> tuple[int, int, int]:
     return dmg, block, hits
 
 
+def _card_energy_gain(card: dict) -> int:
+    """Return a card's immediate energy gain from native values or rules text."""
+    for dynamic_value in card.get("dynamic_values") or []:
+        if not isinstance(dynamic_value, dict):
+            continue
+        name = str(dynamic_value.get("name") or "").lower()
+        if "energy" not in name and "能量" not in name:
+            continue
+        try:
+            value = int(float(dynamic_value.get(
+                "current_value", dynamic_value.get("base_value", 0)) or 0))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if value > 0:
+            return value
+    match = re.search(
+        r"(?:获得|gain(?:s)?|get)\s*(\d+)\s*(?:点\s*)?(?:能量|energy)",
+        _text(card), re.I)
+    return int(match.group(1)) if match else 0
+
+
+def kill_race_free_energy_function_note(
+        hand: list | None, energy, incoming, my_hp, kill_race: bool,
+        *, lethal_now: bool = False, is_unavailable=None,
+        enabled: bool = True) -> str:
+    """Expose non-lethal race skips of free energy functions without acting."""
+    if not enabled or not kill_race or lethal_now:
+        return ""
+    try:
+        current_energy = max(0, int(float(energy or 0)))
+        incoming_value = float(incoming or 0)
+        hp_value = float(my_hp or 0)
+    except (TypeError, ValueError, OverflowError):
+        return ""
+    if incoming_value <= 0:
+        return ""
+    unavailable = is_unavailable or (lambda _card: False)
+    rows = []
+    for card in hand or []:
+        if (not isinstance(card, dict) or not card.get("playable")
+                or unavailable(card) or card.get("costs_x")):
+            continue
+        try:
+            cost = float(card.get("energy_cost") or 0)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if abs(cost) > 1e-9:
+            continue
+        damage, block, _hits = card_numbers(card)
+        if damage > 0 or block > 0:
+            continue
+        gain = _card_energy_gain(card)
+        if gain <= 0:
+            continue
+        pay_match = re.search(
+            r"(?:失去|lose(?:s)?|pay(?:s)?)\s*(\d+)\s*"
+            r"(?:点\s*)?(?:生命|hp|health)", _text(card), re.I)
+        hp_paid = int(pay_match.group(1)) if pay_match else 0
+        unlocked_attacks = 0
+        for other in hand or []:
+            if (other is card or not isinstance(other, dict)
+                    or not other.get("playable")
+                    or unavailable(other) or other.get("costs_x")):
+                continue
+            try:
+                other_cost = float(other.get("energy_cost") or 0)
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (other_cost <= current_energy + 1e-9
+                    or other_cost > current_energy + gain + 1e-9):
+                continue
+            other_damage, _other_block, _other_hits = card_numbers(other)
+            if other_damage > 0:
+                unlocked_attacks += 1
+        if unlocked_attacks <= 0:
+            continue
+        label = str(card.get("card_id") or card.get("name") or "unknown")
+        rows.append(
+            f"{label}:gain={gain},pay={hp_paid},unlock={unlocked_attacks}")
+    if not rows:
+        return ""
+    return (
+        f"；竞速0费回能牌未入选：{','.join(rows)}"
+        f"；hp={hp_value:g}/energy={current_energy}/incoming={incoming_value:g}"
+        "（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）")
+
+
 # 幕边界常量（生涯 320 场一幕 Boss 全部 F17、24 场二幕 Boss 全部 F33 实证；
 # 三幕按 51 估算）——_floor_act/_floors_to_boss 的唯一口径，不再各写一份
 _ACT_BOSS_FLOORS = (17, 33, 51)
@@ -7219,6 +7306,16 @@ class Policy:
                         f"竞速={bool(kill_race or race_allin)}，"
                         f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
                         "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
+            try:
+                _free_energy_obs = bool(int(float(
+                    pol.get("kill_race_free_energy_function_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _free_energy_obs = True
+            _ritual_skip_note += kill_race_free_energy_function_note(
+                hand, energy, incoming, my_hp, kill_race,
+                lethal_now=lethal_now,
+                is_unavailable=self._card_unavailable,
+                enabled=_free_energy_obs)
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
                             wait=1.2)
