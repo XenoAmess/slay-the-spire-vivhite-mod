@@ -871,6 +871,11 @@ DEFAULT_POLICY = {
                                               # 为0且实际扣除生命>0时记录牌名/支付/血量/能量/回合，检验自由回合
                                               # 减免是否把生命透支提前到首个正伤害回合之前。不改评分、候选、动作或
                                               # 参数；0=关闭（旧行为与留痕一键回滚），非白绮角色零改动
+    "vivhite_boss_free_turn_hp_pay_chain_obs": 1,  # Boss 零意图生命支付链观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS）：
+                                                    # 1451-F33 在首个正伤害前连续支付后进入终端锁；仅按已确认的
+                                                    # combat_play_commit 回执累计零意图实际支付，并在后续终端锁收口披露
+                                                    # 累计血量/牌数，避免把未应用的 proposed 决策算入链。只追加观测，
+                                                    # 不改评分、候选、动作或参数；0=关闭（严格回滚），非白绮角色零改动
     "vivhite_hp_terminal_pay_obs": 1,  # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，
                                         # 1428~1432 批复盘新增）：1432-F17 T11 选中实付4血后
                                         # 7→3，T12 又实付2血后3→1；现有直接致死守卫只拦

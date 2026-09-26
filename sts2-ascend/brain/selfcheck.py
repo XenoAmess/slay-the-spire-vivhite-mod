@@ -3818,6 +3818,52 @@ def main() -> int:
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
 
+    # 3tllc) Boss 零意图生命支付链观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS）：
+    #      1451-F33 在首个正伤害前连续支付后进入终端锁；只消费成功回执中的
+    #      扩展字段，把已应用的实付/次数带到终端锁收口。未确认的 proposed
+    #      决策不能入账，关闭键不得改变动作/参数。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_free_turn_hp_pay_chain_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_hp_pay_chain_obs 静态键或默认值被改"
+    vknow_tllc = _vivhite_know("sts2-selfcheck-vterminal-lock-chain-")
+    vpol_tllc = policy.Policy(vknow_tllc, random.Random(11))
+    vctx_tllc = _krh_ctx()
+    d_tllc_play = vpol_tllc.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0), vctx_tllc)
+    assert d_tllc_play.action == "play_card", \
+        f"链观测夹具首张自由回合牌未选中: {d_tllc_play}"
+    _chain_commit = next(
+        (tag for tag in d_tllc_play.tags
+         if isinstance(tag, (tuple, list))
+         and len(tag) >= 10 and tag[0] == "combat_play_commit"), None)
+    assert _chain_commit is not None \
+        and float(_chain_commit[7]) == 2.0 \
+        and float(_chain_commit[8]) == 0.0 \
+        and _chain_commit[9] == "Boss", \
+        f"成功回执链字段缺失或错配: {d_tllc_play.tags}"
+    vctx_tllc.credit_tags.extend(d_tllc_play.tags)
+    d_tllc_wait = vpol_tllc.decide(_terminal_lock_state(), vctx_tllc)
+    d_tllc = vpol_tllc.decide(_terminal_lock_state(), vctx_tllc)
+    assert d_tllc_wait.action is None \
+        and d_tllc.action == "end_turn" \
+        and "/boss_free_turn_paid=2/plays=1" in d_tllc.reason \
+        and "VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS" in d_tllc.reason, \
+        f"已确认自由回合支付未接到终端锁收口: {d_tllc}"
+
+    vknow_tllc0 = _vivhite_know("sts2-selfcheck-vterminal-lock-chain-off-")
+    vknow_tllc0.policy["vivhite_boss_free_turn_hp_pay_chain_obs"] = 0
+    vpol_tllc0 = policy.Policy(vknow_tllc0, random.Random(11))
+    vctx_tllc0 = _krh_ctx()
+    d_tllc0_play = vpol_tllc0.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0), vctx_tllc0)
+    vctx_tllc0.credit_tags.extend(d_tllc0_play.tags)
+    vpol_tllc0.decide(_terminal_lock_state(), vctx_tllc0)
+    d_tllc0 = vpol_tllc0.decide(_terminal_lock_state(), vctx_tllc0)
+    assert d_tllc0.action == d_tllc.action \
+        and d_tllc0.params == d_tllc.params \
+        and "VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS" not in d_tllc0.reason, \
+        f"链观测关闭不得改变动作/参数或残留注记: on={d_tllc} off={d_tllc0}"
+
     # 3tlf) 斩杀竞速功能牌生命支付门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
     #      1398-F33-T3 的综合色序是正分、可执行但需付血的 Skill；只新增
     #      功能牌切片，不能改变最终 end_turn 或参数，键=0 时注记同灭。

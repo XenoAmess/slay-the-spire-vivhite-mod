@@ -4911,3 +4911,34 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1447~1451 批：Boss 零意图生命支付链与终端锁收口观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1451-F33 在首个正伤害前的 Boss 意图0回合连续支付生命，随后在 T6 以 HP=1、incoming=20、energy=2 进入终端锁；既有自由回合支付观测和终端锁逐牌观测仍是两个断开的切片。若把“已应用的零意图实际支付”按战斗累计，并在后续终端锁收口披露，未来样本应能把同一战斗的支付链与终端锁对账。假设可证伪：标记在没有成功回执、非 Boss/有来袭伤害时增长，累计实付/次数与回执不符，或与终端锁无稳定连接。
+- **EVIDENCE**：exact batch 为 1447~1451；最新完整运行文件为 `runs/20260927-052950_U6XPE1HX81Q9.json`，1451 局有 411 条决策，但 packet 仅保留 103 条、遗漏 308 条，`complete_persisted_chain=false`，因此只把保留片段当作定位证据。保留的 F33 片段显示 T1 已有多张生命支付牌且 incoming=0；T6 为 HP=1、incoming=20、energy=2，三张非诅咒牌均 `native_blocked_by_hook`，`end_turn_lethal=yes` 后 GAME_OVER。1420~1422 的自由回合支付记录与 1433~1443 的终端锁逐牌记录提供了相邻、但尚未连接的既有观测。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 Boss 战中，`VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS` 只应在成功 `combat_play_commit` 回执包含 `incoming<=0`、实际支付>0 时累计，并在同一战斗后续终端锁 reason 中出现 `boss_free_turn_paid` 与 `plays`；每个数字都能回指已应用回执。开关关闭时标记消失且 action/params 不变；同一战斗多条 tick 不算独立样本。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_boss_free_turn_hp_pay_chain_obs`，设为 `0` 时严格关闭本链观测。
+- `sts2-ascend/brain/policy.py`：扩展正常/残能救场的成功回执 tag，携带实际生命支付、incoming 与 Boss 节点；只在消费新成功回执时累计，并按战斗重置。终端锁收口追加累计实付/牌数；不改变评分、候选、门槛、目标、动作或参数，旧七元组保持兼容。
+- `sts2-ascend/brain/selfcheck.py`：新增成功回执链正例、终端锁收口对账、关闭键 action/params 不变断言，并覆盖“未应用的 proposed 不入账”语义。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过；代码 diff 已回读，仅包含上述三个静态 brain 文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续 3~10 个独立 Boss 战按 run/floor/combat 对账成功回执、实际支付、首个正伤害回合、终端锁逐牌状态、GAME_OVER/胜负；若累计在 proposed 阶段增长、过滤条件误触发、数字与回执不符或 action/params 漂移，将 `vivhite_boss_free_turn_hp_pay_chain_obs` 设为 `0`，必要时回滚本地 commit。若标记稳定但与结果无可重复区分，只保留观测，不据此调整牌序或生命门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

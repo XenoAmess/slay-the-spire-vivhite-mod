@@ -873,6 +873,10 @@ class Policy:
         self._longfight_effective_dpt_start_hp = None
         self._longfight_effective_dpt_projected = 0.0
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
+        # Boss 意图0生命支付链只消费服务端成功回执；用于把首击前的多张
+        # 白绮生命支付与后续终端锁收口拼成同一场战斗的可证伪观测。
+        self._boss_free_turn_hp_pay_total = 0.0
+        self._boss_free_turn_hp_pay_count = 0
         # 出牌策略账必须以服务端成功回执为准。Agent 会在成功后把 Decision.tags
         # 追加进同一个 credit_tags 列表；这里用列表身份+游标只消费新增项一次。
         self._combat_credit_source = None
@@ -1705,6 +1709,25 @@ class Policy:
             kill_id = str(raw[6] or "")
             if kill_id:
                 self._combat_kills[kill_id] = self._combat_kills.get(kill_id, 0) + 1
+            # VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS：仅消费带有扩展字段的
+            # 新 tag；旧七元组和非白绮/非零意图回执保持兼容且不入账。
+            if len(raw) >= 10:
+                try:
+                    _chain_pay = max(0.0, float(raw[7] or 0.0))
+                    _chain_incoming = float(raw[8] or 0.0)
+                except (TypeError, ValueError, OverflowError):
+                    _chain_pay = 0.0
+                    _chain_incoming = 0.0
+                _chain_node = str(raw[9] or "")
+                try:
+                    _chain_obs = bool(int(float(self.know.policy.get(
+                        "vivhite_boss_free_turn_hp_pay_chain_obs", 1) or 0)))
+                except (TypeError, ValueError, AttributeError):
+                    _chain_obs = False
+                if (_chain_obs and _chain_node == "Boss"
+                        and _chain_incoming <= 0.0 and _chain_pay > 0.0):
+                    self._boss_free_turn_hp_pay_total += _chain_pay
+                    self._boss_free_turn_hp_pay_count += 1
 
     def _sync_action_handshakes(self, ctx) -> None:
         """Import accepted UI-opening actions exactly once.
@@ -3571,6 +3594,22 @@ class Policy:
                         "vivhite_hp_terminal_lock_obs", 1) or 0)))
                 except (TypeError, ValueError):
                     _terminal_lock_obs = False
+                _terminal_chain_note = ""
+                try:
+                    _terminal_chain_obs = bool(int(float(pol.get(
+                        "vivhite_boss_free_turn_hp_pay_chain_obs", 1) or 0)))
+                except (TypeError, ValueError):
+                    _terminal_chain_obs = False
+                _ctx_combat = getattr(ctx, "combat", None) or {}
+                if (_terminal_chain_obs
+                        and getattr(self.character_strategy, "profile_id", None)
+                        == VIVHITE_PROFILE_ID
+                        and _ctx_combat.get("node_type") == "Boss"
+                        and self._boss_free_turn_hp_pay_count > 0):
+                    _terminal_chain_note = (
+                        f"/boss_free_turn_paid={self._boss_free_turn_hp_pay_total:g}"
+                        f"/plays={self._boss_free_turn_hp_pay_count}"
+                        "（VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS）")
                 if (_terminal_lock_obs
                         and getattr(self.character_strategy, "profile_id", None)
                         == VIVHITE_PROFILE_ID):
@@ -3626,6 +3665,7 @@ class Policy:
                         f"/incoming={incoming}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                         f"/cards={'|'.join(_terminal_rows)}"
+                        f"{_terminal_chain_note}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},
@@ -4992,6 +5032,8 @@ class Policy:
             self._longfight_effective_dpt_start_hp = None
             self._longfight_effective_dpt_projected = 0.0
             self._self_harm_potion_paid = 0.0
+            self._boss_free_turn_hp_pay_total = 0.0
+            self._boss_free_turn_hp_pay_count = 0
             self._incoming_ema = 0.0
             self._esc_rounds = 0
             self._intent_spike_from_zero = False
@@ -6836,6 +6878,14 @@ class Policy:
                         f"/kill_race={'yes' if kill_race else 'no'}"
                         f"/ringing={'yes' if _terminal_ringing else 'no'}"
                         "（VIVHITE_HP_TERMINAL_PAY_OBS）")
+            _commit_chain_pay = 0.0
+            if incoming <= 0 and cctx.get("node_type") == "Boss":
+                try:
+                    _commit_chain_pay = max(0.0, float(
+                        self._vivhite_hp_pay(
+                            card, player.get("powers") or []) or 0.0))
+                except (TypeError, ValueError, AttributeError):
+                    _commit_chain_pay = 0.0
             # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
             # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
             # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，
@@ -6913,7 +6963,9 @@ class Policy:
                                   ("play_card_index", card.get("index"),
                                    self._card_key(card)[1]),
                                   ("combat_play_commit", commit_cid, commit_trial,
-                                   commit_exhaust, _est, round_no, commit_kill_id)], wait=0.6)
+                                   commit_exhaust, _est, round_no, commit_kill_id,
+                                   _commit_chain_pay, incoming,
+                                   cctx.get("node_type"))], wait=0.6)
         # 僵局强攻（自动恢复、turn≥120 或 AI 判 offense）：绕过评分阈值，
         # 任何伤害牌打最低血敌人。自动恢复只在触发僵局门的当前回合生效。
         if (stall_force_attack or round_no >= 120
@@ -7120,6 +7172,14 @@ class Policy:
                 if _resc_card.get("index") in _resc_gate_blocked_idx:
                     _gate_rescue_note = ("；门拦格挡净保命放行"
                                          "（VIVHITE_HP_GATE_RESCUE_BLOCK）")
+                _rescue_chain_pay = 0.0
+                if incoming <= 0 and cctx.get("node_type") == "Boss":
+                    try:
+                        _rescue_chain_pay = max(0.0, float(
+                            self._vivhite_hp_pay(
+                                _resc_card, player.get("powers") or []) or 0.0))
+                    except (TypeError, ValueError, AttributeError):
+                        _rescue_chain_pay = 0.0
                 return Decision("play_card", _rparams,
                                 f"战斗：残能救场[{_kind_cn}]：剩余能量{int(energy)}"
                                 f"打出【{_resc_card.get('name')}】"
@@ -7133,7 +7193,9 @@ class Policy:
                                        self._card_key(_resc_card)[1]),
                                       ("combat_play_commit", _rcid, False,
                                        _exhausts_other_cards(_resc_card),
-                                       round(_rest_est, 2), round_no, "")],
+                                       round(_rest_est, 2), round_no, "",
+                                       _rescue_chain_pay, incoming,
+                                       cctx.get("node_type"))],
                                 wait=0.6)
             _gate_note = ""
             if self._hp_gate_stall_round != round_no:
