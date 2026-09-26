@@ -352,7 +352,11 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                          is_unavailable=None, race_mode: bool = False,
                          character_strategy: CharacterStrategy | None = None,
                          player_powers=None) -> str:
-    """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。"""
+    """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。
+
+    与残能救场候选保持同一边界：会消耗其他手牌的牌不能作为可负担
+    格挡漏打证据，否则消耗上限跳过的牌会制造假阳性。
+    """
     try:
         gap = int(incoming) - int(my_block)
         if energy is None or int(energy) <= 0 or gap <= 0:
@@ -362,7 +366,8 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
         best_attack = None  # (estimated damage, name)
         for card in hand or []:
             if (not isinstance(card, dict) or not card.get("playable")
-                    or unavailable(card) or card.get("costs_x")):
+                    or unavailable(card) or card.get("costs_x")
+                    or _exhausts_other_cards(card)):
                 continue
             cost = int(card.get("energy_cost") or 0)
             if cost < 1 or cost > int(energy):

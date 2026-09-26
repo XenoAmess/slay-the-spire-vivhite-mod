@@ -12007,3 +12007,23 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1594 局复盘（IDLE_LEAK_EXHAUST_CAP_ALIGNMENT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`IDLE_LEAK_BLK` 在会消耗其他手牌、且已被消耗上限拦截的牌上是假阳性；审计与实际残能救场候选若统一边界，普通可负担格挡仍应保留，评分与动作不应改变。该假设可证伪。
+- **EVIDENCE**：精确 run `M6BSK58AD2AB`（第 1594 局，`20260927-060045_M6BSK58AD2AB.json`）共 190 条决策。D052（F4/T1，能量1、敌意图11、净缺口6）与 D081（F7/T2，能量1、敌意图14、净缺口11）均在 trace 中以 `EXHAUST_CAP_SKIP_OBS` 跳过【重振精神】（本场消耗1/1），随后仍以 `end_turn` 收口并附带 `IDLE_LEAK_BLK`。原生 `SECOND_WIND` 资料明确为“消耗手牌中所有非攻击牌”；生产 `idle_energy_rescue_pick` 已排除 `_exhausts_other_cards`，只有 `idle_leak_audit_note` 漏掉同一过滤条件。
+- **EXPECTED_SIGNAL**：未来 3~10 局 Ironclad 中，同一收口同时出现 `EXHAUST_CAP_SKIP_OBS` 时不再出现 `IDLE_LEAK_BLK`；普通非消耗、可负担格挡仍出现该 marker。`action`/`params` 应与旧版逐项一致。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：让 `idle_leak_audit_note` 跳过 `_exhausts_other_cards`，仅修正观测候选边界，不改变评分、救场选择、action 或 params。
+- `sts2-ascend/tests/test_review_decision_chain.py`：加入 `SECOND_WIND` 中文规则文本回归夹具，并保留普通格挡与脏载荷测试。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 局，按 run_id、回合、消耗计数、`EXHAUST_CAP_SKIP_OBS`、`IDLE_LEAK_BLK` 和下一回合掉血分层；若普通格挡漏报或消耗牌仍误报，再调整文本/载荷识别，不改出牌行为。
+- **撤回**：若该过滤造成非消耗格挡漏报、或关闭/移除条件前后 action/params 不一致，回退 `idle_leak_audit_note` 的新增过滤并保留本批证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；定向 `idle_leak` 测试 3/3 通过；目标 diff `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

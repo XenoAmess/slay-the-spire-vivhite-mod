@@ -62,6 +62,15 @@ class IdleLeakAuditTests(unittest.TestCase):
             idle_leak_audit_note([self._block(cost=2, costs_x=True)], 2, 11, 5), "")
         self.assertEqual(idle_leak_audit_note([object()], "dirty", None, {}), "")
 
+    def test_idle_leak_suppresses_cards_that_exhaust_other_hand_cards(self) -> None:
+        second_wind = self._block(
+            name="重振精神",
+            rules_text="消耗手牌中所有非攻击牌，每张获得5点格挡。",
+        )
+        note = idle_leak_audit_note(
+            [second_wind], energy=1, incoming=11, my_block=0)
+        self.assertNotIn("IDLE_LEAK_BLK", note)
+
 
 class VivhiteIdleEnergyRescueTests(unittest.TestCase):
     @staticmethod
