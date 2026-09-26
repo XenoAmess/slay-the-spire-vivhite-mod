@@ -13097,3 +13097,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.7313263349783243局)，BASH(14分/3.1572761295970455局)，BODY_SLAM(15分/2.2763031430397813局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1591 胜，当前目标进阶 0
+
+## 第 1592 局复盘（2026-09-27 04:19）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：BREAKTHROUGH, TWIN_STRIKE, HEADBUTT, SHRUG_IT_OFF, STONE_ARMOR, ANGER, ULTIMATE_DEFEND, PILLAGE, SPITE, DEMON_FORM, SHRUG_IT_OFF, CINDER, ARMAMENTS, IMPERVIOUS, ANGER, CINDER, HEADBUTT, EXPECT_A_FIGHT, CRUELTY
+- 本局遗物：HAPPY_FLOWER, REGAL_PILLOW
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血15｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战7回合获胜; F19 Monster战 掉血4｜自损1（可行动段1/非行动段9，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F22 Unknown战 掉血51｜自损2（可行动段2/非行动段55，SELF_LOSS_PHASE_OBS）; F25 Monster战 掉血68｜自损1（可行动段1/非行动段44，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.1881348100952325局)，PACTS_END(25分/69.32763990784159局)，FEED(25分/35.54147684423418局)，BRAND(25分/2.2088557831124755局)，OFFERING(24分/15.694051789081472局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.7182666928059005局)，BASH(14分/3.146225663143456局)，BODY_SLAM(15分/2.2683360820391423局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.39（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1592 胜，当前目标进阶 0
