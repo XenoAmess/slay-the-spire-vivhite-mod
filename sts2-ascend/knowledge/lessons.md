@@ -12987,3 +12987,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8644723378659545局)，BASH(14分/3.269938132040425局)，BODY_SLAM(15分/2.3575291301680443局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1581 胜，当前目标进阶 0
+
+## 第 1582 局复盘（2026-09-26 18:44）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：MOLTEN_FIST, BREAKTHROUGH, BLUDGEON, TAUNT, FEEL_NO_PAIN, EQUILIBRIUM, BREAKTHROUGH, CRUELTY, IRON_WAVE, SWORD_BOOMERANG, UPPERCUT, UNRELENTING, JUGGERNAUT, UNMOVABLE, EVIL_EYE, JUGGERNAUT, BREAKTHROUGH
+- 本局遗物：PLANISPHERE, BAG_OF_MARBLES, VAJRA
+- 战斗记录：F14 Unknown战 掉血1｜自损1（可行动段1/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血2｜自损1（可行动段1/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血62｜自损2（可行动段2/非行动段66，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战11回合获胜; F19 Monster战 掉血4; F20 Monster战 掉血12; F21 Monster战 掉血64｜自损2（可行动段2/非行动段61，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0644398316233525局)，ASHEN_STRIKE(26分/2.266214660954794局)，PERFECTED_STRIKE(25分/3.6987186668593743局)，PACTS_END(25分/70.7802185769539局)，FEED(25分/36.80971369989923局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8509466846834237局)，BASH(14分/3.2584933485782837局)，BODY_SLAM(15分/2.349277778212456局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.42（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.01 → 2.00（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F21——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1582 胜，当前目标进阶 0
