@@ -4731,8 +4731,8 @@ class Policy:
         # 防御预留能量：防御因只多挡 1 点被溢出规则压到 0.03，打击又被固定
         # -8，二者互相压死后带着能量结束回合。现在低边际防御不再制造预留。
         gap_now = max(0, incoming - my_block)
-        reserve_lethal, _ = _lethal_gap_check(gap_now, my_hp, my_max_hp,
-                                              forced_kill)
+        reserve_lethal, reserve_pyrrhic = _lethal_gap_check(
+            gap_now, my_hp, my_max_hp, forced_kill)
         reserve_urgent = (gap_now > 0 and my_hp / max(1, my_max_hp)
                           < float(stance.get("urgent_hp_pct", 0.45)))
         reserve_blk_boost = 1.8 if reserve_lethal else (1.4 if reserve_urgent else 1.0)
@@ -4800,7 +4800,14 @@ class Policy:
         if (bool(pol.get("lethal_survivable_line", True)) and kill_race
                 and not race_allin and reserve_lethal and gap_now > 0
                 and _worthwhile_blks):
-            _cover_need = gap_now - my_hp
+            # 本批证据来自 F17 Boss；普通战的成长型竞速已有全攻回归锚，
+            # 先不把该行为扩散到 Monster/Elite。
+            _pyrrhic_partial_cover = (
+                reserve_pyrrhic and gap_now < my_hp
+                and cctx.get("node_type") == "Boss")
+            _pyrrhic_floor = (0.12 * float(my_max_hp)
+                              if _pyrrhic_partial_cover else 0.0)
+            _cover_need = gap_now - (my_hp - _pyrrhic_floor)
             if _cover_need > 0:
                 _cover_sum = 0.0
                 _cover_energy = energy
@@ -4814,8 +4821,12 @@ class Policy:
                         break
                 race_lethal_cover = _cover_sum > _cover_need
         if race_lethal_cover:
+            _cover_line = (
+                f"12%惨胜线{0.12 * float(my_max_hp):.1f}"
+                if reserve_pyrrhic and gap_now < my_hp
+                else f"生命{my_hp}")
             danger_note += (
-                f"；致死生还线：可负担格挡组合覆盖缺口{gap_now}-生命{my_hp}"
+                f"；致死生还线：可负担格挡组合覆盖缺口{gap_now}-{_cover_line}"
                 "，本回合买命可生还，非斩杀攻击让位格挡"
                 "（LETHAL_SURVIVABLE_LINE）")
         # 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
