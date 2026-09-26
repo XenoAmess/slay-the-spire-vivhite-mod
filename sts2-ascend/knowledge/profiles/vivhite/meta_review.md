@@ -4476,3 +4476,31 @@ production_code_commit: `fc89d936`
 - 只在后续真实 Boss 续航样本中核对分相字段；在信号不足前不把观测升级为策略调整。
 - 若出现标记缺失、分相误归类或 action/params 漂移，将
   `vivhite_hp_pay_phase_audit_obs` 设为 `False`，并回滚 `fc89d936` 的观测提交。
+
+# 第1391~1393批：千足虫重生窗口可证伪观测
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1393 局 F31 的长战败局面至少部分来自逐节击杀后进入两回合重生窗口；当前竞速账只记录静态重生血池，未记录节段离场与回场。若假设成立，后续相同遭遇会看到活动节段集合先减少、约两回合内重新出现；若 3~10 局确认样本没有该转移，假设即被证伪。
+- **EVIDENCE**：完整回放 `20260926-152008_6CECCX4XK7XS.json` 共 833 条 decision；F31 为 411 条战斗决策、T1~T102，含 308 次 `play_card` 与 102 次 `end_turn`。T1 的 422/424 条已记录三节 `DECIMILLIPEDE_SEGMENT_*`、`REATTACH_POWER` 与一次“可击杀”，T2 已发生换线，随后持续出现 `RACE_UPSHIFT_STALE`、`FOCUS_DRIFT_LOCK`，T100~T102 因无伤害手段结束回合并阵亡。原生 v0.111.0 机制记录确认每节附带 `REATTACH_POWER=25`，死亡态转入 `REATTACH_MOVE`，且仅在其他节仍存活时 `DoReattach`。
+- **EXPECTED_SIGNAL**：未来 3~10 局中，首次进入全场千足虫节段时出现每回合至多一次 `DECIMILLIPEDE_REATTACH_WINDOW_OBS`，包含 `live`、各节 HP/预测击杀数、`missing`、`returned` 与 `window_turns=2`；若节段先消失后回场，`missing`/`returned` 应按实例对应。动作与 params 必须保持原样。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `decimillipede_reattach_window_obs` 开关。
+- `sts2-ascend/brain/policy.py`：在已有重生竞速观测之后追加实例集合快照；按战斗实例隔离，每回合一次，仅写 `danger_note`，不进入评分、目标选择或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖首快照、同回合去重、节段离场、回场及关闭开关回滚。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime` 或本批原始证据；本批 `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 代码 diff 已复核，`git diff --check` 通过；提交 SHA 在本地 commit 后回执。
+
+## FOLLOW-UP / ROLLBACK
+
+- 仅在后续真实千足虫样本中核对 `missing`/`returned` 与两回合窗口，不把观测本身当作死亡原因或策略结论。
+- 若标记缺失、实例错配、窗口与原生证据不符或 action/params 漂移，将配置键设为 `False`，并回滚本地提交。

@@ -12257,6 +12257,44 @@ def main() -> int:
         "enemy_id 缺失回退中文名的未知名册判决被快照改变"
     assert rd2_pol._respawn_read_obs.get("异螨") == "nm:未知(n=0,rs=3)", \
         "name 回退未知名册的首判应记 nm:未知 并携带名册读数"
+    # 3yr-reattach-window-observation: this is an audit-only signal.  It must
+    # expose a segment disappearing and returning while leaving the policy gate
+    # fully reversible.
+    rw_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-reattach-window-")))
+    rw_pol = policy.Policy(rw_know)
+    rw_enemies = [
+        {"enemy_id": "DECIMILLIPEDE_SEGMENT_BACK", "index": 0,
+         "current_hp": 31,
+         "powers": [{"power_id": "REATTACH_POWER", "amount": 25}]},
+        {"enemy_id": "DECIMILLIPEDE_SEGMENT_FRONT", "index": 1,
+         "current_hp": 35,
+         "powers": [{"power_id": "REATTACH_POWER", "amount": 25}]},
+        {"enemy_id": "DECIMILLIPEDE_SEGMENT_MIDDLE", "index": 2,
+         "current_hp": 32,
+         "powers": [{"power_id": "REATTACH_POWER", "amount": 25}]},
+    ]
+    rw_first = rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies, True, 1, rw_know.policy)
+    assert "DECIMILLIPEDE_REATTACH_WINDOW_OBS" in rw_first \
+        and "live=3" in rw_first and "window_turns=2" in rw_first, \
+        "千足虫重生窗口首个观测缺失"
+    assert rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies, True, 1, rw_know.policy) == "", \
+        "同一回合重生窗口观测不得重复"
+    rw_missing = rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies[:2], True, 2, rw_know.policy)
+    assert "missing=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_missing, \
+        "重生窗口未记录节段离场"
+    rw_returned = rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies, True, 3, rw_know.policy)
+    assert "returned=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_returned, \
+        "重生窗口未记录节段回场"
+    rw_know.policy["decimillipede_reattach_window_obs"] = False
+    assert rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies, True, 4, rw_know.policy) == "", \
+        "关闭重生窗口观测键未严格回滚"
+
     rd3_pol = policy.Policy(ra_know)
     rd3_pol._combat_kills["SPRING_ADD#0"] = 2
     assert rd3_pol._is_respawn_add({"enemy_id": "SPRING_ADD", "index": 0}), \

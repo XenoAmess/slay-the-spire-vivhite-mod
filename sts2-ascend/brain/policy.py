@@ -650,6 +650,8 @@ class Policy:
         # 判「可行」时携带账面文本，供前夜翻转留痕对账。判死侧已有 doom 全文、
         # 数据缺失侧为空串，消费端据此区分三种现实
         self._race_proj_audit = ""
+        self._respawn_window_obs_round = None
+        self._respawn_window_obs_ids: set = set()
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
@@ -4251,6 +4253,8 @@ class Policy:
         danger_note = self._respawn_read_obs_flush(danger_note)
         danger_note = self._respawn_veto_obs_flush(danger_note)
         danger_note = self._respawn_confirm_obs_flush(danger_note)
+        danger_note = self._decimillipede_reattach_window_obs(
+            danger_note, enemies, all_respawn, round_no, pol)
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
         return kill_race, all_respawn, stance, danger_note
@@ -4318,6 +4322,8 @@ class Policy:
         if self._kills_combat is not ctx.combat:
             self._kills_combat = ctx.combat
             self._combat_kills = {}
+            self._respawn_window_obs_round = None
+            self._respawn_window_obs_ids = set()
             self._respawn_reported = set()
             self._respawn_veto_reported = set()
             self._respawn_veto_obs = {}
@@ -7979,6 +7985,64 @@ class Policy:
                 self._respawn_veto_obs[kid] = _veto_err
             return False
         return True
+
+    def _decimillipede_reattach_window_obs(
+            self, danger_note: str, enemies: list[dict], all_respawn: bool,
+            round_no: int, pol: dict) -> str:
+        """Record the linked-segment reattach window without changing scoring."""
+        try:
+            enabled = bool(int(float(pol.get(
+                "decimillipede_reattach_window_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            enabled = False
+        if not enabled or not all_respawn:
+            return danger_note
+        if self._respawn_window_obs_round == round_no:
+            return danger_note
+
+        segments = []
+        for enemy in enemies:
+            kid = str(enemy.get("enemy_id") or "").upper()
+            if not kid.startswith("DECIMILLIPEDE_SEGMENT"):
+                continue
+            power_amount = "?"
+            for power in enemy.get("powers") or []:
+                if not isinstance(power, dict):
+                    continue
+                power_id = str(power.get("power_id") or power.get("id")
+                                or power.get("power") or "").upper()
+                if power_id == "REATTACH_POWER":
+                    amount = power.get("amount")
+                    try:
+                        power_amount = f"{float(amount):g}"
+                    except (TypeError, ValueError, OverflowError):
+                        power_amount = "?"
+                    break
+            try:
+                hp = f"{float(enemy.get('current_hp', 0) or 0):g}"
+            except (TypeError, ValueError, OverflowError):
+                hp = "?"
+            kill_key = self._kill_confirm_key(kid, enemy.get("index"))
+            predicted_kills = self._combat_kills.get(kill_key, 0)
+            segments.append((kid, hp, power_amount, predicted_kills))
+        if len(segments) < 2:
+            return danger_note
+
+        segments.sort(key=lambda item: item[0])
+        current_ids = {item[0] for item in segments}
+        previous_ids = set(self._respawn_window_obs_ids)
+        missing = sorted(previous_ids - current_ids) if previous_ids else []
+        returned = sorted(current_ids - previous_ids) if previous_ids else []
+        detail = "|".join(
+            f"{kid}={hp}/p{power}/k{kills}"
+            for kid, hp, power, kills in segments)
+        self._respawn_window_obs_round = round_no
+        self._respawn_window_obs_ids = current_ids
+        return (danger_note
+                + f";DECIMILLIPEDE_REATTACH_WINDOW_OBS:round={round_no}"
+                + f";live={len(segments)};segments={detail}"
+                + f";missing={','.join(missing) or '-'}"
+                + f";returned={','.join(returned) or '-'};window_turns=2")
 
     def _respawn_read_obs_flush(self, danger_note: str) -> str:
         """把本场名册读侧首判快照一次性并入 danger_note（每敌每场至多一次）。
