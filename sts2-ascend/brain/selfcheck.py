@@ -3697,6 +3697,68 @@ def main() -> int:
     assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh_nonboss.reason, \
         f"非 Boss 回合不得误挂 Boss 自付注记: {d_bfh_nonboss.reason}"
 
+    # 3bfs) 白绮沙坑末格空过观测（VIVHITE_SANDPIT_EAT_END_TURN_OBS）：
+    #       1459-F33 的 T6 在 clock=1、block 已覆盖 incoming 时 end_turn，随后
+    #       紧接 GAME_OVER；只追加 clock/HP/格挡/意图/服务端投影/续命牌对账，
+    #       不改变 end_turn 或参数，开关关闭与非 Boss 必须严格无注记。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_sandpit_eat_end_turn_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_sandpit_eat_end_turn_obs 静态键或默认值被改"
+
+    def _sandpit_end_turn_state():
+        _st = _krh_state(
+            6, 9, [{
+                "index": 0,
+                "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+                "name": "启发式护盾", "card_type": "Skill", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Block", "current_value": 8}],
+            }], incoming=20)
+        _st["available_actions"] = ["play_card", "end_turn"]
+        _st["combat"]["player"]["block"] = 24
+        _st["combat"]["player"]["energy"] = 1
+        _st["combat"]["end_turn_will_kill_player"] = False
+        _st["combat"]["enemies"][0].update(
+            enemy_id="THE_INSATIABLE", name="无厌沙虫",
+            powers=[{"power_id": "SANDPIT_POWER", "amount": 1}])
+        return _st
+
+    vknow_sand = _vivhite_know("sts2-selfcheck-vsandpit-end-turn-")
+    vpol_sand = policy.Policy(vknow_sand, random.Random(11))
+    vctx_sand = _krh_ctx()
+    d_sand = None
+    for _ in range(4):
+        d_sand = vpol_sand.decide(_sandpit_end_turn_state(), vctx_sand)
+        if d_sand.action == "end_turn":
+            break
+    assert d_sand is not None and d_sand.action == "end_turn" \
+        and d_sand.params == {} \
+        and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" in d_sand.reason \
+        and "clock=1/hp=9/block=24/incoming=20/covered=yes" in d_sand.reason \
+        and "/forced_kill=no/rescue=absent/energy=1" in d_sand.reason, \
+        f"沙坑末格空过观测缺失或动作漂移: {d_sand}"
+
+    vknow_sand0 = _vivhite_know("sts2-selfcheck-vsandpit-end-turn-off-")
+    vknow_sand0.policy["vivhite_sandpit_eat_end_turn_obs"] = 0
+    vpol_sand0 = policy.Policy(vknow_sand0, random.Random(11))
+    vctx_sand0 = _krh_ctx()
+    d_sand0 = None
+    for _ in range(4):
+        d_sand0 = vpol_sand0.decide(_sandpit_end_turn_state(), vctx_sand0)
+        if d_sand0.action == "end_turn":
+            break
+    assert d_sand0 is not None and d_sand0.action == d_sand.action \
+        and d_sand0.params == d_sand.params \
+        and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" not in d_sand0.reason, \
+        f"沙坑末格观测关闭不得改变动作/参数或残留注记: on={d_sand} off={d_sand0}"
+
+    vctx_sand_nonboss = _krh_ctx()
+    vctx_sand_nonboss.combat["node_type"] = "Monster"
+    d_sand_nonboss = vpol_sand.decide(
+        _sandpit_end_turn_state(), vctx_sand_nonboss)
+    assert "VIVHITE_SANDPIT_EAT_END_TURN_OBS" not in d_sand_nonboss.reason, \
+        f"非 Boss 回合不得误挂沙坑末格注记: {d_sand_nonboss.reason}"
+
     # 3bfloor) Boss 零意图生命支付安全下沿：只拦支付后跌破最大生命比例的非击杀牌，
     #           并验证高 HP 仍保留旧出牌、ratio=0 可一键回滚。
     assert float(knowledge.DEFAULT_POLICY[

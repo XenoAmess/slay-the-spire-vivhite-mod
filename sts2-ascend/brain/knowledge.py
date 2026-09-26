@@ -768,6 +768,11 @@ DEFAULT_POLICY = {
                                     # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
                                     # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。
                                     # False 一键回滚旧口径（零差异）
+    "vivhite_sandpit_eat_end_turn_obs": 1,  # 白绮沙坑末格空过观测（VIVHITE_SANDPIT_EAT_END_TURN_OBS，
+                                    # 1459-F33 末次 end_turn 后紧接 GAME_OVER：已有投影理由带时钟封底，
+                                    # 但收口空过没有把 clock、HP/格挡/意图、服务端致死投影与可用续命牌
+                                    # 绑定，无法区分沙坑吞噬和敌方伤害。仅在白绮 Boss、时钟<=1 的最终
+                                    # end_turn reason 追加对账字段；不改评分、候选、动作或参数，0=关闭。
     "sandpit_frantic_play_value": 12.0,  # 沙坑续命牌出牌计价（FRANTIC_ESCAPE_CLOCK_VALUE，第739~743局批复盘，
                                     # 静态键）：狂乱逃离打出即目标沙坑计数+1=一个完整行动回合，通用能力牌桶在
                                     # KILL_RACE_LONGFIGHT_OFF 撤账后只给3.7~5.7分——743局F33时钟=2、14血手握

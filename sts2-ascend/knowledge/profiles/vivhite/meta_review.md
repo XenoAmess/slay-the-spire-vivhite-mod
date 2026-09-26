@@ -4974,3 +4974,36 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1455~1459 批：沙坑末格空过与终局死因对账观测
+
+日期：2026-09-27
+production_code_commit: `00e184d62`
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1459-F33 在无厌沙虫 `SANDPIT_POWER` 时钟为 1 时最后一次 `end_turn`，随后立即 GAME_OVER；死因可能是沙坑归零后的强制吞噬，而不是 `incoming=20` 的普通伤害。已有 `SANDPIT_EAT_CLOCK_CAP` 只出现在出牌/投影理由，末次空过没有把时钟、格挡覆盖和服务端致死投影绑定，无法证伪两种死因。
+- **EVIDENCE**：精确批次为 1455~1459，最新完整运行文件为 `runs/20260927-070838_LMKCAQ5JQR6H.json`；F33 有 23 条决策。T5/T6 已反复记录沙坑时钟封底，T6 最后 `end_turn` 为 `HP=9/block=24/incoming=20`，随后 GAME_OVER；战斗备注仅有 `F33 Boss战 掉血69｜自损16 ... 阵亡`，没有把终局原因与沙坑时钟绑定。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 Boss 战中，在沙坑 `clock<=1` 的末次 `end_turn` reason 出现 `VIVHITE_SANDPIT_EAT_END_TURN_OBS`，并能对账 `clock/HP/block/incoming/covered/forced_kill/rescue/energy` 与下一 tick 的存活或 GAME_OVER。开关关闭、非白绮或非 Boss 不应改变 action/params。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_sandpit_eat_end_turn_obs`，设为 `0` 即关闭。
+- `sts2-ascend/brain/policy.py`：新增只读观测 helper，仅限白绮 Boss 且沙坑时钟 `0 < clock <= 1`；把末次空过的时钟、生命、格挡、来袭伤害、致死投影、续命牌可用性和能量追加到 reason。它不改评分、候选、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖正例、开关关闭时 action/params 不变、非 Boss 不挂注记。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 生产代码 staged diff 已逐文件回读，`git diff --cached --check` 通过；仅有 Git 的 LF/CRLF 提示。
+- 生产代码已提交为 `00e184d62`，报告在该提交之后写入。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计独立 Boss 战，不把同一战斗的多条 tick 当作独立样本；记录沙坑时钟、`forced_kill`、格挡覆盖、续命牌状态、下一 tick 结果和战斗备注。
+- 若注记缺失、字段与原始状态不符，或 action/params 漂移，将 `vivhite_sandpit_eat_end_turn_obs` 设为 `0` 或回滚 `00e184d62`；在重复证据前不把该观测升级为因果行为。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

@@ -3512,6 +3512,56 @@ class Policy:
             return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
         return None
 
+    def _sandpit_end_turn_observation_note(
+            self, ctx, combat, hand, energy, my_hp, my_block, incoming, pol):
+        """Describe a Boss sandpit end-turn boundary without changing policy."""
+        try:
+            enabled = bool(int(float(pol.get(
+                "vivhite_sandpit_eat_end_turn_obs", 1) or 0)))
+        except (TypeError, ValueError, AttributeError):
+            enabled = False
+        ctx_combat = getattr(ctx, "combat", None) or {}
+        if (not enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or ctx_combat.get("node_type") != "Boss"):
+            return ""
+        sandpit_clock = 0.0
+        for enemy in combat.get("enemies") or []:
+            if isinstance(enemy, dict):
+                sandpit_clock = max(
+                    sandpit_clock,
+                    self._enemy_power_stack(enemy, "sandpit", "沙坑"))
+        if not 0.0 < sandpit_clock <= 1.0:
+            return ""
+        rescue_seen = False
+        rescue_available = False
+        for rescue_card in hand or []:
+            if not self._is_frantic_escape(rescue_card):
+                continue
+            rescue_seen = True
+            try:
+                rescue_cost = (energy if rescue_card.get("costs_x")
+                               else float(rescue_card.get("energy_cost") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                rescue_cost = float("inf")
+            if (bool(rescue_card.get("playable"))
+                    and not self._card_unavailable(rescue_card)
+                    and rescue_cost <= energy):
+                rescue_available = True
+                break
+        rescue_state = (
+            "available" if rescue_available
+            else "unavailable" if rescue_seen else "absent")
+        return (
+            f"；沙坑末格空过观测：clock={sandpit_clock:g}"
+            f"/hp={float(my_hp):g}/block={float(my_block):g}"
+            f"/incoming={float(incoming):g}"
+            f"/covered={'yes' if my_block >= incoming else 'no'}"
+            f"/forced_kill={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+            f"/rescue={rescue_state}/energy={float(energy):g}"
+            "（VIVHITE_SANDPIT_EAT_END_TURN_OBS）")
+
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -3559,6 +3609,8 @@ class Policy:
                 return f"{c.get('name')}({c.get('energy_cost', '?')}费){mark}"
 
             _audit = ",".join(_card_audit(c) for c in hand) or "空手"
+            _sandpit_end_turn_note = self._sandpit_end_turn_observation_note(
+                ctx, combat, hand, energy, my_hp, my_block, incoming, pol)
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -3676,7 +3728,7 @@ class Policy:
                     "end_turn", {},
                     f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
                     f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}"
-                    f"{_terminal_lock_note}",
+                    f"{_terminal_lock_note}{_sandpit_end_turn_note}",
                     wait=1.2)
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
@@ -3691,7 +3743,7 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
-                    f"｜能量{energy}｜[{_audit}]",
+                    f"｜能量{energy}｜[{_audit}]{_sandpit_end_turn_note}",
                     wait=1.2)
             # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
             # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
@@ -3812,7 +3864,8 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}",
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}"
+                    f"{_sandpit_end_turn_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
@@ -3823,7 +3876,8 @@ class Policy:
             return Decision(
                 "end_turn", {},
                 f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
-                f"｜能量{energy}｜[{_audit}]{_ff_tax_note}",
+                f"｜能量{energy}｜[{_audit}]{_ff_tax_note}"
+                f"{_sandpit_end_turn_note}",
                 wait=1.2)
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
@@ -7423,7 +7477,7 @@ class Policy:
                 is_unavailable=self._card_unavailable,
                 enabled=_free_energy_obs)
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
