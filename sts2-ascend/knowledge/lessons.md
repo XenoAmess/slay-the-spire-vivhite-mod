@@ -12976,3 +12976,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8780454971058247局)，BASH(14分/3.2814231129356997局)，BODY_SLAM(15分/2.3658094632895574局)
 - 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.36（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 2.03 → 2.02（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F28——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1580 胜，当前目标进阶 0
+
+## 第 1581 局复盘（2026-09-26 17:48）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：CINDER, TWIN_STRIKE, SHRUG_IT_OFF, HEADBUTT, SWORD_BOOMERANG, FLAME_BARRIER, MOLTEN_FIST, DARK_EMBRACE, MOLTEN_FIST, SHRUG_IT_OFF, CINDER, THUNDERCLAP
+- 本局遗物：无
+- 战斗记录：F15 Monster战 掉血3; F17 Boss战 掉血24｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血5; F20 Monster战 掉血25; F22 Monster战 掉血15｜自损5（可行动段5/非行动段16，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血35｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0716907492457124局)，ASHEN_STRIKE(26分/2.274174270902954局)，PERFECTED_STRIKE(25分/3.7117096506366023局)，PACTS_END(25分/71.02881944501144局)，FEED(25分/36.93900020060133局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.8644723378659545局)，BASH(14分/3.269938132040425局)，BODY_SLAM(15分/2.3575291301680443局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.39（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F23——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1581 胜，当前目标进阶 0
