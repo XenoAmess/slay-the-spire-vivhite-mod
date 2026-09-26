@@ -6464,6 +6464,34 @@ class Policy:
                                     f"候选分{float(chosen_score):.2f}>门槛+"
                                     f"{_krh_gate_extra:.1f}"
                                     "（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS）")
+            # Boss free-turn HP payment observation (VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS).
+            # This is deliberately attached after selection: it records the
+            # actual selected card's predicted payment without changing score,
+            # eligibility, parameters, or the action.  The incoming=0 filter
+            # isolates the free-turn relief boundary from ordinary defense.
+            try:
+                _boss_free_turn_obs = bool(int(float(pol.get(
+                    "vivhite_boss_free_turn_hp_pay_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _boss_free_turn_obs = False
+            if (_boss_free_turn_obs
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and cctx.get("node_type") == "Boss"
+                    and incoming <= 0):
+                try:
+                    _boss_free_turn_pay = float(self._vivhite_hp_pay(
+                        card, player.get("powers") or []) or 0.0)
+                except (TypeError, ValueError, AttributeError):
+                    _boss_free_turn_pay = 0.0
+                if _boss_free_turn_pay > 0.0:
+                    _boss_free_turn_name = (
+                        card.get("name") or card.get("card_id") or "?")
+                    why += (
+                        f"｜Boss意图0生命支付：{_boss_free_turn_name}"
+                        f"实付{_boss_free_turn_pay:g}血，"
+                        f"hp={my_hp:g}/energy={energy:g}/round={round_no}"
+                        "（VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS）")
             # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，第 1505~1513 局批复盘
             # 新增，静态键）：RINGING_POWER（昏眩，本回合限打 1 张——原生
             # RingingPower.ShouldPlay=回合内首牌打出后全手牌不可打）生效回合，

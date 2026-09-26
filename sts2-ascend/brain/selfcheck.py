@@ -3656,6 +3656,47 @@ def main() -> int:
         return pol_obj.decide(
             _krh_state(3, 45, hand_fn(), incoming, deck), ctx_obj)
 
+    # 3bfh) Boss 意图0生命支付观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS，
+    #      1420~1422 批复盘）：三局 Boss 阵亡均出现首击前的生命支付，
+    #      1422 F35 T1 连续支付4/2/1/6血。只验证观测边界与纯观测回滚：
+    #      开关不改变已选动作/参数，非自由回合不挂注记，非白绮零改动。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_free_turn_hp_pay_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_hp_pay_obs 静态键或默认值被改"
+    vknow_bfh = _vivhite_know("sts2-selfcheck-vboss-freeturn-hppay-")
+    vknow_bfh.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_bfh = policy.Policy(vknow_bfh, random.Random(11))
+    d_bfh = vpol_bfh.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfh.action == "play_card" \
+        and "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" in d_bfh.reason, \
+        f"Boss 意图0选中生命支付牌缺自由回合观测: {d_bfh}"
+    assert "实付2血" in d_bfh.reason and "hp=65" in d_bfh.reason, \
+        f"Boss 意图0生命支付观测字段不完整: {d_bfh.reason}"
+    vknow_bfh0 = _vivhite_know("sts2-selfcheck-vboss-freeturn-hppay-off-")
+    vknow_bfh0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_bfh0.policy["vivhite_boss_free_turn_hp_pay_obs"] = 0
+    vpol_bfh0 = policy.Policy(vknow_bfh0, random.Random(11))
+    d_bfh0 = vpol_bfh0.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfh0.action == d_bfh.action and d_bfh0.params == d_bfh.params, \
+        f"自由回合生命支付观测关闭不得改变动作: on={d_bfh} off={d_bfh0}"
+    assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh0.reason, \
+        f"观测关闭后不得出现自由回合生命支付注记: {d_bfh0.reason}"
+    vctx_bfh_incoming = _krh_ctx()
+    d_bfh_incoming = vpol_bfh.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=22),
+        vctx_bfh_incoming)
+    assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh_incoming.reason, \
+        f"有来袭伤害的 Boss 回合不得误挂自由回合注记: {d_bfh_incoming.reason}"
+    vctx_bfh_nonboss = _krh_ctx()
+    vctx_bfh_nonboss.combat["node_type"] = "Monster"
+    d_bfh_nonboss = vpol_bfh.decide(
+        _krh_state(1, 65, _krh_hand_vivhite(), incoming=0),
+        vctx_bfh_nonboss)
+    assert "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" not in d_bfh_nonboss.reason, \
+        f"非 Boss 回合不得误挂 Boss 自付注记: {d_bfh_nonboss.reason}"
+
     # 3tll) 生命支付终端锁观测（VIVHITE_HP_TERMINAL_LOCK_OBS，第1202~1204局批
     #      复盘）：1203-F33 与 1204-F48 收口时，全部非诅咒手牌均被原生
     #      blocked_by_hook，白绮仍有能量却只能结束回合；现有逐张审计没有稳定

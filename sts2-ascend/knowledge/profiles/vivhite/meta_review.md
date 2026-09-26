@@ -4751,3 +4751,36 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1420~1422批：Boss 意图0自由回合生命支付观测
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 见交接）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1420~1422 局的 Boss 阵亡可能部分来自白绮在敌方意图为 0 的自由回合连续支付生命；现有 `VIVHITE_HP_GATE_FREE_TURN_RELIEF` 解释了为什么生命支付门在该窗口撤除，但没有把“首个正伤害回合之前已经付血”作为独立事件。若未来 Boss 样本中反复出现 `incoming=0` 且选中牌实际支付生命>0，并且这些样本在首个正伤害回合拥有更低 HP/更高后续 `SELF_LOSS_PHASE_OBS`，假设得到支持；若事件缺失、只在非 Boss/有伤害回合出现，或与后续结果没有可重复区分，假设被证伪。
+- **EVIDENCE**：exact batch 为 1420~1422。1420 完整运行文件为 `runs/20260926-223732_936BX4U1KU5L.json`（F33，Boss 自损67/掉血111，阵亡）；1421 为 `runs/20260926-230750_CL1F03X4VBCM.json`（F35，Boss 自损20/掉血88，阵亡）；1422 为 `runs/20260926-232151_E3QT44NRHDHB.json`（F35，Boss 自损26/掉血61，阵亡）。1421 F35 T1 在 incoming=0 时连续选中三张 `hp-cost=4` 牌；1422 F35 T1 在 incoming=0 时依次记录 `Scale Transformation+` 4、`Successor+` 2、`Closed Projection` 1、`Law of Conservation` 6 的生命成本，并明确带有 `VIVHITE_HP_GATE_FREE_TURN_RELIEF`；这些是决策链的卡面成本，新增观测会按当前 Margin 重新记录实际支付，避免把原始成本误报为掉血。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 战中，仅对最终选中的白绮生命支付牌写入 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS`，字段包含牌名、实际支付、hp/energy/round；同时对账首个 `incoming>0` 回合 HP、`SELF_LOSS_PHASE_OBS`、Boss 胜负与终局回合。开关关闭、非 Boss 或 `incoming>0` 时不得写入；action/params 必须逐项不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_boss_free_turn_hp_pay_obs` 静态键，值为 0 时一键关闭观测。
+- `sts2-ascend/brain/policy.py`：在最终选中出牌、既有竞速自付观测之后，仅当角色为白绮、节点为 Boss、敌方意图总伤为 0 且 `_vivhite_hp_pay` 计算出的实际支付>0 时追加 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS`；不进入评分、候选资格、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：补充默认键、正例、关闭键动作/参数回滚、有来袭伤害过滤和非 Boss 过滤夹具。
+- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime/`、归档或本批原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过（退出码 0）。
+- 报告写入前代码 diff 仅包含上述三个 brain 文件；`.review-cache/` 测试产物和宿主已有素材变更未纳入提交。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只做未来 3~10 个独立 Boss 战的真实对账，不把观测本身当作因果结论；达到样本门槛后再决定是否调整自由回合生命门或牌序。
+- 若标记缺失、实际支付与原生回执不符、过滤误触发或 action/params 发生漂移，将 `vivhite_boss_free_turn_hp_pay_obs` 设为 `0`，必要时回滚本地提交；保留已有生命支付与 Boss 续航审计。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
