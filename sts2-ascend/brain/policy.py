@@ -8286,19 +8286,8 @@ class Policy:
                                     and self._enemy_power_stack(
                                         _o, "minion", "爪牙") <= 0
                                     for _o in enemies)):
-                        _live_minions = sum(
-                            1 for _o in enemies
-                            if _o.get("is_alive") is not False
-                            and self._enemy_power_stack(
-                                _o, "minion", "爪牙") > 0)
-                        _live_primary = sum(
-                            1 for _o in enemies
-                            if _o.get("is_alive") is not False
-                            and self._enemy_power_stack(
-                                _o, "minion", "爪牙") <= 0)
                         why += ("｜爪牙集火在账：目标携MINION_POWER且主场敌存活，"
                                 "其死亡可能触发主场敌行为切换/狂暴"
-                                f"；存活爪牙={_live_minions},存活主场={_live_primary}"
                                 "（MINION_FOCUS_OBS）")
                         # 原生 IllusionPower.AfterDeath 会把 Parafright 送入复生/状态
                         # 切换路径；它同时由 IllusionPower 自动获得 MinionPower。若只

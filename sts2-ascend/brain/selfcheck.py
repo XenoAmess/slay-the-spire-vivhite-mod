@@ -1567,8 +1567,7 @@ def main() -> int:
     mf_pol = policy.Policy(mf_know, random.Random(11))
     d_mf = mf_pol.decide(minion_focus_state(amal_powers=_mf_minion), ctx)
     assert d_mf.action == "play_card" and d_mf.params.get("target_index") == 1 \
-        and "MINION_FOCUS_OBS" in d_mf.reason \
-        and "存活爪牙=1,存活主场=1" in d_mf.reason, \
+        and "MINION_FOCUS_OBS" in d_mf.reason, \
         f"中标爪牙+领导者存活未留痕: {d_mf.params}（{d_mf.reason}）"
     _mf_illusion = [
         {"id": "MINION_POWER", "amount": 1},
