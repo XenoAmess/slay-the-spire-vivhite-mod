@@ -4593,3 +4593,35 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 第1400~1401批：感染棱柱多段污染税命中对账
+
+日期：2026-09-26
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当前 `VITAL_SPARK_SKILL_TAX` 只按「污染层数×技能税」计一次，低估了多段攻击意图的边际受击；若技能牌后同回合意图增量≈「层数×技能税×命中数」，则假设成立；若增量与命中数不符、标记缺失或误触发，则假设证伪。
+- **EVIDENCE**：exact batch 为1400~1401局；失败局 `6TKVQNAWD84N` 的完整证据在 `runs/20260926-174907_6TKVQNAWD84N.json`。F31 中感染棱柱同回合技能牌后出现 15→27→39→51 的意图递增。原生知识 `game/v0.111.0/mechanics/monsters.jsonl` 记录 Whirlwind 为三次重复攻击；`mechanics/powers.jsonl` 记录 `VITAL_SPARK_POWER` 使污染牌在本回合每次攻击额外受伤。
+- **EXPECTED_SIGNAL**：未来3~10个独立感染棱柱战斗中，`VIVHITE_VITAL_SPARK_HIT_AUDIT` 记录技能名、污染边际、意图前后值、实测增量和估算命中数；只在白绮、同回合、可读火花层数且意图上升时出现。关闭键后标记消失，action/params 不变。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_vital_spark_hit_obs`。
+- `sts2-ascend/brain/policy.py`：在 COMBAT 决策前后记录同回合技能牌与敌方总意图增量，追加 `VIVHITE_VITAL_SPARK_HIT_AUDIT`；不改评分、候选、放行、目标或动作参数，并以 run/floor/战斗实例隔离 pending。
+- `sts2-ascend/brain/selfcheck.py`：新增 15→27 三连击估算夹具和关闭键 action/params 不变断言。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或本批原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend`：通过；代码复核仅包含上述三个 brain 文件，宿主预置素材删除与 `.review-cache/` 未纳入。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续3~10局只核对真实意图增量与原生命中数，不把观测本身当作死亡因果；达到至少3个独立样本后，再决定是否把多段命中纳入技能税估值。
+- 若标记缺失、非白绮触发、跨回合误配或 action/params 改变，将 `vivhite_vital_spark_hit_obs` 设为 `0`；必要时回滚本地提交，保留既有 `VITAL_SPARK_SKILL_TAX`。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

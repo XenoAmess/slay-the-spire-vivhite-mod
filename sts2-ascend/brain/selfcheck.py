@@ -8133,7 +8133,8 @@ def main() -> int:
     def vt_state(hand, enemy, turn=1, hp=80):
         enemies = enemy if isinstance(enemy, list) else [enemy]
         return {
-            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "screen": "COMBAT", "run_id": "VT-SPARK-AUDIT",
+            "available_actions": ["play_card", "end_turn"],
             "turn": turn,
             "combat": {
                 "player": {"current_hp": hp, "max_hp": 80, "block": 0, "energy": 3},
@@ -8195,6 +8196,44 @@ def main() -> int:
     assert d_vt6.action == "play_card" \
             and "VITAL_SPARK_SKILL_TAX" not in (d_vt6.reason or ""), \
         f"意图0回合技能不得吃火花税: {d_vt6.action}（{d_vt6.reason}）"
+
+    # ⑦ 白绮同回合命中对账：15→27 的意图增量在火花×2、税2时应估算为
+    # 3 次命中；关闭观测键后 action/params 必须逐项保持不变。
+    vt_audit_know = _vivhite_know("sts2-selfcheck-vspark-audit-")
+    vt_audit_pol = policy.Policy(vt_audit_know, random.Random(5))
+    vt_audit_ctx = vt_ctx()
+    d_vt_audit_1 = vt_audit_pol.decide(
+        vt_state([dict(vt_block)], vt_enemy(stacks=2, intent=15)),
+        vt_audit_ctx)
+    d_vt_audit_2 = vt_audit_pol.decide(
+        vt_state([dict(vt_strike)], vt_enemy(stacks=2, intent=27)),
+        vt_audit_ctx)
+    assert d_vt_audit_1.action == "play_card" \
+            and d_vt_audit_1.params.get("card_index") == 0, \
+        f"命中对账夹具首张技能牌未执行: {d_vt_audit_1}"
+    assert "VIVHITE_VITAL_SPARK_HIT_AUDIT" in (d_vt_audit_2.reason or "") \
+            and "意图15→27" in d_vt_audit_2.reason \
+            and "估算命中3.00" in d_vt_audit_2.reason, \
+        f"命中对账未识别三连击增量: {d_vt_audit_2}"
+
+    vt_audit_off_know = _vivhite_know("sts2-selfcheck-vspark-audit-off-")
+    vt_audit_off_know.policy["vivhite_vital_spark_hit_obs"] = 0
+    vt_audit_off_pol = policy.Policy(vt_audit_off_know, random.Random(5))
+    vt_audit_off_ctx = vt_ctx()
+    d_vt_audit_off_1 = vt_audit_off_pol.decide(
+        vt_state([dict(vt_block)], vt_enemy(stacks=2, intent=15)),
+        vt_audit_off_ctx)
+    d_vt_audit_off_2 = vt_audit_off_pol.decide(
+        vt_state([dict(vt_strike)], vt_enemy(stacks=2, intent=27)),
+        vt_audit_off_ctx)
+    assert d_vt_audit_1.action == d_vt_audit_off_1.action \
+            and d_vt_audit_1.params == d_vt_audit_off_1.params \
+            and d_vt_audit_2.action == d_vt_audit_off_2.action \
+            and d_vt_audit_2.params == d_vt_audit_off_2.params, \
+        "命中对账观测不得改变 action/params"
+    assert "VIVHITE_VITAL_SPARK_HIT_AUDIT" not in \
+        (d_vt_audit_off_2.reason or ""), \
+        f"命中对账关闭键未生效: {d_vt_audit_off_2}"
 
     # 第580局：NO_BLOCK_POWER 锁窗内纯防牌必须成为死牌；载荷已报 0 时
     # 文本兜底同样生效；带伤害面的混合牌保留输出价值。

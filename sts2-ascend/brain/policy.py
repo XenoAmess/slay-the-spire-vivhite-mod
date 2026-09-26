@@ -796,6 +796,11 @@ class Policy:
         # 敌能力快照观测（ENEMY_POWERS_SNAPSHOT_OBS，第 560~576 局批复盘）：
         # 战斗实例身份（一次性快照隔离用），详见 _combat 竞速投影段后的观测位
         self._powers_obs_combat = None
+        # 白绮活力火花命中对账（VIVHITE_VITAL_SPARK_HIT_AUDIT）：只追踪
+        # 技能牌前后同回合意图增量，纯留痕，不参与评分、动作或参数选择。
+        self._vivhite_vspark_audit_scope = None
+        self._vivhite_vspark_audit_pending = None
+        self._vivhite_vspark_audit_note = ""
         # 同事件实例内重复选择记忆（第 214 批复盘）：滑脚木桥「再撑一会」连选 5 次，
         # 结算端 pending_event 被后选覆盖导致该选项永远 n=0——「全零并列选样本最少」
         # 规则于是每局反复选中它，单事件白掉 5 张牌。同实例内已选次数计入有效样本
@@ -810,6 +815,137 @@ class Policy:
     def _strategy_card(self, card: dict) -> CardCatalogEntry | None:
         card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
         return self.character_strategy.card(card_id)
+
+    def _vivhite_vspark_audit_enabled(self) -> bool:
+        if getattr(self.character_strategy, "profile_id", None) != VIVHITE_PROFILE_ID:
+            return False
+        try:
+            return bool(int(self.know.policy.get(
+                "vivhite_vital_spark_hit_obs", 1) or 0))
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
+    def _vivhite_vspark_incoming(state: dict) -> float:
+        combat = state.get("combat") or {}
+        total = 0.0
+        for enemy in combat.get("enemies") or []:
+            if not isinstance(enemy, dict) or not enemy.get("is_alive", True):
+                continue
+            for intent in enemy.get("intents") or []:
+                if not isinstance(intent, dict):
+                    continue
+                try:
+                    total += max(0.0, float(intent.get("total_damage") or 0))
+                except (TypeError, ValueError):
+                    continue
+        return total
+
+    @staticmethod
+    def _vivhite_vspark_turn(state: dict) -> int:
+        try:
+            return int(state.get("turn") or 1)
+        except (TypeError, ValueError):
+            return 0
+
+    @staticmethod
+    def _vivhite_vspark_scope(state: dict, ctx):
+        combat_scope = _vivhite_combat_scope(state, ctx)
+        combat_ctx = getattr(ctx, "combat", None)
+        if combat_scope is None or not isinstance(combat_ctx, dict):
+            return None
+        # Run+floor prevents cross-run carry-over; ctx.combat identity prevents
+        # a same-floor second combat from consuming the previous combat's delta.
+        return combat_scope + (id(combat_ctx),)
+
+    def _observe_vivhite_vspark_hit(self, state: dict, ctx) -> None:
+        """留痕同回合技能牌后意图增量，严格不参与评分或动作选择。"""
+        self._vivhite_vspark_audit_note = ""
+        if not self._vivhite_vspark_audit_enabled():
+            self._vivhite_vspark_audit_scope = None
+            self._vivhite_vspark_audit_pending = None
+            return
+        scope = self._vivhite_vspark_scope(state, ctx)
+        if scope is None:
+            self._vivhite_vspark_audit_scope = None
+            self._vivhite_vspark_audit_pending = None
+            return
+        if scope != self._vivhite_vspark_audit_scope:
+            self._vivhite_vspark_audit_scope = scope
+            self._vivhite_vspark_audit_pending = None
+        pending = self._vivhite_vspark_audit_pending
+        if not pending:
+            return
+        turn = self._vivhite_vspark_turn(state)
+        if turn != pending.get("turn"):
+            self._vivhite_vspark_audit_pending = None
+            return
+        current = self._vivhite_vspark_incoming(state)
+        try:
+            before = float(pending.get("incoming") or 0.0)
+            per_hit = float(pending.get("per_hit") or 0.0)
+        except (TypeError, ValueError):
+            self._vivhite_vspark_audit_pending = None
+            return
+        if current + 1e-9 < before:
+            self._vivhite_vspark_audit_pending = None
+            return
+        if current <= before or per_hit <= 0.0:
+            return
+        delta = current - before
+        estimated_hits = delta / per_hit
+        card_label = str(pending.get("card") or "?")[:40]
+        self._vivhite_vspark_audit_note = (
+            f"；活力火花命中对账：技能【{card_label}】污染边际"
+            f"{per_hit:g}/命中，意图{before:g}→{current:g}，实测增量{delta:g}，"
+            f"估算命中{estimated_hits:.2f}（VIVHITE_VITAL_SPARK_HIT_AUDIT）")
+        self._vivhite_vspark_audit_pending = None
+
+    def _remember_vivhite_vspark_skill(self, state: dict, ctx,
+                                       decision: Decision) -> None:
+        if (not self._vivhite_vspark_audit_enabled()
+                or decision.action != "play_card"
+                or self._vivhite_vspark_audit_pending is not None):
+            return
+        scope = self._vivhite_vspark_scope(state, ctx)
+        if scope is None:
+            return
+        hand = (state.get("combat") or {}).get("hand") or []
+        card_index = (decision.params or {}).get("card_index")
+        card = next((candidate for candidate in hand
+                     if isinstance(candidate, dict)
+                     and candidate.get("index") == card_index), None)
+        if card is None:
+            return
+        entry = self._strategy_card(card)
+        observed_type = str(card.get("card_type") or "").casefold()
+        is_skill_card = bool(
+            (entry is not None and entry.card_type == "skill")
+            or (entry is None and observed_type == "skill"))
+        if not is_skill_card:
+            return
+        try:
+            skill_tax = float(self.know.policy.get(
+                "vital_spark_skill_tax", 2.0) or 0.0)
+        except (TypeError, ValueError):
+            skill_tax = 0.0
+        if skill_tax <= 0.0:
+            return
+        stacks = 0.0
+        for enemy in (state.get("combat") or {}).get("enemies") or []:
+            if isinstance(enemy, dict) and enemy.get("is_alive", True):
+                stacks += self._enemy_power_stack(
+                    enemy, "vital_spark", "活力火花")
+        incoming = self._vivhite_vspark_incoming(state)
+        if stacks <= 0.0 or incoming <= 0.0:
+            return
+        self._vivhite_vspark_audit_scope = scope
+        self._vivhite_vspark_audit_pending = {
+            "turn": self._vivhite_vspark_turn(state),
+            "incoming": incoming,
+            "per_hit": stacks * skill_tax,
+            "card": card.get("name") or card.get("card_id") or "?",
+        }
 
     def _vivhite_margin_source(self, card: dict) -> bool:
         """无条件即时余裕源判定（与残能救场 independent_benefit 的口径一致）：
@@ -1686,6 +1822,9 @@ class Policy:
             self._potion_inventory_signature = None
             self._ui_action_cooldowns = {}
             self._ui_cooldown_scope = None
+            self._vivhite_vspark_audit_scope = None
+            self._vivhite_vspark_audit_pending = None
+            self._vivhite_vspark_audit_note = ""
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -1743,7 +1882,14 @@ class Policy:
         trace_builder = DecisionTraceBuilder(state)
         self._active_trace_builder = trace_builder
         try:
+            if screen == "COMBAT":
+                self._observe_vivhite_vspark_hit(state, ctx)
             decision = handler(state, ctx)
+            if screen == "COMBAT":
+                if self._vivhite_vspark_audit_note:
+                    decision.reason = (f"{decision.reason or ''}"
+                                       f"{self._vivhite_vspark_audit_note}")
+                self._remember_vivhite_vspark_skill(state, ctx, decision)
             if screen == "COMBAT" and decision.action == "use_potion":
                 # 竞速输出账记下本回合号，随后 commit 的本回合伤害不计入持续 DPS
                 try:

@@ -151,6 +151,9 @@ DEFAULT_POLICY = {
                               # 意图（incoming>0）时技能牌按「层数×本键」扣分；意图 0 回合
                               # 无可放大对象、技能零税；攻击/能力不附污染严格零差异；
                               # 0 = 关闭（严格回滚旧口径）
+    "vivhite_vital_spark_hit_obs": 1,  # 白绮活力火花命中对账（VIVHITE_VITAL_SPARK_HIT_AUDIT）：
+                                       # 只比较技能牌前后同回合敌方总意图的实际增量，估算
+                                       # 每刀污染税命中数；不进入评分/动作选择；0=严格关闭。
     "hp_cost_utility_pricing": 1,  # 耗血功能牌计价（HP_COST_UTILITY_PRICING，第1285~1289局批复盘）：
                                    # 「失去X点生命」换抽牌/回能的功能牌（祭品/放血族）此前在
                                    # 功能牌分支满分计价、自付血量零扣减——1289-F17 Boss 战
