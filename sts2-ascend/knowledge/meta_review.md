@@ -11672,3 +11672,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   progression、policy.json、lessons 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1580 局复盘（DECIMILLIPEDE 重接窗口时序观测）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F28 的 `DECIMILLIPEDE_REATTACH_WINDOW_OBS` 只记录当前存活节段、缺失/回场事件和固定 `window_turns=2`，没有记录节段从哪一回合开始缺失、当前已消耗多少回合或预计回场回合；因此无法证伪死亡是否发生在原生重接窗口内。该假设可证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260926-163804_4J7J6EA95TK9.json` 共333个决策，F28回合1~4，HP63→8→0。旧 marker 回合1/2/3为 `live=3`，回合4为 `live=2;missing=DECIMILLIPEDE_SEGMENT_BACK`，随后决策索引332 `GAME_OVER`；无法说明缺失始于哪一回合。原生 `mechanics/monsters.jsonl` 的 `DECIMILLIPEDE_SEGMENT.AfterAddedToRoom` 施加 `REATTACH_POWER` 25；`mechanics/powers.jsonl` 的 `REATTACH_POWER` 语义为仍有其他节段存活时两回合后以25生命回场，且 `DoReattach` 要求其他节段未全死。
+- **EXPECTED_SIGNAL**：未来3~10个独立千足虫窗口中 marker 应追加 `missing_since`、`missing_elapsed`、`return_due`、`returned_after`。回场样本的 `returned_after` 应能与缺失起点和原生两回合窗口对账；若连续出现窗口已过仍未回场、或回场耗时与回合边界不一致，则支持后续“静态竞速/状态采样未消费重接语义”复盘；若稳定对齐则削弱假设。开关关闭不得留 marker，action/params、评分、目标选择不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：按战斗实例清空并维护节段缺失起点；marker追加缺失回合、已耗回合、预计回场回合和实际回场耗时。只增加观测，不改变 `all_respawn`、竞速血池、评分、目标、判决或动作。
+- `sts2-ascend/brain/knowledge.py`：明确默认键仍为纯观测且覆盖原生两回合窗口。
+- `sts2-ascend/brain/selfcheck.py`：夹具覆盖首个快照、同回合去重、缺失后持续一回合、两回合回场耗时及关闭开关回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来3~10场按 run_id、回合、缺失节段、`missing_elapsed`、`returned_after`、节段HP与后续`GAME_OVER`分层；至少3个独立窗口前不改竞速/集火行为。若≥3窗口回场时序稳定对齐，保留观测；若≥3窗口在仍有其他节段时超过`return_due`未回场，再单独复盘状态采样与竞速消费。
+- **撤回**：若瞬态快照造成假缺失、回合边界错配、回场耗时与原生窗口持续不符，或关闭键改变action/params，则将 `decimillipede_reattach_window_obs` 设为 `False` 并保留失败链；必要时回退本批提交恢复旧 marker。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **DIFF_CHECK_OK**。未修改 `.runtime/`、runs、archive、stats、progression、policy.json、lessons 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+

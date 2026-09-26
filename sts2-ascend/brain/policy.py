@@ -652,6 +652,7 @@ class Policy:
         self._race_proj_audit = ""
         self._respawn_window_obs_round = None
         self._respawn_window_obs_ids: set = set()
+        self._respawn_window_obs_missing_since: dict[str, int] = {}
         self._timeline_epoch_pending = None  # (slot index, unchanged-state wait ticks)
         self._cur_turn = None       # combat turn tracking
         self._turn_combat = None    # combat identity paired with _cur_turn
@@ -4345,6 +4346,7 @@ class Policy:
             self._combat_kills = {}
             self._respawn_window_obs_round = None
             self._respawn_window_obs_ids = set()
+            self._respawn_window_obs_missing_since = {}
             self._respawn_reported = set()
             self._respawn_veto_reported = set()
             self._respawn_veto_obs = {}
@@ -8054,6 +8056,22 @@ class Policy:
         previous_ids = set(self._respawn_window_obs_ids)
         missing = sorted(previous_ids - current_ids) if previous_ids else []
         returned = sorted(current_ids - previous_ids) if previous_ids else []
+        for kid in missing:
+            self._respawn_window_obs_missing_since.setdefault(kid, round_no)
+        returned_after = {}
+        for kid in returned:
+            missing_since = self._respawn_window_obs_missing_since.pop(kid, None)
+            if missing_since is not None:
+                returned_after[kid] = max(0, round_no - missing_since)
+        missing_state = []
+        missing_elapsed = []
+        return_due = []
+        for kid in sorted(self._respawn_window_obs_missing_since):
+            if kid not in current_ids:
+                missing_since = self._respawn_window_obs_missing_since[kid]
+                missing_state.append(f"{kid}:{missing_since}")
+                missing_elapsed.append(f"{kid}:{max(0, round_no - missing_since)}")
+                return_due.append(f"{kid}:{missing_since + 2}")
         detail = "|".join(
             f"{kid}={hp}/p{power}/k{kills}"
             for kid, hp, power, kills in segments)
@@ -8063,7 +8081,13 @@ class Policy:
                 + f";DECIMILLIPEDE_REATTACH_WINDOW_OBS:round={round_no}"
                 + f";live={len(segments)};segments={detail}"
                 + f";missing={','.join(missing) or '-'}"
-                + f";returned={','.join(returned) or '-'};window_turns=2")
+                + f";returned={','.join(returned) or '-'}"
+                + f";missing_since={','.join(missing_state) or '-'}"
+                + f";missing_elapsed={','.join(missing_elapsed) or '-'}"
+                + f";return_due={','.join(return_due) or '-'}"
+                + ";window_turns=2"
+                + f";returned_after={','.join(
+                    f'{kid}:{elapsed}' for kid, elapsed in sorted(returned_after.items())) or '-'}")
 
     def _respawn_read_obs_flush(self, danger_note: str) -> str:
         """把本场名册读侧首判快照一次性并入 danger_note（每敌每场至多一次）。

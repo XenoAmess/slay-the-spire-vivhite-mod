@@ -12277,7 +12277,8 @@ def main() -> int:
     rw_first = rw_pol._decimillipede_reattach_window_obs(
         "", rw_enemies, True, 1, rw_know.policy)
     assert "DECIMILLIPEDE_REATTACH_WINDOW_OBS" in rw_first \
-        and "live=3" in rw_first and "window_turns=2" in rw_first, \
+        and "live=3" in rw_first and "window_turns=2" in rw_first \
+        and "missing_since=-" in rw_first, \
         "千足虫重生窗口首个观测缺失"
     assert rw_pol._decimillipede_reattach_window_obs(
         "", rw_enemies, True, 1, rw_know.policy) == "", \
@@ -12286,9 +12287,16 @@ def main() -> int:
         "", rw_enemies[:2], True, 2, rw_know.policy)
     assert "missing=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_missing, \
         "重生窗口未记录节段离场"
+    rw_missing_later = rw_pol._decimillipede_reattach_window_obs(
+        "", rw_enemies[:2], True, 3, rw_know.policy)
+    assert "missing_since=DECIMILLIPEDE_SEGMENT_MIDDLE:2" in rw_missing_later \
+        and "missing_elapsed=DECIMILLIPEDE_SEGMENT_MIDDLE:1" in rw_missing_later \
+        and "return_due=DECIMILLIPEDE_SEGMENT_MIDDLE:4" in rw_missing_later, \
+        "重生窗口未记录缺失起点、已耗回合或原生回场回合"
     rw_returned = rw_pol._decimillipede_reattach_window_obs(
-        "", rw_enemies, True, 3, rw_know.policy)
-    assert "returned=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_returned, \
+        "", rw_enemies, True, 4, rw_know.policy)
+    assert "returned=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_returned \
+        and "returned_after=DECIMILLIPEDE_SEGMENT_MIDDLE:2" in rw_returned, \
         "重生窗口未记录节段回场"
     rw_know.policy["decimillipede_reattach_window_obs"] = False
     assert rw_pol._decimillipede_reattach_window_obs(
