@@ -616,6 +616,7 @@ class Policy:
         self.strategy_parameters = self.character_strategy.parameters
         self.card_catalog = self.character_strategy.card_catalog
         self._end_stall = 0  # consecutive ticks with end_turn but no play_card available
+        self._empty_hand_end_turn_stall = 0  # bounded recovery when Agent hides end_turn after counter drift
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
@@ -1663,6 +1664,7 @@ class Policy:
             self._cur_turn = None
             self._recursive_selection_block_scope = None
             self._end_stall = 0
+            self._empty_hand_end_turn_stall = 0
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
@@ -3005,6 +3007,7 @@ class Policy:
         #   - 已进入过 → 现在没的出 = 真的出完了，短确认即结束回合（不拖节奏）
         #   - 从未进入 → 还在抽牌/开局触发动画里，必须长耐心等待（15 次≈9 秒）
         if can_end:
+            self._empty_hand_end_turn_stall = 0
             self._end_stall += 1
             hand_desc = ",".join(f"{c.get('name')}{'✓' if c.get('playable') else '✗'}" for c in hand) or "空手"
             affordable_playable = False
@@ -3246,6 +3249,44 @@ class Policy:
                 wait=1.2)
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
+        readiness = combat.get("action_readiness") or {}
+        # 2026-09-17 F35 incident: native card effects had emptied the hand and
+        # spent all energy, while the Agent's process-local play counter read zero.
+        # Its opening-draw guard consequently hid both play_card and end_turn for
+        # hours.  Recover only from the exact, contradictory native evidence:
+        # settled player-action phase, empty hand, zero energy, every player ready,
+        # and no modal/selection/action transition.  A 15-tick confirmation keeps
+        # the normal opening draw window untouched and is still bounded (~9 s).
+        empty_hand_end_turn_recovery = (
+            not hand
+            and int(energy or 0) == 0
+            and str(readiness.get("reason") or "") == "local_turn_not_ready"
+            and readiness.get("actions_settled") is True
+            and readiness.get("player_action_phase") is True
+            and readiness.get("combat_in_progress") is True
+            and readiness.get("combat_over_or_ending") is False
+            and readiness.get("modal_open") is False
+            and readiness.get("player_actions_disabled") is False
+            and readiness.get("hand_in_card_play") is False
+            and readiness.get("hand_in_card_selection") is False
+            and str(readiness.get("hand_mode") or "") == "Play"
+            and readiness.get("all_players_ready_to_end_turn") is True
+            and int(player.get("cards_played_this_turn") or 0) == 0)
+        if empty_hand_end_turn_recovery:
+            self._empty_hand_end_turn_stall += 1
+            if self._empty_hand_end_turn_stall < 15:
+                return Decision(
+                    None, {},
+                    "战斗：空手零能量但接口隐藏结束回合，等待原生状态自愈"
+                    f"（{self._empty_hand_end_turn_stall}/15）",
+                    wait=0.6)
+            self._empty_hand_end_turn_stall = 0
+            return Decision(
+                "end_turn", {},
+                "战斗：空手零能量且全员已就绪，接口仍隐藏结束回合，"
+                "执行有界恢复（EMPTY_HAND_END_TURN_RECOVERY）",
+                wait=1.2)
+        self._empty_hand_end_turn_stall = 0
         return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
 
 
@@ -4128,6 +4169,7 @@ class Policy:
             self._failed_hand_len = -1
             self._saw_playable_this_turn = False
             self._end_stall = 0
+            self._empty_hand_end_turn_stall = 0
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
         # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
@@ -4386,6 +4428,7 @@ class Policy:
                 state, ctx, combat, player, hand, energy, round_no, pol,
                 can_end, my_hp, my_block, incoming)
         self._end_stall = 0
+        self._empty_hand_end_turn_stall = 0
         self._saw_playable_this_turn = True
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0

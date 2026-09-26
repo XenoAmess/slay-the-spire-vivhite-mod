@@ -18,6 +18,14 @@ GitHub 拒绝历史中的 `knowledge/profiles/vivhite/runs/20260918-010416_BL53H
 
 采用隔离 bare 仓将精确路径迁移至 Git LFS；原始两版本 SHA256 均与 LFS payload 一致。只重写未发布提交，保留远端已发布边界 `78b590f4`，不需要强推。旧历史保留本地备份 ref，迁移映射和隔离仓保留于 ignored `.tmp/`。最终接入必须持 autogit 仓库锁并检查 HEAD，防止覆盖运行中新增提交。
 
+最终已在仓库锁内接入迁移，206 个未发布提交保留，旧 HEAD 为 `8ee85f87`，新 HEAD 为 `b9c905aa`；备份 ref 为 `refs/backup/pre-lfs-20260926`。迁移后普通 Git blob 均未超过 100 MiB，LFS 两份 payload 完整性验证通过，但远端拒绝上传：`This repository exceeded its LFS budget`。未更改账单或宣称推送成功。
+
+检查既有 ZIP 归档工具后未执行归档：目标记录仍为 `in_progress=true`、`human_assisted=true`、`excluded_from_learning=true`、`ended_at=null`，137407 条决策。工具按异常现场规则保留它；不得篡改这些标记来强行归档。当前需由账户所有者恢复 LFS 配额后正常 `git push origin master`，本地原文件、LFS payload、迁移前历史均已保留。
+
+回退基线完整自检输出 `SELFCHECK OK`，退出码 0。重新启动后 run `FP8AM7ZG9GPH` 已取得两条不同 applied 动作，连续推进战斗、奖励与地图，Quipper 再次通过 3328 MiB / staged_cuda 门禁。
+
+最终只从保全版本恢复独立的空手结束回合协调维护逻辑（计数器、复位、等待与确认），不恢复故障评分/观测块；相关 3 项回归测试及完整 selfcheck 均通过。该维护补丁已落盘，当前已运行的 Brain 仍是此前验证过的回退基线，下次正常加载生效。最终独立巡检确认为 Streaming、HealthWatch Running，已连续推进至 F7；运行中继续产生的学习记录属于正常自动存档，不作 ignore。
+
 ## 经验
 
 - Stack ready 不等于真实游玩；开播后仍需持续检查动作与 HealthWatch。
