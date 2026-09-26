@@ -10963,6 +10963,7 @@ def main() -> int:
                           boss_effective_dpt_obs=True, vivhite=False,
                           boss_focus_switch_obs=True, focus_switches=0,
                           boss_state_obs=True, boss_state_powers=None,
+                          boss_state_powers_next=None,
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
@@ -11058,6 +11059,9 @@ def main() -> int:
                 cap_pol._focus_played_identity = "CAP_BOSS"
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            if boss_state_powers_next is not None:
+                cap_state["combat"]["enemies"][0]["powers"] = (
+                    boss_state_powers_next)
             return cap_pol.decide(cap_state, cap_ctx)
         return decision
 
@@ -11154,6 +11158,33 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS" not in
             d_combat_boss_state_off.reason), \
         f"Boss 有效火力状态观测开关未严格回滚: {d_combat_boss_state_off.reason}"
+    # 3br-boss-effective-dpt-window：1589-F17 的 SOUL_FYSH 在上一个 DPT
+    # 区间内经历 Fade/Intangible，当前回合首状态已经恢复为 none；只记录当前
+    # 状态会把瞬态能力错挂到下一个区间。区间起始状态与当前状态必须并列，且
+    # 关闭既有状态观测时新窗口尾缀一并消失。
+    d_combat_boss_state_window = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "INTANGIBLE_POWER", "amount": 1}],
+        boss_state_powers_next=[])
+    assert ("BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS"
+            in d_combat_boss_state_window.reason
+            and "区间起始状态=CAP_BOSS[alive=1,hittable=1,block=0,"
+            "powers=INTANGIBLE_POWER×1]"
+            in d_combat_boss_state_window.reason
+            and "Boss状态=CAP_BOSS[alive=1,hittable=1,block=0,powers=none]"
+            in d_combat_boss_state_window.reason), \
+        f"Boss DPT 区间状态边界未对齐: {d_combat_boss_state_window.reason}"
+    d_combat_boss_state_window_off = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "INTANGIBLE_POWER", "amount": 1}],
+        boss_state_powers_next=[], boss_state_obs=False)
+    assert (d_combat_boss_state_window_off.action
+            == d_combat_boss_state_window.action
+            and d_combat_boss_state_window_off.params
+            == d_combat_boss_state_window.params
+            and "BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS"
+            not in d_combat_boss_state_window_off.reason), \
+        f"Boss DPT 区间状态观测未严格回滚: {d_combat_boss_state_window_off.reason}"
     # 3br-vivhite-hp-pay-phase-audit：Boss 续航观测同时披露可行动段、非行动段
     # 的累计扣血与 HP 起止快照；只读观测，开关关闭时严格删除自身尾缀。
     assert knowledge.DEFAULT_POLICY["vivhite_hp_pay_phase_audit_obs"] is True

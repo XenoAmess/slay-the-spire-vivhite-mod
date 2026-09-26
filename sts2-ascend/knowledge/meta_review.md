@@ -11864,3 +11864,44 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1589 局复盘（BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第 1589 局 F17 的 SOUL_FYSH 在有效火力 DPT 区间内经历了
+  `FadeMove`/`INTANGIBLE_POWER` 瞬态，但现有 marker 只披露区间结束状态，可能把
+  瞬态能力错挂到后一个区间；该假设可证伪。
+- **EVIDENCE**：精确 run `R6VL28LH7079`（第 1589 局）在 F17 Boss 战中，D155
+  记录 `INTANGIBLE_POWER×1`，DPT 采样 3→5 回合为实际 24、投影 23.0、比值
+  1.05；D159 的下一窗口记录实际 1、投影 19.7、比值 0.05，但当前尾状态已为
+  `powers=none`。原生 SOUL_FYSH mechanics 的 `FadeMove` 会施加 Intangible
+  并隐藏敌人，后续 `ScreamMove` 才恢复可见；仅保留结束状态无法判断低比值窗口
+  是否跨过该阶段。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss DPT 窗口按 run_id、Boss encounter、
+  区间起止 powers/hittable、DPT 比值、血池端点和 GAME_OVER 分层；若低比值窗口
+  稳定表现为起始状态含 Intangible/不可命中、结束状态清除，则支持假设；若起止
+  状态均清除且低比值在至少 3 个独立窗口复现，则削弱该假设并另立投影校准复盘。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 Boss DPT 观测中保存区间起始状态，并在同一
+  marker 追加 `BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS`；不改评分、竞速判决、
+  候选排序、action 或 params，战斗切换时清零。
+- `sts2-ascend/brain/knowledge.py`：更新既有
+  `boss_race_effective_dpt_state_obs` 的说明，明确起止状态均为纯观测且可回滚。
+- `sts2-ascend/brain/selfcheck.py`：加入起始 `INTANGIBLE_POWER×1`、结束 `none` 的
+  边界夹具，并验证关闭观测键后 action/params 不变且窗口 marker 消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 局，优先核对有 Fade/Intangible 或不可命中阶段的
+  Boss；至少 3 个独立窗口前不调整竞速行为。若状态无关的低比值稳定出现，再另
+  立行为/投影校准假设。
+- **撤回**：若起止状态与 DPT 区间错配、跨战斗残留、非 Boss 误挂，或
+  `boss_race_effective_dpt_state_obs=False` 改变 action/params/旧 marker，则关闭
+  该键并移除窗口尾缀，保留本批失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  `git diff --check` 无空白错误；未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+

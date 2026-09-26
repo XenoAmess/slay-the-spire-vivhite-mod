@@ -496,7 +496,8 @@ DEFAULT_POLICY = {
     "boss_race_effective_dpt_state_obs": True,  # Boss 有效火力对账的状态上下文（BOSS_RACE_EFFECTIVE_DPT_STATE_OBS）：
                                                  # 把采样回合首的 is_alive/is_hittable、敌方格挡和 powers
                                                  # 追加到同一条 DPT marker，区分原生阶段/不可命中造成的
-                                                 # 零净降与投影高估；纯观测不改评分、判决或动作；False=严格回滚
+                                                 # 零净降与投影高估；同时追加区间起始状态（BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS），
+                                                 # 使跨回合净降与瞬态能力按同一窗口对齐；纯观测不改评分、判决或动作；False=严格回滚
     "longfight_race_effective_dpt_obs": True,  # 非 Boss 大血池长战回合首对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                                                # F21 OVICOPTER 暴露长战投影有 TTK、无实测敌血净降；
                                                # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，
