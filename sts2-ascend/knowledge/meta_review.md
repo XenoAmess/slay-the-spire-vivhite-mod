@@ -11779,3 +11779,46 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；scoped `git diff --check` 无空白错误（仅已有换行风格警告）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1584 局复盘（RACE_ALLIN_BUYBACK_MARGIN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有败局竞速买活对账以 `击杀所需回合 ≤ 买活后可存活回合 + 1.0`
+  判定“买活可翻盘”。当严格余量为负、但落在一个完整回合的宽松容差内时，
+  该 verdict 可能把实际上撑不到一次完整行动窗口的样本误报为可翻盘；该假设可证伪。
+- **EVIDENCE**：精确 run `MX8ARM1RDD1P`（第 1584 局）共 177 条决策，packet
+  保留 112 条、裁剪 65 条；F17 T8（21:11:44）在生命 1、敌意图 10 时记录
+  “击杀约需 1 回合（实测 24 伤/回合），买活后约可存活 0.1 回合→买活可翻盘”。
+  随后仍在 T8 打出打击/防御、结束回合，21:11:54 以 `GAME_OVER` 阵亡。该样本
+  明确落在“宽松可翻盘、严格不足一回合”的边界，不能单凭旧 verdict 证明买活线成立。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `RACE_ALLIN_LETHAL_COVER_OBS` 窗口应
+  同时记录严格余量、宽松余量和严格 verdict。统计 `严格余量<0≤宽松余量` 的样本
+  与后续 `GAME_OVER`/下一回合动作：若该层重复阵亡，支持“+1 容差掩盖失败”；若
+  严格负余量样本稳定存活或该层不再出现，则削弱假设。关闭观测键时 marker、action、
+  params 必须严格回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的
+  `race_allin_buyback_margin_obs`。
+- `sts2-ascend/brain/policy.py`：保留原有“买活可翻盘/买活仍必败”与 `+1.0` 宽松
+  判定不变；在同一理由后追加严格余量、宽松余量及严格 verdict 的
+  `RACE_ALLIN_BUYBACK_MARGIN_OBS`，不参与评分、判决、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：扩展 RALC 夹具，验证 `253 HP / 253 DPT`
+  得到 `严格-0.8/宽松+0.2` 且旧 verdict 仍为“买活可翻盘”；关闭键后 action/params
+  不变且新 marker 消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 `run_id`、Boss、严格余量符号、宽松 verdict、实际
+  下一回合生存/阵亡和实测 DPT 分层；至少 3 个严格负且宽松正的独立窗口前不改全攻
+  行为。若该层重复阵亡，再另立“收紧买活容差/扩展生还线”的行为复盘；若实际存活，
+  保留观测并削弱假设。
+- **撤回**：若余量与现有 `ttk/surv` 数值不一致、非覆盖/非 race_allin 误挂，或
+  `race_allin_buyback_margin_obs=False` 改变 action/params/旧 verdict，则关闭该键或
+  删除尾缀，保留本批失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标
+  三文件 `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

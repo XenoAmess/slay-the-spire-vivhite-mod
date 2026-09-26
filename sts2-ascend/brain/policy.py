@@ -5312,6 +5312,23 @@ class Policy:
                             f"（实测{_ralc_dpt:.0f}伤/回合），买活后约可存活"
                             f"{_ralc_surv:.1f}回合（净损{_ralc_loss:.0f}/回合）"
                             f"→{_ralc_verdict}")
+                        # The existing verdict intentionally keeps a one-turn
+                        # tolerance for the next draw/action window. Preserve
+                        # that behavior, but expose the exact margin too: a
+                        # sample such as T8 in run 1584 can be labeled
+                        # "买活可翻盘" with only 0.1 survivable turns. This is
+                        # audit-only and must never feed back into selection.
+                        if bool(pol.get("race_allin_buyback_margin_obs", True)):
+                            _ralc_strict_margin = _ralc_surv - _ralc_ttk
+                            _ralc_tolerant_margin = _ralc_surv + 1.0 - _ralc_ttk
+                            _ralc_strict_verdict = (
+                                "可翻盘" if _ralc_strict_margin >= 0.0
+                                else "仍必败")
+                            danger_note += (
+                                f"；买活余量：严格{_ralc_strict_margin:+.1f}/"
+                                f"宽松{_ralc_tolerant_margin:+.1f}回合"
+                                f"→严格{_ralc_strict_verdict}"
+                                "（RACE_ALLIN_BUYBACK_MARGIN_OBS）")
                     else:
                         danger_note += (
                             "；买活对账：无实测输出口径，买活后约可存活"

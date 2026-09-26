@@ -16028,18 +16028,21 @@ def main() -> int:
     #      约需回合/买活后可存活/裁决（池253、dpt20→约13回合；买活后
     #      3血÷净损15≈0.2回合→买活仍必败）；② 无覆盖（手牌零格挡）
     #      ：无注记；③ 键=False：观测同灭。
-    def rallc_policy():
-        return policy.Policy(knowledge.Knowledge(
+    def rallc_policy(margin_obs=True):
+        pol_r = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rallc-"))),
             random.Random(13))
+        pol_r.know.policy["race_allin_buyback_margin_obs"] = margin_obs
+        return pol_r
 
-    def rallc_decide(pol_r, hp_now, incoming, energy_now, hand):
+    def rallc_decide(pol_r, hp_now, incoming, energy_now, hand,
+                     measured_damage=40.0, measured_turns=2):
         # 首 tick 绑定 _race_combat（同回合无回合边界采样，注入值不被覆盖）
         pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
         pol_r._race_rounds = 2
         pol_r._race_loss_rate = 15.0
-        pol_r._krace_turns = 2
-        pol_r._krace_dmg = pol_r._krace_dmg_sustained = 40.0
+        pol_r._krace_turns = measured_turns
+        pol_r._krace_dmg = pol_r._krace_dmg_sustained = measured_damage
         return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
                             lsl_ctx)
 
@@ -16049,8 +16052,26 @@ def main() -> int:
         and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason \
         and "买活对账：击杀约需13回合（实测20伤/回合）" in d_rallc1.reason \
-        and "买活后约可存活0.2回合（净损15/回合）→买活仍必败" in d_rallc1.reason, \
+        and "买活后约可存活0.2回合（净损15/回合）→买活仍必败" in d_rallc1.reason \
+        and "RACE_ALLIN_BUYBACK_MARGIN_OBS" in d_rallc1.reason \
+        and "买活余量：严格-12.5/宽松-11.5回合→严格仍必败" in d_rallc1.reason, \
         f"败局竞速致死覆盖旁观缺失、买活对账缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
+    # ①a 买活宽松容差的可证伪边界：击杀需1.0回合、买活仅能存0.2回合时，
+    #     旧 verdict 仍因 +1 容差写“可翻盘”，严格余量观测必须写“仍必败”。
+    d_rallc_margin = rallc_decide(
+        rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld],
+        measured_damage=253.0, measured_turns=1)
+    assert d_rallc_margin.action == "play_card" \
+        and "→买活可翻盘" in d_rallc_margin.reason \
+        and "买活余量：严格-0.8/宽松+0.2回合→严格仍必败" in d_rallc_margin.reason, \
+        f"买活严格/宽松余量边界观测错误: {d_rallc_margin.action}（{d_rallc_margin.reason}）"
+    d_rallc_margin_off = rallc_decide(
+        rallc_policy(False), 25, 27, 1, [lsl_hit, lsl_shld],
+        measured_damage=253.0, measured_turns=1)
+    assert d_rallc_margin_off.action == d_rallc_margin.action \
+        and d_rallc_margin_off.params == d_rallc_margin.params \
+        and "RACE_ALLIN_BUYBACK_MARGIN_OBS" not in d_rallc_margin_off.reason, \
+        f"买活余量观测关闭改变动作/参数或未同灭: on={d_rallc_margin} off={d_rallc_margin_off}"
     d_rallc2 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_hit2])
     assert d_rallc2.action == "play_card" \
         and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason, \
