@@ -4054,6 +4054,45 @@ class Policy:
                         _longfight_ratio = (
                             _longfight_net_dpt / _longfight_projected
                             if _longfight_projected > 0.0 else None)
+                        # 多敌长战的总血池比值不能单独说明有效输出是否被
+                        # 换线稀释：1581-F23 在丝虫→石虫→熟睡甲虫间反复换线，
+                        # 但旧 marker 只有净降/投影比，无法按遭遇和火线分层。
+                        # 与 Boss 对账保持同一上下文口径，追加遭遇键、血池端点、
+                        # 实际非击杀换线次数和当前火线；只读观测，不回写任何
+                        # 评分、TTK、TSURV、目标或动作。
+                        _longfight_encounter = str(
+                            cctx.get("comp_id") or "").strip()
+                        if not _longfight_encounter:
+                            _longfight_encounter = "+".join(sorted({
+                                str(_e.get("enemy_id") or _e.get("name")
+                                    or "").strip()
+                                for _e in enemies
+                                if isinstance(_e, dict)
+                                and (_e.get("enemy_id") or _e.get("name"))
+                            }))
+                        if not _longfight_encounter:
+                            _longfight_encounter = "unknown"
+                        try:
+                            _longfight_focus_switches = int(
+                                getattr(self, "_focus_drift_flips", 0) or 0)
+                        except (TypeError, ValueError):
+                            _longfight_focus_switches = 0
+                        _longfight_focus_name = "?"
+                        try:
+                            _longfight_focus_name = next(
+                                str(_e.get("name") or _e.get("enemy_id")
+                                    or "敌人")
+                                for _e in enemies
+                                if _e.get("index")
+                                == getattr(self, "_focus_played_index", None))
+                        except StopIteration:
+                            pass
+                        _longfight_context_tail = (
+                            f"；长战遭遇={_longfight_encounter}，血池"
+                            f"{_longfight_start_hp:.1f}→{_longfight_end_hp:.1f}，"
+                            f"火线已换线{_longfight_focus_switches}次至"
+                            f"{_longfight_focus_name}"
+                            "（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）")
                         _longfight_ratio_tail = ""
                         if _longfight_ratio is not None:
                             _longfight_ratio_tail = (
@@ -4065,7 +4104,8 @@ class Policy:
                             f" vs 投影{_longfight_projected:.1f}/回合"
                             f"（差{_longfight_gap:+.1f}，"
                             "LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）"
-                            + _longfight_ratio_tail)
+                            + _longfight_ratio_tail
+                            + _longfight_context_tail)
                     # 手牌滞留税对账火力观测（HAND_TAX_FIRE_OBS，第808~812局批复盘）：
                     # 812-F9 全链实证——PHROG 寄生虫塞手的 INFECTION「不能被打出，
                     # 回合结束时每张3伤」不进格挡结算管线，终局 4 张=12/回合，

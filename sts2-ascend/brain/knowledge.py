@@ -493,6 +493,8 @@ DEFAULT_POLICY = {
     "longfight_race_effective_dpt_obs": True,  # 非 Boss 大血池长战回合首对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                                                # F21 OVICOPTER 暴露长战投影有 TTK、无实测敌血净降；
                                                # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，
+                                               # 并携带遭遇键、血池端点和实际换线次数/当前火线
+                                               # （LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS），
                                                # 纯观测不改评分、判决或动作；False=严格回滚
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，

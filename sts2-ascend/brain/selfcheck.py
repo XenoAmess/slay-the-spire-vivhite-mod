@@ -10924,7 +10924,7 @@ def main() -> int:
     # 观测只读两个回合首快照，不改变动作/评分/判决，开关关闭严格回滚。
     d_combat_longfight_effective = combat_flip_probe(
         1.5, node_type="Monster", longfight_cap=1.5,
-        sample_effective_round=True)
+        sample_effective_round=True, focus_switches=2)
     assert ("LONGFIGHT_RACE_EFFECTIVE_DPT_OBS"
             in d_combat_longfight_effective.reason
             and "敌血净降10.0/回合"
@@ -10932,6 +10932,14 @@ def main() -> int:
             and "实际/投影比"
             in d_combat_longfight_effective.reason
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS"
+            in d_combat_longfight_effective.reason
+            and "长战遭遇=CAP_BOSS"
+            in d_combat_longfight_effective.reason
+            and "血池185.0→175.0"
+            in d_combat_longfight_effective.reason
+            and "火线已换线2次至攻坚巨兽"
+            in d_combat_longfight_effective.reason
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS"
             in d_combat_longfight_effective.reason), \
         f"非 Boss 长战跨回合有效火力对账缺失: {d_combat_longfight_effective.reason}"
     d_combat_longfight_effective_off = combat_flip_probe(
@@ -10944,6 +10952,8 @@ def main() -> int:
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_OBS"
             not in d_combat_longfight_effective_off.reason
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS"
+            not in d_combat_longfight_effective_off.reason
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS"
             not in d_combat_longfight_effective_off.reason), \
         f"非 Boss 长战有效火力对账开关未严格回滚: {d_combat_longfight_effective_off.reason}"
     # 3br-focus-switch：第1563局 F33 在双强化 Boss 中发生两次非击杀换线，

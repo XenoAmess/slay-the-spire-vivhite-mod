@@ -11693,3 +11693,47 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **DIFF_CHECK_OK**。未修改 `.runtime/`、runs、archive、stats、progression、policy.json、lessons 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
 
+## 2026-09-26｜第 1581 局复盘（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非 Boss 多敌长战的总血池有效 DPT 比值，可能把实际的火线换线损失
+  混在聚合净降里；若没有遭遇键、血池端点和换线次数，就不能区分“投影高估”与“目标
+  切换后输出断档”。该假设可证伪。
+- **EVIDENCE**：精确 run `WSAC3Y6XG62C`（第 1581 局）完整链 270 条决策；F23 D249
+  以 HP35 进入斩杀锁，投影为击杀需 12 回合、可存活 2 回合。D252 丝虫→石虫后旧
+  marker 为实际 25.0/投影 15.2（比 1.64），D256 为 20.0/13.5（1.48）；D257
+  转熟睡甲虫，D259 仍为 27.0/19.8（1.36），D263 第二次翻线后降为 0.0/16.2
+  （0.00），最终 D269 HP0。旧长战 marker 没有把这段 BOWLBUG_ROCK+
+  BOWLBUG_SILK+SLUMBERING_BEETLE 的遭遇、血池起止和火线次数联结起来。原生 v0.111.0
+  runtime 记录 Rock 45~48 HP、Silk 40~43 HP、Slumbering Beetle 86 HP；原生
+  `BOWLBUGS_NORMAL` encounter 还确认其固定 Rock 加两个不同 worker 的多敌结构。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Monster/Elite 长战窗口的同一 marker 应携带
+  `LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS`、遭遇键、血池起止、换线次数和当前火线。
+  按 `focus_switches=0/1/≥2` 分层；若至少 3 个窗口在发生换线后中位实际/投影比低于
+  0.80，且更常伴随后续掉血或 `GAME_OVER`，支持假设；若无换线与换线层均接近 0.90~1.10，
+  则削弱假设。观察期间不改目标或竞速判决。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有长战有效火力对账尾部追加遭遇键（缺失时回退当前
+  敌群键）、上一回合首到本回合首的血池端点、实际非击杀换线次数和当前火线；沿用
+  `longfight_race_effective_dpt_obs` 开关，纯观测，不改变评分、TTK、TSURV、目标、判决
+  或动作。
+- `sts2-ascend/brain/knowledge.py`：同步默认策略注释，记录上下文尾部及严格回滚开关。
+- `sts2-ascend/brain/selfcheck.py`：长战夹具加入两次换线、遭遇/血池端点断言；关闭既有
+  开关时断言 action/params 不变且新旧长战 marker 一并消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 `run_id`、`node_type`、遭遇键、回合跨度、血池端点、
+  换线次数、当前火线和比值统计；达到至少 3 个独立换线窗口前不调整行为。达到门槛后，
+  只有换线层稳定显著偏低才另立行为复盘；否则保留观测。
+- **撤回**：若遭遇键错配、血池端点不是回合首快照、非长战误挂，或将
+  `longfight_race_effective_dpt_obs` 设为 `False` 后 action/params 发生变化，则关闭本
+  观测或移除上下文尾部，并保留失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件
+  `git diff --check` → **DIFF_CHECK_OK**。未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
