@@ -16002,10 +16002,10 @@ def main() -> int:
                                   "current_combat_is_hard": False,
                                   "credit_tags": []})()
 
-    def lsl_state(hp_now, incoming, energy_now, hand):
+    def lsl_state(hp_now, incoming, energy_now, hand, turn_now=1):
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
-            "turn": 1,
+            "turn": turn_now,
             "combat": {"player": {"current_hp": hp_now, "max_hp": 80,
                                   "block": 0, "energy": energy_now},
                        "hand": hand,
@@ -16116,6 +16116,35 @@ def main() -> int:
         and "→买活可翻盘" in d_rallc_margin.reason \
         and "买活余量：严格-0.8/宽松+0.2回合→严格仍必败" in d_rallc_margin.reason, \
         f"买活严格/宽松余量边界观测错误: {d_rallc_margin.action}（{d_rallc_margin.reason}）"
+    # ①b 只有后续权威状态才能结算边界样本：同一回合不提前报结局，
+    #     下一回合的 COMBAT 快照记为 survived-to-next-turn。
+    pol_rallc_next = rallc_policy()
+    d_rallc_next_margin = rallc_decide(
+        pol_rallc_next, 25, 27, 1, [lsl_hit, lsl_shld],
+        measured_damage=253.0, measured_turns=1)
+    assert "RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS" not in \
+        d_rallc_next_margin.reason, \
+        f"同回合提前结算买活余量结局: {d_rallc_next_margin.reason}"
+    d_rallc_next = pol_rallc_next.decide(
+        lsl_state(24, 8, 1, [lsl_hit, lsl_shld], turn_now=2), lsl_ctx)
+    assert (d_rallc_next.action == "play_card"
+            and "严格-0.8/宽松+0.2回合→next_turn=2" in d_rallc_next.reason
+            and "RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS" in d_rallc_next.reason), \
+        f"买活余量下一回合结局观测缺失: {d_rallc_next.action}（{d_rallc_next.reason}）"
+    # ①c 同一边界样本若直接进入 GAME_OVER，也必须在原生结算动作上留痕。
+    pol_rallc_game_over = rallc_policy()
+    rallc_decide(pol_rallc_game_over, 25, 27, 1, [lsl_hit, lsl_shld],
+                 measured_damage=253.0, measured_turns=1)
+    d_rallc_game_over = pol_rallc_game_over.decide({
+        "screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False},
+        "run": {"floor": 17}}, lsl_ctx)
+    assert (d_rallc_game_over.action == "continue_game_over"
+            and "严格-0.8/宽松+0.2回合→GAME_OVER(victory=0)"
+            in d_rallc_game_over.reason
+            and "RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS"
+            in d_rallc_game_over.reason), \
+        f"买活余量终局结局观测缺失: {d_rallc_game_over.action}（{d_rallc_game_over.reason}）"
     d_rallc_margin_off = rallc_decide(
         rallc_policy(False), 25, 27, 1, [lsl_hit, lsl_shld],
         measured_damage=253.0, measured_turns=1)
@@ -16123,6 +16152,9 @@ def main() -> int:
         and d_rallc_margin_off.params == d_rallc_margin.params \
         and "RACE_ALLIN_BUYBACK_MARGIN_OBS" not in d_rallc_margin_off.reason, \
         f"买活余量观测关闭改变动作/参数或未同灭: on={d_rallc_margin} off={d_rallc_margin_off}"
+    assert "RACE_ALLIN_BUYBACK_MARGIN_OUTCOME_OBS" not in \
+        d_rallc_margin_off.reason, \
+        f"买活余量关闭后仍残留结局观测: {d_rallc_margin_off.reason}"
     d_rallc2 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_hit2])
     assert d_rallc2.action == "play_card" \
         and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason, \
