@@ -845,12 +845,6 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
-    "vivhite_end_turn_lethal_obs": 1,  # 结束回合致死观测（VIVHITE_END_TURN_LETHAL_OBS）：
-                                       # 1407-F33-T5 的原生 end_turn_will_kill_player 为 null，
-                                       # 但 hp=3、block=0、incoming=14 已足以证明本次提交会致死；
-                                       # 在已确认无牌可出收口处补记本地净伤算术与原生投影三态，
-                                       # 不改评分、候选、动作或参数。0=关闭（严格回滚注记），
-                                       # 非白绮角色零改动
     "vivhite_hp_function_gate_obs": 1,  # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：
                                         # 在白绮有能量、存在敌方意图且生命支付门拦下可执行的
                                         # Skill/Power/Ability 牌时，披露牌型、候选分、实付血与

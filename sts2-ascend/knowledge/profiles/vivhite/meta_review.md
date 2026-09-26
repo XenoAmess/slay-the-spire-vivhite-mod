@@ -4656,35 +4656,3 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 第1405~1407批：结束回合致死观测
-
-日期：2026-09-26
-production_code_commit: pending local commit（最终 SHA 在交接回执中）
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：1407 局 F33-T5 的阵亡收口缺少可验证的「结束回合本身致死」事件。若白绮在已确认无牌可出时满足 `incoming - block >= hp`，新增观测应能把本地净伤算术与原生投影三态对上，并与此前同回合生命支付及下一条 `GAME_OVER` 连接；若非致死回合误标、致死回合漏标或动作参数改变，假设即被证伪。
-- **EVIDENCE**：exact batch 覆盖 1405~1407 局。完整运行文件 `sts2-ascend/knowledge/profiles/vivhite/runs/20260926-192843_CTT2ANDRSYXS.json` 含 568 条 decision；F33-T5 的决策 563~566 中，563 为 `hp=7` 的斩杀出牌，565 实付 4 点生命，566 收口为 `hp=3 / block=0 / incoming=14 / energy=0`，可用动作仅 `end_turn` 与 `save_and_quit`，其 `turn_end_state.end_turn_will_kill_player` 为 `null`，随后 567 进入 `GAME_OVER`。现有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 能看见前一张自付牌，但不能稳定标记最终结束回合的致死算术。
-- **EXPECTED_SIGNAL**：未来 3~10 局按 `VIVHITE_END_TURN_LETHAL_OBS` 统计触发次数、`hp/block/incoming/gap/energy`、native `yes/no/unknown` 比例、同回合前置自付额与下一状态/终局；每次触发都须满足 `gap >= hp`，且 action/params 与关闭开关一致。任一字段错配、白绮外误触发、非致死误标或动作漂移都视为失败。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_end_turn_lethal_obs`，`0` 可严格关闭注记。
-- `sts2-ascend/brain/policy.py`：在已确认无牌可出、即将提交 `end_turn` 的收口路径中，仅对白绮且本地 `incoming - block >= hp` 的样本追加 `VIVHITE_END_TURN_LETHAL_OBS`；记录本地 gap、能量及 native 投影的 yes/no/unknown，不改评分、候选、动作或参数。
-- `sts2-ascend/brain/selfcheck.py`：新增 `hp=3/block=0/incoming=14` 的 Boss 收口夹具，验证默认注记、精确数值、`native=unknown` 及关闭开关后的 action/params 不变。
-- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始任务书；现场预置素材删除与 `.review-cache/` 未纳入成果。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`（最终复跑退出码 0）。
-- `git diff --check -- sts2-ascend`：通过；最终目标代码 diff 仅为 `brain/knowledge.py`、`brain/policy.py`、`brain/selfcheck.py`，本报告与口播结论随后追加。
-
-## FOLLOW-UP / ROLLBACK
-
-- 后续 3~10 局只做真实白绮战斗对账，不把观测本身当作死亡因果；重点比较触发样本与前置自付、敌方伤害、`GAME_OVER` 的时间关系，并确认 native `unknown` 是否因运行时载荷缺失而持续存在。
-- 若出现漏标、误标、native 三态解释错误或 action/params 漂移，将 `vivhite_end_turn_lethal_obs` 设为 `0` 关闭注记，并回滚本地提交；不改动既有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 与其他 Boss 对账观测。
-
-## REPLAY
-
-retry_resolution: none (no failed_review_replay packages requested)
