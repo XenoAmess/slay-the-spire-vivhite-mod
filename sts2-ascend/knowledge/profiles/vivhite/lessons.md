@@ -16067,3 +16067,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.043282197731111局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.8789505951048007局)，IMPATIENCE(22分/4.152803008006361局)
 - 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1457 胜，当前目标进阶 3
+
+## 第 1458 局复盘（2026-09-27 07:08）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F4 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F5 Unknown战 掉血0｜自损6（可行动段6/非行动段7，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损14（可行动段14/非行动段3，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损11（可行动段11/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0｜自损24（可行动段24/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血94｜自损49（可行动段49/非行动段36，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：REND(37分/4.623048276343651局)，FISTICUFFS(35分/6.9206638577985355局)，AUTOMATION(35分/5.0246715132138355局)，ROLLING_BOULDER(34分/8.010250171162452局)，THRUMMING_HATCHET(34分/13.044551200085332局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/4.029130710039053局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.868874268021934局)，IMPATIENCE(22分/4.1382681974783395局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿9张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损49/掉血94（52%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1458 胜，当前目标进阶 3
