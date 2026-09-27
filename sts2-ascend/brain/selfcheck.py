@@ -12162,9 +12162,46 @@ def main() -> int:
     }
     d_low_pool = low_pool_pol.decide(low_pool_state, low_pool_ctx)
     assert "LOW_POOL_BURST_RACE_OBS" in d_low_pool.reason \
+        and "LOW_POOL_BURST_CARD_AUDIT" in d_low_pool.reason \
+        and "selected=play_card:test strike" in d_low_pool.reason \
         and "斩杀竞速投影" not in d_low_pool.reason \
         and not low_pool_pol._krace_latch, \
         f"low-pool observation or race latch mismatch: {d_low_pool.action}/{d_low_pool.reason}"
+
+    low_pool_audit_state = dict(low_pool_state)
+    low_pool_audit_state["combat"] = dict(low_pool_state["combat"])
+    low_pool_audit_state["combat"]["hand"] = [
+        dict(low_pool_state["combat"]["hand"][0]),
+        {"index": 1, "card_id": "LOW_POOL_DEFEND", "name": "test defend",
+         "playable": True, "energy_cost": 1, "requires_target": False,
+         "dynamic_values": [{"name": "Block", "current_value": 8}]},
+    ]
+    low_pool_audit_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-low-pool-card-audit-")))
+    low_pool_audit_pol = policy.Policy(low_pool_audit_know, random.Random(19))
+    low_pool_audit_ctx = SimpleNamespace(
+        combat={"comp_id": "LOW_POOL_CARD_AUDIT", "node_type": "Monster"},
+        current_combat_is_hard=False, credit_tags=[])
+    d_low_pool_audit = low_pool_audit_pol.decide(
+        low_pool_audit_state, low_pool_audit_ctx)
+    assert ("LOW_POOL_BURST_CARD_AUDIT" in d_low_pool_audit.reason
+            and "defense=test defend:1@8" in d_low_pool_audit.reason
+            and "max_block=8" in d_low_pool_audit.reason), \
+        f"low-pool card audit missed affordable block: " \
+        f"{d_low_pool_audit.action}/{d_low_pool_audit.reason}"
+    low_pool_audit_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-low-pool-card-audit-off-")))
+    low_pool_audit_off_know.policy["low_pool_burst_card_audit_obs"] = False
+    low_pool_audit_off_pol = policy.Policy(
+        low_pool_audit_off_know, random.Random(19))
+    d_low_pool_audit_off = low_pool_audit_off_pol.decide(
+        low_pool_audit_state, low_pool_audit_ctx)
+    assert ("LOW_POOL_BURST_CARD_AUDIT" not in d_low_pool_audit_off.reason
+            and d_low_pool_audit_off.action == d_low_pool_audit.action
+            and d_low_pool_audit_off.params == d_low_pool_audit.params), \
+        f"low-pool card audit switch changed action or remained: " \
+        f"{d_low_pool_audit_off.action}/{d_low_pool_audit_off.params}/" \
+        f"{d_low_pool_audit_off.reason}"
     # The decisive failure path can lose play_card after a playable tick.  Keep
     # the same turn context, remove play_card, and verify the end_turn audit is
     # emitted without changing the action or its empty parameters.
@@ -12182,6 +12219,8 @@ def main() -> int:
     assert (d_low_pool_end.action == "end_turn"
             and d_low_pool_end.params == {}
             and "LOW_POOL_BURST_RACE_OBS" in d_low_pool_end.reason
+            and "LOW_POOL_BURST_CARD_AUDIT" in d_low_pool_end.reason
+            and "selected=end_turn" in d_low_pool_end.reason
             and not low_pool_end_pol._krace_latch), \
         f"low-pool end-turn observation mismatch: " \
         f"{d_low_pool_end.action}/{d_low_pool_end.params}/{d_low_pool_end.reason}"

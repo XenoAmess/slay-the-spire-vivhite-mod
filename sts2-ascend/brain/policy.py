@@ -3802,6 +3802,83 @@ class Policy:
             f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
             "（LOW_POOL_BURST_RACE_OBS）")
 
+    def _low_pool_burst_card_audit_note(
+            self, hand, energy, incoming, my_hp, my_block, pol, *,
+            block_locked=False, selected=None,
+            selected_action="end_turn") -> str:
+        """Expose affordable block capacity at a low-pool burst boundary.
+
+        This is deliberately observation-only.  The dynamic-programming
+        capacity is a snapshot of the current hand and energy; it is not fed
+        back into scoring, target selection, or the action returned below.
+        """
+        try:
+            enabled = bool(int(float(pol.get(
+                "low_pool_burst_card_audit_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            enabled = False
+        if not enabled:
+            return ""
+        try:
+            _energy = max(0.0, float(energy or 0.0))
+            _incoming = float(incoming or 0.0)
+            _hp = float(my_hp or 0.0)
+            _block = float(my_block or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            return ""
+
+        _max_energy = int(_energy)
+        _block_by_energy = [0.0] * (_max_energy + 1)
+        _defense_rows = []
+        for _card in hand or []:
+            if (not isinstance(_card, dict)
+                    or not _card.get("playable")
+                    or self._card_unavailable(_card)
+                    or block_locked):
+                continue
+            try:
+                _cost = (_energy if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+                _card_block = float(card_numbers(_card)[1])
+            except (TypeError, ValueError, OverflowError, IndexError):
+                continue
+            if (_cost < 0.0 or _cost > _energy + 1e-9
+                    or _card_block <= 0.0 or not _cost.is_integer()):
+                continue
+            _cost_i = int(_cost)
+            _name = str(_card.get("name") or _card.get("card_id") or "?")
+            _defense_rows.append(f"{_name}:{_cost:g}@{_card_block:g}")
+            for _spent in range(_max_energy, _cost_i - 1, -1):
+                _block_by_energy[_spent] = max(
+                    _block_by_energy[_spent],
+                    _block_by_energy[_spent - _cost_i] + _card_block)
+        _max_block = max(_block_by_energy, default=0.0)
+        _post_gap = max(0.0, _incoming - _block - _max_block)
+        _survives = _post_gap < _hp
+
+        _selected_text = str(selected_action)
+        if isinstance(selected, dict):
+            _selected_name = str(
+                selected.get("name") or selected.get("card_id") or "?")
+            try:
+                _selected_cost = (_energy if selected.get("costs_x")
+                                  else float(selected.get("energy_cost") or 0.0))
+                _selected_block = float(card_numbers(selected)[1])
+                _selected_text = (
+                    f"{selected_action}:{_selected_name}:"
+                    f"{_selected_cost:g}@{_selected_block:g}")
+            except (TypeError, ValueError, OverflowError, IndexError):
+                _selected_text = f"{selected_action}:{_selected_name}:?@?"
+        return (
+            f"；低池爆发牌面审计：hp={_hp:g}/block={_block:g}"
+            f"/incoming={_incoming:g}/energy={_energy:g}"
+            f"/block_locked={'yes' if block_locked else 'no'}"
+            f"/defense={'|'.join(_defense_rows) or 'none'}"
+            f"/max_block={_max_block:g}/post_gap={_post_gap:g}"
+            f"/survives={'yes' if _survives else 'no'}"
+            f"/selected={_selected_text}"
+            "（LOW_POOL_BURST_CARD_AUDIT）")
+
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy) -> str:
         """Link a lethal no-card end-turn to the last latched race projection.
@@ -4356,7 +4433,7 @@ class Policy:
 
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
-            can_end, my_hp, my_block, incoming) -> Decision | None:
+            can_end, my_hp, my_block, incoming, block_locked=False) -> Decision | None:
         """接口就绪阶梯（从 _combat 提取，行为与原内联实现严格等价）：
         謦欬致死锁、play_card 接口恢复等待、END_TURN_SETTLE_GATE 结算等待
         预算阶梯与超时收口。所有路径返回 Decision（主方法直接返回）。
@@ -4407,6 +4484,10 @@ class Policy:
                 [e for e in combat.get("enemies", [])
                  if e.get("is_alive") and e.get("is_hittable")],
                 incoming, my_hp, player.get("max_hp", my_hp), my_block, pol)
+            if _low_pool_burst_note:
+                _low_pool_burst_note += self._low_pool_burst_card_audit_note(
+                    hand, energy, incoming, my_hp, my_block, pol,
+                    block_locked=block_locked, selected_action="end_turn")
             # 1599-F33 exposed a distinct terminal boundary: the live payload
             # had no affordable card left (energy=0), the arithmetic gap was
             # lethal, and the ordinary end-turn reason did not say whether
@@ -6234,7 +6315,7 @@ class Policy:
             # 回合过渡/謦欬致死锁/结算等待闸门的全部分支见 _combat_readiness_wait
             return self._combat_readiness_wait(
                 state, ctx, combat, player, hand, energy, round_no, pol,
-                can_end, my_hp, my_block, incoming)
+                can_end, my_hp, my_block, incoming, block_locked)
         self._end_stall = 0
         self._empty_hand_end_turn_stall = 0
         self._saw_playable_this_turn = True
@@ -8109,6 +8190,11 @@ class Policy:
                         f"RINGING single-play survival veto observed: "
                         f"remaining={_rsp_vetoed_remaining:g} >= hp={my_hp:g} "
                         "(RINGING_SINGLE_PLAY_SURVIVAL_VETO)")
+            if "LOW_POOL_BURST_RACE_OBS" in danger_note:
+                why += self._low_pool_burst_card_audit_note(
+                    hand, energy, incoming, my_hp, my_block, pol,
+                    block_locked=block_locked, selected=card,
+                    selected_action="play_card")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",

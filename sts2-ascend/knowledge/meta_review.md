@@ -12530,3 +12530,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期只移除 `ELITE_FORCED_ENTRY_OUTCOME_OBS`，强制精英选择、action 与 params 不变。若出现无上游 marker 的结局观测，立即回滚本批。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误（仅仓库既有超长资产路径警告）；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none integrated`
+
+## 2026-09-28｜第 1619 局复盘（LOW_POOL_BURST_CARD_AUDIT）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：低血多敌的 `LOW_POOL_BURST_RACE_OBS` 只记录竞速池与终端动作，缺少当前手牌/能量可负担的格挡容量；因此无法证伪“攻击或 `end_turn` 时其实存在足以存活的格挡组合”。该假设可证伪。
+- **EVIDENCE**：精确 run `TGGT8AS4VZ88`（第1619局，`sts2-ascend/knowledge/runs/20260928-043325_TGGT8AS4VZ88.json`）完整持久链398条已逐条核读。F31 D386-D389 在 HP=27、格挡0、来袭21附近重复低池竞速观测；D390-D394 先后出现 Shrug、Eye、Strike、Pommel 与 `end_turn`（HP=6、格挡16、来袭18），D395-D397 再次进入攻击后致死 `end_turn`（HP=4、格挡0、来袭26）。旧 marker 能证明风险与最终动作，但不能说明当帧有哪些可负担格挡牌、最大组合格挡或格挡后的生存缺口。
+- **EXPECTED_SIGNAL**：未来3~10个独立低池窗口应追加 `LOW_POOL_BURST_CARD_AUDIT`，记录 `defense`、`max_block`、`post_gap`、`survives` 与 `selected`。若出现 `survives=yes` 且选择攻击/`end_turn`，支持另开行为复核；若 `defense=none` 或 `post_gap>=hp`，则支持资源不足解释。开关关闭时只移除新 marker，既有竞速 marker、action 与 params 不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `low_pool_burst_card_audit_obs`。
+- `sts2-ascend/brain/policy.py`：在既有低池竞速 marker 的 play-card 与 `end_turn` 路径只读计算当前能量预算内的最大组合格挡，并记录最终动作；不参与评分、排序、目标选择或动作返回。
+- `sts2-ascend/brain/selfcheck.py`：新增可负担格挡、开关关闭与 `end_turn` 夹具，验证观测存在且 action/params 保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：按 `run_id`、floor/turn、`defense`、`max_block`、`post_gap`、`survives`、selected action 及随后 `GAME_OVER` 分层收集3~10局；若至少3个独立窗口显示可存活格挡仍选择攻击或空过，再另开行为批次；若容量不足，维持资源不足归因。
+- **撤回**：将 `low_pool_burst_card_audit_obs` 设为 `False`；预期只移除 `LOW_POOL_BURST_CARD_AUDIT`，旧竞速 marker、评分、action 与 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` 通过；未写入 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

@@ -789,6 +789,7 @@ DEFAULT_POLICY = {
                                          # False 严格回滚为仅记录「判死→实战」摘要
     "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
+    "low_pool_burst_card_audit_obs": True,  # 低池爆发观测补充可负担格挡容量与最终动作；只读、可回滚
     "slippery_ttk_obs": True,  # 滑溜层在账时给竞速投影留痕 ttk 未扣破层期（每层一次命中仅失1血），
                                # 并追加破层期量化读数（层数÷当前手牌能量贪心每回合命中，SLIPPERY_TTK_BREAK_EST，
                                # 第1349~1355局批复盘）；False 关闭全部留痕
