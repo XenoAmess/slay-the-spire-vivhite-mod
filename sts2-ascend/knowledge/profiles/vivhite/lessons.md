@@ -16496,3 +16496,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.319409896364164局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.526540469665633局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5110134013159535局)
 - 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：3/1496 胜，当前目标进阶 3
+
+## 第 1497 局复盘（2026-09-27 17:30）
+- 结果：💀 失败｜进阶 3｜到达层数 3｜当局评分 3
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血23｜自损18（可行动段18/非行动段15，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血39｜自损16（可行动段16/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速审计：T6判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.9612273355776875局)，THINKING_AHEAD(36分/6.933867682556299局)，FISTICUFFS(35分/6.965201813609861局)，VIVHITE_CARD_GEODESIC_VEIL(35分/3.883828885675609局)，AUTOMATION(35分/4.38250573953707局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.3112919617268894局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.514197578021803局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.502224854411348局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1497 胜，当前目标进阶 3
