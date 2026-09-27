@@ -210,6 +210,11 @@ DEFAULT_POLICY = {
     "play_threshold": 0.4,        # min score to bother playing a card
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; False removes only the marker.
+    "native_mandatory_card_priority": True,  # Native mandatory-card behavior gate:
+                                             # ENTHRALLED is playable in the live payload but
+                                             # its v0.111.0 CardModel.ShouldPlay contract
+                                             # requires it to be played before other cards.
+                                             # False restores score-only selection.
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.40,    # 精英灰区下限：血量介于 soft~min(hard) 之间谨慎进精英（0.5 权重+悲观复核 veto），

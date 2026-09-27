@@ -5105,3 +5105,36 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1475~1476 批：原生强制牌执迷优先执行
+
+日期：2026-09-27
+production_code_commit: pending local commit（本批提交 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当 `ENTHRALLED/执迷` 在手牌中 `playable=true` 且费用可负担时，通用评分可能把这张原生强制牌判为负价值并错误结束回合；若只在这一窄条件下优先 `play_card`，应修复强制优先级而不改变能量不足或开关关闭时的旧语义。
+- **EVIDENCE**：完整失败局 `F2MC9QYFC6CV`（1476）F40-T6 为 `HP=30`、`energy=3`、敌意图总伤 `49`；唯一可出的 `执迷` trace 分数为 `-50.0`，最终动作却是 `end_turn`，随后 T7/T8/T9 继续掉血并 GAME_OVER。原生 `sts2-ascend/knowledge/game/v0.111.0/runtime/cards.jsonl` 将该牌描述为“必须优先打出”，`mechanics/cards.jsonl` 的 `Enthralled.ShouldPlay` 也确认了同一契约。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 run 中，只要该牌真实可出且能量足够，下一条真实 `applied` 决策应为带 `NATIVE_MANDATORY_CARD_PRIORITY` 标记的 `play_card`；开关关闭、不可出或能量不足样本应保持旧动作。以回执、后续伤害与存活对账，不把单次优先出牌直接宣称为胜因。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在通用评分结束回合前增加仅匹配 `ENTHRALLED` 的原生优先门，复用 `playable`、不可用钩子和能量门；命中后直接返回 `play_card`，并写入 `NATIVE_MANDATORY_CARD_PRIORITY` 审计标记。
+- `sts2-ascend/brain/knowledge.py`：新增 `native_mandatory_card_priority` 默认开启开关；设为 `0` 可回滚到评分选择。
+- `sts2-ascend/brain/selfcheck.py`：新增 F40 风格正例、开关关闭回滚例和能量不足边界例，验证动作、牌索引和标记。
+- 未修改 `runs`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始资产。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check`：目标生产代码通过；最终复核范围为本批三份 brain 文件，报告文件仅追加本节与结论行。
+- 失败时先将 `native_mandatory_card_priority=0`，再按实际回执判断是否回滚本地提交。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只计 3~10 个独立 run；逐项对账可出执迷、能量、`play_card` 回执、同回合伤害、终端锁和结果，区分真实动作与提案/轮询。
+- 若出现不可出牌误强出、能量/索引/回执不符，或强制优先导致明显异常路径，将开关置 `0`；必要时回滚本地提交并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

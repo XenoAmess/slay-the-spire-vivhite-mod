@@ -5949,6 +5949,57 @@ class Policy:
             + (f"；最低合格挡费用{min_blk_cost}" if race_blk_floor else ""))
         self._trace_gate(
             "RANK 出牌阈值", "neutral", f"> {float(pol['play_threshold']):.2f}")
+        # Native mandatory-card priority (v0.111.0): ENTHRALLED's
+        # CardModel.ShouldPlay contract requires it to be played before other
+        # cards while it is in the hand.  The generic score path classifies the
+        # curse as a negative-value ability and can otherwise end a lethal turn
+        # with the card still playable (1476-F40-T6).  Keep this exact card and
+        # the native playable/energy gates narrow; the static switch restores
+        # the previous score-only behavior for rollback and comparison.
+        try:
+            _native_mandatory_priority = bool(int(float(
+                pol.get("native_mandatory_card_priority", True) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _native_mandatory_priority = True
+        if _native_mandatory_priority:
+            _mandatory_card = None
+            for _candidate in hand:
+                _candidate_id = str(
+                    _candidate.get("card_id") or "").upper().rstrip("+")
+                if (_candidate_id != "ENTHRALLED"
+                        or not _candidate.get("playable")
+                        or self._card_unavailable(_candidate)):
+                    continue
+                try:
+                    _candidate_cost = (energy if _candidate.get("costs_x")
+                                       else float(_candidate.get("energy_cost") or 0))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if _candidate_cost <= float(energy):
+                    _mandatory_card = _candidate
+                    break
+            if _mandatory_card is not None:
+                _mandatory_index = _mandatory_card.get("index")
+                _mandatory_cost = float(
+                    _mandatory_card.get("energy_cost") or 0)
+                _mandatory_name = (_mandatory_card.get("name")
+                                   or "ENTHRALLED")
+                _mandatory_cid = str(
+                    _mandatory_card.get("card_id") or "ENTHRALLED").upper()
+                self._trace_gate(
+                    "GATE 原生强制牌优先", "warn",
+                    f"{_mandatory_name} 可出且费用{_mandatory_cost:g}≤能量{float(energy):g}")
+                return Decision(
+                    "play_card", {"card_index": _mandatory_index},
+                    f"战斗：原生强制优先牌，打出【{_mandatory_name}】"
+                    f"（费用{_mandatory_cost:g}，必须先于其他手牌）"
+                    f"（NATIVE_MANDATORY_CARD_PRIORITY）；"
+                    f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲",
+                    tags=[("play_card", _mandatory_cid),
+                          ("play_card_index", _mandatory_index,
+                           self._card_key(_mandatory_card)[1]),
+                          ("native_mandatory_card_priority", _mandatory_cid)],
+                    wait=0.6)
         # 落选税牌旁观留痕（HAND_TAX_PLAY_AUDIT，第1087~1097局批复盘，纯观测）：
         # HAND_TAX_PLAY_PRICING 只在「中标税牌」的 why 落「手牌税止损计价」——
         # 1097-F27 毒素×2 滞留缴税 20/掉血 27，全链留痕 0 次（部署时序 pre-fix

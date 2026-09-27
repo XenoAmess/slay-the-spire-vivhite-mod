@@ -17015,6 +17015,76 @@ def main() -> int:
         "kill_race_lethal_free_energy_function_obs") is True, \
         "lethal free-energy observation default key missing"
 
+    # 3kfe2) 原生强制牌优先（NATIVE_MANDATORY_CARD_PRIORITY）：
+    #       v0.111.0 的 ENTHRALLED 明确要求「在手牌中必须优先打出」；
+    #       1476-F40-T6 的通用评分却把它记为 -50 并在致死回合空过。
+    #       只覆盖可出且费用可负担的精确 card_id；关闭开关或能量不足
+    #       必须回到评分/结束回合旧路径。
+    mandatory_ctx = type(
+        "MandatoryCtx", (), {
+            "combat": {"comp_id": "MANDATORY_CARD_COMP", "node_type": "Elite"},
+            "current_combat_is_hard": False,
+            "credit_tags": [],
+        })()
+
+    def mandatory_state(energy_now, *, playable=True):
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 6,
+            "combat": {
+                "player": {
+                    "current_hp": 30, "max_hp": 100, "block": 0,
+                    "energy": energy_now,
+                },
+                "hand": [{
+                    "index": 1, "card_id": "ENTHRALLED", "name": "执迷",
+                    "card_type": "Curse", "playable": playable,
+                    "energy_cost": 2, "requires_target": False,
+                }],
+                "enemies": [{
+                    "index": 0, "enemy_id": "MANDATORY_ENEMY", "name": "敌人",
+                    "current_hp": 161, "max_hp": 161, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 49}],
+                }],
+            },
+            "run": {
+                "current_hp": 30, "max_hp": 100, "gold": 0,
+                "floor": 40, "deck": [],
+            },
+        }
+
+    mandatory_on = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-mandatory-"))),
+        random.Random(13))
+    d_mandatory = mandatory_on.decide(
+        mandatory_state(3), mandatory_ctx)
+    assert d_mandatory.action == "play_card" \
+        and d_mandatory.params.get("card_index") == 1 \
+        and "NATIVE_MANDATORY_CARD_PRIORITY" in d_mandatory.reason, \
+        f"原生强制牌未优先出牌: {d_mandatory.action}/{d_mandatory.params}/{d_mandatory.reason}"
+
+    mandatory_off = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-mandatory-off-"))),
+        random.Random(13))
+    mandatory_off.know.policy["native_mandatory_card_priority"] = False
+    d_mandatory_off = mandatory_off.decide(
+        mandatory_state(3), mandatory_ctx)
+    assert not (d_mandatory_off.action == "play_card"
+                and d_mandatory_off.params.get("card_index") == 1) \
+        and "NATIVE_MANDATORY_CARD_PRIORITY" not in d_mandatory_off.reason, \
+        f"强制牌开关关闭未回滚评分路径: {d_mandatory_off.action}/{d_mandatory_off.params}/{d_mandatory_off.reason}"
+
+    mandatory_low_energy = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-mandatory-low-"))),
+        random.Random(13))
+    d_mandatory_low_energy = mandatory_low_energy.decide(
+        mandatory_state(1), mandatory_ctx)
+    assert not (d_mandatory_low_energy.action == "play_card"
+                and d_mandatory_low_energy.params.get("card_index") == 1), \
+        f"能量不足时错误强打原生强制牌: {d_mandatory_low_energy.action}/{d_mandatory_low_energy.params}"
+
     print("SELFCHECK OK")
     return 0
 
