@@ -5138,3 +5138,35 @@ production_code_commit: pending local commit（本批提交 SHA 在交接回执�
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1477~1482 批：Boss 零意图攻击门拦空过对账观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 意图为 0 时，若生命支付攻击牌被 `VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE` 拦下并直接 `end_turn`，该攻击门拦可能把可验证的输出窗口推迟到下一回合，形成“攻击被拦→空过→下一回合承伤/终端锁”的链；若只是安全门的正确拦截，则后续不会稳定出现同样的门拦攻击与不利下一 tick。假设可证伪：观测在非 Boss/有来袭伤害出现、字段与候选或回执不符，或 3~10 场独立 Boss 战中门拦攻击不与后续状态形成可重复区分。
+- **EVIDENCE**：精确批次为 1477~1482；最新完整运行文件 `runs/20260927-131355_4VGSBMTECZ54.json` 共 943 条决策。1482-F48-T9 的保留 trace 显示 `HP=8/incoming=0/energy=3`，`闭域投影+` 可执行、候选分约 19.917、单次实付 4 血，但被 Boss 零意图安全下沿与生命门拦下后 `end_turn`；同一局 T10 继续在低血状态支付并以 F48 GAME_OVER 收口。旧 reason 只有泛化门拦与竞速字段，缺少攻击伤害、敌方剩余血池和门拦资源的独立事件键。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 Boss combat 中，最终空过 reason 仅在 `incoming<=0` 且攻击牌带 Boss 零意图下沿门拦时出现 `VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS`，并能对账 `round/hp/block/energy/incoming/enemy_hp/damage/pay/score`、实际 applied 回执及下一 tick 的存活、终端锁或 GAME_OVER。开关为 0、非 Boss、或有来袭伤害时不应改变 action/params，也不应保留标记。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_boss_free_turn_attack_veto_obs=1`；设为 `0` 只关闭这条观测。
+- `sts2-ascend/brain/policy.py`：在既有 `end_turn` 门拦收口筛选攻击型 `BOSS_FREE_TURN_HP_FLOOR/TERMINAL` 行，追加攻击伤害、实付、候选分、敌方血池和当前资源；不改评分、候选资格、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 1482-F48 风格正例、关闭旋钮 action/params 回滚、来袭伤害和非 Boss 隔离断言。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py sts2-ascend/knowledge/profiles/vivhite/meta_review.md sts2-ascend/knowledge/profiles/vivhite/review_conclusion.txt`：通过；最终只提交上述五个目标文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续按 combat 去重，只计 3~10 场独立 Boss 战；对账门拦攻击条数、牌名/伤害/实付/候选分、Boss 血池、下一回合 incoming、终端锁、GAME_OVER/胜负与 applied 回执。
+- 若标记在非适用场景出现、字段不等于原始状态、回执不匹配或 action/params 漂移，将 `vivhite_boss_free_turn_attack_veto_obs=0`；若仍需纠正生产语义，再回滚本地 commit。观测在证据重复前不升级为行为门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

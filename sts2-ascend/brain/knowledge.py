@@ -901,6 +901,10 @@ DEFAULT_POLICY = {
                                                       # 进入生命支付闸门并保留 VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE；仅作用于
                                                       # 白绮、Boss、incoming=0、非击杀候选；终端观测带是否拦截由终端下沿行为门决定；
                                                       # 0=关闭并回滚旧行为。
+    "vivhite_boss_free_turn_attack_veto_obs": 1,  # Boss 零意图攻击门拦观测：只在生命支付攻击牌被
+                                                   # VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE 或终端下沿门拦下、
+                                                   # 最终空过时记录牌面伤害、实付、敌方血池与资源；不改评分、动作或参数。
+                                                   # 0=关闭观测，非白绮/Boss/有来袭伤害零改动。
     "vivhite_boss_free_turn_terminal_guard": 1,  # Boss 零意图终端生命下沿行为门：在既有比例门的范围内，
                                                    # 禁止非击杀生命支付把 HP 降到 1~终端观测带下沿（默认3）；
                                                    # 击杀牌、非 Boss、非 incoming=0 回合不受影响。0=关闭并恢复

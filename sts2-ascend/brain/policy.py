@@ -3718,6 +3718,75 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _boss_free_turn_attack_veto_observation_note(
+            self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
+            incoming, energy, round_no, pol) -> str:
+        """Record Boss free-turn attack vetoes without changing the decision."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "vivhite_boss_free_turn_attack_veto_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _ctx_combat = getattr(ctx, "combat", None) or {}
+        if (not _enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or _ctx_combat.get("node_type") != "Boss"
+                or float(incoming) > 0
+                or not gate_rows):
+            return ""
+
+        _enemy_hp = 0.0
+        for _enemy in combat.get("enemies") or []:
+            if not isinstance(_enemy, dict) or not _enemy.get("is_alive", True):
+                continue
+            try:
+                _enemy_hp += max(0.0, float(_enemy.get("current_hp") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+
+        _rows = []
+        for _gate_row in gate_rows:
+            if not any(str(_tag) in {
+                    "BOSS_FREE_TURN_HP_FLOOR",
+                    "BOSS_FREE_TURN_TERMINAL"}
+                    for _tag in _gate_row[6:]):
+                continue
+            _card = next((
+                _candidate for _candidate in hand
+                if _candidate.get("index") == _gate_row[0]), None)
+            if _card is None:
+                continue
+            _card_id = str(_card.get("card_id") or "").upper().rstrip("+")
+            _entry = self.character_strategy.card(_card_id)
+            _observed_type = str(_card.get("card_type") or "").casefold()
+            if not ((_entry is not None and _entry.card_type == "attack")
+                    or (_entry is None and _observed_type == "attack")):
+                continue
+            try:
+                _damage, _block, _hits = card_numbers(_card)
+                _damage_total = float(_damage) * max(1, int(_hits))
+            except (TypeError, ValueError, OverflowError):
+                _damage_total = 0.0
+            try:
+                _pay = float(_gate_row[2])
+                _score = float(_gate_row[4])
+            except (TypeError, ValueError, OverflowError, IndexError):
+                continue
+            _rows.append(
+                f"{_card.get('name') or _card_id}:damage={_damage_total:g}"
+                f"/pay={_pay:g}/score={_score:.2f}")
+        if not _rows:
+            return ""
+        return (
+            f"；Boss零意图攻击门拦观测：round={int(round_no)}"
+            f"/hp={float(my_hp):g}/{float(my_max_hp):g}"
+            f"/block={float(my_block):g}/energy={float(energy):g}"
+            f"/incoming={float(incoming):g}/enemy_hp={_enemy_hp:g}"
+            f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+            f"/cards={'|'.join(_rows)}"
+            "（VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS）")
+
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -7758,6 +7827,12 @@ class Policy:
                         + f"；hp={float(my_hp):g}/energy={float(energy):g}"
                         f"/incoming={float(incoming):g}"
                         "（VIVHITE_HP_FUNCTION_GATE_OBS）")
+                _boss_attack_veto_note = (
+                    self._boss_free_turn_attack_veto_observation_note(
+                        ctx, combat, hand, _hp_gate_blocked, my_hp, my_max_hp,
+                        my_block, incoming, energy, round_no, pol))
+                if _boss_attack_veto_note:
+                    _gate_note += _boss_attack_veto_note
                 if _hp_relief_hard_suppressed and incoming <= 0:
                     # 普通战意图0回合被压回门带的直接证据（第 512~529 局批）：
                     # 供复盘核对硬仗限定接线与普通战自损回落（纯注记）

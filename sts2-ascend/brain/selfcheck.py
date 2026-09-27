@@ -3813,6 +3813,50 @@ def main() -> int:
         and "VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE" not in d_bfloor_off.reason, \
         f"安全下沿 ratio=0 必须恢复旧出牌行为: {d_bfloor_off}"
 
+    # 3bfav) Boss 零意图攻击门拦观测（VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS）：
+    #       1482-F48-T9 的闭域投影是可执行攻击、敌意图=0，但支付后生命跌破
+    #       Boss 安全下沿，最终空过；观测必须把攻击伤害/实付/敌方血池与资源
+    #       连接到同一条 end_turn reason。它只追加留痕，关闭后 action/params
+    #       必须逐项不变，且有来袭伤害或非 Boss 不得误挂。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_free_turn_attack_veto_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_attack_veto_obs 静态键或默认值被改"
+    vknow_bfav = _vivhite_know("sts2-selfcheck-vboss-freeturn-atkveto-")
+    vknow_bfav.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_bfav = policy.Policy(vknow_bfav, random.Random(11))
+    d_bfav = vpol_bfav.decide(
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfav.action == "end_turn" \
+        and d_bfav.params == {} \
+        and "VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS" in d_bfav.reason \
+        and "damage=10" in d_bfav.reason \
+        and "pay=2" in d_bfav.reason \
+        and "enemy_hp=200" in d_bfav.reason, \
+        f"Boss 零意图攻击门拦观测字段缺失或动作漂移: {d_bfav}"
+    vknow_bfav0 = _vivhite_know("sts2-selfcheck-vboss-freeturn-atkveto-off-")
+    vknow_bfav0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_bfav0.policy["vivhite_boss_free_turn_attack_veto_obs"] = 0
+    vpol_bfav0 = policy.Policy(vknow_bfav0, random.Random(11))
+    d_bfav0 = vpol_bfav0.decide(
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfav0.action == d_bfav.action \
+        and d_bfav0.params == d_bfav.params \
+        and "VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS" not in d_bfav0.reason, \
+        f"攻击门拦观测关闭不得改变动作/参数或残留注记: on={d_bfav} off={d_bfav0}"
+    vctx_bfav_incoming = _krh_ctx()
+    d_bfav_incoming = vpol_bfav.decide(
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=22),
+        vctx_bfav_incoming)
+    assert "VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS" not in d_bfav_incoming.reason, \
+        f"有来袭伤害的 Boss 回合不得误挂攻击门拦观测: {d_bfav_incoming}"
+    vctx_bfav_nonboss = _krh_ctx()
+    vctx_bfav_nonboss.combat["node_type"] = "Monster"
+    d_bfav_nonboss = vpol_bfav.decide(
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0),
+        vctx_bfav_nonboss)
+    assert "VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS" not in d_bfav_nonboss.reason, \
+        f"非 Boss 回合不得误挂攻击门拦观测: {d_bfav_nonboss}"
+
     # 3btp) Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，1428~1432
     #      批复盘）：只切出「最终选中牌实付后 hp<=3」的边界，不改评分、动作
     #      或参数；开关关闭与非 Boss 均不得留下注记。
