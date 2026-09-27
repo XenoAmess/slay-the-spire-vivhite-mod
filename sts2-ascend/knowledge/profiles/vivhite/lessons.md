@@ -17068,3 +17068,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.938790518230323局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.294897059421347局)，IMPATIENCE(22分/3.0183938461816657局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1548 胜，当前目标进阶 3
+
+## 第 1549 局复盘（2026-09-28 04:08）
+- 结果：💀 失败｜进阶 3｜到达层数 9｜当局评分 9
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_TERMINATION_CONDITION, ULTIMATE_STRIKE
+- 本局遗物：VAMBRACE
+- 战斗记录：F2 Monster战 掉血7｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血18｜自损28（可行动段28/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血30｜自损20（可行动段20/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=61/dpt=13.6/ttk=4.48529/tsurv=2.29167（RACE_PROJ_CALIB_AUDIT）｜竞速审计：T3判死→实战7回合获胜; F9 Elite战 掉血39｜自损20（可行动段20/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/4.1343656702635805局)，MAYHEM(36分/4.619493816136703局)，THINKING_AHEAD(36分/5.778236426163054局)，FISTICUFFS(35分/7.715234951146674局)，ROLLING_BOULDER(34分/5.822113347634944局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.9285047514165172局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.2868649197133726局)，IMPATIENCE(22分/3.00782946772003局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Elite战实测自损20/掉血39（51%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1549 胜，当前目标进阶 3
