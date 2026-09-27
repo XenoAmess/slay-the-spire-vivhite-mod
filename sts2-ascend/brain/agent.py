@@ -3712,6 +3712,24 @@ class Agent:
                             "（RACE_PROJ_CALIB_AUDIT）")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
+            if (bool(self.know.policy.get("race_audit_projection_obs", True))
+                    and bool(self.know.policy.get(
+                        "race_audit_projection_ratio_obs", True))):
+                try:
+                    _actual_rounds = float(agg.get("rounds") or 0.0)
+                    _projected_ttk = float(_ra.get("projection_ttk") or 0.0)
+                    if (math.isfinite(_actual_rounds)
+                            and math.isfinite(_projected_ttk)
+                            and _actual_rounds > 0.0
+                            and _projected_ttk > 0.0):
+                        _ttk_ratio = _actual_rounds / _projected_ttk
+                        note += (
+                            f"｜竞速TTK校准比：actual_rounds={_actual_rounds:g}"
+                            f"/projected_ttk={_projected_ttk:g}"
+                            f"/actual_over_projected={_ttk_ratio:.2f}"
+                            "（RACE_PROJ_TTK_RATIO_OBS）")
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    pass
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))

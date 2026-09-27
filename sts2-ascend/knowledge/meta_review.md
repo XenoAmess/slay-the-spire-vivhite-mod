@@ -12551,3 +12551,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `low_pool_burst_card_audit_obs` 设为 `False`；预期只移除 `LOW_POOL_BURST_CARD_AUDIT`，旧竞速 marker、评分、action 与 params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` 通过；未写入 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1620 局复盘（RACE_PROJ_TTK_RATIO_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `RACE_PROJ_CALIB_AUDIT` 同时保存投影 TTK 与实际回合/结局，却没有同机可聚合的实际/投影比值；因此不能区分投影过于悲观和过于乐观。该假设可证伪。
+- **EVIDENCE**：精确 run `LPHDUNGATZPZ`（第1620局，`sts2-ascend/knowledge/runs/20260928-051904_LPHDUNGATZPZ.json`）完整持久链268条已核读。F17 Boss 投影 `ttk=22.321`、实战9回合获胜，`actual_over_projected≈0.40`；F21 投影 `ttk=2.50825`、实战5回合阵亡，`actual_over_projected≈1.99`。旧 marker 有两端数据但缺少比值。
+- **EXPECTED_SIGNAL**：未来3~10个竞速终端应追加 `RACE_PROJ_TTK_RATIO_OBS`，记录 `actual_rounds`、`projected_ttk` 与 `actual_over_projected`；若比值仍明显分成悲观/乐观两类，支持后续校准批次，若接近1或与结局无关，则否定本假设。动作、评分与 params 应保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `race_audit_projection_ratio_obs`。
+- `sts2-ascend/brain/agent.py`：在既有终端竞速审计中只读追加有限正值比值；不参与判定、排序、目标选择或动作返回。
+- `sts2-ascend/brain/selfcheck.py`：新增比值存在与关闭开关夹具，并确认旧投影 marker 保留。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：按 run、floor/turn、Boss/普通战斗、获胜/阵亡分层收集3~10局；至少3个独立终端出现稳定偏差后再另开行为调整批次。
+- **撤回**：将 `race_audit_projection_ratio_obs` 设为 `False`；预期只移除新比值 marker，既有竞速审计、action 与 params 不变；父开关 `race_audit_projection_obs=False` 仍可整体回滚。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

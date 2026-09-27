@@ -14432,6 +14432,22 @@ def main() -> int:
     assert ("pool=250/dpt=40/ttk=6.25/tsurv=3"
             "（RACE_PROJ_CALIB_AUDIT）") in ra_agent.ctx.combat_notes[-1], \
         f"竞速入锁投影未与实战结局同条留痕: {ra_agent.ctx.combat_notes[-1]}"
+    assert ("actual_rounds=8/projected_ttk=6.25/actual_over_projected=1.28"
+            "（RACE_PROJ_TTK_RATIO_OBS）") in ra_agent.ctx.combat_notes[-1], \
+        f"竞速投影实际/预计TTK比值未留痕: {ra_agent.ctx.combat_notes[-1]}"
+
+    ra_agent.know.policy["race_audit_projection_ratio_obs"] = False
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 4, "esc": False,
+        "projection_pool": 210.0, "projection_dpt": 30.0,
+        "projection_ttk": 7.0, "projection_tsurv": 4.0,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    assert "RACE_PROJ_CALIB_AUDIT" in ra_agent.ctx.combat_notes[-1], \
+        "关闭比值观测不应移除既有竞速投影快照"
+    assert "RACE_PROJ_TTK_RATIO_OBS" not in ra_agent.ctx.combat_notes[-1], \
+        "关闭比值观测后不应新增实际/预计TTK比值"
 
     ra_agent.know.policy["race_audit_projection_obs"] = False
     ra_agent.policy._race_audit = {
@@ -14442,7 +14458,7 @@ def main() -> int:
     ra_agent.ctx.combat_agg = _ra_agg(False, True)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
-    assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
+    assert _ra_stats == {"latched": 3, "won": 2, "esc_won": 1,
                          "died": 1}, f"判死→阵亡未按 esc 分桶落库: {_ra_stats}"
     assert "RACE_PROJ_CALIB_AUDIT" not in ra_agent.ctx.combat_notes[-1], \
         "关闭竞速投影观测键后不应新增投影段"
@@ -14451,7 +14467,7 @@ def main() -> int:
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
-    assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
+    assert _ra_stats == {"latched": 3, "won": 2, "esc_won": 1,
                          "died": 1}, f"未入锁战斗误计审计账: {_ra_stats}"
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
