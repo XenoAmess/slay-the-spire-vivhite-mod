@@ -11797,6 +11797,26 @@ def main() -> int:
         and "斩杀竞速投影" not in d_low_pool.reason \
         and not low_pool_pol._krace_latch, \
         f"low-pool observation or race latch mismatch: {d_low_pool.action}/{d_low_pool.reason}"
+    # The decisive failure path can lose play_card after a playable tick.  Keep
+    # the same turn context, remove play_card, and verify the end_turn audit is
+    # emitted without changing the action or its empty parameters.
+    low_pool_end_pol = policy.Policy(low_pool_know, random.Random(18))
+    low_pool_end_pol.decide(low_pool_state, low_pool_ctx)
+    low_pool_end_state = dict(low_pool_state)
+    low_pool_end_state["available_actions"] = ["end_turn"]
+    low_pool_end_state["combat"] = dict(low_pool_state["combat"])
+    low_pool_end_state["combat"]["player"] = dict(
+        low_pool_state["combat"]["player"], energy=0)
+    low_pool_end_state["combat"]["hand"] = [dict(
+        low_pool_state["combat"]["hand"][0], playable=False)]
+    low_pool_end_pol.decide(low_pool_end_state, low_pool_ctx)
+    d_low_pool_end = low_pool_end_pol.decide(low_pool_end_state, low_pool_ctx)
+    assert (d_low_pool_end.action == "end_turn"
+            and d_low_pool_end.params == {}
+            and "LOW_POOL_BURST_RACE_OBS" in d_low_pool_end.reason
+            and not low_pool_end_pol._krace_latch), \
+        f"low-pool end-turn observation mismatch: " \
+        f"{d_low_pool_end.action}/{d_low_pool_end.params}/{d_low_pool_end.reason}"
     low_pool_know.policy["low_pool_burst_race_obs"] = False
     low_pool_off_ctx = SimpleNamespace(
         combat={"comp_id": "LOW_POOL_RUBY_OFF", "node_type": "Monster"},

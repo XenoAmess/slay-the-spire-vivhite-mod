@@ -3624,6 +3624,45 @@ class Policy:
             f"/rescue={rescue_state}/energy={float(energy):g}"
             "（VIVHITE_SANDPIT_EAT_END_TURN_OBS）")
 
+    def _low_pool_burst_race_observation_note(
+            self, enemies, incoming, my_hp, my_max_hp, my_block, pol):
+        """Describe a lethal low-pool multi-enemy window without changing policy."""
+        if (not bool(pol.get("kill_race_enabled", True))
+                or not bool(pol.get("low_pool_burst_race_obs", True))
+                or getattr(self, "_esc_rounds", 0) >= 2):
+            return ""
+        _live_enemy_count = sum(
+            1 for e in enemies
+            if isinstance(e, dict) and e.get("is_alive", True))
+        if _live_enemy_count < 2:
+            return ""
+        _race_pool_gate = float(pol.get("kill_race_min_enemy_hp", 80.0))
+        all_respawn = all(self._is_respawn_add(e) for e in enemies)
+        _respawn_credit = all_respawn and bool(
+            pol.get("race_all_respawn_pool_credit", True))
+        _invuln_floor = float(pol.get("race_invulnerable_hp_floor", 100000.0)
+                              or 0.0)
+        enemy_hp_total = 0
+        for e in enemies:
+            if self._is_respawn_add(e) and not _respawn_credit:
+                continue
+            try:
+                _e_hp = max(0, int(e.get("current_hp") or 0))
+            except (TypeError, ValueError):
+                continue
+            if _invuln_floor > 0.0 and _e_hp >= _invuln_floor:
+                continue
+            enemy_hp_total += _e_hp
+        if not (0 < enemy_hp_total < _race_pool_gate
+                and my_hp / max(1.0, float(my_max_hp)) <= 0.55
+                and float(incoming) >= max(10.0, float(my_hp) * 0.75)):
+            return ""
+        return (
+            f"；低池多敌爆发观测：血池{enemy_hp_total:.0f}<门槛"
+            f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
+            f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
+            "（LOW_POOL_BURST_RACE_OBS）")
+
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -3673,6 +3712,10 @@ class Policy:
             _audit = ",".join(_card_audit(c) for c in hand) or "空手"
             _sandpit_end_turn_note = self._sandpit_end_turn_observation_note(
                 ctx, combat, hand, energy, my_hp, my_block, incoming, pol)
+            _low_pool_burst_note = self._low_pool_burst_race_observation_note(
+                [e for e in combat.get("enemies", [])
+                 if e.get("is_alive") and e.get("is_hittable")],
+                incoming, my_hp, player.get("max_hp", my_hp), my_block, pol)
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -3790,7 +3833,8 @@ class Policy:
                     "end_turn", {},
                     f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
                     f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}"
-                    f"{_terminal_lock_note}{_sandpit_end_turn_note}",
+                    f"{_terminal_lock_note}{_sandpit_end_turn_note}"
+                    f"{_low_pool_burst_note}",
                     wait=1.2)
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
@@ -3805,7 +3849,8 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
-                    f"｜能量{energy}｜[{_audit}]{_sandpit_end_turn_note}",
+                    f"｜能量{energy}｜[{_audit}]{_sandpit_end_turn_note}"
+                    f"{_low_pool_burst_note}",
                     wait=1.2)
             # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
             # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
@@ -3927,7 +3972,7 @@ class Policy:
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
                     f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}"
-                    f"{_sandpit_end_turn_note}",
+                    f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
@@ -3939,7 +3984,7 @@ class Policy:
                 "end_turn", {},
                 f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
                 f"｜能量{energy}｜[{_audit}]{_ff_tax_note}"
-                f"{_sandpit_end_turn_note}",
+                f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                 wait=1.2)
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
@@ -4060,21 +4105,12 @@ class Policy:
             # （毛绒伏地虫/仪式兽/墨影幻灵）的杀伤来自时间而非血量，血池小≠竞速豁免
             esc_gate = getattr(self, "_esc_rounds", 0) >= 2
             _race_pool_gate = float(pol.get("kill_race_min_enemy_hp", 80.0))
-            _live_enemy_count = sum(
-                1 for e in enemies
-                if isinstance(e, dict) and e.get("is_alive", True))
             # 低池多敌爆发观测只增加可复核留痕，不打开 kill_race、不改变评分。
-            if (bool(pol.get("low_pool_burst_race_obs", True))
-                    and not esc_gate
-                    and _live_enemy_count >= 2
-                    and 0 < enemy_hp_total < _race_pool_gate
-                    and my_hp / max(1.0, float(my_max_hp)) <= 0.55
-                    and float(incoming) >= max(10.0, float(my_hp) * 0.75)):
-                danger_note += (
-                    f"；低池多敌爆发观测：血池{enemy_hp_total:.0f}<门槛"
-                    f"{_race_pool_gate:.0f}、{_live_enemy_count}敌、意图"
-                    f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
-                    "（LOW_POOL_BURST_RACE_OBS）")
+            _low_pool_burst_note = (
+                self._low_pool_burst_race_observation_note(
+                    enemies, incoming, my_hp, my_max_hp, my_block, pol))
+            if _low_pool_burst_note:
+                danger_note += _low_pool_burst_note
             if enemy_hp_total >= _race_pool_gate or esc_gate:
                 # 开局先验开账（第 255 批复盘）：旧版要求实测满两回合才允许判定，
                 # Boss 战的头 1~2 回合仍在按防守姿态花能量——意图升级复利下最贵的

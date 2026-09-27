@@ -12086,3 +12086,45 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、
   `lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1598 局复盘（LOW_POOL_BURST_END_TURN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`LOW_POOL_BURST_RACE_OBS` 目前只在 `play_card` 可用、进入
+  `kill_race` 投影的路径生成；当接口锁定且策略直接收口 `end_turn` 时，同样的低血、
+  多敌、低总血池和近致死来袭会漏记，因而无法区分“低池爆发导致的空过”与普通接口等待。
+  该假设可证伪。
+- **EVIDENCE**：精确 run `UDPA3YQX5ED1`（第 1598 局）完整持久链 310 条。F22 的
+  D306/D308 已出现 `LOW_POOL_BURST_RACE_OBS`；但 D302 为 HP30/80、能量0、
+  格挡5、来袭16 的 `end_turn`，D307 为 HP19/80、能量0、格挡0、来袭16 的
+  `end_turn`，D309 为 HP3/80、能量0、格挡0、来袭16 的 `end_turn`，三条均没有该
+  标记，下一条 D310 为 `GAME_OVER`。源码路径显示 `not can_play` 会先返回
+  `_combat_readiness_wait`，因此绕过原有投影观测。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Ironclad 窗口中，低池（按现有
+  `kill_race_min_enemy_hp`）、至少两名存活敌人、我方血量不高于 55%、来袭达到近致死
+  门槛的 `end_turn` 应带 `LOW_POOL_BURST_RACE_OBS`，并能按后续同一 run 的掉血、下一
+  决策与 `GAME_OVER` 分层；`action`/`params` 必须与旧路径一致。若标记出现在单敌、
+  高池或安全血线，或动作/参数发生变化，则该假设被削弱并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：抽出既有低池爆发谓词为只读 helper；在接口就绪阶梯实际
+  生成 `end_turn` 的理由中复用它，同时保留原 `kill_race` 路径。只追加
+  `LOW_POOL_BURST_RACE_OBS`，不进入评分、排序、目标选择或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：增加“同回合先见过可出牌、随后仅剩 `end_turn`”夹具，
+  验证 marker、`end_turn` 动作、空参数及竞速锁不变。
+- 不新增 policy 键：继续使用已有 `low_pool_burst_race_obs`；设为 `False` 可同时关闭
+  原路径与本次新增观测。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立 run，按 run_id、floor/turn、敌人数与血池、HP/block/
+  incoming、`can_play`/`end_turn` 路径、下一状态及终局分层；样本达标前不改变
+  `kill_race` 行为或低池门槛。
+- **撤回**：将 `low_pool_burst_race_obs` 设为 `False`；若出现边界错挂、字段与快照不符，
+  或 selfcheck 显示 action/params 改变，则保留失败证据并回滚本次观测 helper。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码
+  `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、
+  `policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
