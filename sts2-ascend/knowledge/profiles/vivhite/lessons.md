@@ -17002,3 +17002,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/3.0012682349677666局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.3436858136828995局)，IMPATIENCE(22分/3.0825639034055268局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1542 胜，当前目标进阶 3
+
+## 第 1543 局复盘（2026-09-28 03:02）
+- 结果：💀 失败｜进阶 3｜到达层数 22｜当局评分 22
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_TRICHROMATIC_WALTZ
+- 本局遗物：PANTOGRAPH
+- 战斗记录：F12 Monster战 掉血0｜自损15（可行动段15/非行动段8，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损8（可行动段8/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血42｜自损24（可行动段24/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血13｜自损15（可行动段15/非行动段13，SELF_LOSS_PHASE_OBS）; F20 Unknown战 掉血39｜自损15（可行动段15/非行动段5，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血17｜自损9（可行动段9/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.2222609202425705局)，MAYHEM(36分/4.717702730424599局)，THINKING_AHEAD(36分/5.901079826002654局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.224634939567512局)，FISTICUFFS(35分/7.879258300497494局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.9907637961453797局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.3354829133350097局)，IMPATIENCE(22分/3.0717749297436074局)
+- 策略进化：block_safety: 1.98 → 2.03（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.38 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.03 → 2.02（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F22 但致命战自损9/掉血17≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
+- 生涯战绩：3/1543 胜，当前目标进阶 3
