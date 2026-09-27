@@ -6330,6 +6330,7 @@ class Policy:
             # ——普通阈值都过不了的牌维持旧语义（marginal「不空过」通道不受影响）
             _hp_gate_hit = False
             _boss_floor_gate_hit = False
+            _boss_terminal_gate_hit = False
             _hp_pay = 0.0
             _hp_extra = 0.0
             if _hp_play_margin > 0.0:
@@ -6361,28 +6362,50 @@ class Policy:
                                 or 0.0))
                             _boss_terminal_floor = max(0.0, float(pol.get(
                                 "vivhite_hp_terminal_pay_floor", 3.0) or 0.0))
+                            _boss_terminal_guard = bool(int(pol.get(
+                                "vivhite_boss_free_turn_terminal_guard", 1) or 0))
                             _boss_pre_hp = float(my_hp)
                             _boss_hp_floor = float(my_max_hp) * _boss_floor_ratio
                             _boss_post_hp = _boss_pre_hp - _hp_pay
                         except (TypeError, ValueError):
                             _boss_floor_ratio = 0.0
                             _boss_terminal_floor = 0.0
+                            _boss_terminal_guard = False
                             _boss_pre_hp = 0.0
                             _boss_hp_floor = 0.0
                             _boss_post_hp = 0.0
                         if (_boss_floor_ratio > 0.0
                                 and _boss_hp_floor > 0.0
                                 and _boss_post_hp < _boss_hp_floor
-                                and (_boss_terminal_floor <= 0.0
-                                     or _boss_post_hp > _boss_terminal_floor)
+                                and (
+                                    _boss_terminal_floor <= 0.0
+                                    or _boss_post_hp > _boss_terminal_floor
+                                    or (
+                                        _boss_terminal_guard
+                                        and _boss_post_hp > 0.0
+                                        and _boss_post_hp <= _boss_terminal_floor
+                                    )
+                                )
                                 and "可击杀" not in why
                                 and not re.search(r"kills=[1-9]", why)):
                             _hp_gate_hit = True
-                            why += (
-                                f"｜Boss零意图生命支付安全下沿：实付{_hp_pay:g}血，"
-                                f"hp={_boss_pre_hp:g}->{_boss_post_hp:g}"
-                                f"<{_boss_hp_floor:g}，非击杀牌不放行"
-                                "（VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE）")
+                            if (_boss_terminal_guard
+                                    and _boss_terminal_floor > 0.0
+                                    and _boss_post_hp > 0.0
+                                    and _boss_post_hp <= _boss_terminal_floor):
+                                _boss_terminal_gate_hit = True
+                                why += (
+                                    f"｜Boss零意图终端生命下沿：实付{_hp_pay:g}血，"
+                                    f"hp={_boss_pre_hp:g}->{_boss_post_hp:g}"
+                                    f"<=终端线{_boss_terminal_floor:g}，"
+                                    "非击杀牌不放行"
+                                    "（VIVHITE_BOSS_FREE_TURN_TERMINAL_GUARD）")
+                            else:
+                                why += (
+                                    f"｜Boss零意图生命支付安全下沿：实付{_hp_pay:g}血，"
+                                    f"hp={_boss_pre_hp:g}->{_boss_post_hp:g}"
+                                    f"<{_boss_hp_floor:g}，非击杀牌不放行"
+                                    "（VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE）")
                             _boss_floor_gate_hit = True
                     if _hp_gate_hit:
                         _gate_formula = (f"实付{_hp_pay:g}血×"
@@ -6420,7 +6443,10 @@ class Policy:
                             if _krh_dom_scale > 1.0:
                                 _gate_row += ("KRH_DOM_SCALE",)
                         if _boss_floor_gate_hit:
-                            _gate_row += ("BOSS_FREE_TURN_HP_FLOOR",)
+                            _gate_row += (
+                                "BOSS_FREE_TURN_TERMINAL"
+                                if _boss_terminal_gate_hit
+                                else "BOSS_FREE_TURN_HP_FLOOR",)
                         _hp_gate_blocked.append(_gate_row)
                     elif _hp_rep_extra > 0.0:
                         # 复打税已计价但总分仍超带顶放行——供复盘区分「税未接线」
@@ -7395,9 +7421,11 @@ class Policy:
                                   + ("（VIVHITE_HP_LETHAL_CAP_GATE）"
                                      if len(row) > 6
                                      and row[6] == "LETHAL_CAP_GATE" else "")
-                                  + ("（VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE）"
-                                     if "BOSS_FREE_TURN_HP_FLOOR" in row[6:]
-                                     else "")
+                                   + ("（VIVHITE_BOSS_FREE_TURN_TERMINAL_GUARD）"
+                                      if "BOSS_FREE_TURN_TERMINAL" in row[6:]
+                                      else "（VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE）"
+                                      if "BOSS_FREE_TURN_HP_FLOOR" in row[6:]
+                                      else "")
                                   for row in _hp_gate_blocked)
                               + "（VIVHITE_HP_PLAY_MARGIN_GATE）")
                 # 斩杀竞速功能牌门拦观测（VIVHITE_HP_FUNCTION_GATE_OBS）：

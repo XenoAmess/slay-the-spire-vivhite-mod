@@ -888,8 +888,12 @@ DEFAULT_POLICY = {
                                                     # 不改评分、候选、动作或参数；0=关闭（严格回滚），非白绮角色零改动
     "vivhite_boss_free_turn_hp_floor_ratio": 0.25,  # Boss 零意图非击杀生命支付安全下沿：若实付后 HP 低于最大生命比例，
                                                       # 进入生命支付闸门并保留 VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE；仅作用于
-                                                      # 白绮、Boss、incoming=0、非击杀候选；终端观测带内仍交给终端支付观测；
+                                                      # 白绮、Boss、incoming=0、非击杀候选；终端观测带是否拦截由终端下沿行为门决定；
                                                       # 0=关闭并回滚旧行为。
+    "vivhite_boss_free_turn_terminal_guard": 1,  # Boss 零意图终端生命下沿行为门：在既有比例门的范围内，
+                                                   # 禁止非击杀生命支付把 HP 降到 1~终端观测带下沿（默认3）；
+                                                   # 击杀牌、非 Boss、非 incoming=0 回合不受影响。0=关闭并恢复
+                                                   # 终端带内旧行为，便于按批次回滚。
     "vivhite_hp_terminal_pay_obs": 1,  # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，
                                         # 1428~1432 批复盘新增）：1432-F17 T11 选中实付4血后
                                         # 7→3，T12 又实付2血后3→1；现有直接致死守卫只拦

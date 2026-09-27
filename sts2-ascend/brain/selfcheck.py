@@ -3764,6 +3764,9 @@ def main() -> int:
     assert float(knowledge.DEFAULT_POLICY[
         "vivhite_boss_free_turn_hp_floor_ratio"]) == 0.25, \
         "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_hp_floor_ratio 或默认值被改"
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_free_turn_terminal_guard"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_boss_free_turn_terminal_guard 或默认值被改"
     vknow_bfloor = _vivhite_know("sts2-selfcheck-vboss-freeturn-hpfloor-")
     vknow_bfloor.policy["vivhite_hp_cost_play_margin"] = 1.0
     vpol_bfloor = policy.Policy(vknow_bfloor, random.Random(11))
@@ -3776,6 +3779,30 @@ def main() -> int:
     assert d_bfloor_low.action == "end_turn" \
         and "VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE" in d_bfloor_low.reason, \
         f"Boss 零意图低 HP 非击杀支付缺少安全下沿闸门: {d_bfloor_low}"
+    vknow_bfloor_terminal = _vivhite_know(
+        "sts2-selfcheck-vboss-freeturn-terminal-guard-")
+    vknow_bfloor_terminal.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vpol_bfloor_terminal = policy.Policy(
+        vknow_bfloor_terminal, random.Random(11))
+    d_bfloor_terminal = vpol_bfloor_terminal.decide(
+        _krh_state(1, 4, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfloor_terminal.action == "end_turn" \
+        and "VIVHITE_BOSS_FREE_TURN_TERMINAL_GUARD" in d_bfloor_terminal.reason \
+        and d_bfloor_terminal.params == {}, \
+        f"Boss 零意图终端生命下沿未阻止非击杀支付: {d_bfloor_terminal}"
+    vknow_bfloor_terminal_off = _vivhite_know(
+        "sts2-selfcheck-vboss-freeturn-terminal-guard-off-")
+    vknow_bfloor_terminal_off.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_bfloor_terminal_off.policy[
+        "vivhite_boss_free_turn_terminal_guard"] = 0
+    vpol_bfloor_terminal_off = policy.Policy(
+        vknow_bfloor_terminal_off, random.Random(11))
+    d_bfloor_terminal_off = vpol_bfloor_terminal_off.decide(
+        _krh_state(1, 4, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+    assert d_bfloor_terminal_off.action == "play_card" \
+        and d_bfloor_terminal_off.params == {"card_index": 0, "target_index": 0} \
+        and "VIVHITE_BOSS_FREE_TURN_TERMINAL_GUARD" not in d_bfloor_terminal_off.reason, \
+        f"终端下沿门关闭后必须恢复旧出牌与参数: {d_bfloor_terminal_off}"
     vknow_bfloor_off = _vivhite_know("sts2-selfcheck-vboss-freeturn-hpfloor-off-")
     vknow_bfloor_off.policy["vivhite_hp_cost_play_margin"] = 1.0
     vknow_bfloor_off.policy["vivhite_boss_free_turn_hp_floor_ratio"] = 0.0
@@ -3811,6 +3838,7 @@ def main() -> int:
 
     vknow_tpay = _vivhite_know("sts2-selfcheck-vterminal-pay-")
     vknow_tpay.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_tpay.policy["vivhite_boss_free_turn_terminal_guard"] = 0
     vpol_tpay = policy.Policy(vknow_tpay, random.Random(11))
     vctx_tpay = _krh_ctx()
     d_tpay = vpol_tpay.decide(
@@ -3824,6 +3852,7 @@ def main() -> int:
 
     vknow_tpay0 = _vivhite_know("sts2-selfcheck-vterminal-pay-off-")
     vknow_tpay0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_tpay0.policy["vivhite_boss_free_turn_terminal_guard"] = 0
     vknow_tpay0.policy["vivhite_hp_terminal_pay_obs"] = 0
     vpol_tpay0 = policy.Policy(vknow_tpay0, random.Random(11))
     d_tpay0 = vpol_tpay0.decide(

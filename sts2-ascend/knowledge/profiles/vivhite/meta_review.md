@@ -5007,3 +5007,36 @@ production_code_commit: `00e184d62`
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1460~1463 批：Boss 零意图终端生命下沿行为门
+
+日期：2026-09-27
+production_code_commit: `b96f7698e6f496384f4f2a3860d0b4d02a7d7a24`
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss `incoming=0` 回合的既有 `vivhite_boss_free_turn_hp_floor_ratio` 有意放过了实付后 `HP<=3` 的终端带，因此非击杀生命支付牌可能把白绮从可承伤区直接推入终端锁。若这条链是后续受击/终局的可重复诱因，而不只是相关性，那么禁止该回合把非击杀支付后的 HP 落入 1~3，应减少“零意图实付→终端锁”的链，同时不应拦截击杀牌、非 Boss 或有来袭伤害的回合。
+- **EVIDENCE**：精确批次为 1460~1463；1460 F33 Boss、1462 F17 Boss、1463 F17 Boss 均以阵亡结束，1461 另有 F43 普通战阵亡。完整证据 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-081556_TLQ2LRE99G3X.json` 的 F17 `CEREMONIAL_BEAST` 中，T7 为 `HP=2/incoming=0`，`Termination Condition+` 非击杀实付 1 血后降至 `HP=1`；T8 变为 `incoming=18`，五张非诅咒牌均 `blocked_by_hook`，`end_turn` 致死并进入 `GAME_OVER`。原链同时带有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 与 `/boss_free_turn_paid=12/plays=5`，但不足以单独证明支付是终局因果；原生 Boss 0 意图也会进入后续攻击循环，故本改动只作为可证伪行为试验。
+- **EXPECTED_SIGNAL**：未来 3~10 场独立白绮 Boss 战按 combat 计样本，核对实际 `applied` 支付牌的 `pre/pay/post HP`、`incoming`、击杀标记、下一意图、下一 tick 的存活/终端锁与胜负。若新门命中后“非击杀实付后 HP=1~3→终端锁/终局”减少，且不出现击杀牌误拦、非适用场景误拦或 action/params 漂移，则支持假设；若链频率不降/变差，或出现上述误拦，则证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_boss_free_turn_terminal_guard=1`；设为 `0` 可恢复旧行为。
+- `sts2-ascend/brain/policy.py`：仅在白绮、Boss、`incoming<=0`、候选非击杀、仍处既有生命比例门范围，且实付后 `0<HP<=vivhite_hp_terminal_pay_floor`（默认 3）时拦截该生命支付牌，追加 `VIVHITE_BOSS_FREE_TURN_TERMINAL_GUARD` 及对应 `end_turn` 记录；击杀牌、非 Boss、有来袭伤害或实付后致死不受此新增分支影响。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认开启的终端门、`0` 回滚后的 action/params，以及旧终端支付观测夹具与新行为门的隔离。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime` 或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 代码最终 `git diff --check` 与 staged diff 检查通过；仅有 Git 的 LF/CRLF 提示。
+- 生产代码已本地提交为 `b96f7698e6f496384f4f2a3860d0b4d02a7d7a24`，未 push。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 场独立 Boss 战，不把同一战斗多条 tick 当独立样本；以 `combat_play_commit`/实际回执为准，记录终端门命中、支付前后 HP、下一意图、终端锁、GAME_OVER/胜负及战斗备注。
+- 若出现误拦、action/params 漂移、回执与实际支付不符，或结果显示生存更差，将 `vivhite_boss_free_turn_terminal_guard` 设为 `0`；必要时回滚上述本地代码 commit，并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
