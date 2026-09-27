@@ -5264,3 +5264,35 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1519~1520 批：Boss竞速终端锁分类观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当白绮 Boss 战已有 `_krace_latch`、`incoming>0`、所有非诅咒牌原生 `blocked_by_hook` 且终端生命锁确认时，当前死亡链是“竞速自损→原生锁→致死 `end_turn`/`GAME_OVER`”的独立终端形态；现有通用终端锁观测不能把它和零意图或普通资源锁分开。若后续标记只在该组合出现，假设得到支持；若重复死亡链没有标记或非适用场景出现标记，假设被证伪。
+- **EVIDENCE**：1519 F33 Boss 结算记录敌方伤害 93、白绮自付 26；1520 F17 后段在 `Slippery` 下实测有效输出/投影约为 0.06，竞速闩锁仍保持。T9/T10 的 `RACE_ALLIN_LETHAL_COVER_OBS` 显示一费 11 格挡可执行，但严格买活余量分别为 -1.8/-0.9，仍走全攻；最终收口为 `HP=2/energy=1/incoming=20`，3 张非诅咒牌均 `blocked_by_hook`，随后 `end_turn`/`GAME_OVER`。这正是现有通用终端锁无法单独归因的正 incoming 竞速链。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat 按战斗去重；仅当 Boss、正 `incoming`、同战斗 `_krace_latch`、致死终端锁且 `blocked_by_hook` 覆盖全部非诅咒牌时出现 `VIVHITE_BOSS_RACE_TERMINAL_LOCK_OBS`，并对账 `hp/energy/incoming/blocked`、竞速审计、真实 `applied end_turn` 与后续 `GAME_OVER`/胜负。Monster、`incoming<=0`、未闩锁或部分 blocked 样本不应出现；否则回到假设核查。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_boss_race_terminal_lock_obs=1`；设为 `0` 只关闭新分类标记。
+- `sts2-ascend/brain/policy.py`：在既有白绮终端生命锁收口追加正 incoming Boss 竞速分类，条件严格要求 `_krace_latch`、全量 `blocked_by_hook` 和致死结束标志；只追加 reason 观测，不参与评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增正例、非 Boss、零 incoming 和关闭开关断言。
+- 未修改 `runs`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、原始资产或 replay 包。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 生产三文件完整 diff 已在报告前回读；报告追加后将再次做目标 diff、空白检查和 selfcheck。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 Boss combat，核对标记适用率、竞速闩锁、支付后 HP、`blocked_by_hook` 覆盖率、`applied` 回执和终端结果；不把观测标记直接宣称为行为修复。
+- 若标记出现在非 Boss、无来袭、未闩锁或非全量 blocked 场景，或 action/params 漂移，先将 `vivhite_boss_race_terminal_lock_obs=0`；必要时回滚本地 commit 并保留证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

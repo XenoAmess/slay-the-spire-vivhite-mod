@@ -892,6 +892,7 @@ DEFAULT_POLICY = {
                                       # GAME_OVER」切片验证假设。仅在连续确认后的终端生命锁收口处记录锁定张数、
                                       # 原生 blocked_by_hook 数、hp/energy/incoming 与结束回合致死标志；不改
                                       # 评分、动作或闩锁语义。0=关闭（严格回滚注记），非白绮角色零改动
+    "vivhite_boss_race_terminal_lock_obs": 1,  # Observation-only classifier for a Boss race terminal lock with positive incoming damage.
     "vivhite_boss_free_turn_hp_pay_obs": 1,  # Boss 意图0生命支付观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS，
                                               # 1420~1422 批复盘新增）：三局 Boss 阵亡均出现首击前的生命支付，
                                               # 1422 F35 T1 更连续支付 4/2/1/6 血；仅在选中 Boss 出牌、当前敌意图

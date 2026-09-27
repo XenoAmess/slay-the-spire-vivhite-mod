@@ -4018,6 +4018,37 @@ def main() -> int:
         and "/hp=2/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
         f"终端生命锁缺稳定观测字段: {d_tll.reason}"
 
+    # 3tllr) Classify only the positive-incoming Boss race terminal-lock
+    #      combination. This is observation-only and must not affect actions.
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_boss_race_terminal_lock_obs"]) == 1.0, \
+        "DEFAULT_POLICY missing vivhite_boss_race_terminal_lock_obs"
+    _race_terminal_lock_note = vpol_tll._vivhite_boss_race_terminal_lock_note(
+        vknow_tll.policy, {"node_type": "Boss"}, 20, 1, 2,
+        True, 2, 2, True)
+    assert ("VIVHITE_BOSS_RACE_TERMINAL_LOCK_OBS" in _race_terminal_lock_note
+            and "/boss_race_terminal_lock=race_latched=yes"
+            in _race_terminal_lock_note
+            and "/hp=2/energy=1/incoming=20/blocked=2/2"
+            in _race_terminal_lock_note), \
+        f"Boss race terminal-lock classifier fields missing: {_race_terminal_lock_note}"
+    assert vpol_tll._vivhite_boss_race_terminal_lock_note(
+        vknow_tll.policy, {"node_type": "Monster"}, 20, 1, 2,
+        True, 2, 2, True) == "", \
+        "non-Boss must not emit Boss race terminal-lock classifier"
+    assert vpol_tll._vivhite_boss_race_terminal_lock_note(
+        vknow_tll.policy, {"node_type": "Boss"}, 0, 1, 2,
+        True, 2, 2, True) == "", \
+        "zero incoming must not emit Boss race terminal-lock classifier"
+    vknow_tll_race_off = _vivhite_know(
+        "sts2-selfcheck-vterminal-lock-race-off-")
+    vknow_tll_race_off.policy["vivhite_boss_race_terminal_lock_obs"] = 0
+    vpol_tll_race_off = policy.Policy(vknow_tll_race_off, random.Random(11))
+    assert vpol_tll_race_off._vivhite_boss_race_terminal_lock_note(
+        vknow_tll_race_off.policy, {"node_type": "Boss"}, 20, 1, 2,
+        True, 2, 2, True) == "", \
+        "classifier off switch must suppress the new marker"
+
     vknow_tll0 = _vivhite_know("sts2-selfcheck-vterminal-lock-off-")
     vknow_tll0.policy["vivhite_hp_terminal_lock_obs"] = 0
     vpol_tll0 = policy.Policy(vknow_tll0, random.Random(11))
