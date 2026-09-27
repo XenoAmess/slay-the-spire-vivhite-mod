@@ -210,6 +210,7 @@ DEFAULT_POLICY = {
     "play_threshold": 0.4,        # min score to bother playing a card
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; False removes only the marker.
+    "boss_race_end_turn_obs": True,  # Audit-only marker for Vivhite Boss end-turns after the kill-race latch; False removes only the marker.
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.40,    # 精英灰区下限：血量介于 soft~min(hard) 之间谨慎进精英（0.5 权重+悲观复核 veto），

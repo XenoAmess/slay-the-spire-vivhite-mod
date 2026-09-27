@@ -5105,3 +5105,36 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1473~1474 批：Boss 竞速失利锁后的空过收口缺少锁态归因
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1473/1474 两局 KNOWLEDGE_DEMON Boss 战都在 T2 已进入 `kill_race` 失利锁，但后续 `end_turn` 只留下普通无牌可出或资源致死边界，无法区分“已在竞速失败锁下收口”与普通资源耗尽。若把既有 `_krace_latch` 只读接到白绮 Boss 的 end-turn reason，未来收口证据应能稳定带出锁定回合、当前回合和资源；若标记在入锁前、非白绮或非 Boss 出现，或动作/参数改变，则假设证伪并回滚旋钮。
+- **EVIDENCE**：完整运行文件 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-110133_F6BTA10VV812.json`（1473，438 条决策）与 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-111541_9FJ74DSM9ZJA.json`（1474，749 条决策）均以 F33 KNOWLEDGE_DEMON 阵亡；两局 race audit 都记为 `T2 doomed`，分别实际存活 6 回合和 10 回合。1474 的最终 T10 为 HP=3、block=11、incoming=21、energy=0，手牌仅剩 1 费闭域映射且 `not_enough_energy`，原持久 reason 没有既有竞速锁归因；1473 同样在 T2 后持续收口并阵亡。packet 只保留了失败 run 的部分决策，已回读两份完整 run 链核对。
+- **EXPECTED_SIGNAL**：未来 3~10 场独立白绮 Boss 战按 `VIVHITE_BOSS_RACE_END_TURN_OBS` 对账 `latch_round/round/age/race_turns`、HP/格挡/意图/能量与下一条 `applied` 回执。标记必须只在已有竞速锁后出现，动作仍为原 `end_turn` 且 params 仍为 `{}`；若出现提前/错场景标记、回执不一致或存活/胜负恶化，则将 `boss_race_end_turn_obs=0` 并保留本批证据。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `boss_race_end_turn_obs` 回滚键。
+- `sts2-ascend/brain/policy.py`：新增白绮 Boss 且 `_krace_latch` 为真时的只读收口观测，并接入既有四个 end-turn reason 分支；不参与评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 Boss 竞速锁夹具，断言标记内容；关闭旋钮后断言 action/params 相同且标记消失。
+- 未修改 runs、stats、progression、policy.json、lessons.md、.runtime、归档或原始资产。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 生产代码 `git diff --check`：通过；最终回读确认改动仅为上述观测与回归夹具。
+- `failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只计 3~10 场独立白绮 Boss run；同一战斗的多条 tick 不作为独立样本。逐项核对竞速锁回合、空过回合、`applied` 回执、实际掉血和终局。
+- 若标记早于锁定、跨场景泄漏、动作参数漂移或出现与观测相关的存活恶化，将 `boss_race_end_turn_obs` 设为 `0`；必要时回滚本地提交，保留本批完整证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
