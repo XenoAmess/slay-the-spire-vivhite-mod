@@ -13328,3 +13328,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.466463223818248局)，BASH(14分/2.9331611893846734局)，BODY_SLAM(15分/2.114722868820084局)
 - 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.39 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F22——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F22——药水交药线部分胜利回收）
 - 生涯战绩：0/1612 胜，当前目标进阶 0
+
+## 第 1613 局复盘（2026-09-28 00:36）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：INFLAME, FIGHT_ME, TAUNT, JUGGLING, SETUP_STRIKE, HEADBUTT, CONFLAGRATION, TAUNT, CRUELTY, RAMPAGE, HEADBUTT, ULTIMATE_STRIKE, CRIMSON_MANTLE, HOWL_FROM_BEYOND, SPITE, INFLAME, SWORD_BOOMERANG
+- 本局遗物：VENERABLE_TEA_SET, STRAWBERRY
+- 战斗记录：F14 Monster战 掉血0; F17 Boss战 掉血20｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血23; F21 Monster战 掉血20; F23 Monster战 掉血18｜自损2（可行动段2/非行动段22，SELF_LOSS_PHASE_OBS）; F28 Elite战 掉血50（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.813986101119038局)，OFFERING(26分/17.433090172724455局)，FEED(25分/34.97031701342209局)，PACTS_END(25分/66.33127120792734局)，BRAND(25分/2.0520631677534937局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.4543306025348843局)，BASH(14分/2.922895125221827局)，BODY_SLAM(15分/2.107321338779214局)
+- 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.40 → 0.43（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F28——药水交药线部分胜利回收）
+- 生涯战绩：0/1613 胜，当前目标进阶 0
