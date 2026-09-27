@@ -16848,3 +16848,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.073247751401269局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.152263905755064局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.461598104036888局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.47 → 0.44（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：3/1528 胜，当前目标进阶 3
+
+## 第 1529 局复盘（2026-09-28 00:43）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, OMNISLICE, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：PENDULUM, AKABEKO, TINY_MAILBOX, MEAL_TICKET
+- 战斗记录：F5 Unknown战 掉血0; F6 Monster战 掉血0｜自损6（可行动段6/非行动段4，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损8（可行动段8/非行动段8，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血19｜自损14（可行动段14/非行动段19，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血74｜自损24（可行动段24/非行动段48，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.434685492116222局)，MAYHEM(36分/4.955053287784288局)，THINKING_AHEAD(36分/6.197966820745471局)，FISTICUFFS(35分/6.225975417609158局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.4371789498293275局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.065991384271365局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.141230982084921局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.452982510672759局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.41（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 30.00 → 25.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1529 胜，当前目标进阶 3
