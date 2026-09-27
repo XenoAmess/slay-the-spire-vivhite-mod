@@ -5295,3 +5295,34 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1526~1527 批：沙坑末格续命牌与敌伤致死分账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：无厌沙虫的 `FRANTIC_ESCAPE` 只把 `SANDPIT_POWER` 计数加 1，不提供格挡或减伤；因此末格空过时看到 `rescue=available`，不能单独证明策略漏掉了沙坑续命。若残余敌方伤害已覆盖当前 HP，续命牌不能挽救本回合；若敌伤未致死而服务端仍报告 `forced_kill`，才是可单独验证的沙坑死因。补充残余缺口与 `incoming_lethal` 应能把两类样本分开，且不改变动作。
+- **EVIDENCE**：精确批次覆盖 1526~1527。1527 完整运行文件 `runs/20260928-000536_HJ9WHCDDBL38.json` 的 F33 T7（决策 413）为 `hp=30/block=0/incoming=30/energy=1`，`clock=1/forced_kill=yes/rescue=available`，两张可出的 `FRANTIC_ESCAPE` 候选均为 `-50.0`，最终 `end_turn {}`，下一条 GAME_OVER；原生 `runtime/cards.jsonl` 与 `mechanics/cards.jsonl` 证实该牌只增加沙坑计数。1526 的 `runs/20260927-235014_UQ0243JEGV47.json` F33 T4 为 `hp=10/block=0/incoming=33/energy=0`、无可出牌且无药水，随后 GAME_OVER，支持末端存在敌伤/资源锁链，但不把单局归因升级为因果结论。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat（按 combat 去重）中，已有 `VIVHITE_SANDPIT_EAT_END_TURN_OBS` 且 `rescue=available` 的样本应同时出现 `rescue_effect=clock+1`、`incoming_gap` 和 `incoming_lethal=yes/no`。`incoming_lethal=yes` 时不得因续命牌可出就改变 `end_turn`；`incoming_lethal=no` 且 `forced_kill=yes` 时形成可重复的沙坑单独致死候选，供下一批决定是否改行为。所有样本继续核对真实 `applied` action/params、下一回合掉血、终端/GAME_OVER/胜负。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有白绮 Boss 沙坑末格观测中计算 `max(incoming-block, 0)`，追加 `rescue_effect=clock+1|none`、`incoming_gap` 与 `incoming_lethal`；不改评分、候选、动作或参数，沿用 `vivhite_sandpit_eat_end_turn_obs` 开关。
+- `sts2-ascend/brain/selfcheck.py`：保留无续命牌/已覆盖伤害的兼容夹具，新增 F33 型可出 `FRANTIC_ESCAPE` 但 `incoming_gap==hp` 的夹具，验证观测分账和 `end_turn {}` 不漂移。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始资产；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 目标生产/自检 diff 已回读，`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过；报告追加后还会再做最终 diff 与 commit 前复核。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 Boss combat；逐条对账 clock、rescue、rescue_effect、incoming_gap、incoming_lethal、forced_kill、真实回执、下一 tick 掉血及 GAME_OVER/胜负，不把观测字段本身当作胜因。
+- 若字段与原始状态不符、`incoming_lethal` 在格挡后仍误判、非 Boss/非末格出现标记，或 action/params 漂移，先将 `vivhite_sandpit_eat_end_turn_obs=0`；必要时回滚本地 commit，保留本批证据。只有 `incoming_lethal=no` 的沙坑单独致死样本重复后，才进入行为改动评估。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

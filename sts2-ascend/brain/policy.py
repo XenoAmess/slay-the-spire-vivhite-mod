@@ -3731,6 +3731,13 @@ class Policy:
         rescue_state = (
             "available" if rescue_available
             else "unavailable" if rescue_seen else "absent")
+        try:
+            incoming_gap = max(0.0, float(incoming) - float(my_block))
+            incoming_lethal = incoming_gap >= max(0.0, float(my_hp))
+        except (TypeError, ValueError, OverflowError):
+            incoming_gap = 0.0
+            incoming_lethal = False
+        rescue_effect = "clock+1" if rescue_available else "none"
         return (
             f"；沙坑末格空过观测：clock={sandpit_clock:g}"
             f"/hp={float(my_hp):g}/block={float(my_block):g}"
@@ -3738,6 +3745,9 @@ class Policy:
             f"/covered={'yes' if my_block >= incoming else 'no'}"
             f"/forced_kill={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
             f"/rescue={rescue_state}/energy={float(energy):g}"
+            f"/rescue_effect={rescue_effect}"
+            f"/incoming_gap={incoming_gap:g}"
+            f"/incoming_lethal={'yes' if incoming_lethal else 'no'}"
             "（VIVHITE_SANDPIT_EAT_END_TURN_OBS）")
 
     def _low_pool_burst_race_observation_note(

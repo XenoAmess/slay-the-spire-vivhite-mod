@@ -3786,8 +3786,34 @@ def main() -> int:
         and d_sand.params == {} \
         and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" in d_sand.reason \
         and "clock=1/hp=9/block=24/incoming=20/covered=yes" in d_sand.reason \
-        and "/forced_kill=no/rescue=absent/energy=1" in d_sand.reason, \
+        and "/forced_kill=no/rescue=absent/energy=1" in d_sand.reason \
+        and "/rescue_effect=none/incoming_gap=0/incoming_lethal=no" in d_sand.reason, \
         f"沙坑末格空过观测缺失或动作漂移: {d_sand}"
+
+    def _sandpit_rescue_lethal_state():
+        _st = _krh_state(
+            7, 30, [{
+                "index": 0, "card_id": "FRANTIC_ESCAPE", "name": "狂乱逃离",
+                "card_type": "Status", "playable": True, "energy_cost": 1,
+                "requires_target": False,
+            }], incoming=30)
+        _st["combat"]["player"]["energy"] = 1
+        _st["combat"]["enemies"][0].update(
+            enemy_id="THE_INSATIABLE", name="无厌沙虫",
+            powers=[{"power_id": "SANDPIT_POWER", "amount": 1}])
+        _st["combat"]["end_turn_will_kill_player"] = True
+        return _st
+
+    vctx_sand_rescue = _krh_ctx()
+    d_sand_rescue = vpol_sand.decide(
+        _sandpit_rescue_lethal_state(), vctx_sand_rescue)
+    assert d_sand_rescue.action == "end_turn" \
+        and d_sand_rescue.params == {} \
+        and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" in d_sand_rescue.reason \
+        and "/forced_kill=yes/rescue=available/energy=1" in d_sand_rescue.reason \
+        and "/rescue_effect=clock+1/incoming_gap=30/incoming_lethal=yes" \
+        in d_sand_rescue.reason, \
+        f"沙坑续命牌与敌方致死伤害未分账或动作漂移: {d_sand_rescue}"
 
     vknow_sand0 = _vivhite_know("sts2-selfcheck-vsandpit-end-turn-off-")
     vknow_sand0.policy["vivhite_sandpit_eat_end_turn_obs"] = 0
