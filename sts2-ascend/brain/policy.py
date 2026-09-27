@@ -4695,8 +4695,11 @@ class Policy:
                     _terminal_lock_note = (
                         f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
                         f"native_blocked_by_hook={_hook_blocked}/"
-                        f"{len(non_curse_cards)}/hp={my_hp}/energy={energy}"
-                        f"/incoming={incoming}/end_turn_lethal="
+                        f"{len(non_curse_cards)}/hp={float(my_hp):g}"
+                        f"/block={float(my_block):g}"
+                        f"/gap={max(0.0, float(incoming) - float(my_block)):g}"
+                        f"/energy={float(energy):g}"
+                        f"/incoming={float(incoming):g}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                         f"/cards={'|'.join(_terminal_rows)}"
                         f"{_terminal_chain_note}"

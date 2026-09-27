@@ -4081,6 +4081,7 @@ def main() -> int:
 
     def _terminal_lock_state():
         _st = _krh_state(12, 2, _terminal_lock_hand(), incoming=42)
+        _st["combat"]["player"]["block"] = 16
         _st["available_actions"] = ["end_turn"]
         _st["combat"]["player"]["energy"] = 2
         _st["combat"]["end_turn_will_kill_player"] = True
@@ -4098,7 +4099,7 @@ def main() -> int:
         and "native_blocked_by_hook=2/2" in d_tll.reason \
         and "cards=VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook|" in d_tll.reason \
         and "VIVHITE_CARD_CLOSED_PROJECTION:life=3/margin=0/effective=3/playable=no/unavailable=no/energy=1/native=blocked_by_hook" in d_tll.reason \
-        and "/hp=2/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
+        and "/hp=2/block=16/gap=26/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
         f"终端生命锁缺稳定观测字段: {d_tll.reason}"
 
     vknow_tll0 = _vivhite_know("sts2-selfcheck-vterminal-lock-off-")

@@ -5453,3 +5453,34 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1564~1568 批：终端生命锁补齐当前格挡与残余缺口观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`VIVHITE_HP_TERMINAL_LOCK_OBS` 现有收口只记录 HP、incoming 和原生 hook 锁数量，遗漏当前格挡与格挡后的残余缺口；因此不能从 marker 独立核对 `end_turn` 是否确实致死。若追加 `block` 与 `gap=max(incoming-block,0)`，字段应能与同一快照对账，且 action/params 保持不变。
+- **EVIDENCE**：精确批次 1564~1568 的最新完整链为 `runs/20260928-070911_UA49BRUH5EVT.json`。1568-F31-T3 的前一条决策记录 `hp=1/block=16/incoming=21`，随后终端锁 marker 只写 `hp=1/incoming=21/native_blocked_by_hook=4/4/end_turn_lethal=yes`，未写 16 点格挡或残余缺口 5；下一条为 GAME_OVER。该缺口是观测不可证伪，不把单局升级为行为因果结论。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite terminal-lock combat 中，marker 的 `block` 与原始状态一致，`gap` 始终等于 `max(incoming-block,0)`；`vivhite_hp_terminal_lock_obs=0` 时 marker 消失，确认等待、`end_turn {}`、action/params 不变。字段错位或动作漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 追加 `/block` 与 `/gap`，只读当前快照，不改变评分、候选、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：将终端锁夹具设为 `hp=2/block=16/incoming=42`，断言 marker 输出 `gap=26`；既有观测关闭后的两次确认与 action/params 回滚断言保持有效。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档、资产或在线进程；无 failed-review replay package。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已回读两个生产/自检目标文件的完整 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只统计后续 3~10 个独立 terminal-lock combat，逐条核对 `block/gap`、原始状态、真实 `applied` action/params、下一 tick 掉血与 GAME_OVER/胜负；不把 marker 出现本身当作胜因。
+- 若 `block/gap` 与原始状态不符，或关闭键前后 action/params 漂移，先将 `vivhite_hp_terminal_lock_obs=0`，必要时回滚本地 commit 并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
