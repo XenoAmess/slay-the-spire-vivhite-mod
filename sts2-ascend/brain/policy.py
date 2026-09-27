@@ -842,7 +842,8 @@ class Policy:
         self._exhaust_plays = 0     # 本场已打出"消耗其他牌"的牌数（防坚毅耗光攻击牌）
         self._hp_gate_stall = 0        # 謦欬门连续低危拦截回合数（VIVHITE_HP_GATE_STALL_BREAK 账）
         self._hp_gate_stall_round = None  # 上次计入/清零的回合号（同回合多 tick 只动一次）
-        self._hp_gate_stall_latch = False  # 僵局放行闩锁：本场一旦放行，余量门不再回归
+        self._hp_gate_stall_latch = False  # 僵局放行闩锁：敌血量推进后重新武装余量门
+        self._hp_gate_stall_rearm_pending = False  # 余量门重武装观测待写入决策链
         self._hp_gate_stall_uncovered = 0  # 謦欬门连续未覆盖拦截回合数（VIVHITE_HP_GATE_STALL_UNCOVERED 观测账）
         self._hp_gate_stall_any = 0      # 謦欬门连续拦截回合数（不论意图是否覆盖，VIVHITE_HP_GATE_STALL_ANY 账）
         self._hp_gate_stall_any_fired = False  # 本场放行由全拦截口径触发（留痕分流用）
@@ -3543,6 +3544,7 @@ class Policy:
             self._hp_gate_stall = 0
             self._hp_gate_stall_round = None
             self._hp_gate_stall_latch = False
+            self._hp_gate_stall_rearm_pending = False
             self._hp_gate_stall_uncovered = 0
             self._hp_gate_stall_any = 0
             self._hp_gate_stall_any_fired = False
@@ -3556,6 +3558,21 @@ class Policy:
             if enemy_hp_total < self._stall_min_hp:
                 self._stall_min_hp = enemy_hp_total
                 self._stall_no_progress = 0
+                # STALL_ANY 只为打破“门拦且敌血不动”的死循环而临时撤掉
+                # 余量门。敌方血量一旦真实下降，战斗已经重新取得进展；继续
+                # 沿用旧 latch 会把后续每一张生命支付牌永久放进候选，正是
+                # 1488-F3 在 37→20 血区间反复实付 2 血的失控路径。清掉本轮
+                # 链状态，允许下一次真正无进展时重新触发闩锁；峰值/近失账保留
+                # 为审计累计值。
+                if self._hp_gate_stall_latch:
+                    self._hp_gate_stall_latch = False
+                    self._hp_gate_stall_any_fired = False
+                    self._hp_gate_stall_early_fired = False
+                    self._hp_gate_stall = 0
+                    self._hp_gate_stall_any = 0
+                    self._hp_gate_stall_uncovered = 0
+                    self._hp_gate_stall_esc = 0
+                    self._hp_gate_stall_rearm_pending = True
             else:
                 self._stall_no_progress += 1
             self._stall_turn_seen = round_no
@@ -3588,6 +3605,14 @@ class Policy:
                                 tags=[("stall_giveup", round_no)], wait=0.8)
             return Decision(None, {}, "战斗：摆烂中（停止出牌）", wait=0.5)
         return None
+
+    def _consume_hp_gate_stall_rearm_note(self) -> str:
+        """Consume the one-shot audit note for a progress-triggered re-arm."""
+        if not self._hp_gate_stall_rearm_pending:
+            return ""
+        self._hp_gate_stall_rearm_pending = False
+        return ("；敌方血量出现真实进展，余量门重新武装"
+                "（VIVHITE_HP_GATE_STALL_REARM）")
 
     def _sandpit_end_turn_observation_note(
             self, ctx, combat, hand, energy, my_hp, my_block, incoming, pol):
@@ -6991,6 +7016,8 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             chosen_score, card, target, why = chosen
+            if self._hp_gate_stall_rearm_pending:
+                why += self._consume_hp_gate_stall_rearm_note()
             # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，
             # 纯观测不改分）：本 tick 评分侧静默翻线的挂账在此挂到实际打出牌
             # 的 why 上——只有打出牌的 why 会入决策链，跨回合火线横跳从此可
@@ -7453,6 +7480,7 @@ class Policy:
                 params = {"card_index": c["index"]}
                 if c.get("requires_target"):
                     params["target_index"] = tgt.get("index")
+                rearm_note = self._consume_hp_gate_stall_rearm_note()
                 recovery_note = (
                     f"，连续{self._stall_no_progress}回合无进展，"
                     "STALL_ATTACK_RECOVERY"
@@ -7463,7 +7491,8 @@ class Policy:
                 return Decision(
                     "play_card", params,
                     f"战斗：僵局强攻（回合{round_no}{recovery_note}）"
-                    f"打出【{c.get('name')}】→{tgt.get('name')}",
+                    f"打出【{c.get('name')}】→{tgt.get('name')}"
+                    f"{rearm_note}",
                     tags=[("play_card", c.get("card_id")),
                           ("play_card_index", c.get("index"),
                            self._card_key(c)[1]), *recovery_tags], wait=0.6)
@@ -7662,6 +7691,7 @@ class Policy:
                 if _resc_card.get("index") in _resc_gate_blocked_idx:
                     _gate_rescue_note = ("；门拦格挡净保命放行"
                                          "（VIVHITE_HP_GATE_RESCUE_BLOCK）")
+                _rearm_note = self._consume_hp_gate_stall_rearm_note()
                 _rescue_chain_pay = 0.0
                 if incoming <= 0 and cctx.get("node_type") == "Boss":
                     try:
@@ -7677,7 +7707,7 @@ class Policy:
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
                                 f"{_resc_slip_note}"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
-                                f"{danger_note}{_gate_rescue_note}",
+                                f"{danger_note}{_gate_rescue_note}{_rearm_note}",
                                 tags=[("play_card", _rcid),
                                       ("play_card_index", _resc_card.get("index"),
                                        self._card_key(_resc_card)[1]),
@@ -7921,8 +7951,9 @@ class Policy:
                     _ritual_skip_note += _lethal_note.replace(
                         "KILL_RACE_FREE_ENERGY_FUNCTION_OBS",
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
+            _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

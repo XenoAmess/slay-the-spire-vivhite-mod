@@ -3224,6 +3224,29 @@ def main() -> int:
     d_any2 = vpol_any.decide(_vgate_stall(6, 10), vctx_any)
     assert d_any2.action == "play_card", \
         f"闩锁后余量门不得回归: {d_any2}"
+    # ④a) 闩锁不是永久许可：敌血量真实下降后必须重新武装余量门，
+    #     并在下一条决策链留痕，避免 1488-F3 式持续支付生命。
+    vknow_rearm = _vivhite_know("sts2-selfcheck-vhgate-rearm-")
+    vknow_rearm.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_rearm.policy["vivhite_hp_gate_stall_turns"] = 6
+    vknow_rearm.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vknow_rearm.policy["hp_gate_stall_esc_early"] = 0
+    vpol_rearm = policy.Policy(vknow_rearm, random.Random(11))
+    vctx_rearm = _vgate_ctx()
+    for _turn in (1, 2, 3, 4):
+        vpol_rearm.decide(_vgate_stall(_turn, 0 if _turn % 2 else 10),
+                          vctx_rearm)
+    d_rearm_latch = vpol_rearm.decide(_vgate_stall(5, 0), vctx_rearm)
+    assert d_rearm_latch.action == "play_card" \
+        and vpol_rearm._hp_gate_stall_latch, \
+        f"重武装夹具未先建立全拦截闩锁: {d_rearm_latch}"
+    _st_rearm = _vgate_stall(6, 10)
+    _st_rearm["combat"]["enemies"][0]["current_hp"] = 167
+    d_rearm = vpol_rearm.decide(_st_rearm, vctx_rearm)
+    assert d_rearm.action == "end_turn" \
+        and not vpol_rearm._hp_gate_stall_latch \
+        and "VIVHITE_HP_GATE_STALL_REARM" in d_rearm.reason, \
+        f"敌血推进后余量门未重武装或缺少观测: {d_rearm}"
     # 新战斗（combat 身份变化）必须重置全拦截账、闩锁与分流标记
     d_any3 = vpol_any.decide(_vgate_stall(1, 10), _vgate_ctx())
     assert d_any3.action == "end_turn", \

@@ -4594,6 +4594,37 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 retry_resolution: none (no failed_review_replay packages requested)
 
+# 1485~1488 批：敌血推进后重新武装 VIVHITE_HP_GATE_STALL_ANY 生命门
+
+日期：2026-09-27
+production_code_commit: 334aa3321
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`VIVHITE_HP_GATE_STALL_ANY` 达阈值后把余量门永久关闭；若敌方血量随后真实下降仍保留旧 latch，白绮会在已取得进展的非致死窗口持续支付生命。敌血下降后重新武装余量门，应减少这条放血链，同时保留首次僵局放行能力。
+- **EVIDENCE**：精确批次为 1485~1488；已逐条读取完整 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-144121_UUYCWDG7TM2U.json`。1488-F3 的决策 36 首次记录“本场余量门停用”；决策 44 已见自付速率 3.0/回合高于敌方净损 1.4/回合，决策 52 为 HP=20，决策 53~55 仍连续实付 2 血，决策 56 以致死无牌空过收口。该链支持“永久 latch 而非单次放行”是可修复执行缺口，但不把它单独宣称为死亡唯一原因。
+- **EXPECTED_SIGNAL**：未来 3~10 场独立白绮 combat 中，敌血在 latch 后首次下降时出现一次 `VIVHITE_HP_GATE_STALL_REARM`；随后非致死生命支付重新经过余量门，支付前后 HP、自损/敌损比与终局结果可按 applied 回执对账。若 re-arm 缺失、无进展场景误 re-arm、动作参数漂移或自损恶化，则假设证伪并回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有战斗僵局账发现敌方总血量低于历史最低值时，清除本战斗的 stall latch 与连续链计数，保留峰值/近失审计；余量门恢复生效，并在下一条出牌、救场或结束回合决策追加一次 `VIVHITE_HP_GATE_STALL_REARM`。没有真实血量进展时，原有阈值与放行行为不变。
+- `sts2-ascend/brain/selfcheck.py`：新增“交替意图先触发全拦截闩锁、随后敌血下降、门恢复并留痕”的回归夹具；既有闩锁无进展行为继续保留。
+- 未修改 runs、stats、progression、policy.json、lessons、.runtime、原始证据、资产或 replay 审计目录。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 报告写入前已回读目标生产 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续按 combat 去重，只计 3~10 场独立白绮战斗；记录 latch 触发、re-arm 次数、re-arm 后生命支付牌的 `pre/pay/post HP`、敌我掉血、自损占比、终端锁、GAME_OVER/胜负与 applied 回执，并确认无进展时不提前重武装。
+- 若出现非真实血量进展触发、生命门漏过、动作/参数漂移或存活恶化，先回滚本地本批 commit；仅关闭 `vivhite_hp_gate_stall_any_turns` 不能撤回旧 `STALL_BREAK` 路径的同一重武装代码，因此完整回滚以 commit 为准。
+
+## REPLAY
+
+retry_resolution: 20260927-150733-1790492853720329400-d1a46a7f integrated
+
 # 1452~1454 批：Boss 零意图生命支付低血安全下沿行为闸门
 
 日期：2026-09-27
