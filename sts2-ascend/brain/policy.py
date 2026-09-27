@@ -7134,6 +7134,8 @@ class Policy:
             _resc_slip = 0.0
             _resc_gate_blocked_idx: set = set()
             _resc_invuln_note = ""
+            _resc_invuln_attack_count = 0
+            _resc_invuln_non_attack_count = 0
             if _resc_enabled:
                 try:
                     _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
@@ -7196,8 +7198,26 @@ class Policy:
                         for c in _resc_hand:
                             _rd, _rb, _rh2 = card_numbers(c)
                             if _rd and float(_rd) > 0:
+                                try:
+                                    _rcost = (energy if c.get("costs_x")
+                                              else float(c.get("energy_cost") or 0))
+                                except (TypeError, ValueError):
+                                    _rcost = energy + 1
+                                if (c.get("playable")
+                                        and not self._card_unavailable(c)
+                                        and _rcost <= energy):
+                                    _resc_invuln_attack_count += 1
                                 continue
                             _resc_kept.append(c)
+                            try:
+                                _rcost = (energy if c.get("costs_x")
+                                          else float(c.get("energy_cost") or 0))
+                            except (TypeError, ValueError):
+                                _rcost = energy + 1
+                            if (c.get("playable")
+                                    and not self._card_unavailable(c)
+                                    and _rcost <= energy):
+                                _resc_invuln_non_attack_count += 1
                         if len(_resc_kept) != len(_resc_hand):
                             _resc_invuln_note = (
                                 "；全场无敌帧，攻击救场禁出"
@@ -7292,6 +7312,31 @@ class Policy:
                                        _rescue_chain_pay, incoming,
                                        cctx.get("node_type"))],
                                 wait=0.6)
+            _invuln_end_turn_note = ""
+            try:
+                _invuln_end_turn_obs = bool(int(float(pol.get(
+                    "invuln_lethal_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _invuln_end_turn_obs = False
+            if (_invuln_end_turn_obs
+                    and _resc_invuln_attack_count > 0
+                    and lethal_now):
+                _invuln_names = [
+                    str(e.get("name") or e.get("enemy_id") or "敌人")
+                    for e in enemies if isinstance(e, dict)]
+                _invuln_steam = max(
+                    (self._enemy_steam_eruption_stack(e)
+                     for e in enemies if isinstance(e, dict)),
+                    default=0.0)
+                _invuln_end_turn_note = (
+                    f"；无敌帧致死空过观测：enemy={'|'.join(_invuln_names) or '敌人'}"
+                    f",hp={float(my_hp):g}/block={float(my_block):g}"
+                    f"/incoming={float(incoming):g}"
+                    f",vetoed_attacks={_resc_invuln_attack_count}"
+                    f",non_attack_candidates={_resc_invuln_non_attack_count}"
+                    f",steam={float(_invuln_steam):g}"
+                    f",forced={'yes' if forced_kill else 'no'}"
+                    "（INVULN_LETHAL_END_TURN_OBS）")
             _gate_note = ""
             if self._hp_gate_stall_round != round_no:
                 # 謦欬门僵局放行账（每回合只动一次，VIVHITE_HP_GATE_STALL_BREAK）：
@@ -7477,7 +7522,7 @@ class Policy:
                 is_unavailable=self._card_unavailable,
                 enabled=_free_energy_obs)
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

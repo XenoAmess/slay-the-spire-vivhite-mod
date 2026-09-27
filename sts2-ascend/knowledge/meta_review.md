@@ -12027,3 +12027,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；定向 `idle_leak` 测试 3/3 通过；目标 diff `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1596 局复盘（INVULN_LETHAL_END_TURN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：全场无敌自爆相过滤攻击后，当前意图若已覆盖生命缺口，现有 `INVULN_TARGET_VETO` 只留下泛化“攻击救场禁出”，无法区分“没有非攻击救场牌的必死空过”和“仍有可负担非攻击牌却空过”的两类路径；该假设可证伪。
+- **EVIDENCE**：精确 run `0KAMK1NRNJR0`（第 1596 局）完整链 215 条已逐条核读。F17 D212 已记录 `STEAM_ERUPTION_POWER×39`，D214 为 HP=27、敌意图=39、无格挡；攻击手牌全部被 `INVULN_TARGET_VETO` 过滤，结束回合后 D215 `GAME_OVER`。原生 `STEAM_ERUPTION_POWER` runtime 描述为“被击杀时，在你的下一回合结束时造成伤害”，mechanics 的 `AfterDeath` 触发 `TriggerAboutToBlowState` 且 `ShouldStopCombatFromEnding=true`；现有生产代码已有无敌血池/禁攻行为，但没有上述资源分层。新 marker 不回填旧 run，供后续真实窗口验证。
+- **EXPECTED_SIGNAL**：未来 3~10 个含无敌自爆相的 end-turn 窗口按 `run_id`、Boss、`hp/block/incoming`、`vetoed_attacks`、`non_attack_candidates`、`steam`、`forced` 与后续 `GAME_OVER` 分层。若 `non_attack_candidates=0` 稳定对应必死，说明是资源耗尽；若该值大于 0 仍频繁空过并阵亡，才另立非攻击救场行为假设；若 marker 与无敌状态错配，回滚观测。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `invuln_lethal_end_turn_obs`。
+- `sts2-ascend/brain/policy.py`：在全场无敌帧过滤攻击、且 `lethal_now` 的 end-turn 收口追加 `INVULN_LETHAL_END_TURN_OBS`，记录敌人、HP、格挡、意图、可负担被过滤攻击数、可负担非攻击候选数、蒸汽喷发层数和服务端致死标记；不改评分、候选、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加“唯一攻击且无非攻击候选”的端到端夹具，验证 marker；关闭观测键后 action/params 与理由严格回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按上述字段与无敌相进入/退出回合、实际下一状态和终局结果对账；未取得分层样本前不改变无敌目标禁攻或防守行为。若 `non_attack_candidates>0` 且仍空过致死，另立行为复盘；若字段缺失或全场判定错挂，修正载荷口径。
+- **撤回**：将 `invuln_lethal_end_turn_obs` 设为 `False`；selfcheck 已验证 marker 消失且 action/params 不变。若仅需停用蒸汽层字段而保留通用无敌观测，先保留主 marker，不扩大本批范围。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+

@@ -6112,6 +6112,8 @@ def main() -> int:
     itv_pol = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-"))),
         random.Random(7))
+    assert itv_pol.know.policy.get("invuln_lethal_end_turn_obs") is True, \
+        "无敌帧致死空过观测默认键未迁移"
 
     def itv_enemy(hp=999999999, *, index=0, intent=36, name="瀑布巨兽"):
         return {"index": index, "enemy_id": "INVLN_BOSS", "name": name,
@@ -6185,6 +6187,20 @@ def main() -> int:
     d_itv = itv_live.decide(itv_combat_state([dict(itv_strike)]), DummyCtx())
     assert d_itv.action == "end_turn", \
         f"无敌帧自爆相不得把唯一攻击打进不可击杀目标: {d_itv.action} {d_itv.params}（{d_itv.reason}）"
+    assert "INVULN_LETHAL_END_TURN_OBS" in d_itv.reason \
+        and "vetoed_attacks=1" in d_itv.reason \
+        and "non_attack_candidates=0" in d_itv.reason, \
+        f"无敌帧致死空过缺少可证伪分层: {d_itv.reason}"
+    itv_live_obs_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-end-turn-off-"))),
+        random.Random(7))
+    itv_live_obs_off.know.policy["invuln_lethal_end_turn_obs"] = False
+    d_itv_obs_off = itv_live_obs_off.decide(
+        itv_combat_state([dict(itv_strike)]), DummyCtx())
+    assert d_itv_obs_off.action == d_itv.action \
+        and d_itv_obs_off.params == d_itv.params \
+        and "INVULN_LETHAL_END_TURN_OBS" not in d_itv_obs_off.reason, \
+        f"无敌帧致死空过观测关闭未严格回滚: {d_itv_obs_off.action} {d_itv_obs_off.params}（{d_itv_obs_off.reason}）"
     # 对照锚：同一载荷键=False 时攻击照常打出（旧口径回归）
     itv_live_off = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invulnveto-off-"))),
