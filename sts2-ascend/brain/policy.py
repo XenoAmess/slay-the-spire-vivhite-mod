@@ -3913,6 +3913,74 @@ class Policy:
             f"/energy={_num(_pending.get('energy'))}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
+    def _restore_kill_race_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a terminal audit after a policy/process reload.
+
+        The terminal audit is already persisted in the preceding decision
+        before the native GAME_OVER state is observed.  Keep this recovery
+        observation-only: require the most recent persisted decision to be the
+        matching terminal end-turn, then rebuild exactly the fields consumed by
+        ``_consume_kill_race_terminal_outcome_note``.  No scoring or action
+        selection reads this snapshot.
+        """
+        if (isinstance(getattr(self, "_race_terminal_outcome_pending", None), dict)
+                or bool(getattr(self, "_race_terminal_outcome_reported", False))):
+            return
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker = "KILL_RACE_TERMINAL_AUDIT_OBS"
+        marker_at = reason.rfind(marker)
+        if marker_at < 0:
+            return
+        audit_at = reason.rfind("竞速终端对账：", 0, marker_at)
+        if audit_at < 0:
+            return
+        audit = reason[audit_at:marker_at]
+
+        def _token(name: str):
+            match = re.search(
+                rf"{re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        try:
+            _lock_round = int(_number("lock_round"))
+            _last_round = int(_number("last_round"))
+            _projection = {
+                "round": _last_round,
+                "enemy_hp": _number("pool"),
+                "dpt": _number("dpt"),
+                "ttk": _number("ttk"),
+                "tsurv": _number("tsurv"),
+            }
+            _pending = {
+                "projection": _projection,
+                "terminal_round": _last_round,
+                "lock_round": _lock_round,
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _number("energy"),
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._race_terminal_outcome_pending = _pending
+        self._race_terminal_outcome_reported = False
+
     def _lethal_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
             combat, kill_race, race_allin) -> str:
@@ -13908,6 +13976,8 @@ class Policy:
         actions = state.get("available_actions", [])
         victory = bool(go.get("is_victory"))
         phase = str(go.get("phase") or "")
+        self._restore_kill_race_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
 

@@ -12425,3 +12425,23 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `potion_reserve_end_turn_obs` 设为 `False`，预期只移除 `POTION_RESERVE_END_TURN_OBS`；或删除该快照方法及对应 selfcheck，既有 `LETHAL_UNAVAILABLE_END_TURN_OBS`、终端审计、action 与 params 应保持不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → exit 0（仅既有超长资产路径警告）；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1614 局复盘（KILL_RACE_TERMINAL_OUTCOME_RECOVERY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1614局的终端竞速审计已经写入持久决策，但紧随其后的 `GAME_OVER` 没有 `KILL_RACE_TERMINAL_OUTCOME_OBS`；原因是原实现只把待上报结局保存在当前 `Policy` 进程内，重载或进程边界会丢失，而不是终端审计本身缺失。该假设可证伪。
+- **EVIDENCE**：精确 run `JTK6DKDLU25W`（`sts2-ascend/knowledge/runs/20260928-011023_JTK6DKDLU25W.json`）完整核读253条决策。F17 D251 的 `end_turn` 同时含 `LETHAL_UNAVAILABLE_END_TURN_OBS`、`POTION_RESERVE_END_TURN_OBS` 和 `KILL_RACE_TERMINAL_AUDIT_OBS`，并记录 `lock_round=8/last_round=12/pool=59/dpt=13.8333/ttk=4.26506/tsurv=0.652174/hp=15/block=0/incoming=23/energy=0`；D252 的 `GAME_OVER` 只有 `continue_game_over`，没有结局 marker。此前D217、D222、D234、D238、D242、D248已有竞速伤害投影，但不能解释该单一缺口。
+- **EXPECTED_SIGNAL**：未来3~10个独立竞速终局中，若最新持久决策是同一楼层的 `end_turn` 且包含完整终端审计，重建 `Policy` 后的 `GAME_OVER` 应补出同一字段的 `KILL_RACE_TERMINAL_OUTCOME_OBS`，且 `action`/`params` 不变；无审计、楼层不匹配、字段损坏或开关关闭时不得补 marker。若出现旧楼层或非最新审计也被消费，则推翻并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有内存 pending 消费前，只读检查当前上下文最后一条已持久化 `end_turn` 决策，解析已有终端审计文本并重建同一结局快照；不改评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增跨 `Policy` 重建的持久审计恢复夹具，以及开关关闭夹具，验证恢复后的字段与原内存路径一致、`continue_game_over` 和空参数严格不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集3~10个独立窗口，按 `run_id`、floor/turn、是否发生进程/策略重载、终端审计到 `GAME_OVER` 的间隔分层；核对 marker 的 `round/lock_round/pool/dpt/ttk/tsurv/hp/block/incoming/energy` 与审计原文一致。若有持久审计仍缺 marker，继续检查决策持久化边界；若非最新或不匹配审计触发 marker，立即回滚。
+- **撤回**：将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只移除 `KILL_RACE_TERMINAL_OUTCOME_OBS`，终端审计、`GAME_OVER` 的 `action` 与 `params` 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 通过；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

@@ -16132,6 +16132,44 @@ def main() -> int:
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局对账缺失或动作漂移: {d_race_terminal_outcome}"
 
+    # 3z-5c) 进程重载后的结局恢复：终端审计已随上一条决策持久化，但
+    #        Policy 的瞬时 pending 可能在 GAME_OVER 前丢失；新实例只能从
+    #        当前 run 的最近 end_turn 决策恢复，且 action/params 必须不变。
+    race_terminal_replay_pol = policy.Policy(race_terminal_know)
+    race_terminal_replay_ctx = _SettleCtx()
+    race_terminal_replay_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }]
+    d_race_terminal_replay = race_terminal_replay_pol.decide(
+        race_terminal_outcome_state, race_terminal_replay_ctx)
+    assert (d_race_terminal_replay.action == d_race_terminal_outcome.action
+            and d_race_terminal_replay.params == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_replay.reason
+            and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未从持久终端审计恢复结局: {d_race_terminal_replay}"
+
+    race_terminal_replay_off_know = knowledge.Knowledge(tmp)
+    race_terminal_replay_off_know.policy[
+        "kill_race_terminal_outcome_obs"] = False
+    race_terminal_replay_off_pol = policy.Policy(race_terminal_replay_off_know)
+    race_terminal_replay_off_ctx = _SettleCtx()
+    race_terminal_replay_off_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }]
+    d_race_terminal_replay_off = race_terminal_replay_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_replay_off_ctx)
+    assert (d_race_terminal_replay_off.action
+            == d_race_terminal_replay.action
+            and d_race_terminal_replay_off.params
+            == d_race_terminal_replay.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            not in d_race_terminal_replay_off.reason), \
+        f"进程重载恢复关闭后 action/marker 漂移: {d_race_terminal_replay_off}"
+
     race_terminal_outcome_off_know = knowledge.Knowledge(tmp)
     race_terminal_outcome_off_know.policy["kill_race_terminal_outcome_obs"] = False
     race_terminal_outcome_off_pol = policy.Policy(race_terminal_outcome_off_know)
