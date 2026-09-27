@@ -7731,12 +7731,35 @@ class Policy:
                 except (TypeError, ValueError, AttributeError):
                     _boss_free_turn_pay = 0.0
                 if _boss_free_turn_pay > 0.0:
+                    try:
+                        _boss_free_turn_card_damage, _boss_free_turn_card_block, _boss_free_turn_card_hits = card_numbers(card)
+                        _boss_free_turn_card_damage = float(
+                            _boss_free_turn_card_damage or 0.0)
+                        _boss_free_turn_card_block = float(
+                            _boss_free_turn_card_block or 0.0)
+                        _boss_free_turn_card_hits = max(
+                            1, int(_boss_free_turn_card_hits or 1))
+                    except (TypeError, ValueError, OverflowError):
+                        _boss_free_turn_card_damage = 0.0
+                        _boss_free_turn_card_block = 0.0
+                        _boss_free_turn_card_hits = 1
+                    try:
+                        _boss_free_turn_enemy_state = (
+                            self._boss_effective_dpt_state(enemies)
+                            or "unknown")
+                    except (TypeError, ValueError, AttributeError):
+                        _boss_free_turn_enemy_state = "unknown"
                     _boss_free_turn_name = (
                         card.get("name") or card.get("card_id") or "?")
                     why += (
                         f"｜Boss意图0生命支付：{_boss_free_turn_name}"
                         f"实付{_boss_free_turn_pay:g}血，"
                         f"hp={my_hp:g}/energy={energy:g}/round={round_no}"
+                        f"/enemy_hp={float(enemy_hp_total):g}"
+                        f"/enemy_state={_boss_free_turn_enemy_state}"
+                        f"/card_damage={_boss_free_turn_card_damage:g}"
+                        f"/card_block={_boss_free_turn_card_block:g}"
+                        f"/card_hits={_boss_free_turn_card_hits}"
                         "（VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS）")
             # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS）：1432-F17
             # T11 的实付4血把 hp 从7推到3，T12 又实付2血到1；既有

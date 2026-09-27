@@ -3737,6 +3737,12 @@ def main() -> int:
         f"Boss 意图0选中生命支付牌缺自由回合观测: {d_bfh}"
     assert "实付2血" in d_bfh.reason and "hp=65" in d_bfh.reason, \
         f"Boss 意图0生命支付观测字段不完整: {d_bfh.reason}"
+    assert ("/enemy_hp=200" in d_bfh.reason
+            and "/enemy_state=RITUAL_BEAST" in d_bfh.reason
+            and "/card_damage=10" in d_bfh.reason
+            and "/card_block=0" in d_bfh.reason
+            and "/card_hits=1" in d_bfh.reason), \
+        f"Boss free-turn HP payment audit fields missing: {d_bfh.reason}"
     vknow_bfh0 = _vivhite_know("sts2-selfcheck-vboss-freeturn-hppay-off-")
     vknow_bfh0.policy["vivhite_hp_cost_play_margin"] = 1.0
     vknow_bfh0.policy["vivhite_boss_free_turn_hp_pay_obs"] = 0

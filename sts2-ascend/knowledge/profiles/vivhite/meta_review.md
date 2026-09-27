@@ -5358,3 +5358,34 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1532~1538 批：Boss 零意图付血与无实体转场的目标对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：已有 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS` 只记录牌名、实付生命、玩家 HP/能量/回合，不能把零意图付血与 Boss 当时的血池、能力状态和牌面输出面对账。1538-F17 中，付血链随后出现 `SOUL_FYSH` 的 `none→INTANGIBLE_POWER` 状态窗口和一回合敌血净降 0；若补齐目标与牌面字段，未来可以区分“已知无实体下付血”与“付血后才进入无实体”，不把观测误当行为修复。
+- **EVIDENCE**：当前 exact batch 覆盖 1532~1538，完整失败链为 `runs/20260928-015903_EAGQ2SQRBKGJ.json`，共 212 条决策。1538-F17 的 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS` 出现 7 次，终端 `VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS` 汇总 `boss_free_turn_paid=18/plays=7`；其中 T6 的生命支付前后，Boss 有效火力对账记录 `SOUL_FYSH` 敌血 `109→109`、实际/投影比 `0.00`，状态窗口起点为 `powers=none`、当前状态为 `INTANGIBLE_POWER×1`。旧 marker 没有目标血池、能力状态或牌面伤害/格挡/命中数字，因此无法仅凭当前日志切片这条转场。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat（按 combat 去重）中，每条 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS` 应带有 `/enemy_hp`、`/enemy_state`、`/card_damage`、`/card_block`、`/card_hits`，并可与后续 `BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS`、实际净伤/投影比、`applied` 回执及 GAME_OVER/胜负对账。已知无实体、无实体在付血后才出现、以及普通能力状态应能分开；开关关闭时 action/params 必须逐项不变且 marker 消失，字段或回执不符即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：复用既有 `vivhite_boss_free_turn_hp_pay_obs` 开关，在已选生命支付牌的观测中追加当前敌方血池、`_boss_effective_dpt_state`、牌面伤害、格挡和命中数。只读观测，不改变候选、评分、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：扩展既有 Boss 零意图付血夹具，断言目标血池、目标状态和牌面字段出现；既有关闭开关的 action/params 回滚断言保持有效。
+- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- `git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py sts2-ascend/knowledge/profiles/vivhite/meta_review.md sts2-ascend/knowledge/profiles/vivhite/review_conclusion.txt` 通过；仅有仓库既有 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立 Boss combat，逐条核对 marker 字段与原始状态、真实 `applied` action/params、下一回合有效火力状态/净伤以及终局；不把字段出现本身当作胜因。
+- 若 marker 在非 Boss、非零意图或无生命支付样本出现，字段与状态不符，或 action/params 漂移，先将 `vivhite_boss_free_turn_hp_pay_obs=0`，必要时回滚本地 commit，并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
