@@ -12340,3 +12340,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1609 局复盘（ELITE_FORCED_ENTRY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：前期卡组未达到精英闸门时，地图评分仍可能在替代路线更差的情况下选中 Elite；当前理由能说明“规避门未通过”，但不能机械区分唯一候选的地形强制进场与多候选中的损失最小选择。该假设可证伪：若后续标记主要出现在可替代且随后高损/阵亡的窗口，说明回退排序把闸门否决重新放行；若主要是唯一候选且能稳定存活，则应保留为地形约束而暂不改行为。
+- **EVIDENCE**：精确 run `1KRP4UYA2UVW`（第1609局）完整持久链110条；packet保留72条、裁剪38条，已回读完整 `runs/20260927-202102_1KRP4UYA2UVW.json`。F7 决策41在 HP 71/80 时选择 `Elite(7,5)`，理由记录“非基础牌仅6张(<7)，卡组强度不足规避精英”且“其余候选评分更差，取损失最小项”；随后 F8 `TERROR_EEL` 战斗从决策75开始，玩家在 T10、HP6、来袭12、能量0时结束回合，下一条决策110为 `GAME_OVER`。原生 `mechanics/monsters.jsonl` 的 `TerrorEel` 记录确认该 Elite 的 140 初始生命、`ShriekPower` 与 Crash/Thrash/Stun/Terror 状态机，故该死亡窗口与前期精英进场链相符，但单局不足以直接改选路行为。
+- **EXPECTED_SIGNAL**：未来3~10个独立地图窗口中，精英门槛未通过但仍选中 Elite 时追加 `ELITE_FORCED_ENTRY_OBS`，披露 `floor/hp/max_hp/good_cards/required/gate/candidates/mode`；按 `mode=only_candidate` 与 `mode=least_loss` 分层，继续对账下一场精英战的掉血、是否跨过 `GAME_OVER` 及同 run 后续状态。若至少3个独立窗口出现 `least_loss` 且随后高损/阵亡，支持另立最小行为闸；若标记主要为唯一候选且存活，说明是地图约束；若字段与实际候选数或门槛不符，先修观测边界。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `elite_forced_entry_obs`。
+- `sts2-ascend/brain/policy.py`：仅在最终选中 Elite 且 `elite_gate_f < 1` 时追加只读对账，区分 `only_candidate` / `least_loss` 并记录门槛与候选读数；不改变地图评分、节点排序、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 F7、6张非基础牌、前期7张门槛的唯一 Elite 夹具；验证 marker 字段、`choose_map_node` 参数，以及开关关闭后 marker 消失且动作/参数严格不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3~10个独立 run，按 `run_id`、floor、HP、门槛差、候选数/模式、实际 Elite 掉血、下一状态和 `GAME_OVER` 分层；在样本成熟前不把只读信号改成硬拒绝。
+- **调整**：若 `least_loss` 的高损/阵亡达到3个独立窗口，基于真实替代节点设计有界行为闸；若只有 `only_candidate` 或选中后稳定存活，维持观测；若门槛/候选数与地图快照不一致，先修读数。
+- **撤回**：将 `elite_forced_entry_obs` 设为 `False`；预期只移除 `ELITE_FORCED_ENTRY_OBS`，地图选择、action 与 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`

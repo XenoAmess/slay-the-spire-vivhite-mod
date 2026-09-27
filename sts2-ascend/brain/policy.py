@@ -3400,6 +3400,14 @@ class Policy:
                 best_notes.append(elite_gate_note + "；无其他候选，规避门否决后强制进场")
             else:
                 best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
+            if bool(pol.get("elite_forced_entry_obs", True)):
+                mode = "only_candidate" if len(cand) <= 1 else "least_loss"
+                best_notes.append(
+                    "强制精英进场观测："
+                    f"floor={int(floor)}/hp={int(hp)}/{int(max_hp)}"
+                    f"/good_cards={good_cards}/{elite_deck_req}"
+                    f"/gate={elite_gate_f:.2f}/candidates={len(cand)}"
+                    f"/mode={mode}（ELITE_FORCED_ENTRY_OBS）")
             note_txt = f"；{'；'.join(best_notes)}"
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）

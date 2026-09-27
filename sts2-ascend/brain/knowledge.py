@@ -295,6 +295,7 @@ DEFAULT_POLICY = {
     "elite_early_deck_extra": 3,  # 前期精英额外要求的非基础牌数：floor ≤ elite_early_floor_max 时
                                   # 闸门按 elite_min_deck_cards + 此值 放行。中后期自动回落基础
                                   # 门槛——136~137 批「饥饿卡组靠精英供血」教义不受影响
+    "elite_forced_entry_obs": True,  # 精英闸门未通过但仍被选中时追加只读对账；False 只移除该 marker
     "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
     "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数
     "path_doomed_value_bonus": 8.0,  # 绝境资源节点偏好（403~406 批次复盘）：全部候选路径都投影

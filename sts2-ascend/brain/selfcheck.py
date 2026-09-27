@@ -9200,6 +9200,39 @@ def main() -> int:
     assert "硬线精英尾部复核" not in d_etv_off.reason, \
         f"旋钮关闭后仍留痕: {d_etv_off.reason}"
 
+    # 3etf) 前期精英闸门未通过仍被地图拓扑选中时的只读对账（第1609局复盘）：
+    #       F7 仅6张非基础牌而前期门槛为7，仍因替代路线更差进入 Elite；
+    #       先记录「唯一候选/取损失最小项」与门槛读数，暂不改变选路。
+    etf_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-forced-"))
+    etf_know = knowledge.Knowledge(etf_dir)
+    etf_pol = policy.Policy(etf_know)
+    etf_head = {"index": 0, "row": 1, "col": 0, "node_type": "Elite",
+                "children": [{"row": 2, "col": 0}]}
+    etf_boss = {"row": 2, "col": 0, "node_type": "Boss"}
+    etf_state = {
+        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [etf_head],
+                "nodes": [etf_head, etf_boss],
+                "boss_node": {"row": 2}},
+        "run": {"current_hp": 71, "max_hp": 80, "gold": 0, "floor": 7,
+                "deck": [{"card_id": f"ELITE_TEST_CARD_{i}",
+                          "card_type": "Attack", "energy_cost": 1}
+                         for i in range(6)]}}
+    etf_ctx = type("C", (), {"credit_tags": []})()
+    d_etf = etf_pol.decide(etf_state, etf_ctx)
+    assert d_etf.action == "choose_map_node" and d_etf.params == {"option_index": 0}, \
+        f"强制精英夹具动作漂移: {d_etf.action} {d_etf.params}"
+    assert ("ELITE_FORCED_ENTRY_OBS" in d_etf.reason
+            and "good_cards=6/7" in d_etf.reason
+            and "candidates=1" in d_etf.reason
+            and "mode=only_candidate" in d_etf.reason), \
+        f"强制精英只读对账缺失: {d_etf.reason}"
+    etf_know.policy["elite_forced_entry_obs"] = False
+    d_etf_off = etf_pol.decide(etf_state, etf_ctx)
+    assert d_etf_off.action == d_etf.action and d_etf_off.params == d_etf.params \
+        and "ELITE_FORCED_ENTRY_OBS" not in d_etf_off.reason, \
+        f"强制精英观测关闭未严格回滚: {d_etf_off.reason}"
+
     # 3xz) 绝境投影篝火回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，
     #      而地图端全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——
     #      随后 F23 -37、F31 被漏斗逼进强制精英 -68 阵亡。投影绝望时篝火的
