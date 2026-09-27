@@ -15950,6 +15950,57 @@ def main() -> int:
         and "KILL_RACE_TERMINAL_AUDIT_OBS" not in d_race_terminal_off.reason, \
         f"竞速终端对账关闭后动作或尾缀漂移: {d_race_terminal_off and d_race_terminal_off.reason}"
 
+    # 3z-5b) 竞速终端结局对账（KILL_RACE_TERMINAL_OUTCOME_OBS）：
+    #        1610-F33 在终端审计后紧接 GAME_OVER；把投影与权威终局结果
+    #        绑定，才能统计“判死后阵亡/翻盘”，但不改变 GAME_OVER 动作。
+    race_terminal_outcome_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+    }
+    d_race_terminal_outcome = race_terminal_pol.decide(
+        race_terminal_outcome_state, race_terminal_ctx)
+    assert (d_race_terminal_outcome.action == "continue_game_over"
+            and d_race_terminal_outcome.params == {}
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS" in d_race_terminal_outcome.reason
+            and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
+            in d_race_terminal_outcome.reason), \
+        f"竞速终端结局对账缺失或动作漂移: {d_race_terminal_outcome}"
+
+    race_terminal_outcome_off_know = knowledge.Knowledge(tmp)
+    race_terminal_outcome_off_know.policy["kill_race_terminal_outcome_obs"] = False
+    race_terminal_outcome_off_pol = policy.Policy(race_terminal_outcome_off_know)
+    race_terminal_outcome_off_ctx = _SettleCtx()
+    race_terminal_outcome_off_ctx.combat = {}
+    assert race_terminal_outcome_off_pol.decide(
+        _lethal_unavailable_state(True), race_terminal_outcome_off_ctx).action == "play_card", \
+        "竞速终端结局关闭夹具热身帧未进入出牌状态"
+    race_terminal_outcome_off_pol._krace_latch = True
+    race_terminal_outcome_off_pol._krace_latch_round = 5
+    race_terminal_outcome_off_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    d_race_terminal_outcome_off_end = None
+    for _ in range(6):
+        d_candidate = race_terminal_outcome_off_pol.decide(
+            _lethal_unavailable_state(False), race_terminal_outcome_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal_outcome_off_end = d_candidate
+            break
+    assert d_race_terminal_outcome_off_end is not None, \
+        "竞速终端结局关闭夹具未提交终端空过"
+    d_race_terminal_outcome_off = race_terminal_outcome_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_outcome_off_ctx)
+    assert (d_race_terminal_outcome_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_outcome_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            not in d_race_terminal_outcome_off.reason), \
+        f"竞速终端结局关闭后动作或 marker 漂移: {d_race_terminal_outcome_off}"
+
     # 3z-6) 致死可牌评分拒绝观测（LETHAL_PLAYABLE_REJECT_OBS）：
     #       1602-F31-T6 的形态——9 血/0 甲面对 24 意图，仍有可玩但低分的
     #       JUGGLING，策略收口 end_turn 后下一条 GAME_OVER；它不是资源耗尽，

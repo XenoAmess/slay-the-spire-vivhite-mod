@@ -873,6 +873,8 @@ class Policy:
         self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
         self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
+        self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
+        self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -3791,6 +3793,50 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _consume_kill_race_terminal_outcome_note(
+            self, pol, victory, floor=None) -> str:
+        """Join a terminal race audit to the authoritative GAME_OVER outcome."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(self, "_race_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(self, "_race_terminal_outcome_reported", False))):
+            return ""
+        self._race_terminal_outcome_reported = True
+        _projection = _pending.get("projection") or {}
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(value))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速终端结局：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/lock_round={_round(_pending.get('lock_round'))}"
+            f"/last_round={_round(_projection.get('round'))}"
+            f"/pool={_num(_projection.get('enemy_hp'))}"
+            f"/dpt={_num(_projection.get('dpt'))}"
+            f"/ttk={_num(_projection.get('ttk'))}"
+            f"/tsurv={_num(_projection.get('tsurv'))}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
+
     def _lethal_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
             combat, kill_race, race_allin) -> str:
@@ -4011,8 +4057,26 @@ class Policy:
                     f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
-                _lethal_unavailable_note += self._kill_race_terminal_audit_note(
+                _terminal_audit_note = self._kill_race_terminal_audit_note(
                     pol, my_hp, my_block, incoming, energy)
+                _lethal_unavailable_note += _terminal_audit_note
+                if _terminal_audit_note:
+                    _projection = getattr(self, "_race_terminal_projection", None)
+                    if (isinstance(_projection, dict)
+                            and (getattr(self, "_race_terminal_outcome_pending", None)
+                                 is None
+                                 or getattr(self, "_race_terminal_outcome_pending", {})
+                                 .get("terminal_round") != round_no)):
+                        self._race_terminal_outcome_pending = {
+                            "projection": dict(_projection),
+                            "terminal_round": round_no,
+                            "lock_round": getattr(self, "_krace_latch_round", None),
+                            "hp": my_hp,
+                            "block": my_block,
+                            "incoming": incoming,
+                            "energy": energy,
+                        }
+                        self._race_terminal_outcome_reported = False
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -5498,6 +5562,8 @@ class Policy:
             self._krace_dmg_sustained = 0.0
             self._krace_potion_rounds = set()
             self._race_terminal_projection = None
+            self._race_terminal_outcome_pending = None
+            self._race_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -13646,6 +13712,8 @@ class Policy:
         actions = state.get("available_actions", [])
         victory = bool(go.get("is_victory"))
         phase = str(go.get("phase") or "")
+        _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
+            self.know.policy, victory, go.get("floor"))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -13654,7 +13722,8 @@ class Policy:
         # HTTP response is reconciled by the next authoritative state payload.
         if go.get("can_continue") and "continue_game_over" in actions:
             return Decision("continue_game_over", {},
-                            "结算：确认战绩，执行原生分数、解锁与存档流程", wait=1.0)
+                            "结算：确认战绩，执行原生分数、解锁与存档流程"
+                            f"{_terminal_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -13674,13 +13743,14 @@ class Policy:
                     return Decision(
                         None, {},
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
-                        "原生结算已落盘，正在提交终局统计…",
+                        f"原生结算已落盘，正在提交终局统计…{_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
                 # The unresolved rotation entry continues to block embark.
                 return Decision("return_to_main_menu", {},
-                                "结算：恢复旧终局界面，仅完成原生返回，不重复统计",
+                                "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
+                                f"{_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)

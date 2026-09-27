@@ -12362,3 +12362,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `elite_forced_entry_obs` 设为 `False`；预期只移除 `ELITE_FORCED_ENTRY_OBS`，地图选择、action 与 params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1610 局复盘（KILL_RACE_TERMINAL_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速投影已经在致死资源耗尽的 `end_turn` 写出 `KILL_RACE_TERMINAL_AUDIT_OBS`，但下一条权威 `GAME_OVER` 没有携带同一投影的真实结局；因此无法机械区分“判死后确实阵亡”与“判死后翻盘”。该假设可证伪：若绑定后的 `outcome=victory` 反复出现，则当前 `ttk/tsurv` 判死口径存在可翻盘样本；若 `ttk>tsurv` 几乎总是 `defeat`，则终端资源审计的归因更可信。
+- **EVIDENCE**：精确 run `8P3A9PTPLCP5`（第1610局）完整文件为 `sts2-ascend/knowledge/runs/20260927-210610_8P3A9PTPLCP5.json`。F33 尾部终端决策记录 `lock_round=2/last_round=4/pool=284/dpt=25/ttk=11.36/tsurv=0.484848/hp=16/block=0/incoming=33/energy=0` 的 `KILL_RACE_TERMINAL_AUDIT_OBS`，下一条决策即为 F33 `GAME_OVER` 失败；旧链条缺少这两个事件的机器连接。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 run 中，只有同一场先产生终端竞速审计、随后进入权威 `GAME_OVER` 时，才追加 `KILL_RACE_TERMINAL_OUTCOME_OBS`；按 `run_id` 聚合，并披露 `floor/terminal_round/lock_round/pool/dpt/ttk/tsurv/hp/block/incoming/energy/outcome`。终端审计后胜负均应可计数；无终端审计的普通 `GAME_OVER` 不得凭空出现该 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `kill_race_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：在既有终端审计成立时暂存同场快照，在下一条 `GAME_OVER` 只读追加结局 marker；不改变评分、候选、动作或参数，每场只消费一次。
+- `sts2-ascend/brain/selfcheck.py`：新增失败终局夹具，验证投影字段与 `outcome=defeat` 绑定，并验证关闭开关后 `continue_game_over` 及空参数严格不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立 run，按 `run_id`、Boss/楼层、`ttk/tsurv` 比值、终端 HP/来袭伤害、`outcome` 与终端后耗时分层；若至少 3 个独立 `victory` 样本出现于 `ttk>tsurv`，再单独复盘判死行为，不把观测直接升级为硬闸。
+- **撤回**：将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只移除 `KILL_RACE_TERMINAL_OUTCOME_OBS`，终端审计、`GAME_OVER` action 与 params 保持不变。若无终端审计仍出现 marker，立即回滚本批。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **TARGET_DIFF_CHECK_OK**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; local production observation)`
