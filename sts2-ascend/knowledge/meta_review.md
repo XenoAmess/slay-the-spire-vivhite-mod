@@ -12508,3 +12508,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：恢复 `_restore_kill_race_terminal_outcome_from_decisions` 的旧一次性 guard，或将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只影响结局观测 marker，终端审计、GAME_OVER action/params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **exit 0**（仅报告既有超长资产路径提示）；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1618 局复盘（ELITE_FORCED_ENTRY_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：地图端已经记录“精英闸门未通过但被迫入场”的候选与门槛，却没有把该次入场和下一场精英战的真实结局绑定；因此无法区分“唯一候选造成的地形约束”与“仍可由替代路线修正的排序损失”。该假设可证伪：若后续绑定样本中 `least_loss` 反复高损/阵亡，应另开行为闸；若主要是 `only_candidate` 且能稳定存活，则应维持地图约束解释。
+- **EVIDENCE**：精确 run `QPJ8Y4ZADFCA`（第1618局，`sts2-ascend/knowledge/runs/20260928-035351_QPJ8Y4ZADFCA.json`）完整链 325 条已逐条核读。D292/F30 的唯一候选精英选择写入 `ELITE_FORCED_ENTRY_OBS`：`hp=73/86`、`good_cards=18/4`、`gate=0.10`、`candidates=1`、`mode=only_candidate`，并明确“无其他候选，规避门否决后强制进场”；随后 D293-D323 在 F31 精英战持续掉血，D323 为 `hp=3/block=5/incoming=27/energy=0` 的致死无牌空过，D324 `GAME_OVER` 失败。旧链条能看到强制选择和终局，却没有机器可聚合的入场→结局字段。
+- **EXPECTED_SIGNAL**：未来3~10个独立强制精英窗口中，只有既有 `ELITE_FORCED_ENTRY_OBS` 后确实进入下一楼层战斗并到达权威 `GAME_OVER` 时，追加 `ELITE_FORCED_ENTRY_OUTCOME_OBS`，披露 `entry_floor/entry_hp/good_cards/required/gate/candidates/mode/outcome/terminal_floor`；按 `only_candidate` 与 `least_loss` 分层。普通精英、已领取奖励、楼层不匹配或没有强制入场 marker 时不得凭空生成；同一 marker 持久后重试不得重复。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `elite_forced_entry_outcome_obs`，并保持原 `elite_forced_entry_obs` 作为上游门控。
+- `sts2-ascend/brain/policy.py`：在既有强制精英地图观测成立时暂存字段，在匹配楼层的 `GAME_OVER` 只读追加结局 marker；支持进程重载、丢动作重试和同一局多次强制入场的持久边界，不改变评分、候选排序、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：覆盖首次结局、未持久化重试、已持久化幂等、关闭新开关和关闭原观测开关；动作与空参数保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集未来3~10个独立窗口，按 `run_id`、`mode`、入场 HP/门槛、实际精英掉血、是否 `GAME_OVER` 与终局楼层分层；当前单个 `only_candidate` 阵亡样本不足以行为化。
+- **调整**：若至少3个独立 `least_loss` 样本仍高损或阵亡，回到真实替代节点重排；若 `only_candidate` 样本稳定存活，则保留现有地形约束；若 marker 与实际楼层/奖励边界不一致，先修复恢复解析。
+- **撤回**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期只移除 `ELITE_FORCED_ENTRY_OUTCOME_OBS`，强制精英选择、action 与 params 不变。若出现无上游 marker 的结局观测，立即回滚本批。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误（仅仓库既有超长资产路径警告）；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none integrated`

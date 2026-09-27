@@ -9313,7 +9313,8 @@ def main() -> int:
                 "children": [{"row": 2, "col": 0}]}
     etf_boss = {"row": 2, "col": 0, "node_type": "Boss"}
     etf_state = {
-        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "screen": "MAP", "run_id": "ELITE-FORCED-CHECK",
+        "available_actions": ["choose_map_node"],
         "map": {"available_nodes": [etf_head],
                 "nodes": [etf_head, etf_boss],
                 "boss_node": {"row": 2}},
@@ -9321,7 +9322,8 @@ def main() -> int:
                 "deck": [{"card_id": f"ELITE_TEST_CARD_{i}",
                           "card_type": "Attack", "energy_cost": 1}
                          for i in range(6)]}}
-    etf_ctx = type("C", (), {"credit_tags": []})()
+    etf_ctx = type("C", (), {"credit_tags": [], "decisions": [],
+                               "run_id": "ELITE-FORCED-CHECK"})()
     d_etf = etf_pol.decide(etf_state, etf_ctx)
     assert d_etf.action == "choose_map_node" and d_etf.params == {"option_index": 0}, \
         f"强制精英夹具动作漂移: {d_etf.action} {d_etf.params}"
@@ -9330,6 +9332,42 @@ def main() -> int:
             and "candidates=1" in d_etf.reason
             and "mode=only_candidate" in d_etf.reason), \
         f"强制精英只读对账缺失: {d_etf.reason}"
+    etf_game_over = {
+        "screen": "GAME_OVER", "run_id": "ELITE-FORCED-CHECK",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 8,
+                       "can_continue": True}}
+    d_etf_outcome = etf_pol.decide(etf_game_over, etf_ctx)
+    assert (d_etf_outcome.action == "continue_game_over"
+            and d_etf_outcome.reason.count(
+                "ELITE_FORCED_ENTRY_OUTCOME_OBS") == 1
+            and "entry_floor=7" in d_etf_outcome.reason
+            and "entry_hp=71/80" in d_etf_outcome.reason
+            and "good_cards=6/7" in d_etf_outcome.reason
+            and "mode=only_candidate" in d_etf_outcome.reason
+            and "outcome=defeat/terminal_floor=8" in d_etf_outcome.reason), \
+        f"强制精英结局对账缺失: {d_etf_outcome.reason}"
+    # The first GAME_OVER decision may be lost before persistence.  A retry
+    # must re-emit the audit; once its marker is durable, a further poll must
+    # remain idempotent.
+    d_etf_retry = etf_pol.decide(etf_game_over, etf_ctx)
+    assert d_etf_retry.reason.count("ELITE_FORCED_ENTRY_OUTCOME_OBS") == 1, \
+        f"强制精英结局重试未恢复: {d_etf_retry.reason}"
+    etf_ctx.decisions.append({"action": "continue_game_over", "floor": 8,
+                              "reason": d_etf_retry.reason})
+    d_etf_duplicate = etf_pol.decide(etf_game_over, etf_ctx)
+    assert "ELITE_FORCED_ENTRY_OUTCOME_OBS" not in d_etf_duplicate.reason, \
+        f"强制精英结局 marker 非幂等: {d_etf_duplicate.reason}"
+    etf_know.policy["elite_forced_entry_outcome_obs"] = False
+    etf_pol_outcome_off = policy.Policy(etf_know)
+    etf_ctx_outcome_off = type("C", (), {"credit_tags": [], "decisions": [],
+                                          "run_id": "ELITE-FORCED-CHECK"})()
+    etf_pol_outcome_off.decide(etf_state, etf_ctx_outcome_off)
+    d_etf_outcome_off = etf_pol_outcome_off.decide(
+        etf_game_over, etf_ctx_outcome_off)
+    assert "ELITE_FORCED_ENTRY_OUTCOME_OBS" not in d_etf_outcome_off.reason, \
+        f"强制精英结局观测关闭未严格回滚: {d_etf_outcome_off.reason}"
+    etf_know.policy["elite_forced_entry_outcome_obs"] = True
     etf_know.policy["elite_forced_entry_obs"] = False
     d_etf_off = etf_pol.decide(etf_state, etf_ctx)
     assert d_etf_off.action == d_etf.action and d_etf_off.params == d_etf.params \

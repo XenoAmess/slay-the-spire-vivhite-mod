@@ -875,6 +875,8 @@ class Policy:
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
         self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
+        self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
+        self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -2240,6 +2242,8 @@ class Policy:
             self._vivhite_vspark_audit_scope = None
             self._vivhite_vspark_audit_pending = None
             self._vivhite_vspark_audit_note = ""
+            self._elite_forced_entry_pending = None
+            self._elite_forced_entry_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -2256,6 +2260,11 @@ class Policy:
             self._reward_floor = -1
             self._reward_instance_key = None
             self._reward_card_offer_key = None
+        if screen == "REWARD":
+            # A reward proves that the forced Elite room resolved without a
+            # GAME_OVER outcome; do not carry its pending audit into a later room.
+            self._elite_forced_entry_pending = None
+            self._elite_forced_entry_reported = False
         # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
         # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
         if not self._state_has_explicit_card_offer(state):
@@ -3470,6 +3479,10 @@ class Policy:
                 best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
             if bool(pol.get("elite_forced_entry_obs", True)):
                 mode = "only_candidate" if len(cand) <= 1 else "least_loss"
+                self._remember_elite_forced_entry_observation(
+                    floor=floor, hp=hp, max_hp=max_hp,
+                    good_cards=good_cards, elite_deck_req=elite_deck_req,
+                    elite_gate_f=elite_gate_f, candidates=len(cand), mode=mode)
                 best_notes.append(
                     "强制精英进场观测："
                     f"floor={int(floor)}/hp={int(hp)}/{int(max_hp)}"
@@ -3868,6 +3881,158 @@ class Policy:
             f"/occupied={len(_occupied)}/can_use={len(_ready)}"
             f"/ids={_occupied_ids}/ready_ids={_ready_ids}"
             "（POTION_RESERVE_END_TURN_OBS）")
+
+    def _remember_elite_forced_entry_observation(
+            self, floor, hp, max_hp, good_cards, elite_deck_req,
+            elite_gate_f, candidates, mode) -> None:
+        """Keep the map-side forced-Elite sample until its next room resolves."""
+        try:
+            self._elite_forced_entry_pending = {
+                "entry_floor": int(floor),
+                "expected_floor": int(floor) + 1,
+                "hp": int(hp),
+                "max_hp": int(max_hp),
+                "good_cards": int(good_cards),
+                "required": int(elite_deck_req),
+                "gate": float(elite_gate_f),
+                "candidates": int(candidates),
+                "mode": str(mode),
+            }
+            self._elite_forced_entry_reported = False
+        except (TypeError, ValueError, OverflowError):
+            self._elite_forced_entry_pending = None
+            self._elite_forced_entry_reported = False
+
+    @staticmethod
+    def _elite_forced_entry_outcome_enabled(pol) -> bool:
+        try:
+            return (bool(int(float(pol.get(
+                "elite_forced_entry_obs", 1) or 0)))
+                    and bool(int(float(pol.get(
+                        "elite_forced_entry_outcome_obs", 1) or 0))))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    def _consume_elite_forced_entry_outcome_note(
+            self, pol, victory, floor=None) -> str:
+        """Link a forced-Elite map sample to the authoritative GAME_OVER result."""
+        if not self._elite_forced_entry_outcome_enabled(pol):
+            return ""
+        _pending = getattr(self, "_elite_forced_entry_pending", None)
+        if (not isinstance(_pending, dict)
+                or bool(getattr(self, "_elite_forced_entry_reported", False))):
+            return ""
+        try:
+            _expected_floor = int(_pending.get("expected_floor"))
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        if floor is not None:
+            try:
+                if int(float(floor)) != _expected_floor:
+                    return ""
+            except (TypeError, ValueError, OverflowError):
+                return ""
+        self._elite_forced_entry_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        _terminal_floor = "?" if floor is None else str(floor)
+        return (
+            "; forced-elite outcome audit:"
+            f"entry_floor={_pending.get('entry_floor', '?')}"
+            f"/entry_hp={_pending.get('hp', '?')}/{_pending.get('max_hp', '?')}"
+            f"/good_cards={_pending.get('good_cards', '?')}"
+            f"/{_pending.get('required', '?')}"
+            f"/gate={_num(_pending.get('gate'))}"
+            f"/candidates={_pending.get('candidates', '?')}"
+            f"/mode={_pending.get('mode', '?')}"
+            f"/outcome={_result}/terminal_floor={_terminal_floor}"
+            " (ELITE_FORCED_ENTRY_OUTCOME_OBS)")
+
+    def _restore_elite_forced_entry_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a forced-Elite outcome audit after a policy/process reload."""
+        decisions = getattr(ctx, "decisions", None)
+        marker = "ELITE_FORCED_ENTRY_OUTCOME_OBS"
+        if not isinstance(decisions, list) or not decisions:
+            if getattr(self, "_elite_forced_entry_reported", False):
+                self._elite_forced_entry_reported = False
+            return
+        _latest_forced_index = -1
+        for _index, _row in enumerate(decisions):
+            if (isinstance(_row, dict)
+                    and _row.get("action") == "choose_map_node"
+                    and "ELITE_FORCED_ENTRY_OBS" in str(
+                        _row.get("reason") or "")):
+                _latest_forced_index = _index
+        if _latest_forced_index < 0:
+            _last = decisions[-1]
+            if (isinstance(_last, dict)
+                    and marker in str(_last.get("reason") or "")):
+                self._elite_forced_entry_reported = True
+                return
+        if (_latest_forced_index >= 0
+                and any(marker in str(row.get("reason") or "")
+                        for row in decisions[_latest_forced_index + 1:]
+                        if isinstance(row, dict))):
+            self._elite_forced_entry_reported = True
+            return
+        if getattr(self, "_elite_forced_entry_reported", False):
+            self._elite_forced_entry_reported = False
+        if isinstance(getattr(self, "_elite_forced_entry_pending", None), dict):
+            return
+
+        forced_marker = "ELITE_FORCED_ENTRY_OBS"
+        for index in range(len(decisions) - 1, -1, -1):
+            if index != _latest_forced_index:
+                continue
+            row = decisions[index]
+            if not isinstance(row, dict) or row.get("action") != "choose_map_node":
+                continue
+            reason = str(row.get("reason") or "")
+            marker_at = reason.rfind(forced_marker)
+            if marker_at < 0:
+                continue
+            later = [item for item in decisions[index + 1:]
+                     if isinstance(item, dict)]
+            later_screens = {
+                str(item.get("screen") or "").upper() for item in later}
+            if ("REWARD" in later_screens
+                    or later_screens.intersection(
+                        {"MAP", "REST", "SHOP", "CHEST", "EVENT"})
+                    or "COMBAT" not in later_screens):
+                return
+            match = re.search(
+                r"floor=(\d+)/hp=([^/]+)/([^/]+)/good_cards=([^/]+)/([^/]+)"
+                r"/gate=([^/]+)/candidates=(\d+)/mode=([A-Za-z_]+)",
+                reason[:marker_at])
+            if not match:
+                return
+            try:
+                _entry_floor = int(match.group(1))
+                _expected_floor = _entry_floor + 1
+                if floor is not None and int(float(floor)) != _expected_floor:
+                    return
+                self._elite_forced_entry_pending = {
+                    "entry_floor": _entry_floor,
+                    "expected_floor": _expected_floor,
+                    "hp": int(float(match.group(2))),
+                    "max_hp": int(float(match.group(3))),
+                    "good_cards": int(float(match.group(4))),
+                    "required": int(float(match.group(5))),
+                    "gate": float(match.group(6)),
+                    "candidates": int(match.group(7)),
+                    "mode": match.group(8),
+                }
+            except (TypeError, ValueError, OverflowError):
+                return
+            self._elite_forced_entry_reported = False
+            return
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -14104,6 +14269,11 @@ class Policy:
         actions = state.get("available_actions", [])
         victory = bool(go.get("is_victory"))
         phase = str(go.get("phase") or "")
+        self._restore_elite_forced_entry_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _elite_forced_entry_outcome_note = (
+            self._consume_elite_forced_entry_outcome_note(
+                self.know.policy, victory, go.get("floor")))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
@@ -14117,6 +14287,7 @@ class Policy:
         if go.get("can_continue") and "continue_game_over" in actions:
             return Decision("continue_game_over", {},
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
+                            f"{_elite_forced_entry_outcome_note}"
                             f"{_terminal_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
@@ -14137,13 +14308,16 @@ class Policy:
                     return Decision(
                         None, {},
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
-                        f"原生结算已落盘，正在提交终局统计…{_terminal_outcome_note}",
+                        f"原生结算已落盘，正在提交终局统计…"
+                        f"{_elite_forced_entry_outcome_note}"
+                        f"{_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
                 # The unresolved rotation entry continues to block embark.
                 return Decision("return_to_main_menu", {},
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
+                                f"{_elite_forced_entry_outcome_note}"
                                 f"{_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
