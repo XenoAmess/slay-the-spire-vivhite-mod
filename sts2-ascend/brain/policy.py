@@ -3924,10 +3924,26 @@ class Policy:
         ``_consume_kill_race_terminal_outcome_note``.  No scoring or action
         selection reads this snapshot.
         """
-        if (isinstance(getattr(self, "_race_terminal_outcome_pending", None), dict)
-                or bool(getattr(self, "_race_terminal_outcome_reported", False))):
-            return
         decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_race_terminal_outcome_reported", False))
+        if _reported:
+            # ``_consume_kill_race_terminal_outcome_note`` runs while building
+            # a Decision, before the agent knows whether the HTTP action was
+            # accepted and persisted.  If that action was lost, the durable
+            # tail still ends at the terminal end_turn and this transient bit
+            # must not suppress the next GAME_OVER retry.  A persisted outcome
+            # marker is the commit proof; only then is the one-shot guard kept.
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if "KILL_RACE_TERMINAL_OUTCOME_OBS" in _last_reason:
+                return
+            self._race_terminal_outcome_reported = False
+        if isinstance(getattr(self, "_race_terminal_outcome_pending", None), dict):
+            return
         if not isinstance(decisions, list) or not decisions:
             return
         row = decisions[-1]

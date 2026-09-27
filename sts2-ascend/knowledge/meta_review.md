@@ -12487,3 +12487,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `waterfall_about_to_blow_end_turn_obs` 设为 `False`；预期只移除 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS`，既有 `INVULN_LETHAL_END_TURN_OBS`、评分、动作和参数保持不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 无空白错误（仅仓库既有超长资产路径警告）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1617 局复盘（KILL_RACE_TERMINAL_OUTCOME_RETRY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：终端竞速结局观测的瞬时 `_race_terminal_outcome_reported` 在 `GAME_OVER` action 发送前就被置真；若该 POST 丢失或被拒，下一次重试会丢掉 `KILL_RACE_TERMINAL_OUTCOME_OBS`。该假设可证伪：若未来所有未持久化首个 `GAME_OVER` 决策的重试仍稳定补出 marker，或已持久化后出现重复 marker，则本修补边界错误。
+- **EVIDENCE**：精确 run `RH5WH4LQ673P`（第1617局，`sts2-ascend/knowledge/runs/20260928-030936_RH5WH4LQ673P.json`）完整链 200 条已逐条核读。F17 T7 D198 的 `end_turn` 同时写入 `LETHAL_UNAVAILABLE_END_TURN_OBS`、`POTION_RESERVE_END_TURN_OBS(state=present/occupied=0/can_use=0)` 和 `KILL_RACE_TERMINAL_AUDIT_OBS(lock_round=2/last_round=7/pool=84/dpt=23.7143/ttk=3.54217/tsurv=0.666667/hp=10/block=0/incoming=15/energy=0)`；紧随 D199 的 `GAME_OVER` 没有结局 marker。当前源码确认消费位先于动作提交，旧 selfcheck 只覆盖跨 Policy 重建，未覆盖同实例的丢动作重试。
+- **EXPECTED_SIGNAL**：未来3~10个独立终局中，终端审计后的首个 `GAME_OVER` action 若未进入持久决策链，下一次重试应再次写出完全相同的结局字段；带 marker 的决策一旦持久化，同帧后续不得重复；无终端审计的普通 `GAME_OVER` 不得生成该 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：恢复逻辑把最近一条已持久化决策中的 `KILL_RACE_TERMINAL_OUTCOME_OBS` 作为提交证据；若 reported 仅存在于瞬时 Policy 且持久尾部仍是终端 `end_turn`，清除瞬时位并允许重试恢复。评分、候选、action 与 params 不变。
+- `sts2-ascend/brain/selfcheck.py`：增加首个 `GAME_OVER` 决策不落盘、第二次重发、成功落盘后不重复的回归夹具；保留既有跨进程恢复与关闭开关夹具。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集未来3~10个独立 run，按 `run_id`、终端楼层/回合、审计到 `GAME_OVER` 的间隔、是否发生 POST/进程重载、marker 是否落盘分层；逐字段核对 `lock_round/last_round/pool/dpt/ttk/tsurv/hp/block/incoming/energy/outcome`。
+- **调整**：若仍有持久终端审计但重试后无 marker，检查 action 提交回执与决策 append 边界；若已持久化 marker 后重复，收紧“最近持久行”判定并立即停止扩大消费范围。
+- **撤回**：恢复 `_restore_kill_race_terminal_outcome_from_decisions` 的旧一次性 guard，或将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只影响结局观测 marker，终端审计、GAME_OVER action/params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → **exit 0**（仅报告既有超长资产路径提示）；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

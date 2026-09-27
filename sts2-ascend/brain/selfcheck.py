@@ -16219,6 +16219,41 @@ def main() -> int:
             not in d_race_terminal_replay_off.reason), \
         f"进程重载恢复关闭后 action/marker 漂移: {d_race_terminal_replay_off}"
 
+    # 3z-5d) 结局观测的动作提交边界：第一次 GAME_OVER 决策若在 POST
+    #        成功前丢失，瞬时 reported 位不能吞掉下一次重试；一旦带 marker
+    #        的决策已持久化，后续同帧仍必须保持一次性。
+    race_terminal_retry_pol = policy.Policy(race_terminal_know)
+    race_terminal_retry_ctx = _SettleCtx()
+    race_terminal_retry_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }]
+    d_race_terminal_retry_first = race_terminal_retry_pol.decide(
+        race_terminal_outcome_state, race_terminal_retry_ctx)
+    assert (d_race_terminal_retry_first.action == "continue_game_over"
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_retry_first.reason), \
+        f"竞速终端首次结局观测缺失: {d_race_terminal_retry_first}"
+    # Do not append the first decision: this models a lost/rejected action.
+    d_race_terminal_retry = race_terminal_retry_pol.decide(
+        race_terminal_outcome_state, race_terminal_retry_ctx)
+    assert (d_race_terminal_retry.action
+            == d_race_terminal_retry_first.action
+            and d_race_terminal_retry.params
+            == d_race_terminal_retry_first.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_retry.reason), \
+        f"竞速终端丢动作后未重发结局观测: {d_race_terminal_retry}"
+    race_terminal_retry_ctx.decisions.append({
+        "action": d_race_terminal_retry.action,
+        "floor": 33,
+        "reason": d_race_terminal_retry.reason,
+    })
+    d_race_terminal_retry_committed = race_terminal_retry_pol.decide(
+        race_terminal_outcome_state, race_terminal_retry_ctx)
+    assert "KILL_RACE_TERMINAL_OUTCOME_OBS" not in d_race_terminal_retry_committed.reason, \
+        f"竞速终端已提交后重复结局观测: {d_race_terminal_retry_committed}"
+
     race_terminal_outcome_off_know = knowledge.Knowledge(tmp)
     race_terminal_outcome_off_know.policy["kill_race_terminal_outcome_obs"] = False
     race_terminal_outcome_off_pol = policy.Policy(race_terminal_outcome_off_know)
