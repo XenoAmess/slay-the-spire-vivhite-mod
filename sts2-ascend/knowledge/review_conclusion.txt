@@ -11,3 +11,4 @@
 1602局：F31致死空过仍有可玩低分牌，新增可回滚拒绝观测；动作不变，SELFCHECK OK，继续核对3至10局。
 1603-1607局：零伤害辅助体可能误判减益目标；新增可回滚意图审计，SELFCHECK OK，待3至10局验证。
 1608局：滑溜实测/投影比缺失，新增可回滚比值观测；SELFCHECK OK，后续3至10局按阶段核对。
+1608局终端审计：追加 live/hittable/focus/focus_switches 只读上下文，action/params 不变；SELFCHECK OK，后续3至10局核对，异常关闭开关回滚。

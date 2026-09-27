@@ -11516,6 +11516,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第1608局终端竞速审计上下文补充
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `KILL_RACE_TERMINAL_AUDIT_OBS` 记录了终端竞速投影和资源账，但没有记录终端帧仍存活的敌人数、可命中敌人数、当前火线身份或换线次数，因此不能证伪“输出不足”与“多目标火线漂移”两种败因。若补充这些只读字段，未来 3~10 个独立终端窗口应能按 `live/hittable/focus/focus_switches` 分层复核；若字段持续与真实战斗不符，或所有终端窗口都无这些分层信号，则假设不成立。
+- **EVIDENCE**：精确 run `QVCEEDS4E2U6`（第1608局）完整链 416 条；F30 的 D414 是致死 `end_turn`，随后 D415 `GAME_OVER`。旧 marker 只保留 `lock_round=4/last_round=7/pool=29/dpt=30.5714/ttk=0.948598/tsurv=0.363636` 及 HP、格挡、来袭伤害、能量，不能回看终端帧的存活目标和火线状态；同一楼层此前已出现 `FOCUS_DRIFT_FLUSH_OBS`。
+- **EXPECTED_SIGNAL**：后续 3~10 个独立终端窗口保留同一 marker 的旧投影字段，并追加 `live`、`hittable`、`focus`、`focus_switches`；按 `focus_switches>0` 或多存活目标与 `GAME_OVER` 的关联分层。action、target、params 不应因该尾缀变化。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：让既有终端审计辅助函数接收当前 combat 敌人列表，统计存活/可命中数量，读取已有 focus index 与漂移计数，仅追加只读尾缀；不进入评分、排序、目标决策或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：在既有终端审计夹具中设置当前 `BOSS#0` 与 2 次换线，断言新字段出现，并保持关闭 `kill_race_terminal_audit_obs` 时 action/params 与 marker 回滚不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：先收集 3~10 个独立终端窗口，按目标数量和换线次数核对输出不足/火线漂移的可证伪分层，不据本局单独改策略。
+- **调整**：若至少 3 个窗口显示换线次数与终端失败稳定相关，再基于原生目标身份和意图证据设计下一项最小观测；若字段缺失或身份不稳定，先修复观测边界。
+- **回滚**：将 `kill_race_terminal_audit_obs` 设为 `False`，预期只移除 `KILL_RACE_TERMINAL_AUDIT_OBS` 尾缀，评分、动作与参数不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` 已复核；未修改 `.runtime/`、runs、archive、stats、progression、policy.json、lessons 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
 ## 2026-09-20｜第 1566 局复盘（exact run V6RT4KXQNTD5；MINION_ILLUSION_FOCUS_OBS）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
