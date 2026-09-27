@@ -7587,9 +7587,10 @@ class Policy:
             # Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS）：1432-F17
             # T11 的实付4血把 hp 从7推到3，T12 又实付2血到1；既有
             # HP_COST_LETHAL_GUARD 只禁止 post-hp<=0，无法把「已进入终端带」
-            # 与下一回合的来袭伤害/终局对账。只在最终选中牌收口追加 pre/pay/post
-            # 切片，绝不改评分、候选资格、目标、动作或参数；floor=0 或 obs=0
-            # 严格关闭本观测。
+            # 与当前回合来袭伤害/终局对账。只在最终选中牌收口追加 pre/pay/post
+            # 切片；除支付后 hp 命中 floor 外，也记录结算该牌格挡后仍覆盖
+            # 支付后 hp 的致死缺口，绝不改评分、候选资格、目标、动作或参数；
+            # floor=0 或 obs=0 严格关闭本观测。
             try:
                 _terminal_pay_obs = bool(int(float(pol.get(
                     "vivhite_hp_terminal_pay_obs", 1) or 0)))
@@ -7610,13 +7611,30 @@ class Policy:
                 except (TypeError, ValueError, AttributeError):
                     _terminal_pay = 0.0
                 _terminal_post_hp = max(0.0, float(my_hp) - _terminal_pay)
+                try:
+                    _terminal_card_block = max(0.0, float(block or 0.0))
+                    _terminal_post_gap = max(
+                        0.0,
+                        float(incoming) - float(my_block)
+                        - _terminal_card_block)
+                except (TypeError, ValueError, AttributeError):
+                    _terminal_post_gap = 0.0
+                _terminal_floor_hit = (
+                    _terminal_post_hp <= _terminal_pay_floor)
+                _terminal_projected_lethal = (
+                    _terminal_post_hp > 0.0
+                    and _terminal_post_gap >= _terminal_post_hp)
                 if (_terminal_pay > 0.0
                         and _terminal_pay_floor > 0.0
-                        and _terminal_post_hp <= _terminal_pay_floor):
+                        and (_terminal_floor_hit or _terminal_projected_lethal)):
                     _terminal_card_name = (
                         card.get("name") or card.get("card_id") or "?")
                     _terminal_ringing = character_power_amount(
                         player.get("powers") or [], RINGING_POWER_ID) > 0
+                    _terminal_boundary = (
+                        "projected_lethal"
+                        if _terminal_projected_lethal and not _terminal_floor_hit
+                        else "floor")
                     why += (
                         f"｜终端生命支付：{_terminal_card_name}实付"
                         f"{_terminal_pay:g}血，hp={float(my_hp):g}→"
@@ -7625,6 +7643,7 @@ class Policy:
                         f"/round={round_no}/lethal={'yes' if lethal_now else 'no'}"
                         f"/kill_race={'yes' if kill_race else 'no'}"
                         f"/ringing={'yes' if _terminal_ringing else 'no'}"
+                        f"/boundary={_terminal_boundary}"
                         "（VIVHITE_HP_TERMINAL_PAY_OBS）")
             _commit_chain_pay = 0.0
             if incoming <= 0 and cctx.get("node_type") == "Boss":

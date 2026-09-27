@@ -3909,8 +3909,9 @@ def main() -> int:
         f"非 Boss 回合不得误挂攻击门拦观测: {d_bfav_nonboss}"
 
     # 3btp) Boss 终端生命支付观测（VIVHITE_HP_TERMINAL_PAY_OBS，1428~1432
-    #      批复盘）：只切出「最终选中牌实付后 hp<=3」的边界，不改评分、动作
-    #      或参数；开关关闭与非 Boss 均不得留下注记。
+    #      批复盘）：切出「最终选中牌实付后 hp<=3」或「结算该牌格挡后本回合
+    #      缺口仍覆盖支付后 hp」的边界，不改评分、动作或参数；开关关闭与非
+    #      Boss 均不得留下注记。
     assert float(knowledge.DEFAULT_POLICY[
         "vivhite_hp_terminal_pay_obs"]) == 1.0, \
         "DEFAULT_POLICY 缺少 vivhite_hp_terminal_pay_obs 静态键或默认值被改"
@@ -3942,8 +3943,35 @@ def main() -> int:
         and "VIVHITE_HP_TERMINAL_PAY_OBS" in d_tpay.reason \
         and "实付4血" in d_tpay.reason \
         and "hp=7→3/floor=3" in d_tpay.reason \
-        and "/incoming=0/" in d_tpay.reason, \
+        and "/incoming=0/" in d_tpay.reason \
+        and "/boundary=floor" in d_tpay.reason, \
         f"Boss 终端生命支付观测缺失或字段不完整: {d_tpay}"
+
+    vknow_tpay_projected = _vivhite_know(
+        "sts2-selfcheck-vterminal-pay-projected-")
+    vknow_tpay_projected.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_tpay_projected.policy["vivhite_boss_free_turn_terminal_guard"] = 0
+    vpol_tpay_projected = policy.Policy(
+        vknow_tpay_projected, random.Random(11))
+    d_tpay_projected = vpol_tpay_projected.decide(
+        _krh_state(11, 8, _terminal_pay_hand(), incoming=65), _krh_ctx())
+    vknow_tpay_projected0 = _vivhite_know(
+        "sts2-selfcheck-vterminal-pay-projected-off-")
+    vknow_tpay_projected0.policy["vivhite_hp_cost_play_margin"] = 1.0
+    vknow_tpay_projected0.policy["vivhite_boss_free_turn_terminal_guard"] = 0
+    vknow_tpay_projected0.policy["vivhite_hp_terminal_pay_obs"] = 0
+    vpol_tpay_projected0 = policy.Policy(
+        vknow_tpay_projected0, random.Random(11))
+    d_tpay_projected0 = vpol_tpay_projected0.decide(
+        _krh_state(11, 8, _terminal_pay_hand(), incoming=65), _krh_ctx())
+    assert d_tpay_projected.action == d_tpay_projected0.action \
+        and d_tpay_projected.params == d_tpay_projected0.params \
+        and "VIVHITE_HP_TERMINAL_PAY_OBS" in d_tpay_projected.reason \
+        and "hp=8→4/floor=3" in d_tpay_projected.reason \
+        and "/incoming=65/" in d_tpay_projected.reason \
+        and "/boundary=projected_lethal" in d_tpay_projected.reason, \
+        f"支付后仍处本回合致死缺口时观测缺失或动作漂移: " \
+        f"on={d_tpay_projected} off={d_tpay_projected0}"
 
     vknow_tpay0 = _vivhite_know("sts2-selfcheck-vterminal-pay-off-")
     vknow_tpay0.policy["vivhite_hp_cost_play_margin"] = 1.0

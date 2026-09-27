@@ -5264,3 +5264,34 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1521~1525 批：支付后高于终端下沿仍当回合致死的生命支付观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F48 中存在一类生命支付牌：支付后 HP 高于既有 `vivhite_hp_terminal_pay_floor=3`，但结算当前牌格挡后，本回合来袭缺口仍覆盖支付后 HP；旧 `VIVHITE_HP_TERMINAL_PAY_OBS` 因只看 floor 会漏记这类终端竞速。若补充 `boundary=projected_lethal`，未来应能捕获该类样本且 action/params 不变；若标记与实际缺口、回执或结局对不上，假设即被证伪。
+- **EVIDENCE**：完整失败局 `runs/20260927-232527_Q2413ZPLXU0Y.json`（1525）F48 Boss 的 D759 记录 `HP=6` 打出【后继式】，实付2血后 `HP=4`，`incoming=65`、当前 block=0；已有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 与 gate-state 留痕，但没有 `VIVHITE_HP_TERMINAL_PAY_OBS`，D760 随即为 `HP=4/block=0/incoming=65` 的致死空过审计，D761 GAME_OVER。1521~1525 五局均失败；`failed_review_replay.requested_packages=[]`，本批无指定 replay 目标。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat（按 combat 去重）中，对账 `boundary=projected_lethal` 的 pre/pay/post HP、当前 block、牌面 block、incoming、post gap、实际 `applied` action/params 及下一结算/GAME_OVER/胜负；支付后仅命中旧 floor 的样本保持 `boundary=floor`。开关关闭与开启的 action/params 应一致；若出现覆盖后仍安全、字段错位、适用边界漂移或动作漂移，假设失败。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：复用既有终端生命支付观测，在最终选中牌收口计算 `incoming-current_block-card_block`；支付后 HP 高于 floor 但该缺口仍致死时追加 `/boundary=projected_lethal`，旧 floor 路径标为 `/boundary=floor`。不改评分、候选资格、目标、动作或参数；`vivhite_hp_terminal_pay_obs=0` 或 floor=0 仍严格关闭。
+- `sts2-ascend/brain/selfcheck.py`：增加 HP=8、实付4、incoming=65、支付后 HP=4 的 F48 风格正例，并与观测关闭夹具对照 action/params；保留 floor 正例与非 Boss/关闭边界。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 生产补丁与 selfcheck 完整 diff 已回读；目标文件 `git diff --check` 通过。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 Boss combat；统计两类 boundary 的适用率、字段与 `applied` 回执一致性、支付后实际掉血、终端锁及 GAME_OVER/胜负，不把单次标记直接宣称为因果修复。
+- 若 projected 标记在格挡后仍安全、字段不符或 action/params 漂移，先将 `vivhite_hp_terminal_pay_obs=0`，必要时回滚本地 commit，并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
