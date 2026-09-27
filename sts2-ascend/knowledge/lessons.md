@@ -13295,3 +13295,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.5031173668026017局)，BASH(14分/2.9641762334483577局)，BODY_SLAM(15分/2.1370838025445256局)
 - 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1609 胜，当前目标进阶 0
+
+## 第 1610 局复盘（2026-09-27 21:19）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：BLUDGEON, DISMANTLE, ARMAMENTS, ANGER, EVIL_EYE, INFLAME, DISMANTLE, TWIN_STRIKE, COLOSSUS, FEEL_NO_PAIN, FEED, UNRELENTING, HEADBUTT, STONE_ARMOR, MOLTEN_FIST, DISMANTLE, HEADBUTT, CINDER, EVIL_EYE, SPITE, FEEL_NO_PAIN, PILLAGE, STOMP, TRUE_GRIT
+- 本局遗物：REPTILE_TRINKET, HAPPY_FLOWER, SHOVEL, CENTENNIAL_PUZZLE, WHETSTONE
+- 战斗记录：F19 Monster战 掉血34; F20 Monster战 掉血21; F22 Monster战 掉血3｜竞速审计：T3判死→实战5回合获胜; F28 Elite战 掉血41; F31 Monster战 掉血35; F33 Boss战 掉血64｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.84374099602105局)，OFFERING(26分/17.61742646553714局)，FEED(25分/35.34009073299043局)，PACTS_END(25分/67.03265349361946局)，BRAND(25分/2.073761542121624局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.490856456018793局)，BASH(14分/2.9538016166312886局)，BODY_SLAM(15分/2.12960400923562局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（4回合掉血64，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.37 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
+- 生涯战绩：0/1610 胜，当前目标进阶 0
