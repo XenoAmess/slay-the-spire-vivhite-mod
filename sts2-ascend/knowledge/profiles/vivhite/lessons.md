@@ -16408,3 +16408,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.3853882824213812局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.6268571273287455局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5824421780261733局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（12回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1488 胜，当前目标进阶 3
+
+## 第 1489 局复盘（2026-09-27 15:10）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_RING, JACKPOT, ULTIMATE_STRIKE
+- 本局遗物：BRONZE_SCALES, SHURIKEN, RED_MASK
+- 战斗记录：F4 Monster战 掉血19｜自损12（可行动段12/非行动段10，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血3｜自损9（可行动段9/非行动段9，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血5｜自损9（可行动段9/非行动段11，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损1（可行动段1/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血9｜自损3（可行动段3/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血69｜自损14（可行动段14/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/5.102355375506069局)，THINKING_AHEAD(36分/7.131109834340897局)，FISTICUFFS(35分/7.163335302194677局)，VIVHITE_CARD_GEODESIC_VEIL(35分/3.994309039270265局)，AUTOMATION(35分/4.507171352128622局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.3770394234329064局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.614163127383095局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5734036304030816局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（88%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：3/1489 胜，当前目标进阶 3
