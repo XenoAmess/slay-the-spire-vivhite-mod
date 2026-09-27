@@ -16859,3 +16859,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.065991384271365局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.141230982084921局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.452982510672759局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（95%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.41（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 30.00 → 25.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：3/1529 胜，当前目标进阶 3
+
+## 第 1530 局复盘（2026-09-28 00:50）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：LUCKY_FYSH, BAG_OF_PREPARATION
+- 战斗记录：F2 Monster战 掉血9｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血34｜自损26（可行动段26/非行动段9，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血8｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损10（可行动段10/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血26｜自损22（可行动段22/非行动段17，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血58｜自损25（可行动段25/非行动段16，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.419164092893816局)，MAYHEM(36分/4.937710601277043局)，THINKING_AHEAD(36分/6.176273936872862局)，FISTICUFFS(35分/6.204184503647526局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.421648823504925局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.0587604144264153局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.130236673647624局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.4443970718854047局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1530 胜，当前目标进阶 3
