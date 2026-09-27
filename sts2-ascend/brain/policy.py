@@ -9365,6 +9365,7 @@ class Policy:
             _winner_rem = 0.0
             _winner_damp = 0.0
             _cf_best_i, _cf_best_s = None, -1.0
+            _support_debuff_gate_targets = []
             for e in enemies:
                 if (not (self._is_respawn_add(e) and not all_respawn)
                         and len(enemies) > 1
@@ -9428,10 +9429,12 @@ class Policy:
                 # 零伤害减益体当头号目标，真正持续叠力量的敌人反而被晾着。
                 scaler_stack = (self._enemy_strength_stack(e)
                                 if (not resp and len(enemies) > 1) else 0.0)
-                is_support = (not resp and len(enemies) > 1 and threat <= 0
-                              and sup_bonus > 0 and scaler_stack <= 0)
+                _base_support = (not resp and len(enemies) > 1 and threat <= 0
+                                 and sup_bonus > 0 and scaler_stack <= 0)
                 _support_intent_obs = ""
-                if is_support:
+                _support_intent_role = "unknown"
+                _support_debuff_gated = False
+                if _base_support:
                     _intent_labels = []
                     for _intent in e.get("intents") or []:
                         if not isinstance(_intent, dict):
@@ -9463,10 +9466,23 @@ class Policy:
                                     else "debuff" if _has_debuff
                                     else "self_defense" if _has_self_defense
                                     else "unknown")
+                    _support_intent_role = _intent_role
                     _support_intent_obs = (
                         f"target={e.get('enemy_id') or e.get('name') or 'unknown'}"
                         f"#{e.get('index', '?')} intent={_intent_text}"
                         f" role={_intent_role}")
+                    # Native DebuffIntent acts on the player, not a teammate.
+                    # Keep the old support heuristic for unknown/mixed payloads,
+                    # but stop a known debuff from receiving the teammate-support
+                    # bonus. The key is a narrow, reversible behavior gate.
+                    _support_debuff_gated = (
+                        bool(pol.get("support_target_debuff_gate", True))
+                        and _support_intent_role == "debuff")
+                    if _support_debuff_gated:
+                        _support_debuff_gate_targets.append(
+                            f"{e.get('enemy_id') or e.get('name') or 'unknown'}"
+                            f"#{e.get('index', '?')}/intent={_intent_text}")
+                is_support = _base_support and not _support_debuff_gated
                 if resp:
                     # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
                     # 输出、本体雾菇意图滚到 22 的教训）：
@@ -9695,6 +9711,11 @@ class Policy:
                 else:
                     why += ("｜减员成本随附（去除减员分后中标不变，"
                             "REMOVAL_COST_FLIP_AUDIT）")
+            if (_support_debuff_gate_targets and best_t is not None
+                    and bool(pol.get("support_target_debuff_gate", True))):
+                why += ("｜已抑制零伤害减益体辅助加分："
+                        + "、".join(_support_debuff_gate_targets)
+                        + "（SUPPORT_TARGET_DEBUFF_GATE）")
             # 无实体竞速低效攻击让位格挡（INTANGIBLE_RACE_OUTPUT_GUARD，
             # 第1591局 SOUL_FYSH）：_attack_outcome 已把每 hit 的有效伤害
             # 压到1，但 kill_race 的攻击提速仍可能让一张牌以低有效输出抢走

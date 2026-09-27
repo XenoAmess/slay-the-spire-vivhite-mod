@@ -1480,6 +1480,10 @@ DEFAULT_POLICY = {
                                          # buff/debuff/self_defense/unknown 归类；不改变评分、目标或动作。用于验证
                                          # 零伤害减益体是否被误当成会强化队友的辅助体；False 严格回滚
                                          # 该观测尾缀。
+    "support_target_debuff_gate": True,  # 已知原生 DebuffIntent 不得获得辅助体转火加分：
+                                         # 该意图作用于玩家而非队友；仅 role=debuff 被窄门拦截，
+                                         # buff、mixed 与未知载荷保留旧行为。关闭即恢复旧评分/目标，
+                                         # 并移除 SUPPORT_TARGET_DEBUFF_GATE 留痕。
     "removal_cost_bonus_max": 6.0,  # 多敌战斗减员成本加分上限（第 1356~1360 批复盘，REMOVAL_COST_TARGET）：
                                     # 剩余血池 ≤ 全场峰值一半的目标按不对称度 +上限×(1−池/峰值)——
                                     # 同族双子生涯 227 战 147 死（65% 头号死因），90 场火线 802:0

@@ -1447,8 +1447,8 @@ def main() -> int:
         and "辅助体优先转火" not in d_sup2.reason, \
         f"辅助体转攻击意图后应恢复威胁评分: {d_sup2.reason}（{d_sup2.params}）"
     # 1607-F11 复核：零伤害 Shrinker Beetle 的原生 DebuffIntent 被旧理由写成
-    # 「放生=纵容其强化队友」。先只记录真实中标目标的意图类型，验证下一批是否
-    # 反复命中 debuff/unknown；该观测不得改变现有目标或动作，且可一键回滚。
+    # 「放生=纵容其强化队友」。已达行为化门槛：窄门应抑制其辅助体加分并转回
+    # 实际威胁目标，同时保留角色门留痕；关闭键必须恢复旧目标。
     sup_obs_state = support_state(0)
     sup_obs_state["combat"]["enemies"][0]["intents"][0]["intent_type"] = "Buff"
     d_sup_obs = pol.decide(sup_obs_state, ctx)
@@ -1461,13 +1461,15 @@ def main() -> int:
     shrinker["enemy_id"] = "SHRINKER_BEETLE"
     shrinker["name"] = "缩小甲虫"
     shrinker["intents"][0]["intent_type"] = "Debuff"
-    d_shrinker_obs = pol.decide(shrinker_obs_state, ctx)
-    assert d_shrinker_obs.action == "play_card" \
-        and d_shrinker_obs.params.get("target_index") == 0 \
-        and "SUPPORT_TARGET_INTENT_OBS" in d_shrinker_obs.reason \
-        and "target=SHRINKER_BEETLE#0" in d_shrinker_obs.reason \
-        and "role=debuff" in d_shrinker_obs.reason, \
-        f"减益型零伤害目标未留下可证伪观测: {d_shrinker_obs.reason}"
+    d_shrinker_gate = pol.decide(shrinker_obs_state, ctx)
+    assert d_shrinker_gate.action == "play_card" \
+        and d_shrinker_gate.params.get("target_index") == 1 \
+        and "辅助体优先转火" not in d_shrinker_gate.reason \
+        and "SHRINKER_BEETLE#0/intent=Debuff" in d_shrinker_gate.reason \
+        and "SUPPORT_TARGET_DEBUFF_GATE" in d_shrinker_gate.reason, \
+        f"已知减益型零伤害目标仍获得辅助体加分: {d_shrinker_gate.reason}"
+    pol._focus_index = None
+    pol._focus_drift_flips = 0
     crossbow_obs_state = support_state(0)
     crossbow = crossbow_obs_state["combat"]["enemies"][0]
     crossbow["enemy_id"] = "CROSSBOW_RUBY_RAIDER"
@@ -1481,11 +1483,19 @@ def main() -> int:
         and "intent=Defend" in d_crossbow_obs.reason \
         and "role=self_defense" in d_crossbow_obs.reason, \
         f"Defend 意图未归类为自我防御或改写动作: {d_crossbow_obs.reason}"
+    pol.know.policy["support_target_debuff_gate"] = False
+    d_shrinker_gate_rb = pol.decide(shrinker_obs_state, ctx)
+    assert d_shrinker_gate_rb.action == "play_card" \
+        and d_shrinker_gate_rb.params.get("target_index") == 0 \
+        and "辅助体优先转火" in d_shrinker_gate_rb.reason \
+        and "SUPPORT_TARGET_DEBUFF_GATE" not in d_shrinker_gate_rb.reason, \
+        f"support_target_debuff_gate=False 未恢复旧目标: {d_shrinker_gate_rb.reason}"
+    pol.know.policy["support_target_debuff_gate"] = True
     pol.know.policy["support_target_intent_obs"] = False
     d_support_obs_rb = pol.decide(shrinker_obs_state, ctx)
-    assert d_support_obs_rb.params.get("target_index") == 0 \
+    assert d_support_obs_rb.params.get("target_index") == 1 \
         and "SUPPORT_TARGET_INTENT_OBS" not in d_support_obs_rb.reason, \
-        f"support_target_intent_obs=False 未严格回滚观测或改写动作: {d_support_obs_rb.reason}"
+        f"support_target_intent_obs=False 未严格回滚旧观测或保留新门控: {d_support_obs_rb.reason}"
     pol.know.policy["support_target_intent_obs"] = True
 
     # 3yhr) 减员成本转火（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：

@@ -12572,3 +12572,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `race_audit_projection_ratio_obs` 设为 `False`；预期只移除新比值 marker，既有竞速审计、action 与 params 不变；父开关 `race_audit_projection_obs=False` 仍可整体回滚。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1621 局复盘（SUPPORT_TARGET_DEBUFF_GATE）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：多敌战斗的零伤害辅助体启发式把已知原生 `DebuffIntent` 当成“强化队友”，给其辅助体转火加分，可能把火线从成长型敌人错误移开；只对 `role=debuff` 收紧该加分应减少误转火，同时不改变 `buff`、`mixed` 或未知载荷。
+- **EVIDENCE**：1603~1607 五局已建立同一问题的独立批次证据。第 1621 局完整 188 条链中，F14 D160 在 HP=61 时选择 `SHRINKER_BEETLE`，理由仍为“辅助体优先转火”，但同一条审计已给出 `intent=Debuff role=debuff`；随后 D168~D187 进入 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE 的高危滚雪球链，D188 `GAME_OVER`。v0.111.0 native mechanics 的 `SHRINKER_BEETLE` 记录确认 `SHRINKER` 是对玩家施加减益，不是队友增益。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立相关战斗中，`role=debuff` 命中应计数 `SUPPORT_TARGET_DEBUFF_GATE`，不再出现“辅助体优先转火”；按目标、下一至两条决策、战损和 `GAME_OVER` 分层。若门控后转火减少且成长体更常被处理，支持假设；若出现错误目标或载荷角色缺失，立即撤回门控。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在现有原生意图角色解析前置 `role=debuff` 门控；已知减益体不再获得 `support_target_bonus`，并在实际决策尾缀追加 `SUPPORT_TARGET_DEBUFF_GATE`。其余角色和评分路径保持原口径。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `support_target_debuff_gate`；设为 `False` 即恢复旧评分/目标并移除该门控留痕。
+- `sts2-ascend/brain/selfcheck.py`：扩展 Shrinker Debuff 夹具，验证目标从 0 转为 1、Buff/Defend 分类仍成立、门控关闭恢复目标 0，且既有观测开关不改写新行为。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 `run_id`、floor/turn、目标 ID、`intent/role`、是否出现 `SUPPORT_TARGET_DEBUFF_GATE`、后续伤害与终局分层；若至少 3 个独立窗口仍显示错误转火，继续检查意图字段解析；若门控后仍高损，才评估成长型目标的独立排序修正。
+- **撤回**：将 `support_target_debuff_gate` 设为 `False`；预期只恢复已知 `role=debuff` 的辅助体加分/目标选择并移除 `SUPPORT_TARGET_DEBUFF_GATE`，保留既有 `SUPPORT_TARGET_INTENT_OBS` 与其他评分路径。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 无空白错误（仓库既有超长资产路径警告不属于本批）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
