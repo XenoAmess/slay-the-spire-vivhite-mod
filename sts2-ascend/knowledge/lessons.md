@@ -13427,3 +13427,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3587859233969635局)，BASH(14分/2.8420496274897404局)，BODY_SLAM(15分/2.0490341149082836局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1621 胜，当前目标进阶 0
+
+## 第 1622 局复盘（2026-09-28 06:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SWORD_BOOMERANG, SHRUG_IT_OFF, STOMP, ARMAMENTS, JUGGERNAUT, STOMP, UPPERCUT, TWIN_STRIKE, BREAKTHROUGH, EXPECT_A_FIGHT, HEADBUTT, SHRUG_IT_OFF, INFLAME
+- 本局遗物：WHITE_STAR, SHOVEL
+- 战斗记录：F5 Unknown战 掉血0; F6 Monster战 掉血0; F7 Monster战 掉血0; F14 Monster战 掉血38｜竞速投影审计：pool=25/dpt=10.32/ttk=2.42248/tsurv=0.870968（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=2.42248/actual_over_projected=2.48（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T6判死→实战6回合获胜; F15 Monster战 掉血12｜自损1（可行动段1/非行动段17，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血45｜竞速投影审计：pool=172/dpt=5.4/ttk=31.8519/tsurv=21.5（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=31.8519/actual_over_projected=0.22（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.7265764252541485局)，OFFERING(25分/17.87075626299504局)，FEED(25分/34.877060900611035局)，PACTS_END(25分/64.27085061321108局)，NOT_YET(24分/3.2369029666562223局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3470301726650744局)，BASH(14分/2.8321024537935267局)，BODY_SLAM(15分/2.0418624955061047局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1622 胜，当前目标进阶 0
