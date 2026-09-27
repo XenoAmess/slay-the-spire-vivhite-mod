@@ -887,6 +887,7 @@ class Policy:
         self._boss_effective_dpt_start_state = ""
         self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_projected = 0.0
+        self._boss_effective_dpt_last_window = None
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
         # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
         self._longfight_effective_dpt_combat = None
@@ -4236,6 +4237,8 @@ class Policy:
         _respawn_credit = all_respawn and bool(
             pol.get("race_all_respawn_pool_credit", True))
         kill_race = False
+        # Per-decision bridge for the selected-card DPT/HP-payment observation.
+        self._boss_effective_dpt_last_window = None
         if pol.get("kill_race_enabled", True):
             enemy_hp_total = 0
             # 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
@@ -4844,6 +4847,15 @@ class Policy:
                         _boss_gap = _boss_net_dpt - _boss_projected
                         _boss_ratio = (_boss_net_dpt / _boss_projected
                                        if _boss_projected > 0.0 else None)
+                        self._boss_effective_dpt_last_window = {
+                            "round": _boss_prev_round,
+                            "span": _boss_span,
+                            "start_hp": _boss_start_hp,
+                            "end_hp": _boss_end_hp,
+                            "net_dpt": _boss_net_dpt,
+                            "projected": _boss_projected,
+                            "ratio": _boss_ratio,
+                        }
                         # 按遭遇实例保留 DPT 对账的身份与血池端点：1578-F17
                         # WATERFALL_GIANT 的后段低比值可能来自 Boss 自身的
                         # 压力/回血阶段，不能只凭净降比把它归因成通用投影高估。
@@ -5384,6 +5396,7 @@ class Policy:
             self._boss_effective_dpt_start_hp = None
             self._boss_effective_dpt_start_state = ""
             self._boss_effective_dpt_projected = 0.0
+            self._boss_effective_dpt_last_window = None
             self._longfight_effective_dpt_combat = ctx.combat
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
@@ -7278,6 +7291,68 @@ class Policy:
                                     f"候选分{float(chosen_score):.2f}>门槛+"
                                     f"{_krh_gate_extra:.1f}"
                                     "（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS）")
+            # 竞速低有效火力生命支付联合观测（VIVHITE_KILL_RACE_DPT_HP_PAY_OBS）：
+            # 1484-F33 末段出现实际/投影比 0.39、0.57、-0.79 的有效火力窗口，
+            # 同一判死竞速链仍选中实付牌。现有 DPT 对账与 KRH 自付账分别存在，
+            # 无法切片验证「投影已失真时的支付是否集中发生」。只在同一决策拥有
+            # 已完成的 Boss DPT 窗口、实际/投影比低于阈值且最终选牌确实实付生命
+            # 时追加组合标记，并披露是否已有越过软门留痕；不改评分、候选、动作、
+            # 参数或竞速判定。观测键/比值阈值关闭时严格回滚。
+            try:
+                _dpt_pay_obs = bool(int(float(pol.get(
+                    "vivhite_kill_race_dpt_pay_obs", 1) or 0)))
+            except (TypeError, ValueError):
+                _dpt_pay_obs = False
+            if (_dpt_pay_obs
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and cctx.get("node_type") == "Boss"
+                    and kill_race):
+                _dpt_window = getattr(
+                    self, "_boss_effective_dpt_last_window", None)
+                try:
+                    _dpt_pay_ratio = float(pol.get(
+                        "vivhite_kill_race_dpt_pay_ratio", 0.75) or 0.0)
+                except (TypeError, ValueError):
+                    _dpt_pay_ratio = 0.0
+                if isinstance(_dpt_window, dict):
+                    try:
+                        _dpt_ratio = float(_dpt_window.get("ratio"))
+                    except (TypeError, ValueError):
+                        _dpt_ratio = None
+                    if (_dpt_ratio is not None
+                            and _dpt_ratio <= _dpt_pay_ratio):
+                        try:
+                            _dpt_pay = float(self._vivhite_hp_pay(
+                                card, player.get("powers") or []) or 0.0)
+                        except (TypeError, ValueError, AttributeError):
+                            _dpt_pay = 0.0
+                        if _dpt_pay > 0.0:
+                            try:
+                                _dpt_hp_before = float(my_hp)
+                                _dpt_hp_after = max(
+                                    0.0, _dpt_hp_before - _dpt_pay)
+                                _dpt_incoming = float(incoming)
+                            except (TypeError, ValueError, OverflowError):
+                                _dpt_hp_before = 0.0
+                                _dpt_hp_after = 0.0
+                                _dpt_incoming = 0.0
+                            _dpt_bypass = (
+                                "KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS"
+                                in why)
+                            why += (
+                                f"｜竞速低有效火力生命支付：采样"
+                                f"{_dpt_window.get('round')}→{round_no}回合/"
+                                f"span={_dpt_window.get('span')}，"
+                                f"实际/投影比={_dpt_ratio:.2f}≤"
+                                f"{_dpt_pay_ratio:.2f}，"
+                                f"净DPT={float(_dpt_window.get('net_dpt', 0.0)):.1f}"
+                                f"/投影{float(_dpt_window.get('projected', 0.0)):.1f}，"
+                                f"实付{_dpt_pay:g}血，"
+                                f"hp={_dpt_hp_before:g}->{_dpt_hp_after:g}，"
+                                f"incoming={_dpt_incoming:g}，"
+                                f"gate_bypass={'yes' if _dpt_bypass else 'no'}"
+                                "（VIVHITE_KILL_RACE_DPT_HP_PAY_OBS）")
             # Boss free-turn HP payment observation (VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS).
             # This is deliberately attached after selection: it records the
             # actual selected card's predicted payment without changing score,

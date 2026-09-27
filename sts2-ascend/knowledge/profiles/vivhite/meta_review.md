@@ -5170,3 +5170,36 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1483~1484 批：Boss 低有效火力窗口仍支付生命联合观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮 Boss 竞速已判死后，若跨回合实际有效火力显著低于投影，仍选中生命支付牌，则“投影失真”可能正与后续终端锁/阵亡相连；若新增同一决策联合观测，未来可按窗口验证这条链，而不把 DPT 低值或单次支付直接当成因果。可证伪条件是观测字段与原始状态不符、适用范围漂移，或 3~10 场独立 Boss 战中低有效火力窗口不再伴随生命支付/终端收口。
+- **EVIDENCE**：精确批次为 1483~1484；已完整读取最新失败运行文件 `runs/20260927-135211_LMD79EDBGFD0.json` 的 494 条决策。1484-F33 的已存 DPT 对账在 idx465 显示 `9/23.3=0.39`，`闭域投影+` 将 HP 70→66、incoming=0；idx479 的 `黎曼星阵` 实付 6 血、HP 35→29，实际/投影比 `-0.79`，Boss 血量还因阶段回血由 194→212。相邻 idx489 比值 `1.81`，作为高于阈值的不命中边界。旧链的 DPT 与判死自付标记分离，缺少同一选牌事件的联合键。
+- **EXPECTED_SIGNAL**：未来 3~10 场独立白绮 Boss 战中，仅当同一决策有完成的 Boss DPT 窗口、`实际/投影比≤0.75`、竞速已判死且选中牌实付生命时出现 `VIVHITE_KILL_RACE_DPT_HP_PAY_OBS`；`round/span/netDPT/projected/pay/hp/incoming` 应与原始快照一致，比例高于 0.75、非 Boss 或无实付时不应出现。若低比值标记稳定集中在随后终端支付、空过致死或 GAME_OVER 前，支持假设；若不命中、字段漂移或 3~10 场内链条不复现，则关闭观测并否证。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_kill_race_dpt_pay_obs=1` 与比值阈值 `vivhite_kill_race_dpt_pay_ratio=0.75`；设观测键为 `0` 可回滚。
+- `sts2-ascend/brain/policy.py`：把已完成的 Boss 有效 DPT 窗口暂存到当前决策，选牌后仅对白绮、Boss、判死竞速且实际生命支付的低比值窗口追加联合标记，并披露已有越过软门留痕；不改评分、候选、竞速判定、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增零敌血净降的低比值生命支付夹具，验证观测命中、关闭开关后标记消失以及 action/params 严格一致。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B .\sts2-ascend\brain\selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过；报告写入前已回读生产 diff。
+- 本地提交未 push；最终 SHA 在交接回执中给出。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续按 combat 去重，只计 3~10 场独立 Boss 战；逐项核对 DPT 窗口、实付牌、HP/incoming、终端锁、`applied` 回执、GAME_OVER/胜负，不把观测本身当作胜因。
+- 若标记在非适用场景出现、字段与快照不符、关闭开关仍留痕，或假设在观察窗内不复现，将 `vivhite_kill_race_dpt_pay_obs=0`；必要时回滚本地提交，保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

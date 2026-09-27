@@ -11293,7 +11293,8 @@ def main() -> int:
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
                           joint_player_hp=None, joint_incoming=None,
-                          joint_energy=None):
+                          joint_energy=None, effective_enemy_drop=None,
+                          dpt_pay_obs=True):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -11382,6 +11383,7 @@ def main() -> int:
             "boss_race_effective_dpt_block_obs"] = boss_block_obs
         cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
+        cap_pol.know.policy["vivhite_kill_race_dpt_pay_obs"] = dpt_pay_obs
         cap_pol.know.policy[
             "longfight_joint_survival_margin_obs"] = longfight_joint_survival_obs
         cap_pol.know.policy["vivhite_hp_pay_phase_audit_obs"] = (
@@ -11399,7 +11401,10 @@ def main() -> int:
                 cap_pol._focus_identity_flips = focus_switches
                 cap_pol._focus_played_identity = "CAP_BOSS"
             cap_state["turn"] = 2
-            cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            _effective_drop = (10 if effective_enemy_drop is None
+                               else effective_enemy_drop)
+            cap_state["combat"]["enemies"][0]["current_hp"] = (
+                enemy_hp - _effective_drop)
             if boss_block_next is not None:
                 cap_state["combat"]["enemies"][0]["block"] = boss_block_next
             if boss_state_powers_next is not None:
@@ -11580,6 +11585,37 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             not in d_combat_boss_effective_off.reason), \
         f"普通 Boss 有效火力对账开关未严格回滚: {d_combat_boss_effective_off.reason}"
+    # 3br-vivhite-kill-race-dpt-pay：1484-F33 末段的实际/投影比低窗与
+    # 判死竞速自付必须能在同一条选牌理由中闭合，才能统计「投影失真时仍付血」；
+    # 观测只读，关闭时 action/params 严格一致。
+    _dpt_pay_hand = [
+        {"index": 0, "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+         "name": "弦光投影", "card_type": "attack", "playable": True,
+         "energy_cost": 1, "requires_target": True,
+         "valid_target_indices": [0],
+         "dynamic_values": [{"name": "Damage", "current_value": 10}]},
+    ]
+    assert knowledge.DEFAULT_POLICY["vivhite_kill_race_dpt_pay_obs"] == 1
+    d_combat_dpt_pay = combat_flip_probe(
+        1.5, vivhite=True, hand_override=_dpt_pay_hand,
+        sample_effective_round=True, effective_enemy_drop=0,
+        dpt_pay_obs=True)
+    d_combat_dpt_pay_off = combat_flip_probe(
+        1.5, vivhite=True, hand_override=_dpt_pay_hand,
+        sample_effective_round=True, effective_enemy_drop=0,
+        dpt_pay_obs=False)
+    assert ("VIVHITE_KILL_RACE_DPT_HP_PAY_OBS" in d_combat_dpt_pay.reason
+            and "实际/投影比=0.00" in d_combat_dpt_pay.reason
+            and "实付2血" in d_combat_dpt_pay.reason
+            and "gate_bypass=no" in d_combat_dpt_pay.reason), \
+        f"白绮低有效火力生命支付联合观测缺失: {d_combat_dpt_pay.reason}"
+    assert (d_combat_dpt_pay_off.action == d_combat_dpt_pay.action
+            and d_combat_dpt_pay_off.params == d_combat_dpt_pay.params
+            and "VIVHITE_KILL_RACE_DPT_HP_PAY_OBS"
+            not in d_combat_dpt_pay_off.reason
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS"
+            in d_combat_dpt_pay_off.reason), \
+        f"白绮低有效火力生命支付观测未严格回滚: {d_combat_dpt_pay_off.reason}"
     # 3br-longfight-effective-dpt：非 Boss 大血池长战也必须对账实际敌血净降
     # 与投影 dpt。1577-F21 OVICOPTER 只有长战投影/迟滞标签，没有实际火力比值；
     # 观测只读两个回合首快照，不改变动作/评分/判决，开关关闭严格回滚。
