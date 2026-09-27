@@ -13416,3 +13416,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.370582963770159局)，BASH(14分/2.852031738574752局)，BODY_SLAM(15分/2.056230923139271局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.43（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F21——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1620 胜，当前目标进阶 0
+
+## 第 1621 局复盘（2026-09-28 05:58）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：UPPERCUT, TAUNT, TRUE_GRIT, HEADBUTT, DEMON_FORM, ARMAMENTS, WHIRLWIND, CINDER, MOLTEN_FIST, INFLAME
+- 本局遗物：ORNAMENTAL_FAN
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血8; F5 Monster战 掉血14; F7 Monster战 掉血14; F12 Monster战 掉血13; F14 Unknown战 掉血61（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.7361529606163053局)，OFFERING(25分/17.93352359557957局)，FEED(25分/34.99955935836531局)，PACTS_END(25分/64.49658867356857局)，NOT_YET(24分/3.248271918370519局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3587859233969635局)，BASH(14分/2.8420496274897404局)，BODY_SLAM(15分/2.0490341149082836局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1621 胜，当前目标进阶 0
