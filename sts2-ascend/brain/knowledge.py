@@ -199,6 +199,13 @@ DEFAULT_POLICY = {
                                          # 已覆盖生命缺口时，记录 HP/格挡/意图、被过滤攻击数、
                                          # 仍可负担的非攻击牌数与蒸汽喷发层数；纯观测，不改
                                          # 结束回合判决。False = 关闭该尾缀，旧动作与理由恢复。
+    "waterfall_about_to_blow_end_turn_obs": True,  # 瀑布巨兽自爆相终端观测：原生
+                                                    # TriggerAboutToBlowState 将
+                                                    # WATERFALL_GIANT 的 HP 设为
+                                                    # 999999999，并移除蒸汽喷发层；当该
+                                                    # 无敌相在致死 end_turn 过滤攻击时，
+                                                    # 追加 WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS。
+                                                    # 纯观测，不改变资源/动作；False=关闭。
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

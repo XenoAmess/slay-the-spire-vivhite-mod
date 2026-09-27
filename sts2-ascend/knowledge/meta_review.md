@@ -12466,3 +12466,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `support_target_intent_obs` 设为 `False`，预期只移除 `SUPPORT_TARGET_INTENT_OBS` 尾缀，评分、target、action 和 params 不变；或删除本次分类与对应夹具并保留失败证据。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1616 局复盘（WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1616-F17 的 `WATERFALL_GIANT` 在 `STEAM_ERUPTION_KILL_VETO_OBS` 后进入原生 `TriggerAboutToBlowState`；`AboutToBlowMove` 会移除 `SteamEruptionPower`，所以现有终端观测的 `steam=0` 不能单独证明这是延迟自爆相，无法与一般无敌目标空过区分。该假设可证伪。
+- **EVIDENCE**：精确 run `UCX0ZD0A13DH`（`sts2-ascend/knowledge/runs/20260928-022956_UCX0ZD0A13DH.json`）完整链 204 条已逐条核读。F17 D198 记录 `STEAM_ERUPTION_KILL_VETO_OBS`；D199-D202 进入 HP=999999999 的无敌相，D202 为玩家 HP=1、格挡10、incoming=33、energy=2、3张攻击牌被 `INVULN_TARGET_VETO`、`non_attack_candidates=0`，随后 D203 `GAME_OVER`。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的 `WaterfallGiant.TriggerAboutToBlowState` 明确把当前/最大 HP 设为 999999999；`mechanics/powers.jsonl` 的 `SteamEruptionPower.AfterDeath` 触发该状态并阻止战斗结束。
+- **EXPECTED_SIGNAL**：未来3~10个独立相关窗口中，只有真实 `WATERFALL_GIANT` 且当前 HP≥100000 的致死 end-turn、全场无敌并过滤了可负担攻击时，才追加 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS`，记录敌方哨兵 HP、玩家 HP/格挡/incoming/energy、被过滤攻击数和非攻击候选数；普通无敌敌人、同名但其他 ID、非致死窗口或开关关闭时不得出现。该 marker 与后续 `GAME_OVER`/胜利的关系用于判断能否另立生存行为假设；`action` 与 `params` 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `waterfall_about_to_blow_end_turn_obs`。
+- `sts2-ascend/brain/policy.py`：新增只读 `WATERFALL_GIANT` ID + HP 哨兵识别，并在既有 `INVULN_LETHAL_END_TURN_OBS` 后追加自爆相终端尾缀；不改评分、目标、竞速锁、资源使用、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加真实 ID/HP 哨兵、伪造普通无敌载荷和关闭开关三组夹具，验证 `end_turn` 与空参数不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：按 `run_id`、floor/turn、敌方 ID/HP 哨兵、`steam`、玩家 HP/格挡/incoming/energy、`vetoed_attacks`、`non_attack_candidates` 及下一条状态分层统计3~10局；若 marker 与 Waterfall Giant 哨兵或原生 mechanics 不一致，先修正载荷边界；若 `non_attack_candidates=0` 的自爆相连续出现且仍有可验证的生存资源，再另开行为批次，不在本批凭单局改防守策略。
+- **撤回**：将 `waterfall_about_to_blow_end_turn_obs` 设为 `False`；预期只移除 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS`，既有 `INVULN_LETHAL_END_TURN_OBS`、评分、动作和参数保持不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 无空白错误（仅仓库既有超长资产路径警告）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

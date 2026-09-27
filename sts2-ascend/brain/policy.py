@@ -8189,6 +8189,37 @@ class Policy:
                     f",steam={float(_invuln_steam):g}"
                     f",forced={'yes' if forced_kill else 'no'}"
                     "（INVULN_LETHAL_END_TURN_OBS）")
+            _waterfall_blow_end_turn_note = ""
+            try:
+                _waterfall_blow_end_turn_obs = bool(int(float(pol.get(
+                    "waterfall_about_to_blow_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _waterfall_blow_end_turn_obs = False
+            _waterfall_blow_enemy = next(
+                (e for e in enemies
+                 if self._is_waterfall_about_to_blow(e)), None)
+            if (_waterfall_blow_end_turn_obs
+                    and _resc_invuln_attack_count > 0
+                    and lethal_now
+                    and _waterfall_blow_enemy is not None):
+                try:
+                    _waterfall_blow_hp = float(
+                        _waterfall_blow_enemy.get("current_hp") or 0)
+                except (TypeError, ValueError, OverflowError):
+                    _waterfall_blow_hp = 0.0
+                _waterfall_blow_name = (
+                    _waterfall_blow_enemy.get("name")
+                    or _waterfall_blow_enemy.get("enemy_id")
+                    or "WATERFALL_GIANT")
+                _waterfall_blow_end_turn_note = (
+                    f"；瀑布巨兽自爆相终端观测：enemy={_waterfall_blow_name}"
+                    f",enemy_hp={_waterfall_blow_hp:.0f}"
+                    f",hp={float(my_hp):g}/block={float(my_block):g}"
+                    f"/incoming={float(incoming):g}"
+                    f",energy={float(energy):g}"
+                    f",vetoed_attacks={_resc_invuln_attack_count}"
+                    f",non_attack_candidates={_resc_invuln_non_attack_count}"
+                    "（WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS）")
             _gate_note = ""
             if self._hp_gate_stall_round != round_no:
                 # 謦欬门僵局放行账（每回合只动一次，VIVHITE_HP_GATE_STALL_BREAK）：
@@ -8409,7 +8440,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
@@ -10347,6 +10378,26 @@ class Policy:
         玩家伤害永远无法兑现击杀。
         """
         return self._enemy_power_stack(enemy, "steam_eruption", "蒸汽喷发")
+
+    def _is_waterfall_about_to_blow(self, enemy: dict) -> bool:
+        """识别原生 WaterfallGiant 的 AboutToBlow HP 哨兵。
+
+        原生 TriggerAboutToBlowState 会把 WATERFALL_GIANT 的当前/最大生命
+        设为 999999999，并进入延迟自爆状态；AboutToBlowMove 随后移除
+        SteamEruptionPower，所以终端快照里的 steam 层数可能已经是 0。
+        只认原生敌人 ID 前缀和远超正常 Boss 血池的哨兵值，不把普通无敌目标
+        或同名测试载荷混入该观测。
+        """
+        if not isinstance(enemy, dict) or enemy.get("is_alive") is False:
+            return False
+        enemy_id = str(enemy.get("enemy_id") or enemy.get("id") or "").upper()
+        if not enemy_id.startswith("WATERFALL_GIANT"):
+            return False
+        try:
+            current_hp = float(enemy.get("current_hp") or 0)
+        except (TypeError, ValueError, OverflowError):
+            return False
+        return current_hp >= 100000.0
 
     def _enemy_asleep_stack(self, enemy: dict) -> float:
         """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""

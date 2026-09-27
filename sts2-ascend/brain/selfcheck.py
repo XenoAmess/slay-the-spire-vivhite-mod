@@ -6441,6 +6441,36 @@ def main() -> int:
         and "vetoed_attacks=1" in d_itv.reason \
         and "non_attack_candidates=0" in d_itv.reason, \
         f"无敌帧致死空过缺少可证伪分层: {d_itv.reason}"
+    # ④g) WaterfallGiant 的原生 AboutToBlow 相会在移除 SteamEruptionPower 后
+    # 只留下 HP=999999999 哨兵；新增观测必须用实体 ID 把它与普通无敌目标分开，
+    # 且不得改写既有 end_turn 动作/参数。
+    itv_waterfall = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-waterfall-blow-"))),
+        random.Random(7))
+    waterfall_state = itv_combat_state([dict(itv_strike)], incoming=33)
+    waterfall_state["combat"]["enemies"][0]["enemy_id"] = "WATERFALL_GIANT"
+    waterfall_state["combat"]["enemies"][0]["current_hp"] = 999999999
+    waterfall_state["combat"]["enemies"][0]["name"] = "瀑布巨兽"
+    d_waterfall = itv_waterfall.decide(waterfall_state, DummyCtx())
+    assert d_waterfall.action == "end_turn" \
+        and d_waterfall.params == d_itv.params \
+        and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" in d_waterfall.reason \
+        and "enemy_hp=999999999" in d_waterfall.reason, \
+        f"瀑布巨兽自爆相终端观测缺失或改写动作: {d_waterfall.action} {d_waterfall.params}（{d_waterfall.reason}）"
+    waterfall_generic = itv_combat_state([dict(itv_strike)], incoming=33)
+    waterfall_generic["combat"]["enemies"][0]["current_hp"] = 999999999
+    d_waterfall_generic = itv_waterfall.decide(waterfall_generic, DummyCtx())
+    assert "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" not in d_waterfall_generic.reason, \
+        f"非 WaterfallGiant 无敌载荷误挂自爆相观测: {d_waterfall_generic.reason}"
+    itv_waterfall_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-waterfall-blow-off-"))),
+        random.Random(7))
+    itv_waterfall_off.know.policy["waterfall_about_to_blow_end_turn_obs"] = False
+    d_waterfall_off = itv_waterfall_off.decide(waterfall_state, DummyCtx())
+    assert d_waterfall_off.action == d_waterfall.action \
+        and d_waterfall_off.params == d_waterfall.params \
+        and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" not in d_waterfall_off.reason, \
+        f"瀑布巨兽自爆相观测关闭未严格回滚: {d_waterfall_off.action} {d_waterfall_off.params}（{d_waterfall_off.reason}）"
     itv_live_obs_off = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-end-turn-off-"))),
         random.Random(7))
