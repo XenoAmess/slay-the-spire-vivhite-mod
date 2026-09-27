@@ -17211,3 +17211,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.807847841146336局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.1926441214427133局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/38.239539630843325局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（88%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：3/1561 胜，当前目标进阶 3
+
+## 第 1562 局复盘（2026-09-28 06:15）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE
+- 本局遗物：JOSS_PAPER
+- 战斗记录：F9 Monster战 掉血11｜自损16（可行动段16/非行动段10，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血0｜自损5（可行动段5/非行动段10，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损9（可行动段9/非行动段5，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血17｜自损21（可行动段21/非行动段17，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血67｜自损18（可行动段18/非行动段50，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=195/dpt=13.9844/ttk=13.9441/tsurv=4.6（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=13.9441/actual_over_projected=0.79（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.9501521628529033局)，MAYHEM(36分/4.413664620994847局)，THINKING_AHEAD(36分/5.52077753558462局)，FISTICUFFS(35分/7.3714698843383575局)，ROLLING_BOULDER(34分/5.562699448176464局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.798020373702324局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.184969867017664局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/38.105701242135375局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：3/1562 胜，当前目标进阶 3
