@@ -5453,35 +5453,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 1557~1563 批：竞速致死生命支付漏算替代格挡的最小行为修复
-
-日期：2026-09-28
-production_code_commit: 27a3f609c5c3c07f586f12cba5d72c6bceb71e78
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：`LETHAL_SURVIVABLE_LINE` 只按回合级 `缺口-当前生命` 判断，未把候选牌在攻击前支付的 LifeCost 纳入生还检查。因此，在 kill-race 致死回合，非斩杀白绮攻击可能先付血再抢斩杀，即使手中有一张支付后仍能覆盖意图的格挡。若新增逐卡闸只拦这种“有可生还替代格挡”的候选，便能消除该漏算，同时保留无替代路径的孤注、合法斩杀和非致死行为。
-- **EVIDENCE**：exact batch 1557~1563 的 7 局均失败；最新完整链为 `runs/20260928-061627_EVXTFWT2GLPH.json`。1563-F17-T7 为 HP15、意图15；decision 194 选择非斩杀 `弦光投影`，实际支付2血后 HP15→13、无格挡，随后 decision 195/196 才打出格挡，T8/T9 降至1血并终局。该样本使 `gap==hp`，正好绕过旧回合级生还线；竞速投影为 `pool=249/dpt=22.0806/ttk=11.2769/tsurv=3.46667`，实际战斗9回合。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss kill-race 致死 combat 中，若某非斩杀攻击的支付后 `HP+当前格挡<=incoming` 且存在支付后严格覆盖 `incoming` 的替代格挡，应出现 `KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD`，并选择替代格挡或救场动作；斩杀、无替代路径、非致死样本不得被该 marker 或动作改变。任一动作/参数漂移、斩杀被拦、无替代路径被拦或 marker 与实际支付不符即证伪。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_hopeless_hp_pay_survival_guard`，置0可严格回滚。
-- `sts2-ascend/brain/policy.py`：在白绮 kill-race 致死逐卡评分后，读取真实生命支付并扫描可负担格挡；只有支付后攻击不能生还且替代格挡能严格生还时才进入既有出牌门拦截链，并在决策理由中追加 `KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD`。无替代路径、斩杀、非致死和非白绮不变。
-- `sts2-ascend/brain/selfcheck.py`：新增开启、合法斩杀、非致死和关闭四类夹具，验证动作、参数和 marker 边界。
-- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码0。
-- 生产/自检差异已完整回读；提交前 `git diff --cached --check` 通过。生产 commit 为 `27a3f609c5c3c07f586f12cba5d72c6bceb71e78`。
-
-## FOLLOW-UP / ROLLBACK
-
-- 只统计后续 3~10 个独立 Boss combat，逐条核对 marker、真实 `applied` action/params、支付前后 HP、替代格挡及 GAME_OVER/胜负；不把 marker 出现本身当作胜因。
-- 若 marker 在无替代路径/非致死样本出现，支付口径或动作不符，先将 `kill_race_hopeless_hp_pay_survival_guard=0`，保留本批证据并再决定是否回滚 commit。
-
-## REPLAY
-
-retry_resolution: none (no failed_review_replay packages requested)
