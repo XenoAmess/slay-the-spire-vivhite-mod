@@ -17013,3 +17013,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.9907637961453797局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.3354829133350097局)，IMPATIENCE(22分/3.0717749297436074局)
 - 策略进化：block_safety: 1.98 → 2.03（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.38 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.03 → 2.02（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F22 但致命战自损9/掉血17≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：3/1543 胜，当前目标进阶 3
+
+## 第 1544 局复盘（2026-09-28 03:09）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_AXIOM_RING, DRAMATIC_ENTRANCE
+- 本局遗物：BRONZE_SCALES, STRAWBERRY, LASTING_CANDY
+- 战斗记录：F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损6（可行动段6/非行动段1，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血0｜自损14（可行动段14/非行动段8，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损5（可行动段5/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血9｜自损13（可行动段13/非行动段9，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血76｜自损20（可行动段20/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.207483007021722局)，MAYHEM(36分/4.701190770868113局)，THINKING_AHEAD(36分/5.880426046611645局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.2098487172790255局)，FISTICUFFS(35分/7.851680896445753局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.980296122858871局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.327308723138337局)，IMPATIENCE(22分/3.061023717489505局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1544 胜，当前目标进阶 3
