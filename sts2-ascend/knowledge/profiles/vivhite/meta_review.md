@@ -5422,3 +5422,36 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1547~1551 批：竞速终端相位损失账与自付速率对账
+
+日期：2026-09-28
+production_code_commit: 9b4120f9c
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮在竞速入锁后的终端失败，主要由敌方行动段损失而不是生命支付主导；该假设可证伪：未来 3~10 个独立终端样本中，若至少 3 个同时满足 `phase_enemy > phase_own` 且 `enemy_rate >= self_rate`，则支持；若至少 3 个反向成立，则证伪并转入生命支付行为复核。
+- **EVIDENCE**：精确批次 1547~1551 全部失败。最新完整链 `runs/20260928-041208_LJRRT4YXEH4T.json` 为第1551局，共464条决策；F33 Boss 在 T2 已锁定竞速判死，T3仍出现终止条件实付4血与星体测度实付2血，T7 仍拒绝可致死的猩红转化仪式，T9 为 hp=3、incoming=24、energy=0 的致死资源空过，随后 GAME_OVER。结算摘要同时给出 `掉血86｜自损4（可行动段4/非行动段60，SELF_LOSS_PHASE_OBS）` 与 `pool=234/dpt=24.1339/ttk=9.69589/tsurv=4`；旧终端审计只带投影和资源边界，无法在空过当帧连接相位账。
+- **EXPECTED_SIGNAL**：后续终端审计应在既有 `KILL_RACE_TERMINAL_AUDIT_OBS` 后追加 `phase_own/phase_enemy/self_rate/enemy_rate/ratio`，并可按 `run_id`、floor/round、lock_round、下一条 GAME_OVER/胜负及 `applied` 回执核对。字段缺失、与结算相位账不一致或 action/params 漂移均直接证伪；本批不据此改变生命支付行为。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `kill_race_terminal_self_loss_obs`。
+- `sts2-ascend/brain/policy.py`：在已有终端竞速审计尾部追加实测可行动段/敌方行动段累计值、自付速率、敌方净损速率及比值；纯观测，不参与投影、评分、候选、action、params 或终局结算。
+- `sts2-ascend/brain/selfcheck.py`：加入相位账正例与关闭键回滚夹具，断言既有终端审计保留且 action/params 不变。
+- 未修改 `.runtime/`、`runs/`、`archive/`、stats、progression、`policy.json`、`lessons.md`、review prompt 或在线进程；无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 实现提交已完成：`9b4120f9c`；代码/配置/selfcheck 的 staged diff 与 `git diff --check` 通过。
+
+## FOLLOW-UP / ROLLBACK
+
+- 继续采集 3~10 个独立 Vivhite 终端 combat，按 phase 账、速率、投影锁定回合、终端资源与 GAME_OVER/胜负分层；确认假设前不新增行为门。
+- 若至少 3 个独立样本反向显示自付主导，再另开行为批次评估生命支付抑制；若 phase 账与真实支付不同，先修正采样边界。
+- 将 `kill_race_terminal_self_loss_obs` 设为 `False` 即移除新尾缀；既有终端审计、评分、action 与 params 应保持不变。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

@@ -3834,12 +3834,58 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return "?"
 
+        # KILL_RACE_TERMINAL_SELF_LOSS_OBS (batch 1551): the existing terminal
+        # projection records the forecast/resource boundary, while
+        # SELF_LOSS_PHASE_OBS is only emitted when the combat is settled.  Put
+        # the phase shadow ledger beside the boundary so a terminal sample can
+        # test whether the preceding race window was own-phase/self-rate heavy
+        # or enemy-phase heavy.  This is observation-only: none of these
+        # values feed the projection, score, action, or terminal outcome.
+        _self_loss_tail = ""
+        try:
+            _self_loss_obs = bool(int(float(pol.get(
+                "kill_race_terminal_self_loss_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _self_loss_obs = False
+        if _self_loss_obs:
+            def _metric(value) -> str:
+                try:
+                    _value = float(value)
+                    if not math.isfinite(_value):
+                        return "?"
+                    return f"{max(0.0, _value):g}"
+                except (TypeError, ValueError, OverflowError):
+                    return "?"
+
+            _phase_own = max(
+                0.0, float(getattr(self, "_race_same_round_loss_own", 0.0)
+                           or 0.0))
+            _phase_enemy = max(
+                0.0, float(getattr(self, "_race_same_round_loss_enemy", 0.0)
+                           or 0.0))
+            _self_rate = max(
+                0.0, float(getattr(self, "_race_self_paid_rate", 0.0)
+                           or 0.0))
+            _enemy_rate = max(
+                0.0, float(getattr(self, "_race_loss_rate", 0.0) or 0.0))
+            _rate_ratio = (
+                _self_rate / _enemy_rate if _enemy_rate > 0.0
+                else float("inf") if _self_rate > 0.0 else 0.0)
+            _self_loss_tail = (
+                f"/phase_own={_metric(_phase_own)}"
+                f"/phase_enemy={_metric(_phase_enemy)}"
+                f"/self_rate={_metric(_self_rate)}"
+                f"/enemy_rate={_metric(_enemy_rate)}"
+                f"/ratio={_metric(_rate_ratio)}"
+                "（KILL_RACE_TERMINAL_SELF_LOSS_OBS）")
+
         return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
             f"/last_round={_round_text(_projection.get('round'))}"
             f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
             f"/hp={float(my_hp):g}/block={float(my_block):g}"
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
+            f"{_self_loss_tail}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:

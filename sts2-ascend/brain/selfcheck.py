@@ -16173,6 +16173,10 @@ def main() -> int:
         "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
         "ttk": 2.2, "tsurv": 0.5,
     }
+    race_terminal_pol._race_same_round_loss_own = 4.0
+    race_terminal_pol._race_same_round_loss_enemy = 18.0
+    race_terminal_pol._race_self_paid_rate = 2.5
+    race_terminal_pol._race_loss_rate = 8.0
     d_race_terminal = None
     for _ in range(6):
         d_candidate = race_terminal_pol.decide(
@@ -16184,8 +16188,46 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal.reason \
         and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal.reason \
         and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
+            in d_race_terminal.reason \
+        and "/phase_own=4/phase_enemy=18/self_rate=2.5/enemy_rate=8/ratio=0.3125" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
+
+    race_terminal_self_loss_off_know = knowledge.Knowledge(tmp)
+    race_terminal_self_loss_off_know.policy[
+        "kill_race_terminal_self_loss_obs"] = False
+    race_terminal_self_loss_off_pol = policy.Policy(race_terminal_self_loss_off_know)
+    race_terminal_self_loss_off_ctx = _SettleCtx()
+    race_terminal_self_loss_off_ctx.combat = {}
+    assert race_terminal_self_loss_off_pol.decide(
+        _lethal_unavailable_state(True),
+        race_terminal_self_loss_off_ctx).action == "play_card", \
+        "竞速终端相位账关闭夹具热身帧未进入出牌状态"
+    race_terminal_self_loss_off_pol._krace_latch = True
+    race_terminal_self_loss_off_pol._krace_latch_round = 5
+    race_terminal_self_loss_off_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    race_terminal_self_loss_off_pol._race_same_round_loss_own = 4.0
+    race_terminal_self_loss_off_pol._race_same_round_loss_enemy = 18.0
+    race_terminal_self_loss_off_pol._race_self_paid_rate = 2.5
+    race_terminal_self_loss_off_pol._race_loss_rate = 8.0
+    d_race_terminal_self_loss_off = None
+    for _ in range(6):
+        d_candidate = race_terminal_self_loss_off_pol.decide(
+            _lethal_unavailable_state(False),
+            race_terminal_self_loss_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal_self_loss_off = d_candidate
+            break
+    assert (d_race_terminal_self_loss_off is not None
+            and d_race_terminal_self_loss_off.action == d_race_terminal.action
+            and d_race_terminal_self_loss_off.params == d_race_terminal.params
+            and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal_self_loss_off.reason
+            and "KILL_RACE_TERMINAL_SELF_LOSS_OBS"
+            not in d_race_terminal_self_loss_off.reason), \
+        f"竞速终端相位账关闭后动作或尾缀漂移: {d_race_terminal_self_loss_off}"
 
     race_terminal_off_know = knowledge.Knowledge(tmp)
     race_terminal_off_know.policy["kill_race_terminal_audit_obs"] = False
