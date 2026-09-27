@@ -12254,3 +12254,51 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `lethal_playable_reject_obs` 设为 `False`；预期只移除 `LETHAL_PLAYABLE_REJECT_OBS`，评分、候选、action、params 和既有致死/资源耗尽观测不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 `git diff --check` → **exit 0**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: 20260927-145032-1790491832675858100-3c63a9fc integrated`
+
+## 2026-09-27｜第 1603~1607 批复盘（SUPPORT_TARGET_INTENT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：多敌战斗中“零伤害意图且未持力量”的宽泛辅助体启发式，可能把
+  对玩家施加减益的敌人也当成“会强化队友的辅助体”，从而在非击杀窗口错误转火并
+  放大火线漂移。该假设可证伪：若未来至少 3 个独立相关战斗中所有实际中标的
+  `SUPPORT_TARGET_INTENT_OBS` 都是 `role=buff`，且没有同场非击杀换线/终局关联，
+  则本次误分类假设不成立；若 marker 缺失，则先判定观测边界有问题。
+- **EVIDENCE**：1603~1607 五局精确批次均为 Ironclad 失败；既有
+  `FOCUS_DRIFT_DAMP` 在五局分别出现 19/10/9/14/21 次，
+  `FOCUS_DRIFT_FLUSH_OBS` 出现 5/2/1/2/3 次。最新精确 run
+  `QGANY4HCSE4K`（`runs/20260927-184430_QGANY4HCSE4K.json`）F11 的 D172
+  选择 `SHRINKER_BEETLE`，理由明确写成“辅助体优先转火……放生=纵容其强化队友”；
+  D176 仍以同类支持理由处理该场目标，随后 D180~D193 进入未能击杀且最终致死的
+  长战链。原生机制记录 `game/v0.111.0/mechanics/monsters.jsonl:90` 显示
+  `SHRINKER_BEETLE` 的该动作是 `DebuffIntent`，`ShrinkMove` 调用
+  `PowerCmd.Apply<ShrinkPower>` 作用于 `targets`，未见队友增益调用。生产代码当前
+  的 `is_support` 条件只检查零伤害、多敌、无力量层，没有检查原生意图类型。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立相关 run 中，每个实际中标的零伤害转火都应
+  留下目标、`intent` 和 `role=buff/debuff/unknown`；重点统计 `role=debuff` 或
+  `role=unknown` 后的非击杀换线、`GAME_OVER` 和下一两条决策。`role=debuff` 被实际
+  选中并伴随漂移/终局会支持假设，但不单凭一局触发行为改动；全为 `role=buff` 且
+  无上述关联则削弱假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的
+  `support_target_intent_obs`；不改受保护的 `knowledge/policy.json`。
+- `sts2-ascend/brain/policy.py`：仅在现有辅助体启发式实际中标时，从
+  `intent_type/type/intent_id/name` 生成 `SUPPORT_TARGET_INTENT_OBS`，并归类为
+  `buff/debuff/mixed/unknown`；不进入评分、排序、目标判决或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：增加 Buff、`SHRINKER_BEETLE` Debuff 和关闭键夹具，
+  验证 marker 可见时 action/target 不变，关闭时只移除观测尾缀。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：按精确 `run_id`、floor/turn、目标 ID、intent、role、是否非击杀换线及
+  后续 `GAME_OVER` 分层采集 3~10 个独立窗口；暂不把一次 Debuff 命中直接行为化。
+- **调整**：若至少 3 个独立窗口实际选中 `role=debuff`，再基于原生意图白名单设计
+  最小目标评分修正；若 `unknown` 占主导，先补齐 API 载荷边界而不是猜测角色。
+- **撤回**：将 `support_target_intent_obs` 设为 `False`；预期只移除
+  `SUPPORT_TARGET_INTENT_OBS`，评分、目标、action 和 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

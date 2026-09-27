@@ -1446,6 +1446,34 @@ def main() -> int:
     assert d_sup2.action == "play_card" and d_sup2.params.get("target_index") == 1 \
         and "辅助体优先转火" not in d_sup2.reason, \
         f"辅助体转攻击意图后应恢复威胁评分: {d_sup2.reason}（{d_sup2.params}）"
+    # 1607-F11 复核：零伤害 Shrinker Beetle 的原生 DebuffIntent 被旧理由写成
+    # 「放生=纵容其强化队友」。先只记录真实中标目标的意图类型，验证下一批是否
+    # 反复命中 debuff/unknown；该观测不得改变现有目标或动作，且可一键回滚。
+    sup_obs_state = support_state(0)
+    sup_obs_state["combat"]["enemies"][0]["intents"][0]["intent_type"] = "Buff"
+    d_sup_obs = pol.decide(sup_obs_state, ctx)
+    assert d_sup_obs.action == "play_card" and d_sup_obs.params.get("target_index") == 0 \
+        and "SUPPORT_TARGET_INTENT_OBS" in d_sup_obs.reason \
+        and "intent=Buff" in d_sup_obs.reason and "role=buff" in d_sup_obs.reason, \
+        f"已知增益意图观测缺失或改写动作: {d_sup_obs.reason}（{d_sup_obs.params}）"
+    shrinker_obs_state = support_state(0)
+    shrinker = shrinker_obs_state["combat"]["enemies"][0]
+    shrinker["enemy_id"] = "SHRINKER_BEETLE"
+    shrinker["name"] = "缩小甲虫"
+    shrinker["intents"][0]["intent_type"] = "Debuff"
+    d_shrinker_obs = pol.decide(shrinker_obs_state, ctx)
+    assert d_shrinker_obs.action == "play_card" \
+        and d_shrinker_obs.params.get("target_index") == 0 \
+        and "SUPPORT_TARGET_INTENT_OBS" in d_shrinker_obs.reason \
+        and "target=SHRINKER_BEETLE#0" in d_shrinker_obs.reason \
+        and "role=debuff" in d_shrinker_obs.reason, \
+        f"减益型零伤害目标未留下可证伪观测: {d_shrinker_obs.reason}"
+    pol.know.policy["support_target_intent_obs"] = False
+    d_support_obs_rb = pol.decide(shrinker_obs_state, ctx)
+    assert d_support_obs_rb.params.get("target_index") == 0 \
+        and "SUPPORT_TARGET_INTENT_OBS" not in d_support_obs_rb.reason, \
+        f"support_target_intent_obs=False 未严格回滚观测或改写动作: {d_support_obs_rb.reason}"
+    pol.know.policy["support_target_intent_obs"] = True
 
     # 3yhr) 减员成本转火（REMOVAL_COST_TARGET，第 1356~1360 批复盘）：
     #      真实同族双子血池口径（神官 190 / 信徒 58——3yh 旧夹具把两者血池

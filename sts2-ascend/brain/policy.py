@@ -8696,6 +8696,33 @@ class Policy:
                                 if (not resp and len(enemies) > 1) else 0.0)
                 is_support = (not resp and len(enemies) > 1 and threat <= 0
                               and sup_bonus > 0 and scaler_stack <= 0)
+                _support_intent_obs = ""
+                if is_support:
+                    _intent_labels = []
+                    for _intent in e.get("intents") or []:
+                        if not isinstance(_intent, dict):
+                            continue
+                        _label = next(
+                            (str(_intent.get(_key)).strip()
+                             for _key in ("intent_type", "type", "intent_id", "name")
+                             if _intent.get(_key) not in (None, "")),
+                            "")
+                        if _label and _label not in _intent_labels:
+                            _intent_labels.append(_label)
+                    _intent_text = ",".join(_intent_labels) or "unknown"
+                    _intent_lower = _intent_text.lower()
+                    _has_debuff = "debuff" in _intent_lower or "减益" in _intent_text
+                    _has_buff = (("buff" in _intent_lower
+                                  and "debuff" not in _intent_lower)
+                                 or "增益" in _intent_text)
+                    _intent_role = ("mixed" if _has_buff and _has_debuff
+                                    else "buff" if _has_buff
+                                    else "debuff" if _has_debuff
+                                    else "unknown")
+                    _support_intent_obs = (
+                        f"target={e.get('enemy_id') or e.get('name') or 'unknown'}"
+                        f"#{e.get('index', '?')} intent={_intent_text}"
+                        f" role={_intent_role}")
                 if resp:
                     # 确认重生体三重压制（第 58 局利齿之眼被预测击杀 13 次仍吸引
                     # 输出、本体雾菇意图滚到 22 的教训）：
@@ -8792,6 +8819,10 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    if (is_support and _support_intent_obs
+                            and bool(pol.get("support_target_intent_obs", True))):
+                        why += (f"｜零伤害目标意图审计：{_support_intent_obs}"
+                                "（SUPPORT_TARGET_INTENT_OBS）")
                     if _rem_cost > 0.0:
                         why += (f"｜减员成本加分+{_rem_cost:.1f}"
                                 f"（{_rem_pool:.0f}池≤峰值{_pool_peak:.0f}一半，"
