@@ -5422,3 +5422,34 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1552~1556 批：竞速终端自损相位与敌伤收口对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1556-F33 在 T2 已进入竞速判死，T6 以 `end_turn {}` 和 `KILL_RACE_TERMINAL_AUDIT_OBS` 收口；现有终端 marker 有投影、HP、格挡、敌意图和能量，却没有把累计可行动段自付与非行动段敌伤接到同一个终端样本。若补齐这三个字段，未来可以区分“竞速输出不足”与“生命支付把白绮推入终端带”，且不改变任何决策。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-050258_EAPWWC593K4H.json` 共 486 条 decisions，已逐条检查；F33 的 T2 首次竞速锁定投影为 `pool=313/dpt=25.3603/ttk=12.3421/tsurv=3.38384`，T6 终端审计为 `pool=158/dpt=24.1667/ttk=6.53793/tsurv=0.461538`、`HP=12/block=11/incoming=26`，当局战斗摘要为掉血75、自损31（可行动段31/非行动段41）。原生 knowledge 还确认 CRUSHER/ROCKET 血池为209/199；mechanics 记录两者入场带 BackAttack/CrabRage，且存在力量成长与最高31/35伤的激光攻击。旧 marker 无法把这些自损相位与终端对齐。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 竞速终端 combat 中，同一条 `KILL_RACE_TERMINAL_AUDIT_OBS` 应追加 `self_loss/own_phase/foe_phase`，并能分别对账战斗摘要、真实 `applied end_turn {}`、下一 tick 掉血与 GAME_OVER/胜负；非终端、未入锁样本不应出现。字段错位或 action/params 漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：复用既有 `kill_race_terminal_audit_obs` 开关，在竞速终端 marker 追加非负 `self_loss`、`own_phase`、`foe_phase`，分别读取本场净自付、可行动段与非行动段相位账；不改评分、候选、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：扩展竞速终端夹具为 `31/31/41` 相位账，并断言投影字段、新相位字段与既有 `end_turn {}` 动作同时保留；既有关闭键夹具继续验证整段终端 marker 可撤回。
+- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档、原始证据或资产；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 目标生产/自检 diff 已完整回读；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有仓库既有 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立竞速终端 combat，按 combat/run/floor 对账三字段、战斗摘要、真实回执、下一 tick 掉血、终端锁和 GAME_OVER/胜负；不把新增观测直接当作行为修复。
+- 若相位字段与摘要/原始状态不符、未入锁或非终端样本显形，或 action/params 漂移，将 `kill_race_terminal_audit_obs=0`，立即恢复本批前的终端 marker 行为并保留证据；在重复证据前不改竞速动作。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

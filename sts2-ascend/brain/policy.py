@@ -3917,6 +3917,9 @@ class Policy:
             f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
             f"/hp={float(my_hp):g}/block={float(my_block):g}"
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
+            f"/self_loss={max(0.0, float(getattr(self, '_race_same_round_loss', 0.0) or 0.0)):g}"
+            f"/own_phase={max(0.0, float(getattr(self, '_race_same_round_loss_own', 0.0) or 0.0)):g}"
+            f"/foe_phase={max(0.0, float(getattr(self, '_race_same_round_loss_enemy', 0.0) or 0.0)):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:

@@ -16212,6 +16212,9 @@ def main() -> int:
         "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
         "ttk": 2.2, "tsurv": 0.5,
     }
+    race_terminal_pol._race_same_round_loss = 31.0
+    race_terminal_pol._race_same_round_loss_own = 31.0
+    race_terminal_pol._race_same_round_loss_enemy = 41.0
     d_race_terminal = None
     for _ in range(6):
         d_candidate = race_terminal_pol.decide(
@@ -16223,6 +16226,8 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal.reason \
         and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal.reason \
         and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
+            in d_race_terminal.reason \
+        and "/self_loss=31/own_phase=31/foe_phase=41" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
 
