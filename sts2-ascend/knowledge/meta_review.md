@@ -12383,3 +12383,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只移除 `KILL_RACE_TERMINAL_OUTCOME_OBS`，终端审计、`GAME_OVER` action 与 params 保持不变。若无终端审计仍出现 marker，立即回滚本批。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **TARGET_DIFF_CHECK_OK**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; local production observation)`
+
+## 2026-09-27｜第 1611 局复盘（HAND_TAX_KILL_RACE_PAY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`KILL_RACE_HOPELESS_HP_PAY_OBS` 的文本回退会把「回合结束时仍在手牌中才失去生命」误当成打牌即时支付。该假设可证伪：原生行为若证明打出税牌仍会支付该生命，或后续同类窗口没有条件税误报，则本修正不成立。
+- **EVIDENCE**：精确 run `CGXR534L52YA`（第1611局，文件 `sts2-ascend/knowledge/runs/20260927-222241_CGXR534L52YA.json`）F17 的 D298 在 HP=1、敌意图=0 时选中 `BECKON/呼唤`；理由同时出现 `HAND_TAX_PLAY_PRICING` 与「竞速判死自付6血，hp=1->0」。原生 `BECKON` 规则是“回合结束时仍在手牌才失去6生命”，而现有评分夹具明确记录打出即清除滞留税；因此该 `hp=1->0` 是观测误归因，不是即时支付。D299 随后空过，D302 写入 `LETHAL_UNAVAILABLE_END_TURN_OBS`，D303 进入 `GAME_OVER`；本批只修正支付观测，不把终局归因与该假设混写。
+- **EXPECTED_SIGNAL**：未来3~10个独立竞速窗口中，选中的纯 `HAND_TAX_PLAY_PRICING` 牌不应再出现 `KILL_RACE_HOPELESS_HP_PAY_OBS`；含真实即时支付与滞留税的混合文本仍应披露即时支付。按 run、floor/turn、card_id、HP、incoming、税额和终局分层；若税牌实际打出后仍被原生扣税，立即推翻假设并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：将竞速自付观测的文本回退集中到 `_observed_hp_pay_for_race`；忽略手牌滞留税条件子句，仅保留真实即时支付，混合文本仍能识别条件子句外的支付。评分、候选排序、选牌、action 和 params 不变。
+- `sts2-ascend/brain/knowledge.py`：补充既有 `kill_race_hopeless_hp_pay_obs` 的静态说明，明确滞留税牌打出即清税且不计为即时支付。
+- `sts2-ascend/brain/selfcheck.py`：新增纯 `BECKON`=0 与“即时2+滞留6”混合牌=2 的判别夹具；既有普通自残牌观测夹具继续覆盖正例。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集3~10个独立窗口，分离纯滞留税、混合支付和普通自残牌；在确认原生消费语义前不改 `HAND_TAX_PLAY_PRICING` 的行为。若条件税仍产生支付后 HP 下降证据，先恢复旧观测并回读原生结算链。
+- **撤回**：将 `kill_race_hopeless_hp_pay_obs` 设为 `False`；预期只移除该观测尾缀，选牌、action 和 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 通过；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

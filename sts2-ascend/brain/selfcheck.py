@@ -12714,6 +12714,13 @@ def main() -> int:
     bkn_pol = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-beckon-"))),
         random.Random(5))
+    _krh_beckon_pay = bkn_pol._observed_hp_pay_for_race(_beckon, [])
+    _krh_mixed_pay = bkn_pol._observed_hp_pay_for_race(
+        {"card_id": "KRH_MIXED_TAX", "name": "混合支付",
+         "rules_text": "失去2点生命。在你的回合结束时，如果这张牌在你的手牌中，"
+                        "你失去6点生命。"}, [])
+    assert _krh_beckon_pay == 0 and _krh_mixed_pay == 2, \
+        f"竞速自付观测误把手牌税当即时支付: beckon={_krh_beckon_pay}, mixed={_krh_mixed_pay}"
     bkn_enemies = [{"index": 0, "enemy_id": "SOUL_FYSH", "name": "灵魂异鱼",
                     "current_hp": 184, "max_hp": 211, "block": 0,
                     "is_alive": True, "is_hittable": True,

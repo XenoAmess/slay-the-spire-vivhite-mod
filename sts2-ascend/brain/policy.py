@@ -1353,6 +1353,32 @@ class Policy:
                 player_powers, VIVHITE_MARGIN_POWER_ID))
         return max(0.0, life_cost - min(life_cost, max(0.0, margin_before)))
 
+    def _observed_hp_pay_for_race(self, card: dict, player_powers) -> float:
+        """Return only HP paid by playing a card for the race audit.
+
+        A hand-end tax is conditional on the card remaining in hand.  Playing
+        the card removes that condition, so its text must not be recycled as an
+        immediate payment in ``KILL_RACE_HOPELESS_HP_PAY_OBS``.  Keep a real
+        immediate payment in mixed text visible by ignoring only matches inside
+        the hand-end tax clause.
+        """
+        pay = float(self._vivhite_hp_pay(card, player_powers) or 0.0)
+        if pay <= 0.0 and self._strategy_card(card) is None:
+            text = _text(card)
+            hand_tax = (_HAND_TAX_ZHS_RE.search(text)
+                        or _HAND_TAX_EN_RE.search(text))
+            for match in re.finditer(
+                    r"失去\s*(\d+)\s*点?\s*生命"
+                    r"|lose\s+(\d+)\s*(?:hp|health|life)",
+                    text, re.I):
+                if (hand_tax is not None
+                        and hand_tax.start() <= match.start()
+                        and match.end() <= hand_tax.end()):
+                    continue
+                pay = float(next(g for g in match.groups() if g))
+                break
+        return max(0.0, pay)
+
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
         return score_realized_mechanics(
@@ -7401,16 +7427,8 @@ class Policy:
             except (TypeError, ValueError):
                 _krh_obs = False
             if _krh_obs and kill_race:
-                _krh_pay = float(self._vivhite_hp_pay(
-                    card, player.get("powers") or []) or 0.0)
-                if _krh_pay <= 0.0 and self._strategy_card(card) is None:
-                    _m_krh = re.search(
-                        r"失去\s*(\d+)\s*点?\s*生命"
-                        r"|lose\s+(\d+)\s*(?:hp|health|life)",
-                        _text(card), re.I)
-                    if _m_krh:
-                        _krh_pay = float(next(
-                            g for g in _m_krh.groups() if g))
+                _krh_pay = self._observed_hp_pay_for_race(
+                    card, player.get("powers") or [])
                 if _krh_pay > 0.0:
                     try:
                         _krh_hp_before = float(my_hp)
