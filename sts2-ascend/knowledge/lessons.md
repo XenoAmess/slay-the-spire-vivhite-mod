@@ -13438,3 +13438,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3470301726650744局)，BASH(14分/2.8321024537935267局)，BODY_SLAM(15分/2.0418624955061047局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1622 胜，当前目标进阶 0
+
+## 第 1623 局复盘（2026-09-28 07:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：INFLAME, IRON_WAVE, MOLTEN_FIST, TAUNT, DRUM_OF_BATTLE, FLAME_BARRIER, HEADBUTT, UNMOVABLE
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F2 Monster战 掉血4; F3 Monster战 掉血15; F4 Monster战 掉血0; F11 Monster战 掉血7; F14 Monster战 掉血5; F17 Boss战 掉血68｜竞速投影审计：pool=221/dpt=8.775/ttk=25.1852/tsurv=3.57895（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=25.1852/actual_over_projected=0.44（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T3判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.717033407765759局)，OFFERING(25分/17.80820861607456局)，FEED(25分/34.7549911874589局)，PACTS_END(25分/64.04590263606485局)，NOT_YET(24分/3.2255738062729256局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.335315567060747局)，BASH(14分/2.8221900952052494局)，BODY_SLAM(15分/2.0347159767718335局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.41（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1623 胜，当前目标进阶 0
