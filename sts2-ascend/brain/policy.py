@@ -4024,11 +4024,15 @@ class Policy:
                     float(my_hp) + float(my_block))
             except (TypeError, ValueError, OverflowError):
                 _lethal_by_gap = False
-            if (_lethal_unavailable_obs
-                    and not affordable_playable
-                    and (bool(combat.get("end_turn_will_kill_player"))
-                         or _lethal_by_gap)):
-                _energy_locked = 0
+            _nonlethal_unavailable_note = ""
+            try:
+                _nonlethal_unavailable_obs = bool(int(float(pol.get(
+                    "nonlethal_unavailable_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _nonlethal_unavailable_obs = False
+
+            def _count_energy_locked_cards() -> int:
+                _count = 0
                 for _card in hand:
                     if self._card_unavailable(_card):
                         continue
@@ -4048,7 +4052,25 @@ class Policy:
                                      "not_enough_energy",
                                      "energy_cost_too_high",
                                      "energycosttoohigh"})):
-                        _energy_locked += 1
+                        _count += 1
+                return _count
+
+            if (_nonlethal_unavailable_obs
+                    and not affordable_playable
+                    and float(incoming) > 0
+                    and not _lethal_by_gap
+                    and not bool(combat.get("end_turn_will_kill_player"))):
+                _nonlethal_unavailable_note = (
+                    f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
+                    f"/block={float(my_block):g}/incoming={float(incoming):g}"
+                    f"/energy={float(energy):g}/cards={len(hand)}"
+                    f"/energy_locked={_count_energy_locked_cards()}"
+                    "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")
+            if (_lethal_unavailable_obs
+                    and not affordable_playable
+                    and (bool(combat.get("end_turn_will_kill_player"))
+                         or _lethal_by_gap)):
+                _energy_locked = _count_energy_locked_cards()
                 _lethal_unavailable_note = (
                     f"；致死无牌空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
@@ -4333,7 +4355,8 @@ class Policy:
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
                     f"｜能量{energy}｜[{_audit}]{_settle_note}"
-                    f"{_lethal_unavailable_note}{_ff_tax_note}"
+                    f"{_lethal_unavailable_note}{_nonlethal_unavailable_note}"
+                    f"{_ff_tax_note}"
                     f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                     wait=1.2)
             if self._end_stall < 15:
@@ -4345,7 +4368,8 @@ class Policy:
             return Decision(
                 "end_turn", {},
                 f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
-                f"｜能量{energy}｜[{_audit}]{_ff_tax_note}"
+                f"｜能量{energy}｜[{_audit}]"
+                f"{_nonlethal_unavailable_note}{_ff_tax_note}"
                 f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                 wait=1.2)
         self._terminal_life_lock_signature = None

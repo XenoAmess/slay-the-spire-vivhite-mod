@@ -5232,3 +5232,35 @@ production_code_commit: local commit；最终 SHA 由交接结果给出
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1517~1518 批：非致死无牌空过先兆观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：若来袭伤害存在、尚未达到致死线，但手牌没有可负担且可出的牌，记录这一非致死空过先兆，未来可把“资源/原生锁牌链→终端”与普通 `end_turn` 区分开；若字段或适用边界不稳定，则假设被证伪。该改动只追加观测，不改变动作或参数。
+- **EVIDENCE**：完整失败局 `runs/20260927-214232_JG1LU7RGL7F9.json`（1518）F48 Boss `TEST_SUBJECT` 的 T5（决策序号 572）为 `HP=55/block=22/incoming=50/energy=2`，手牌仅剩原生不可出的 `WOUND`；T7（序号 580）为 `HP=48/incoming=30/energy=3`，手牌为原生不可出的 `REGRET/WOUND`；两次都尚未进入已有致死观测。T8（序号 583）才在 `HP=26/incoming=45` 时触发 `LETHAL_UNAVAILABLE_END_TURN_OBS`，随后 T8 GAME_OVER（序号 584）。原生 runtime/mechanics 证据确认 `REGRET`、`WOUND` 为不可打牌/状态牌。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite run 中，按 combat 去重；仅当 `incoming>0`、非致死、非强制死亡且没有可负担可出牌时出现 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`，并能对账 `hp/block/incoming/energy/cards/energy_locked`、真实 `applied` 的 `end_turn {}`、下一回合掉血及终端/GAME_OVER/胜负。可出牌、`incoming<=0`、致死或强制结束样本不应出现；若动作/参数漂移或字段不符即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `nonlethal_unavailable_end_turn_obs=1`；设为 `0` 只移除该观测。
+- `sts2-ascend/brain/policy.py`：在既有无可出牌的 `end_turn` 收口前，追加非致死来袭空过的资源字段和 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`；复用逐牌能量锁计数，不改候选、评分、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 F48-T5/T7 形态夹具、开关关闭回滚及致死标记隔离断言。
+- 未修改 `runs`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始资产。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 生产三文件完整 diff 已回读；报告追加后再做目标 diff、空白检查和最终 selfcheck；仅提交本批五个目标文件。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 run，按 combat 去重，对账标记适用率、字段与 `applied` 回执、下一回合实际掉血、终端锁、GAME_OVER/胜负；不把单次标记直接宣称为因果修复。
+- 若标记出现在可出牌/无来袭/致死/强制样本，字段或动作参数不符，先将 `nonlethal_unavailable_end_turn_obs=0`；必要时回滚本地提交并保留证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

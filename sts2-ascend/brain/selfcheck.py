@@ -15890,6 +15890,60 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_empty_off.reason, \
         f"致死资源耗尽观测关闭后动作或标记漂移: {d_lethal_empty_off and d_lethal_empty_off.reason}"
 
+    # 3z-4b) 非致死资源耗尽空过先兆（NONLETHAL_UNAVAILABLE_END_TURN_OBS）：
+    #         1518-F48-T5/T7 的形态——尚未达到服务端致死线，但来袭伤害存在，
+    #         手牌已只剩原生不可打牌；只记录该终端前置样本，不改变动作/参数，
+    #         并与致死资源耗尽标记严格分离。
+    def _nonlethal_unavailable_state(hand_ready):
+        state = _lethal_unavailable_state(hand_ready)
+        state["combat"]["player"]["current_hp"] = 55
+        state["combat"]["player"]["block"] = 22
+        state["combat"]["enemies"][0]["intents"] = [{"total_damage": 50}]
+        state["run"]["current_hp"] = 55
+        state["run"]["floor"] = 48
+        return state
+
+    nonlethal_empty_know = knowledge.Knowledge(tmp)
+    nonlethal_empty_pol = policy.Policy(nonlethal_empty_know)
+    nonlethal_empty_ctx = _SettleCtx()
+    assert nonlethal_empty_pol.decide(
+        _nonlethal_unavailable_state(True), nonlethal_empty_ctx).action == "play_card", \
+        "非致死资源耗尽夹具热身帧未进入出牌状态"
+    d_nonlethal_empty = None
+    for _ in range(6):
+        d_candidate = nonlethal_empty_pol.decide(
+            _nonlethal_unavailable_state(False), nonlethal_empty_ctx)
+        if d_candidate.action == "end_turn":
+            d_nonlethal_empty = d_candidate
+            break
+    assert d_nonlethal_empty is not None \
+        and d_nonlethal_empty.params == {} \
+        and "NONLETHAL_UNAVAILABLE_END_TURN_OBS" in d_nonlethal_empty.reason \
+        and "（LETHAL_UNAVAILABLE_END_TURN_OBS）" not in d_nonlethal_empty.reason \
+        and "hp=55/block=22/incoming=50/energy=0" in d_nonlethal_empty.reason \
+        and "/energy_locked=2" in d_nonlethal_empty.reason, \
+        f"非致死资源耗尽先兆观测缺失: {d_nonlethal_empty and d_nonlethal_empty.reason}"
+
+    nonlethal_empty_off_know = knowledge.Knowledge(tmp)
+    nonlethal_empty_off_know.policy["nonlethal_unavailable_end_turn_obs"] = False
+    nonlethal_empty_off_pol = policy.Policy(nonlethal_empty_off_know)
+    nonlethal_empty_off_ctx = _SettleCtx()
+    assert nonlethal_empty_off_pol.decide(
+        _nonlethal_unavailable_state(True), nonlethal_empty_off_ctx).action == "play_card", \
+        "非致死资源耗尽关闭夹具热身帧未进入出牌状态"
+    d_nonlethal_empty_off = None
+    for _ in range(6):
+        d_candidate = nonlethal_empty_off_pol.decide(
+            _nonlethal_unavailable_state(False), nonlethal_empty_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_nonlethal_empty_off = d_candidate
+            break
+    assert d_nonlethal_empty_off is not None \
+        and d_nonlethal_empty_off.action == d_nonlethal_empty.action \
+        and d_nonlethal_empty_off.params == d_nonlethal_empty.params \
+        and "NONLETHAL_UNAVAILABLE_END_TURN_OBS" not in d_nonlethal_empty_off.reason, \
+        f"非致死资源耗尽观测关闭后动作或标记漂移: {d_nonlethal_empty_off and d_nonlethal_empty_off.reason}"
+
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能
