@@ -5040,3 +5040,36 @@ production_code_commit: `b96f7698e6f496384f4f2a3860d0b4d02a7d7a24`
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1467~1468 批：血税超软顶全生命支付牌奖的可选跳过门
+
+日期：2026-09-27
+production_code_commit: `93f4f36510e3b0d39db2a8415d2f9f08d35f05ba`
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：如果白绮卡组目录生命支付总额已经超过运行时软顶，且当前可自愿跳过的牌奖全部都是生命支付牌，那么继续拿牌会把后续精英/战斗的自损风险继续放大；在不触发强制入组、薄卡组保底或混合供给时，跳过该 offer 应减少无替代的血税堆积，而不应改变强制屏或非生命替代的选择。
+- **EVIDENCE**：精确批次为 1467~1468；最新完整运行文件为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260927-093905_QDL30TMDLWDL.json`。1468 F24 选牌决策 261 明确记录 `deck_tax=54/20`、`offer_life=3/3`、`best_nonlife=NONE`，仍选择 `EVENT_LOOP+`；F24 地图决策 263 已预计血量 58% 进精英后仅剩 32%（需求 41%），但无其他候选而被迫进场。F25 精英战决策 264 的 `TERMINATION_CONDITION` 在 `HP=57`、`incoming=15` 时实际支付 4 血并走 `KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS`，后续多次生命支付累计自损 29，决策 286 `GAME_OVER`。这条链支持“可选牌奖是更早的可逆切入点”，但不能单独证明它是死亡的唯一原因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 run，按 offer 对账 `deck_tax/cap`、候选中生命支付比例、`skip_reward_cards` 与 `VIVHITE_LIFE_COST_OVERCAP_SKIP` 命中、后续生命支付牌数/自损、敌方掉血、精英战后存活与 run 结果。若超顶全生命 offer 的无替代拿牌和后续自损下降，且混合供给、强制屏、薄卡组保底、软顶以下没有误跳过，则支持假设；若标记与实际 offer 不符、误伤上述例外、胜率/存活变差或指标不降，则证伪并关闭/回滚。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_life_cost_overcap_skip=1`，可单键关闭。
+- `sts2-ascend/brain/policy.py`：新增白绮专用门，仅在 `skip_reward_cards` 可用、非薄卡组保底、卡组血税严格超过软顶且 offer 每张牌均为 LifeCost 时跳过；同时接入 REWARD 与实际 `CARD_SELECTION` 路径，并追加 `VIVHITE_LIFE_COST_OVERCAP_SKIP` 证据标记。强制选牌、混合 offer、软顶以下和薄卡组保底保持旧行为。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认开启的高价值全生命 offer、关闭旋钮后的 action/params 恢复，以及既有强制路径夹具。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 针对三份生产代码文件的最终工作区与 staged `git diff --check` 均返回 0；最终 staged diff 仅包含 `knowledge.py`、`policy.py`、`selfcheck.py`。
+- 生产代码已在报告前本地提交为 `93f4f36510e3b0d39db2a8415d2f9f08d35f05ba`，未 push。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 run，不把同一 offer 的轮询或同一战斗多条 tick 当独立样本；以真实 `applied` 回执和 offer 状态对账。
+- 若出现误跳过、强制/混合/薄卡组路径漂移、标记与回执不符，或血税/自损/存活指标没有改善，将 `vivhite_life_cost_overcap_skip` 设为 `0`；必要时回滚 `93f4f36510e3b0d39db2a8415d2f9f08d35f05ba`，保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

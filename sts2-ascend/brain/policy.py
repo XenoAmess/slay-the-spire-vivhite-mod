@@ -1181,6 +1181,54 @@ class Policy:
             f"over={max(0.0, deck_tax - cap):.0f},forced={int(bool(forced))},"
             f"offer_life={offer_note},best_nonlife={best_nonlife}{gap_note}")
 
+    def _vivhite_life_cost_overcap_skip_note(
+            self, deck: list, offer: list, *, source: str) -> str:
+        """Skip a voluntary offer only when every candidate costs life and the
+        current Vivhite deck-tax total is already above its soft cap."""
+        try:
+            enabled = bool(int(float(
+                self.know.policy.get("vivhite_life_cost_overcap_skip", 1)
+                or 0)))
+        except (TypeError, ValueError):
+            enabled = False
+        if (not enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or not isinstance(offer, list) or not offer):
+            return ""
+
+        def _life_cost(card) -> float:
+            if not isinstance(card, dict):
+                return 0.0
+            entry = self._strategy_card(card)
+            if entry is None:
+                return 0.0
+            try:
+                return max(0.0, float(entry.mechanics.life_calculation_cost))
+            except (TypeError, ValueError):
+                return 0.0
+
+        rows = [card for card in offer if isinstance(card, dict)]
+        if len(rows) != len(offer):
+            return ""
+        life_costs = [_life_cost(card) for card in rows]
+        if any(life <= 0.0 for life in life_costs):
+            return ""
+        deck_tax = sum(_life_cost(card) for card in (deck or ()))
+        try:
+            cap = max(1.0, float(
+                self.know.policy.get("vivhite_life_cost_deck_cap", 60.0)
+                or 60.0))
+        except (TypeError, ValueError):
+            cap = 60.0
+        if deck_tax <= cap + 1e-9:
+            return ""
+        return (
+            f"；謦欬血税超软顶且本次供给全为生命支付，跳过"
+            f"（VIVHITE_LIFE_COST_OVERCAP_SKIP:source={source},"
+            f"deck_tax={deck_tax:.0f}/{cap:.0f},"
+            f"offer_life={len(rows)}/{len(rows)}）")
+
     def _is_basic_card(self, card: dict) -> bool:
         """基础牌统一判定：角色静态目录 rarity=="basic" 优先；无目录角色
         （Ironclad）回退 STRIKE/DEFEND 子串。旧实现只认子串，对白绮基础牌
@@ -11390,6 +11438,15 @@ class Policy:
                 f"最高 {best_v:.2f} / 门槛 {pick_line:.2f}；单薄保底={thin_take}")
             self._trace_gate(
                 "RANK 奖励卡价值", "pass", f"{len(scored)} 个当前可选候选")
+            _overcap_skip_note = ""
+            if "skip_reward_cards" in actions and not thin_take:
+                _overcap_skip_note = self._vivhite_life_cost_overcap_skip_note(
+                    deck, [c for _v, c, _d in all_scored], source="REWARD")
+            if _overcap_skip_note:
+                return Decision(
+                    "skip_reward_cards", {},
+                    f"奖励选牌：{_overcap_skip_note}；候选：{', '.join(vals)}",
+                    tags=[("card_skip", None)], wait=0.8)
             if (best_v >= pick_line or thin_take) and "choose_reward_card" in actions:
                 best_v, best, explore_note, explore_tag = self._reward_card_choice(
                     scored, deck, state, ctx,
@@ -11910,12 +11967,22 @@ class Policy:
                 # 只有可跳过的通用选牌屏才是自愿奖励 offer。升级/删除/献祭/
                 # 置顶均在前面的语义分支，不会污染 offered/seen。
                 self._record_card_offer("CARD_SELECTION", state, cards)
+            _thin_take = self._thin_deck_must_pick(deck, best_v)
+            if _has_skip and not _thin_take:
+                _overcap_skip_note = self._vivhite_life_cost_overcap_skip_note(
+                    deck, [c for _v, c in scored], source="CARD_SELECTION")
+                if _overcap_skip_note:
+                    return Decision(
+                        "skip_reward_cards", {},
+                        f"选牌界面：{_overcap_skip_note}；候选："
+                        + ", ".join(f"{c.get('name')}={v:.1f}"
+                                     for v, c in scored),
+                        tags=[("card_skip", None)], wait=0.8)
             # 跳过守卫（第 56 局实证）：经"打开卡牌奖励"进入的本屏没有阈值判断，
             # 全负候选（未升级基础牌 -3.9/-6.2）也被硬塞进卡组稀释质量——
             # REWARD 端同场景会跳过，同一决策的两个入口必须共享同一套门槛
             # （第 65~66 局复盘：门槛升级为随卡组膨胀动态抬升）
-            if best_v < pick_line and _has_skip \
-                    and not self._thin_deck_must_pick(deck, best_v):
+            if best_v < pick_line and _has_skip and not _thin_take:
                 return Decision("skip_reward_cards", {},
                                 f"选牌界面：全部低于拾取门槛（最高 {best_v:.1f} < {pick_line:.1f}），跳过不拿",
                                 tags=[("card_skip", None)], wait=0.8)

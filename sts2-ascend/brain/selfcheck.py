@@ -4982,6 +4982,40 @@ def main() -> int:
             and "謦欬血税密度扣分" in d_lc_obs.reason
             and "VIVHITE_LIFE_COST_DECK_TAX" in d_lc_obs.reason), \
         f"超顶卡组真实拿牌路径缺血税密度扣分留痕: {d_lc_obs.action}（{d_lc_obs.reason}）"
+    # 超软顶后的可选 offer 若全为生命支付牌，应该在评分已足够时直接跳过，
+    # 但同一张牌在强制入组屏仍必须保持原选择；旋钮关闭则恢复旧行为。
+    _lc_high = _vm_card("VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL",
+                        "绯红定积分", "Attack", 2)
+    _lc_optional_state = {
+        "screen": "CARD_SELECTION", "run_id": "RUN_VLCTAX_OPTIONAL",
+        "available_actions": ["select_deck_card", "skip_reward_cards"],
+        "selection": {"kind": "", "prompt": "将一张牌添加到你的牌组。",
+                       "min_select": 1, "selected_count": 0,
+                       "can_confirm": False, "cards": [dict(_lc_high, index=0)]},
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 10,
+                "deck": _lc_obs_deck}}
+    vknow_lc_optional = _vivhite_know("sts2-selfcheck-vlctax-optional-")
+    vpol_lc_optional = policy.Policy(vknow_lc_optional, random.Random(19))
+    _lc_optional_ctx = DummyCtx()
+    _lc_optional_ctx.run_id = "RUN_VLCTAX_OPTIONAL"
+    d_lc_optional = vpol_lc_optional.decide(
+        _lc_optional_state, _lc_optional_ctx)
+    assert (d_lc_optional.action == "skip_reward_cards"
+            and "VIVHITE_LIFE_COST_OVERCAP_SKIP" in d_lc_optional.reason
+            and "deck_tax=72/60" in d_lc_optional.reason
+            and "offer_life=1/1" in d_lc_optional.reason), \
+        f"超顶全生命支付可选 offer 未跳过: {d_lc_optional.action}（{d_lc_optional.reason}）"
+    vknow_lc_optional_off = _vivhite_know(
+        "sts2-selfcheck-vlctax-optional-off-")
+    vknow_lc_optional_off.policy["vivhite_life_cost_overcap_skip"] = 0
+    vpol_lc_optional_off = policy.Policy(
+        vknow_lc_optional_off, random.Random(19))
+    d_lc_optional_off = vpol_lc_optional_off.decide(
+        _lc_optional_state, _lc_optional_ctx)
+    assert (d_lc_optional_off.action == "select_deck_card"
+            and d_lc_optional_off.params.get("option_index") == 0
+            and "VIVHITE_LIFE_COST_OVERCAP_SKIP" not in d_lc_optional_off.reason), \
+        f"超顶跳过旋钮关闭后未恢复旧选择: {d_lc_optional_off.action}（{d_lc_optional_off.reason}）"
     # 零血税候选（AXIOM_RING lc=0）在超顶卡组拿牌不带留痕
     _lc_zero_ctx = DummyCtx()
     _lc_zero_ctx.run_id = "RUN_VLCTAX_OBS_ZERO"
