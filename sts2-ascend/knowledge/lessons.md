@@ -13405,3 +13405,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.38242143880598局)，BASH(14分/2.862048909758908局)，BODY_SLAM(15分/2.063453008669615局)
 - 策略进化：elite_grey_safety_mult: 1.95 → 2.15（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.40（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1619 胜，当前目标进阶 0
+
+## 第 1620 局复盘（2026-09-28 05:28）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：COLOSSUS, HEADBUTT, TWIN_STRIKE, INFLAME, MANGLE, MANGLE, TWIN_STRIKE, SWORD_BOOMERANG, BREAKTHROUGH, SHRUG_IT_OFF, CINDER, HEMOKINESIS, FEED, CINDER, BLUDGEON, MOLTEN_FIST
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F13 Unknown战 掉血18; F15 Unknown战 掉血0; F17 Boss战 掉血46｜自损6（可行动段6/非行动段38，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=226/dpt=10.125/ttk=22.321/tsurv=3.05882（RACE_PROJ_CALIB_AUDIT）｜竞速审计：T2判死→实战9回合获胜; F19 Monster战 掉血29｜自损1（可行动段1/非行动段34，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血37; F21 Monster战 掉血25｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=76/dpt=30.3/ttk=2.50825/tsurv=0.392857（RACE_PROJ_CALIB_AUDIT）｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.745763131576824局)，OFFERING(25分/17.99651138542857局)，FEED(25分/35.1224880665984局)，PACTS_END(25分/64.72311959214106局)，BRAND(25分/2.0023124447713605局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.370582963770159局)，BASH(14分/2.852031738574752局)，BODY_SLAM(15分/2.056230923139271局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.43（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F21——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1620 胜，当前目标进阶 0
