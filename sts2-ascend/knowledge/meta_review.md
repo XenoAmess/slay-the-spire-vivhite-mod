@@ -12128,3 +12128,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、
   `policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1599 局复盘（LETHAL_UNAVAILABLE_END_TURN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当回合结束前已经没有可负担/可执行的牌，且当前敌方意图扣除格挡后必然致死，现有 `end_turn` 留痕只说明“无牌可出”，无法区分“资源耗尽导致的强制死亡”与“策略主动空过”。该假设可证伪，且只要求补齐归因观测，不预设应改变动作。
+- **EVIDENCE**：第 1599 局精确 run `RL4ZR55NS04M` 的完整 391 条决策链中，F33 D390 为 `end_turn`：HP=9、格挡=6、敌意图=20、能量=0；手牌为两张 `not_enough_energy` 牌，下一条 D391 即 `GAME_OVER`。此前 D380 已出现“可存活 0 回合”的竞速判断，说明该终端窗口值得单独切片。
+- **EXPECTED_SIGNAL**：未来 3~10 个相关战斗窗口中，若 `end_turn` 时无可负担牌且 `incoming >= hp + block` 或原生 `end_turn_will_kill_player` 为真，应追加 `LETHAL_UNAVAILABLE_END_TURN_OBS`，带 `hp/block/incoming/energy/cards/energy_locked/forced/gap`；动作和参数保持不变。安全窗口、仍有可负担牌或关闭开关时不得出现该 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `lethal_unavailable_end_turn_obs`，设为 `False` 可只关闭该观测。
+- `sts2-ascend/brain/policy.py`：在 `_combat_readiness_wait` 的真实 `end_turn` 收口中追加只读 marker；能量锁定计数同时识别原生 `not_enough_energy` 的 `playable=false` 载荷，不改变评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 F33 形态夹具，验证默认 marker、字段值、开关关闭以及 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：观察 3~10 个独立 run，按 run_id、floor/turn、HP/block/incoming、energy_locked、下一决策和 `GAME_OVER` 对账；样本成熟前不改空过策略。
+- **调整**：若 marker 出现在非致死窗口、仍有可负担牌，或 `energy_locked` 与原生原因不一致，优先修正载荷归因并保留原始链。
+- **撤回**：将 `lethal_unavailable_end_turn_obs` 设为 `False`；预期只消失 marker，动作/参数保持旧值。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **TARGET_DIFF_CHECK_OK**；未写入运行时状态、runs、archive、policy、lessons 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`

@@ -3716,6 +3716,57 @@ class Policy:
                 [e for e in combat.get("enemies", [])
                  if e.get("is_alive") and e.get("is_hittable")],
                 incoming, my_hp, player.get("max_hp", my_hp), my_block, pol)
+            # 1599-F33 exposed a distinct terminal boundary: the live payload
+            # had no affordable card left (energy=0), the arithmetic gap was
+            # lethal, and the ordinary end-turn reason did not say whether
+            # death was forced by resources or by a choice.  Keep this audit
+            # separate from settle-timeout/terminal-life observations so the
+            # next runs can falsify the attribution without changing action
+            # selection.  The policy key is an explicit rollback for the note.
+            _lethal_unavailable_note = ""
+            try:
+                _lethal_unavailable_obs = bool(int(float(pol.get(
+                    "lethal_unavailable_end_turn_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _lethal_unavailable_obs = False
+            try:
+                _lethal_by_gap = float(incoming) >= (
+                    float(my_hp) + float(my_block))
+            except (TypeError, ValueError, OverflowError):
+                _lethal_by_gap = False
+            if (_lethal_unavailable_obs
+                    and not affordable_playable
+                    and (bool(combat.get("end_turn_will_kill_player"))
+                         or _lethal_by_gap)):
+                _energy_locked = 0
+                for _card in hand:
+                    if self._card_unavailable(_card):
+                        continue
+                    try:
+                        _card_cost = (
+                            energy if _card.get("costs_x")
+                            else float(_card.get("energy_cost") or 0))
+                    except (TypeError, ValueError, OverflowError):
+                        continue
+                    _native_reason = re.sub(
+                        r"[^a-z0-9]+", "_",
+                        str(self._native_card_unplayable_reason(_card) or "")
+                        .lower()).strip("_")
+                    if (_card_cost > float(energy)
+                            and (_card.get("playable")
+                                 or _native_reason in {
+                                     "not_enough_energy",
+                                     "energy_cost_too_high",
+                                     "energycosttoohigh"})):
+                        _energy_locked += 1
+                _lethal_unavailable_note = (
+                    f"；致死无牌空过观测：hp={float(my_hp):g}"
+                    f"/block={float(my_block):g}/incoming={float(incoming):g}"
+                    f"/energy={float(energy):g}/cards={len(hand)}"
+                    f"/energy_locked={_energy_locked}"
+                    f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+                    f"/gap={'yes' if _lethal_by_gap else 'no'}"
+                    "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -3971,7 +4022,8 @@ class Policy:
                 return Decision(
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
-                    f"｜能量{energy}｜[{_audit}]{_settle_note}{_ff_tax_note}"
+                    f"｜能量{energy}｜[{_audit}]{_settle_note}"
+                    f"{_lethal_unavailable_note}{_ff_tax_note}"
                     f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                     wait=1.2)
             if self._end_stall < 15:
