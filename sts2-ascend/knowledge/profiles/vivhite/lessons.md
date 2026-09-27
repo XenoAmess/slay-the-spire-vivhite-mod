@@ -16375,3 +16375,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.410611213556583局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.665207264383568局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.609748743459149局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：3/1485 胜，当前目标进阶 3
+
+## 第 1486 局复盘（2026-09-27 14:32）
+- 结果：💀 失败｜进阶 3｜到达层数 9｜当局评分 9
+- 死因：敌人组合 HAUNTED_SHIP
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_RECURRENT_STARLIGHT, PANACHE
+- 本局遗物：MUMMIFIED_HAND
+- 战斗记录：F2 Monster战 掉血0｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Unknown战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血30｜自损17（可行动段17/非行动段17，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血53｜自损20（可行动段20/非行动段31，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/5.156307329245473局)，THINKING_AHEAD(36分/7.2065136977683455局)，FISTICUFFS(35分/7.239079915496042局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.036544587492191局)，AUTOMATION(35分/4.554829871065377局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.402174074309135局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.652379038958226局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.600614622857042局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1486 胜，当前目标进阶 3
