@@ -3793,43 +3793,6 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
-    def _vivhite_boss_race_terminal_lock_note(
-            self, pol, ctx_combat, incoming, energy, my_hp,
-            race_active, hook_blocked, non_curse_count,
-            end_turn_will_kill) -> str:
-        """Classify a positive-incoming Boss race terminal lock.
-
-        This is an observation-only tail. It requires every non-curse card
-        to be natively blocked, a Boss with incoming damage, and an active
-        race mode. It never participates in scoring or action selection.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "vivhite_boss_race_terminal_lock_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            _enabled = False
-        if (not _enabled
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID
-                or (ctx_combat or {}).get("node_type") != "Boss"
-                or not bool(race_active)
-                or not bool(end_turn_will_kill)):
-            return ""
-        try:
-            _incoming = float(incoming)
-            _hook_blocked = int(hook_blocked)
-            _non_curse_count = int(non_curse_count)
-        except (TypeError, ValueError, OverflowError):
-            return ""
-        if (_incoming <= 0.0 or _non_curse_count <= 0
-                or _hook_blocked != _non_curse_count):
-            return ""
-        return (
-            f"/boss_race_terminal_lock=race_latched={'yes' if bool(race_active) else 'no'}"
-            f"/hp={float(my_hp):g}/energy={float(energy):g}"
-            f"/incoming={_incoming:g}/blocked={_hook_blocked}/{_non_curse_count}"
-            " (VIVHITE_BOSS_RACE_TERMINAL_LOCK_OBS)")
-
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
@@ -4199,13 +4162,6 @@ class Policy:
                         1 for _card in non_curse_cards
                         if self._native_card_unplayable_reason(
                             _card).casefold().startswith("blocked_by_hook"))
-                    _race_terminal_lock_note = (
-                        self._vivhite_boss_race_terminal_lock_note(
-                            pol, _ctx_combat, incoming, energy, my_hp,
-                            bool(getattr(self, "_krace_latch", False)),
-                            _hook_blocked,
-                            len(non_curse_cards),
-                            bool(combat.get("end_turn_will_kill_player"))))
                     _terminal_rows = []
                     _terminal_margin = max(0.0, character_power_amount(
                         player.get("powers") or [], VIVHITE_MARGIN_POWER_ID))
@@ -4254,7 +4210,7 @@ class Policy:
                         f"/incoming={incoming}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                         f"/cards={'|'.join(_terminal_rows)}"
-                        f"{_terminal_chain_note}{_race_terminal_lock_note}"
+                        f"{_terminal_chain_note}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},
