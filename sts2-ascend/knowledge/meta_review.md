@@ -12302,3 +12302,41 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1608 局复盘（SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `SLIPPERY_TTK_EFFECTIVE_DPT_OBS` 只记录滑溜窗口的绝对差值，
+  无法直接按窗口聚合“实际输出是投影的多少”。若补充实际/投影比，后续可证伪低比值
+  是否集中在破层阶段，而不是从自然语言差值反推。
+- **EVIDENCE**：精确 run `QVCEEDS4E2U6`（第1608局）完整持久链 416 条。F17
+  滑溜 Boss 的决策 191、195、199 分别记录敌血净降 `3.0/17.8`、`3.0/29.7`、
+  `25.0/32.8` 每回合；现有 marker 有差值但没有可机械聚合的比值，最终该局在 F30
+  阵亡。上述窗口同时保留了滑溜层数与回合边界，适合下一批按阶段核对。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立滑溜窗口应出现
+  `SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS`；按 run、滑溜层数、回合跨度和后续
+  `GAME_OVER` 分层。若至少 3 个独立窗口比值持续 `<0.80` 且不由破层阶段解释，
+  支持另立投影消费/竞速校准假设；若中位比值接近 `0.90~1.10`，则削弱假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有滑溜回合首净降对账后追加两位小数的
+  `实际/投影比` 与 `SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS`；仅在既有正投影窗口
+  生成，不改变 `ttk`、`tsurv`、评分、目标、判决、action 或 params。
+- `sts2-ascend/brain/knowledge.py`：补充该比值属于同一默认开启、可回滚观测键的说明。
+- `sts2-ascend/brain/selfcheck.py`：扩展滑溜跨回合夹具，验证比值 marker 出现，且
+  关闭 `slippery_ttk_effective_dpt_obs` 同时移除绝对差值与比值而不改变 action/params。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立 run，按 `run_id`、Boss、滑溜层数、回合跨度、
+  实际/投影比、血池端点及终局分层；达到 3 个低比值窗口且排除破层解释后，再单独
+  评估投影或竞速行为，不凭本局直接改动作。
+- **撤回**：将 `slippery_ttk_effective_dpt_obs` 设为 `False`；预期绝对对账与
+  `SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS` 一并消失。若回合边界错配、投影为零仍产出
+  比值或 action/params 漂移，先回滚本批观测。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

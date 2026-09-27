@@ -11500,12 +11500,17 @@ def main() -> int:
         0.0, slippery=True, sample_effective_round=True)
     assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" in d_combat_slippery_effective.reason \
         and "敌血净降10.0/回合" in d_combat_slippery_effective.reason \
-        and "vs 投影" in d_combat_slippery_effective.reason, \
+        and "vs 投影" in d_combat_slippery_effective.reason \
+        and "实际/投影比" in d_combat_slippery_effective.reason \
+        and "SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS" \
+        in d_combat_slippery_effective.reason, \
         f"滑溜跨回合有效火力对账缺失: {d_combat_slippery_effective.reason}"
     d_combat_slippery_effective_off = combat_flip_probe(
         0.0, slippery=True, effective_dpt_obs=False,
         sample_effective_round=True)
     assert "SLIPPERY_TTK_EFFECTIVE_DPT_OBS" not in \
+        d_combat_slippery_effective_off.reason \
+        and "SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS" not in \
         d_combat_slippery_effective_off.reason, \
         f"滑溜有效火力对账开关未严格回滚: {d_combat_slippery_effective_off.reason}"
 

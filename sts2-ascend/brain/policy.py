@@ -4699,7 +4699,8 @@ class Policy:
                     # 是否按该速率下降。用已观测的「上一回合首→当前回合首」敌方总
                     # 血量净变化，绑定上一回合开始时的滑溜层数，直接给出实测净
                     # dpt 与投影 dpt 的差值。回血/召唤等非伤害因素可能让读数为负，
-                    # 故明确标为“敌血净降”，不冒充逐卡真实伤害。纯观测，不改
+                    # 故明确标为“敌血净降”，不冒充逐卡真实伤害；同时保留比值，
+                    # 让跨窗口聚合不必从自然语言差值反推比例。纯观测，不改
                     # ttk/tsurv/判决/评分；键=False 严格回滚且不推进该账。
                     _slippery_effective_dpt_pending = None
                     if bool(pol.get("slippery_ttk_effective_dpt_obs", True)):
@@ -4791,12 +4792,15 @@ class Policy:
                             _slippery_effective_dpt_pending)
                         _sl_net_dpt = (_sl_start_hp - _sl_end_hp) / _sl_span
                         _sl_gap = _sl_net_dpt - _sl_projected
+                        _sl_ratio = _sl_net_dpt / _sl_projected
                         danger_note += (
                             f"；滑溜有效火力对账：滑溜{_sl_layers:g}层、采样"
                             f"{_sl_prev_round}→{round_no}回合，敌血净降"
                             f"{_sl_net_dpt:.1f}/回合 vs 投影{_sl_projected:.1f}/回合"
                             f"（差{_sl_gap:+.1f}，"
-                            "SLIPPERY_TTK_EFFECTIVE_DPT_OBS）")
+                            "SLIPPERY_TTK_EFFECTIVE_DPT_OBS）；"
+                            f"实际/投影比{_sl_ratio:.2f}"
+                            "（SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS）")
                     # 无实体封顶期观测（INTANGIBLE_TTK_OBS，第945~952局批复盘）：
                     # ttk=pool/dpt 同样未计入敌方无实体窗口——窗口内每 hit 伤害
                     # 封顶 1，实测 dpt 塌缩后又被首窗先验下限
