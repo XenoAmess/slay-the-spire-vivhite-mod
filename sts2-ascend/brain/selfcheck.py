@@ -9281,56 +9281,6 @@ def main() -> int:
             and "candidates=1" in d_etf.reason
             and "mode=only_candidate" in d_etf.reason), \
         f"强制精英只读对账缺失: {d_etf.reason}"
-
-    # 3etf-combat) 把强制精英地图选择连接到首场 Elite 首帧（只读）：
-    #       1613-F27→F28 的现象需要同时保留地图门槛与真实遭遇/来袭伤害，
-    #       才能按 run 对账“唯一候选强制进场”是否紧邻高损/阵亡；首战 marker
-    #       不得改写卡牌动作或参数，关闭时只去掉连接观测。
-    etf_combat_state = {
-        "screen": "COMBAT",
-        "available_actions": ["play_card", "end_turn"],
-        "turn": 1,
-        "combat": {
-            "player": {"current_hp": 71, "max_hp": 80, "block": 0,
-                        "energy": 3},
-            "hand": [{"index": 0, "card_id": "STRIKE_IRONCLAD",
-                      "name": "打击", "playable": True, "energy_cost": 1,
-                      "requires_target": True, "valid_target_indices": [0],
-                      "dynamic_values": [{"name": "Damage", "current_value": 6}]}],
-            "enemies": [{"index": 0, "enemy_id": "ENTOMANCER",
-                         "name": "蜂群术士", "current_hp": 145,
-                         "max_hp": 145, "block": 0, "is_alive": True,
-                         "is_hittable": True,
-                         "intents": [{"total_damage": 21}],
-                         "powers": [{"power_id": "PERSONAL_HIVE_POWER",
-                                      "amount": 1}]}]},
-        "run": {"current_hp": 71, "max_hp": 80, "gold": 0,
-                "floor": 8, "deck": []}}
-    etf_combat_ctx = SimpleNamespace(
-        combat={"comp_id": "ENTOMANCER", "node_type": "Elite"},
-        current_combat_is_hard=True, credit_tags=[])
-    d_etf_combat = etf_pol.decide(etf_combat_state, etf_combat_ctx)
-    assert (d_etf_combat.action
-            and "ELITE_FORCED_ENTRY_COMBAT_OBS" in d_etf_combat.reason
-            and "map_floor=7" in d_etf_combat.reason
-            and "combat_floor=8" in d_etf_combat.reason
-            and "encounter=ENTOMANCER" in d_etf_combat.reason
-            and "incoming=21" in d_etf_combat.reason), \
-        f"强制精英首战连接观测缺失: {d_etf_combat.action} {d_etf_combat.reason}"
-
-    etf_combat_off_know = knowledge.Knowledge(
-        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-forced-combat-off-")))
-    etf_combat_off_know.policy["elite_forced_entry_combat_obs"] = False
-    etf_combat_off_pol = policy.Policy(etf_combat_off_know)
-    d_etf_map_off = etf_combat_off_pol.decide(etf_state, etf_ctx)
-    d_etf_combat_off = etf_combat_off_pol.decide(
-        etf_combat_state, etf_combat_ctx)
-    assert (d_etf_map_off.action == d_etf.action
-            and d_etf_map_off.params == d_etf.params
-            and d_etf_combat_off.action == d_etf_combat.action
-            and d_etf_combat_off.params == d_etf_combat.params
-            and "ELITE_FORCED_ENTRY_COMBAT_OBS" not in d_etf_combat_off.reason), \
-        f"强制精英首战观测关闭后动作或参数漂移: {d_etf_combat_off.action} {d_etf_combat_off.params}"
     etf_know.policy["elite_forced_entry_obs"] = False
     d_etf_off = etf_pol.decide(etf_state, etf_ctx)
     assert d_etf_off.action == d_etf.action and d_etf_off.params == d_etf.params \

@@ -735,7 +735,6 @@ class Policy:
         self._reward_card_cooldowns: dict[tuple, int] = {}
         self._active_card_offer_key = None  # 当前可跳过卡牌 offer；跨 tick 去重 seen
         self._active_card_offer_explore_id = None  # 同一 offer 重试时保持探索选择稳定
-        self._elite_forced_entry_pending = None  # 当前 run 最近一次强制精英选择，等待首场 Elite 观测
         self._card_explore_run = None       # run identity for per-run novelty quota
         self._card_explore_used = 0         # deliberate non-greedy reward picks this run
         # 受控新颖度统一走“成功回执标签 → 下一 tick 入账”。决策尝试本身不占
@@ -2241,7 +2240,6 @@ class Policy:
             self._vivhite_vspark_audit_scope = None
             self._vivhite_vspark_audit_pending = None
             self._vivhite_vspark_audit_note = ""
-            self._elite_forced_entry_pending = None
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -3479,34 +3477,6 @@ class Policy:
                     f"/gate={elite_gate_f:.2f}/candidates={len(cand)}"
                     f"/mode={mode}（ELITE_FORCED_ENTRY_OBS）")
             note_txt = f"；{'；'.join(best_notes)}"
-        # 强制精英地图观测的首战连接（ELITE_FORCED_ENTRY_COMBAT_OBS）：
-        # 1609/1613 的地图 marker 能说明「为什么被迫进场」，但无法和随后
-        # 哪一场 Elite 的首帧血池、敌意图及终局直接对账。只暂存一次同 run
-        # 选择事实，战斗端首个有效 Elite tick 消费；不进入路径分、候选排序
-        # 或任何动作参数。非强制节点会清掉旧 pending，避免跨节点误绑定。
-        self._elite_forced_entry_pending = None
-        if (best_node is not None
-                and best_node.get("node_type") == "Elite"
-                and elite_gate_f < 1.0
-                and bool(pol.get("elite_forced_entry_obs", True))):
-            try:
-                _combat_obs_enabled = bool(int(pol.get(
-                    "elite_forced_entry_combat_obs", 1) or 0))
-            except (TypeError, ValueError, OverflowError):
-                _combat_obs_enabled = False
-            if _combat_obs_enabled:
-                self._elite_forced_entry_pending = {
-                    "run_key": str(state.get("run_id")
-                                   or run.get("run_id") or ""),
-                    "map_floor": int(floor),
-                    "map_hp": float(hp),
-                    "map_max_hp": float(max_hp),
-                    "good_cards": int(good_cards),
-                    "required": int(elite_deck_req),
-                    "gate": float(elite_gate_f),
-                    "candidates": int(len(cand)),
-                    "mode": "only_candidate" if len(cand) <= 1 else "least_loss",
-                }
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
         ctx.rest_before_boss = (best_node.get("node_type") == "RestSite"
@@ -3567,71 +3537,6 @@ class Policy:
     # ------------------------------------------------------------------
     # combat
     # ------------------------------------------------------------------
-
-    def _elite_forced_entry_combat_observation_note(
-            self, pol, state, cctx, enemies) -> str:
-        """Join a forced Elite map choice to its first valid Elite combat tick."""
-        pending = self._elite_forced_entry_pending
-        if not isinstance(pending, dict):
-            return ""
-        node_type = str((cctx or {}).get("node_type") or "")
-        if node_type != "Elite":
-            if node_type:
-                self._elite_forced_entry_pending = None
-            return ""
-        self._elite_forced_entry_pending = None
-        try:
-            enabled = bool(int(pol.get("elite_forced_entry_combat_obs", 1) or 0))
-        except (TypeError, ValueError, OverflowError):
-            enabled = False
-        if not enabled:
-            return ""
-        run = state.get("run") or {}
-        current_run_key = str(state.get("run_id") or run.get("run_id") or "")
-        pending_run_key = str(pending.get("run_key") or "")
-        if pending_run_key and current_run_key and pending_run_key != current_run_key:
-            return ""
-
-        def number(value) -> str:
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        enemy_parts = []
-        for enemy in (enemies or [])[:8]:
-            if not isinstance(enemy, dict):
-                continue
-            label = str(enemy.get("enemy_id") or enemy.get("name") or "?")
-            enemy_parts.append(
-                f"{label}:{number(enemy.get('current_hp'))}/"
-                f"{number(enemy.get('max_hp'))}")
-        enemy_text = "|".join(enemy_parts) or "none"
-        encounter = str((cctx or {}).get("comp_id") or "unknown")
-        incoming = 0.0
-        for enemy in (enemies or []):
-            if not isinstance(enemy, dict):
-                continue
-            for intent in enemy.get("intents") or []:
-                if isinstance(intent, dict):
-                    try:
-                        incoming += float(intent.get("total_damage") or 0.0)
-                    except (TypeError, ValueError, OverflowError):
-                        pass
-        combat_floor = run.get("floor", "?")
-        return (
-            "；强制精英首战观测："
-            f"map_floor={pending.get('map_floor', '?')}"
-            f"/map_hp={number(pending.get('map_hp'))}/{number(pending.get('map_max_hp'))}"
-            f"/good_cards={pending.get('good_cards', '?')}/{pending.get('required', '?')}"
-            f"/gate={number(pending.get('gate'))}"
-            f"/candidates={pending.get('candidates', '?')}"
-            f"/mode={pending.get('mode', '?')}"
-            f"/combat_floor={combat_floor}"
-            f"/encounter={encounter}"
-            f"/enemies={enemy_text}"
-            f"/incoming={number(incoming)}"
-            "（ELITE_FORCED_ENTRY_COMBAT_OBS）")
 
     @staticmethod
     def _apply_growth_ramp_stance_relief(
@@ -6094,8 +5999,6 @@ class Policy:
                 state, cctx, pol, enemies, hand, incoming, my_hp, my_max_hp,
                 my_block, round_no, stance, stance_defensive_tone, race_allin,
                 danger_note))
-        danger_note += self._elite_forced_entry_combat_observation_note(
-            pol, state, cctx, enemies)
 
         # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
         # _race_joint_feasible 只回答「跨回合是否存在攻防分配」，而第1592局
