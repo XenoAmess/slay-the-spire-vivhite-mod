@@ -16474,3 +16474,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.335731403478823局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.551356460774409局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5286832073984518局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：3/1494 胜，当前目标进阶 3
+
+## 第 1495 局复盘（2026-09-27 16:59）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_INVARIANT, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：AKABEKO, WHETSTONE, GAME_PIECE, MINIATURE_CANNON, BOWLER_HAT
+- 战斗记录：F6 Monster战 掉血0｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血28｜自损16（可行动段16/非行动段22，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血22｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血0｜自损20（可行动段20/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血17｜自损18（可行动段18/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战8回合获胜; F17 Boss战 掉血61｜自损20（可行动段20/非行动段22，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.99613910661997局)，THINKING_AHEAD(36分/6.982660770354341局)，FISTICUFFS(35分/7.014215397252007局)，VIVHITE_CARD_GEODESIC_VEIL(35分/3.9111590875899154局)，AUTOMATION(35分/4.413345091701608局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.327556343566647局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.5389267131616986局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.519832816172557局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：3/1495 胜，当前目标进阶 3
