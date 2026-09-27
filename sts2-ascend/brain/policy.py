@@ -7209,6 +7209,18 @@ class Policy:
             except (TypeError, ValueError):
                 _hp_gate_nm_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
+        # A lethal kill-race HP payment must be evaluated per candidate.  The
+        # existing survivable-line check only sees the turn-wide gap, so it
+        # cannot see that this card pays HP before its attack resolves.
+        _race_hp_pay_guarded: list = []
+        _race_hp_pay_guard_on = False
+        if (getattr(self.character_strategy, "profile_id", None)
+                == VIVHITE_PROFILE_ID):
+            try:
+                _race_hp_pay_guard_on = bool(int(float(pol.get(
+                    "kill_race_hopeless_hp_pay_survival_guard", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _race_hp_pay_guard_on = False
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
         # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
@@ -7603,6 +7615,70 @@ class Policy:
                         _hp_gate_blocked.append(
                             (c.get("index"), c.get("name") or cid,
                              _hp_pay, 0.0, score, 0, "ZERO_PRESSURE"))
+            # 竞速致死自付逐卡生还闸（KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）：
+            # race_lethal_cover 只比较「缺口-当前生命」，当缺口恰好等于当前生命
+            # 时会把本张牌支付的生命漏掉。非斩杀攻击若支付后生命+现有格挡仍不能
+            # 严格超过本回合意图，且手中存在支付后可生还的替代格挡，则先拦候选，
+            # 让该格挡/救场路径接管；没有替代路径时保留孤注一掷旧行为。斩杀牌
+            # 仍保留抢杀例外。该闸独立于 _hp_play_margin，覆盖致死回合的高分越门牌。
+            if (not _hp_gate_hit and _race_hp_pay_guard_on
+                    and kill_race and lethal_now):
+                _race_hp_pay = self._observed_hp_pay_for_race(
+                    c, player.get("powers") or [])
+                _race_entry = (
+                    self.character_strategy.card(cid)
+                    if getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID else None)
+                _race_observed_type = str(c.get("card_type") or "").casefold()
+                _race_is_attack = bool(
+                    _race_observed_type == "attack"
+                    or (_race_entry is not None
+                        and _race_entry.card_type == "attack"))
+                _race_is_kill = (
+                    "可击杀" in why
+                    or re.search(r"kills=[1-9]", why) is not None)
+                if (_race_is_attack and _race_hp_pay > 0.0
+                        and not _race_is_kill):
+                    _race_post_hp = float(my_hp) - float(_race_hp_pay)
+                    _race_post_total = _race_post_hp + float(my_block)
+                    _race_has_survivable_alt = False
+                    for _race_other in hand:
+                        if (_race_other is c
+                                or not _race_other.get("playable")
+                                or self._card_unavailable(_race_other)):
+                            continue
+                        _race_other_cost = (
+                            energy if _race_other.get("costs_x")
+                            else (_race_other.get("energy_cost") or 0))
+                        if _race_other_cost > energy:
+                            continue
+                        _race_other_block = card_numbers(_race_other)[1]
+                        if _race_other_block <= 0:
+                            continue
+                        _race_other_pay = self._observed_hp_pay_for_race(
+                            _race_other, player.get("powers") or [])
+                        _race_other_total = (
+                            float(my_hp) - float(_race_other_pay)
+                            + float(my_block) + float(_race_other_block))
+                        if _race_other_total > float(incoming):
+                            _race_has_survivable_alt = True
+                            break
+                    if (_race_post_total <= float(incoming)
+                            and _race_has_survivable_alt):
+                        _hp_gate_hit = True
+                        _race_hp_pay_guarded.append(
+                            (c.get("name") or cid, _race_hp_pay,
+                             _race_post_hp, _race_post_total))
+                        why += (
+                            f"｜竞速生命支付生还闸：非斩杀攻击实付"
+                            f"{_race_hp_pay:g}血，支付后hp={_race_post_hp:g}"
+                            f"+block={float(my_block):g}≤意图{float(incoming):g}，"
+                            "阻止抢斩杀"
+                            "（KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）")
+                        _hp_gate_blocked.append(
+                            (c.get("index"), c.get("name") or cid,
+                             _race_hp_pay, 0.0, score, 0,
+                             "KRH_SURVIVAL_GUARD"))
             # 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
             # 局批复盘新增）：余量门带致死豁免以「付血换输出买命/抢斩杀当场兑现」
             # 为前提；中标目标处于无实体封顶窗（评分侧 ENEMY_INTANGIBLE_CAP_OBS
@@ -7714,6 +7790,14 @@ class Policy:
                                          or immediate_score > marginal_best[0]):
                     marginal_best = (immediate_score, c, target, why, mode)
 
+        if _race_hp_pay_guarded:
+            _guarded = "、".join(
+                f"{_name}:实付{_pay:g}/支付后总生还{_total:g}"
+                for _name, _pay, _post_hp, _total
+                in _race_hp_pay_guarded[:3])
+            danger_note += (
+                f"；竞速生命支付生还闸拦下候选[{_guarded}]"
+                "（KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）")
         choice_mode = ""
         chosen = (None if stall_force_attack
                   else best if best and best[0] > pol["play_threshold"] else None)
@@ -8570,6 +8654,9 @@ class Policy:
                                   + ("（KILL_RACE_HOPELESS_HP_PAY_MARGIN）"
                                      if len(row) > 6
                                      and row[6] == "KRH_MARGIN" else "")
+                                  + ("（KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）"
+                                     if len(row) > 6
+                                     and row[6] == "KRH_SURVIVAL_GUARD" else "")
                                   + ("（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE）"
                                      if len(row) > 7
                                      and row[7] == "KRH_DOM_SCALE" else "")

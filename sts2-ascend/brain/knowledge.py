@@ -1033,6 +1033,12 @@ DEFAULT_POLICY = {
                                         # “高分越带放行”。开启时在选中出牌链追加候选分与
                                         # 门带上限，评分/放行/动作零改动；0=关闭观测，
                                         # 非白绮角色零改动
+    "kill_race_hopeless_hp_pay_survival_guard": 1,  # 竞速致死自付逐卡生还闸
+                                        # （KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）：
+                                        # 致死竞速的非斩杀白绮攻击若支付后生命+当前格挡
+                                        # 不能严格超过本回合意图，且手中有支付后可生还
+                                        # 的替代格挡，则不得抢斩杀；斩杀、无替代路径、
+                                        # 非致死和非白绮零改动。0=回滚旧行为
     "ringing_single_play_obs": 1,  # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，
                                         # 第 1505~1513 局批复盘新增，静态键）：RINGING_POWER
                                         # （昏眩，本回合限打 1 张）生效回合，主评分出牌位

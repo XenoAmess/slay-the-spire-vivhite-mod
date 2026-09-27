@@ -4571,6 +4571,83 @@ def main() -> int:
         and "cause=profile_or_config" in d_khb_profile.reason, \
         f"配置关闭余量门的既有原因分类被改变: {d_khb_profile.reason}"
 
+    # ⑨ 竞速致死自付逐卡生还闸（KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD）：
+    #      1563-F17-T7 在 15 血对 15 意图时，非斩杀攻击先付2血再抢斩杀，
+    #      现有回合级生还线因 gap==hp 漏掉这笔支付。逐卡闸应让位给支付后
+    #      仍能严格覆盖意图的格挡；斩杀、非致死和键关闭都必须保持边界行为。
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_survival_guard"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_survival_guard 静态键或默认值被改"
+
+    def _krh_survival_guard_hand(damage=10, include_block=True):
+        _hand = [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+            "name": "弦光投影", "card_type": "Attack", "playable": True,
+            "energy_cost": 1, "requires_target": True,
+            "valid_target_indices": [0],
+            "dynamic_values": [
+                {"name": "Damage", "current_value": damage},
+                {"name": "LifeCost", "current_value": 2}],
+        }]
+        if include_block:
+            _hand.append({
+                "index": 1,
+                "card_id": "VIVHITE_CARD_HEURISTIC_SHIELD",
+                "name": "启发式护盾", "card_type": "Skill", "playable": True,
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [
+                    {"name": "Block", "current_value": 8},
+                    {"name": "LifeCost", "current_value": 2}],
+            })
+        return _hand
+
+    def _krh_survival_guard_drive(final_hand, final_hp=15,
+                                  final_incoming=15, enabled=1,
+                                  enemy_hp=200):
+        _vk = _vivhite_know("sts2-selfcheck-krhsurvival-")
+        _vk.policy["vivhite_hp_cost_play_margin"] = 0.0
+        _vk.policy["kill_race_hopeless_hp_pay_survival_guard"] = enabled
+        _vp = policy.Policy(_vk, random.Random(11))
+        _vc = _krh_ctx()
+        for _turn, _hp in ((1, 65), (2, 55)):
+            _d = _vp.decide(
+                _krh_state(_turn, _hp, _krh_hand_vivhite()), _vc)
+            _vc.credit_tags.extend(_d.tags)
+        _st = _krh_state(3, final_hp, final_hand, final_incoming)
+        _st["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        return _vp.decide(_st, _vc)
+
+    d_krhsg_on = _krh_survival_guard_drive(
+        _krh_survival_guard_hand(), enabled=1)
+    assert d_krhsg_on.action == "play_card" \
+        and d_krhsg_on.params.get("card_index") == 1 \
+        and "KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD" in d_krhsg_on.reason, \
+        f"致死自付逐卡生还闸未让位支付后可生还格挡: {d_krhsg_on}"
+
+    d_krhsg_kill = _krh_survival_guard_drive(
+        _krh_survival_guard_hand(damage=250, include_block=False),
+        enabled=1, enemy_hp=200)
+    assert d_krhsg_kill.action == "play_card" \
+        and d_krhsg_kill.params.get("card_index") == 0 \
+        and "KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD" not in d_krhsg_kill.reason, \
+        f"致死自付逐卡生还闸误拦合法斩杀: {d_krhsg_kill}"
+
+    d_krhsg_safe = _krh_survival_guard_drive(
+        _krh_survival_guard_hand(include_block=False),
+        final_hp=30, final_incoming=15, enabled=1)
+    assert d_krhsg_safe.action == "play_card" \
+        and d_krhsg_safe.params.get("card_index") == 0 \
+        and "KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD" not in d_krhsg_safe.reason, \
+        f"非致死自付逐卡生还闸误触发: {d_krhsg_safe}"
+
+    d_krhsg_off = _krh_survival_guard_drive(
+        _krh_survival_guard_hand(include_block=False), enabled=0)
+    assert d_krhsg_off.action == "play_card" \
+        and d_krhsg_off.params.get("card_index") == 0 \
+        and "KILL_RACE_HOPELESS_HP_PAY_SURVIVAL_GUARD" not in d_krhsg_off.reason, \
+        f"逐卡生还闸关闭未回滚旧致死抢斩杀行为: {d_krhsg_off}"
+
     # 3vlc) 謦欬致死回合无实体封顶软顶（VIVHITE_HP_LETHAL_CAP_GATE，第 1017~1036
     #      局批复盘）：余量门带致死豁免的前提是「付血换输出买命/抢斩杀当场兑现」；
     #      中标目标在无实体封顶窗（每 hit≈1、非击杀）时该前提坍塌——1036 局 F48
