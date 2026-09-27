@@ -427,3 +427,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-27 14:50:32 | 第 1602 局 | `3c63a9fc` | stall | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260927-145032-1790491832675858100-3c63a9fc` | 复盘 CLI/工具调用无进展挂起 |
 <!-- rejection:20260927-150733-1790492853720329400-d1a46a7f -->
 | 2026-09-27 15:07:33 | 第 1485~1488 局 | `d1a46a7f` | stall | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260927-150733-1790492853720329400-d1a46a7f` | 复盘 CLI/工具调用无进展挂起 |
+<!-- rejection:20260927-152350-1790493830011396700-c31a8d8f -->
+| 2026-09-27 15:23:50 | 第 1602 局 | `c31a8d8f` | stall | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260927-152350-1790493830011396700-c31a8d8f` | 复盘 CLI/工具调用无进展挂起 |
