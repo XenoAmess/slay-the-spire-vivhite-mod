@@ -3663,43 +3663,6 @@ class Policy:
             f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
             "（LOW_POOL_BURST_RACE_OBS）")
 
-    def _vivhite_boss_race_end_turn_observation_note(
-            self, ctx, round_no, energy, my_hp, my_block, incoming, pol):
-        """Describe a Vivhite Boss end-turn after a latched race-loss projection."""
-        try:
-            enabled = bool(int(float(pol.get(
-                "boss_race_end_turn_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            enabled = False
-        ctx_combat = getattr(ctx, "combat", None) or {}
-        if (not enabled
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID
-                or ctx_combat.get("node_type") != "Boss"
-                or not bool(getattr(self, "_krace_latch", False))):
-            return ""
-        try:
-            _current_round = int(round_no)
-        except (TypeError, ValueError, OverflowError):
-            _current_round = None
-        try:
-            _latch_round = int(getattr(self, "_krace_latch_round", None))
-        except (TypeError, ValueError, OverflowError):
-            _latch_round = None
-        _round_label = str(_current_round) if _current_round is not None else "?"
-        _latch_label = str(_latch_round) if _latch_round is not None else "?"
-        _age_label = (
-            str(max(0, _current_round - _latch_round))
-            if _current_round is not None and _latch_round is not None
-            else "?")
-        return (
-            f"；Boss竞速入锁空过观测：latch_round={_latch_label}"
-            f"/round={_round_label}/age={_age_label}"
-            f"/race_turns={int(getattr(self, '_krace_turns', 0) or 0)}"
-            f"/hp={float(my_hp):g}/block={float(my_block):g}"
-            f"/incoming={float(incoming):g}/energy={float(energy):g}"
-            "（VIVHITE_BOSS_RACE_END_TURN_OBS）")
-
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -3753,9 +3716,6 @@ class Policy:
                 [e for e in combat.get("enemies", [])
                  if e.get("is_alive") and e.get("is_hittable")],
                 incoming, my_hp, player.get("max_hp", my_hp), my_block, pol)
-            _boss_race_end_turn_note = (
-                self._vivhite_boss_race_end_turn_observation_note(
-                    ctx, round_no, energy, my_hp, my_block, incoming, pol))
             # 1599-F33 exposed a distinct terminal boundary: the live payload
             # had no affordable card left (energy=0), the arithmetic gap was
             # lethal, and the ordinary end-turn reason did not say whether
@@ -3925,7 +3885,7 @@ class Policy:
                     f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
                     f"结束回合｜能量{energy}｜[{_audit}]{_ff_tax_note}"
                     f"{_terminal_lock_note}{_sandpit_end_turn_note}"
-                    f"{_low_pool_burst_note}{_boss_race_end_turn_note}",
+                    f"{_low_pool_burst_note}",
                     wait=1.2)
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
@@ -3941,7 +3901,7 @@ class Policy:
                     "end_turn", {},
                     f"战斗：可出牌接口长时间未恢复，结束回合防止永久卡死"
                     f"｜能量{energy}｜[{_audit}]{_sandpit_end_turn_note}"
-                    f"{_low_pool_burst_note}{_boss_race_end_turn_note}",
+                    f"{_low_pool_burst_note}",
                     wait=1.2)
             # 结算等待闸门（第790局批复盘闭环实验 END_TURN_SETTLE_GATE，
             # 承接 END_TURN_LEFTOVER_ENERGY_AUDIT 观测链的行为化升级；
@@ -4064,8 +4024,7 @@ class Policy:
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
                     f"｜能量{energy}｜[{_audit}]{_settle_note}"
                     f"{_lethal_unavailable_note}{_ff_tax_note}"
-                    f"{_sandpit_end_turn_note}{_low_pool_burst_note}"
-                    f"{_boss_race_end_turn_note}",
+                    f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                     wait=1.2)
             if self._end_stall < 15:
                 return Decision(None, {}, f"战斗：手牌未就绪，等待稳定（{self._end_stall}/15，{hand_desc}）", wait=0.6)
@@ -4077,8 +4036,7 @@ class Policy:
                 "end_turn", {},
                 f"战斗：手牌长时间未就绪（疑似全部不可用），结束回合"
                 f"｜能量{energy}｜[{_audit}]{_ff_tax_note}"
-                f"{_sandpit_end_turn_note}{_low_pool_burst_note}"
-                f"{_boss_race_end_turn_note}",
+                f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                 wait=1.2)
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
