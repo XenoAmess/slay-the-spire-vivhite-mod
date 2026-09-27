@@ -13207,3 +13207,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.6027677263155784局)，BASH(14分/3.048495768420876局)，BODY_SLAM(15分/2.1978757049943414局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1601 胜，当前目标进阶 0
+
+## 第 1602 局复盘（2026-09-27 14:19）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：ARMAMENTS, HEMOKINESIS, CINDER, BATTLE_TRANCE, RUPTURE, ULTIMATE_STRIKE, MOLTEN_FIST, TAUNT, CINDER, FEED, THUNDERCLAP, SHRUG_IT_OFF, SPITE, MOLTEN_FIST, OFFERING, SLICE, BACKSTAB, CORROSIVE_WAVE, INFLAME, ULTIMATE_STRIKE
+- 本局遗物：MEAL_TICKET, CANDELABRA, VAMBRACE
+- 战斗记录：F19 Monster战 掉血9｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血6; F22 Monster战 掉血4; F25 Unknown战 掉血23｜自损5（可行动段5/非行动段15，SELF_LOSS_PHASE_OBS）; F27 Monster战 掉血17｜竞速审计：T4判死→实战6回合获胜; F31 Elite战 掉血68｜自损2（可行动段2/非行动段51，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.924634606752093局)，ASHEN_STRIKE(26分/2.1127451117685654局)，OFFERING(26分/18.11857521311295局)，FEED(25分/35.31693564823062局)，PACTS_END(25分/67.91821775218824局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.590158039273474局)，BASH(14分/3.0378260332314033局)，BODY_SLAM(15分/2.1901831400268614局)
+- 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.38（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1602 胜，当前目标进阶 0
