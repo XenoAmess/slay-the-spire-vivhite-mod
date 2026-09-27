@@ -16463,3 +16463,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.343935176596912局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.5638298653029694局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5375646837917225局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损35/掉血56（62%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1493 胜，当前目标进阶 3
+
+## 第 1494 局复盘（2026-09-27 16:45）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：CLASH, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_ASTRAL_MEASURE
+- 本局遗物：TUNING_FORK, ODDLY_SMOOTH_STONE
+- 战斗记录：F6 Unknown战 掉血0｜自损12（可行动段12/非行动段12，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损24（可行动段24/非行动段20，SELF_LOSS_PHASE_OBS）｜竞速审计：T7判死→实战11回合获胜; F9 Monster战 掉血27｜自损22（可行动段22/非行动段15，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损20（可行动段20/非行动段19，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损7（可行动段7/非行动段3，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损18（可行动段18/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/5.013687011159027局)，THINKING_AHEAD(36分/7.007185921078114局)，FISTICUFFS(35分/7.038851377071758局)，VIVHITE_CARD_GEODESIC_VEIL(35分/3.9248962243752286局)，AUTOMATION(35分/4.428846052886711局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.335731403478823局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.551356460774409局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5286832073984518局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：3/1494 胜，当前目标进阶 3
