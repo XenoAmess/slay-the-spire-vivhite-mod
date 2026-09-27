@@ -13218,3 +13218,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.590158039273474局)，BASH(14分/3.0378260332314033局)，BODY_SLAM(15分/2.1901831400268614局)
 - 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.38（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1602 胜，当前目标进阶 0
+
+## 第 1603 局复盘（2026-09-27 14:54）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：VICIOUS, INFLAME, EXPECT_A_FIGHT, STONE_ARMOR, BATTLE_TRANCE, SHRUG_IT_OFF, BULLY, ASHEN_STRIKE, HEADBUTT, SWORD_BOOMERANG
+- 本局遗物：TUNING_FORK
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血24｜竞速审计：T4判死→实战7回合获胜; F7 Monster战 掉血8｜竞速审计：T4判死→实战6回合获胜; F9 Monster战 掉血20｜竞速审计：T3判死→实战8回合获胜; F14 Monster战 掉血36; F15 Monster战 掉血13｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.914398385628461局)，OFFERING(26分/18.055160199867057局)，FEED(25分/35.193326373461815局)，PACTS_END(25分/67.68050399005558局)，BRAND(25分/2.1252875346221973局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.577592486136017局)，BASH(14分/3.0271936421150936局)，BODY_SLAM(15分/2.1825174990367677局)
+- 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1603 胜，当前目标进阶 0
