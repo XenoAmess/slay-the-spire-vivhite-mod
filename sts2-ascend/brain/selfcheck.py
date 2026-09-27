@@ -16817,8 +16817,11 @@ def main() -> int:
     kfe_attack = {
         "card_id": "MOLTEN_FIST",
         "name": "熔融之拳",
-        "playable": True,
+        "playable": False,
         "energy_cost": 1,
+        "unplayable_reason": "not_enough_energy",
+        "unplayable_reason_raw": "EnergyCostTooHigh",
+        "why_not_playable": "not_enough_energy",
         "dynamic_values": [{"name": "Damage", "current_value": 10}],
     }
     kfe_note = policy.kill_race_free_energy_function_note(
@@ -16836,11 +16839,31 @@ def main() -> int:
         [kfe_energy_card, kfe_attack], 0, 18, 74, True,
         lethal_now=True, is_unavailable=lambda _card: False) == "", \
         "致死竞速不应挂非致死0费回能观测"
+    kfe_lethal_note = policy.kill_race_free_energy_function_note(
+        [kfe_energy_card, kfe_attack], 0, 14, 7, True,
+        lethal_now=True, is_unavailable=lambda _card: False,
+        allow_lethal=True)
+    kfe_lethal_note = kfe_lethal_note.replace(
+        "KILL_RACE_FREE_ENERGY_FUNCTION_OBS",
+        "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
+    assert "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS" in kfe_lethal_note \
+        and "BLOODLETTING:gain=2,pay=3,unlock=1" in kfe_lethal_note \
+        and "hp=7/energy=0/incoming=14" in kfe_lethal_note, \
+        f"lethal free-energy observation missed: {kfe_lethal_note}"
+    assert policy.kill_race_free_energy_function_note(
+        [kfe_energy_card, kfe_attack], 0, 14, 7, True,
+        lethal_now=True, is_unavailable=lambda _card: False,
+        enabled=False, allow_lethal=True) == "", \
+        "lethal free-energy observation did not roll back"
     kfe_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kfe-")))
     assert kfe_know.policy.get("kill_race_free_energy_function_obs") is True, \
         "竞速0费回能观测默认键未迁移"
 
+
+    assert kfe_know.policy.get(
+        "kill_race_lethal_free_energy_function_obs") is True, \
+        "lethal free-energy observation default key missing"
 
     print("SELFCHECK OK")
     return 0

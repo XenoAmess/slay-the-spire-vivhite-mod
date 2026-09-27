@@ -208,6 +208,7 @@ DEFAULT_POLICY = {
     "kill_bonus": 12.0,           # bonus for securing a kill
     "free_card_bonus": 1.5,       # small bonus for 0-cost plays
     "play_threshold": 0.4,        # min score to bother playing a card
+    "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     # --- map ---
     "elite_min_hp_pct": 0.55,     # below this hp% elites are avoided
     "elite_soft_hp_pct": 0.40,    # 精英灰区下限：血量介于 soft~min(hard) 之间谨慎进精英（0.5 权重+悲观复核 veto），

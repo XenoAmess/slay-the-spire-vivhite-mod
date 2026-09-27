@@ -12048,3 +12048,41 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **OK**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-27｜第 1597 局复盘（KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：致死 `kill_race` 收口时，旧的 `KILL_RACE_FREE_ENERGY_FUNCTION_OBS` 主动排除
+  `lethal_now`，可能把“0 费回能、支付生命、解锁当前能量不足的攻击”与“确实没有救场资源”混成同一类。
+  该假设可证伪；它不预设出牌祭品一定能获胜，只要求先把可复核的资源路径记录下来。
+- **EVIDENCE**：精确 run `TRSCPPTCQ0WV`（第 1597 局）完整链 F33 T5 的 end-turn
+  （persisted decision index 327）为 HP=7、能量=0、来袭=14。手牌中 `OFFERING`（祭品）
+  原生可玩，其余多张攻击牌被接口标为 `playable=false / not_enough_energy`；策略仍以
+  `end_turn` 收口并记录可能致死，下一条为 `GAME_OVER`。原生 Ironclad knowledge 显示
+  `OFFERING` 为 0 费、失去 6 HP、获得 2 能量并抽 3 张；因此这是“漏掉回能分层”的证据，
+  不是对该牌实际胜率的事后断言。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Ironclad 致死 `kill_race` end-turn 窗口中，
+  若存在可出 0 费纯回能牌且其回能能解锁攻击，应出现
+  `KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS`，带有 `gain/pay/unlock/hp/energy/incoming`；
+  `action` 与 `params` 应逐项保持旧值。无此资源路径、非能量原因不可玩、非 kill-race 或非致死窗口
+  不应挂该 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的
+  `kill_race_lethal_free_energy_function_obs`，设为 `False` 可关闭本批观测。
+- `sts2-ascend/brain/policy.py`：给既有纯观测 helper 增加显式 `allow_lethal` 边界；仅在原有
+  end-turn 收口已经判定 `lethal_now` 时读取新开关并改写 marker 名称。回能候选、评分、排序、
+  `Decision` action 和 params 均不变；只把明确标为 `not_enough_energy` 的攻击视为“回能后可解锁”。
+- `sts2-ascend/brain/selfcheck.py`：用真实的能量不足卡牌载荷验证 marker、致死边界、关闭回滚和默认键。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 个独立窗口，按 run_id、回合、HP/来袭、回能牌原生字段、
+  `unplayable_reason`、解锁攻击数、下一状态与 `GAME_OVER` 分层；样本达标前不改变回能牌评分或出牌行为。
+- **撤回**：将 `kill_race_lethal_free_energy_function_obs` 设为 `False`。若 marker 出现在非能量锁定、
+  不可支付生命、无攻击解锁或非致死窗口，保留证据并回滚本批观测边界。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三份源码
+  `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、
+  `lessons.md` 或 review prompt。
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`

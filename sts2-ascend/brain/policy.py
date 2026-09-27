@@ -168,9 +168,9 @@ def _card_energy_gain(card: dict) -> int:
 def kill_race_free_energy_function_note(
         hand: list | None, energy, incoming, my_hp, kill_race: bool,
         *, lethal_now: bool = False, is_unavailable=None,
-        enabled: bool = True) -> str:
-    """Expose non-lethal race skips of free energy functions without acting."""
-    if not enabled or not kill_race or lethal_now:
+        enabled: bool = True, allow_lethal: bool = False) -> str:
+    """Expose kill-race skips of free energy functions without acting."""
+    if not enabled or not kill_race or (lethal_now and not allow_lethal):
         return ""
     try:
         current_energy = max(0, int(float(energy or 0)))
@@ -181,6 +181,20 @@ def kill_race_free_energy_function_note(
     if incoming_value <= 0:
         return ""
     unavailable = is_unavailable or (lambda _card: False)
+
+    def _playable_or_energy_locked(card: dict) -> bool:
+        if card.get("playable"):
+            return True
+        for field in ("unplayable_reason", "why_not_playable",
+                      "unplayable_reason_raw"):
+            reason = re.sub(
+                r"[^a-z0-9]+", "_", str(card.get(field) or "").lower()
+            ).strip("_")
+            if reason in {"not_enough_energy", "energy_cost_too_high",
+                          "energycosttoohigh"}:
+                return True
+        return False
+
     rows = []
     for card in hand or []:
         if (not isinstance(card, dict) or not card.get("playable")
@@ -205,7 +219,7 @@ def kill_race_free_energy_function_note(
         unlocked_attacks = 0
         for other in hand or []:
             if (other is card or not isinstance(other, dict)
-                    or not other.get("playable")
+                    or not _playable_or_energy_locked(other)
                     or unavailable(other) or other.get("costs_x")):
                 continue
             try:
@@ -7549,6 +7563,23 @@ class Policy:
                 lethal_now=lethal_now,
                 is_unavailable=self._card_unavailable,
                 enabled=_free_energy_obs)
+            if lethal_now:
+                try:
+                    _lethal_free_energy_obs = bool(int(float(
+                        pol.get("kill_race_lethal_free_energy_function_obs", 1)
+                        or 0)))
+                except (TypeError, ValueError, OverflowError):
+                    _lethal_free_energy_obs = False
+                _lethal_note = kill_race_free_energy_function_note(
+                    hand, energy, incoming, my_hp, kill_race,
+                    lethal_now=True,
+                    is_unavailable=self._card_unavailable,
+                    enabled=_lethal_free_energy_obs,
+                    allow_lethal=True)
+                if _lethal_note:
+                    _ritual_skip_note += _lethal_note.replace(
+                        "KILL_RACE_FREE_ENERGY_FUNCTION_OBS",
+                        "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
