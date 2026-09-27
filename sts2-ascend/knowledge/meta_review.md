@@ -12445,3 +12445,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_terminal_outcome_obs` 设为 `False`；预期只移除 `KILL_RACE_TERMINAL_OUTCOME_OBS`，终端审计、`GAME_OVER` 的 `action` 与 `params` 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 通过；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1615 局复盘（SUPPORT_TARGET_INTENT_SELF_DEFENSE_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：多敌战斗中，现有零伤害“辅助体”启发式会把原生自我防御/装填意图与强化队友意图混在一起；`SUPPORT_TARGET_INTENT_OBS` 只记录为 `role=unknown`，无法验证该转火是否放大低池爆发风险。该假设可证伪，且本批只补分类观测，不预先改变行为。
+- **EVIDENCE**：精确 run `L3YW8ZPZB7ZF`（第1615局，`sts2-ascend/knowledge/runs/20260928-014430_L3YW8ZPZB7ZF.json`）完整链 166 条。F15 的 D163/D164 在 HP=8、格挡5、3名敌人、敌池由58降至49时选中 `CROSSBOW_RUBY_RAIDER`，理由为零伤害 `Defend` 意图但标 `role=unknown`；D165 写入 `LETHAL_UNAVAILABLE_END_TURN_OBS` 与 `POTION_RESERVE_END_TURN_OBS(state=present/occupied=0/can_use=0)`，D166 `GAME_OVER`。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的 `CROSSBOW_RUBY_RAIDER` 记录显示 `RELOAD_MOVE` 使用 `DefendIntent`，并只给自身 3 格挡。
+- **EXPECTED_SIGNAL**：未来3~10个独立相关窗口中，原生 `Defend`/Block/Shield 类意图应在实际中标的支持目标后记录 `role=self_defense`；继续按 `buff/debuff/self_defense/unknown`、低池爆发字段、后续1~2条决策及 `GAME_OVER` 分层。评分、候选排序、target、action 和 params 均应保持不变；已知意图仍为 `unknown` 时先修载荷边界，不行为化猜测。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `SUPPORT_TARGET_INTENT_OBS` 分类中识别 Defend/Block/Shield 及中文防御标签为 `self_defense`；该分支只生成 reason 尾缀，不参与评分、排序、目标判决或动作参数。
+- `sts2-ascend/brain/knowledge.py`：同步既有观测开关说明，明确四类归类。
+- `sts2-ascend/brain/selfcheck.py`：新增 `CROSSBOW_RUBY_RAIDER` + `Defend` 夹具，断言 `role=self_defense` 且原 target/action 保持不变；既有 Buff、Debuff 与关闭开关夹具继续作为回滚锚点。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集3~10个独立窗口，按 `run_id`、floor/turn、target、intent、role、低池血量/敌人数/来袭、是否非击杀换线及后续终局分层。若至少3个 `self_defense` 窗口与非击杀转火或终局稳定相关，再另开行为批次评估是否取消该类支持加分；若 `unknown` 仍覆盖原生已知意图，先查 API 字段。
+- **撤回**：将 `support_target_intent_obs` 设为 `False`，预期只移除 `SUPPORT_TARGET_INTENT_OBS` 尾缀，评分、target、action 和 params 不变；或删除本次分类与对应夹具并保留失败证据。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

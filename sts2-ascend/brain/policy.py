@@ -9097,9 +9097,19 @@ class Policy:
                     _has_buff = (("buff" in _intent_lower
                                   and "debuff" not in _intent_lower)
                                  or "增益" in _intent_text)
+                    # Native DefendIntent/Block-style labels describe the
+                    # target's own defensive move, not a teammate buff. Keep
+                    # this observational distinction separate from scoring so
+                    # the existing support-target behavior remains reversible.
+                    _has_self_defense = (
+                        any(_token in _intent_lower
+                            for _token in ("defend", "block", "shield"))
+                        or any(_token in _intent_text
+                               for _token in ("防御", "格挡", "护盾")))
                     _intent_role = ("mixed" if _has_buff and _has_debuff
                                     else "buff" if _has_buff
                                     else "debuff" if _has_debuff
+                                    else "self_defense" if _has_self_defense
                                     else "unknown")
                     _support_intent_obs = (
                         f"target={e.get('enemy_id') or e.get('name') or 'unknown'}"

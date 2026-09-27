@@ -1468,6 +1468,19 @@ def main() -> int:
         and "target=SHRINKER_BEETLE#0" in d_shrinker_obs.reason \
         and "role=debuff" in d_shrinker_obs.reason, \
         f"减益型零伤害目标未留下可证伪观测: {d_shrinker_obs.reason}"
+    crossbow_obs_state = support_state(0)
+    crossbow = crossbow_obs_state["combat"]["enemies"][0]
+    crossbow["enemy_id"] = "CROSSBOW_RUBY_RAIDER"
+    crossbow["name"] = "劫掠者弩手"
+    crossbow["intents"][0]["intent_type"] = "Defend"
+    d_crossbow_obs = pol.decide(crossbow_obs_state, ctx)
+    assert d_crossbow_obs.action == "play_card" \
+        and d_crossbow_obs.params.get("target_index") == 0 \
+        and "SUPPORT_TARGET_INTENT_OBS" in d_crossbow_obs.reason \
+        and "target=CROSSBOW_RUBY_RAIDER#0" in d_crossbow_obs.reason \
+        and "intent=Defend" in d_crossbow_obs.reason \
+        and "role=self_defense" in d_crossbow_obs.reason, \
+        f"Defend 意图未归类为自我防御或改写动作: {d_crossbow_obs.reason}"
     pol.know.policy["support_target_intent_obs"] = False
     d_support_obs_rb = pol.decide(shrinker_obs_state, ctx)
     assert d_support_obs_rb.params.get("target_index") == 0 \

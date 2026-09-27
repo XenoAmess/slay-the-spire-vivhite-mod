@@ -1463,7 +1463,7 @@ DEFAULT_POLICY = {
                                   # removal_cost_bonus_max 计价。
     "support_target_intent_obs": True,  # 零伤害转火目标的原生意图审计（SUPPORT_TARGET_INTENT_OBS）：
                                          # 仅在辅助体启发式实际中标时记录 intent_type/type/id 与
-                                         # buff/debuff/unknown 归类；不改变评分、目标或动作。用于验证
+                                         # buff/debuff/self_defense/unknown 归类；不改变评分、目标或动作。用于验证
                                          # 零伤害减益体是否被误当成会强化队友的辅助体；False 严格回滚
                                          # 该观测尾缀。
     "removal_cost_bonus_max": 6.0,  # 多敌战斗减员成本加分上限（第 1356~1360 批复盘，REMOVAL_COST_TARGET）：
