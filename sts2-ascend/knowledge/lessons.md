@@ -13152,3 +13152,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.6664836145837745局)，BASH(14分/3.1024092123401186局)，BODY_SLAM(15分/2.2367457109133784局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1596 胜，当前目标进阶 0
+
+## 第 1597 局复盘（2026-09-27 08:52）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：INFLAME, FIGHT_ME, INFLAME, BREAKTHROUGH, RUPTURE, CONFLAGRATION, BREAKTHROUGH, MOLTEN_FIST, PANIC_BUTTON, SWORD_BOOMERANG, CRUELTY, OFFERING, HEMOKINESIS, SHRUG_IT_OFF, HOWL_FROM_BEYOND, OFFERING, RUPTURE, HOWL_FROM_BEYOND, BATTLE_TRANCE, TWIN_STRIKE, TRUE_GRIT
+- 本局遗物：BRONZE_SCALES, OLD_COIN
+- 战斗记录：F17 Boss战 掉血61｜自损3（可行动段3/非行动段58，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合获胜; F19 Monster战 掉血27; F20 Monster战 掉血17｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）; F28 Unknown战 掉血11; F31 Monster战 掉血14; F33 Boss战 掉血79｜自损1（可行动段1/非行动段71，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.1501095609106393局)，OFFERING(25分/17.42132168705921局)，FEED(25分/34.923839618613854局)，PACTS_END(25分/69.11936917309846局)，BRAND(25分/2.170470446350694局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.6536509219327313局)，BASH(14分/3.091550780096928局)，BODY_SLAM(15分/2.2289171009251816局)
+- 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（5回合掉血79，每回合16≥14）——按「没挡住」证据上调防御权重）；kill_race_prior_eff: 0.35 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1597 胜，当前目标进阶 0
