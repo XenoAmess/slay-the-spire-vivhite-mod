@@ -211,6 +211,7 @@ DEFAULT_POLICY = {
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; False removes only the marker.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn.
+    "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
     "native_mandatory_card_priority": True,  # Native mandatory-card behavior gate:
                                              # ENTHRALLED is playable in the live payload but
                                              # its v0.111.0 CardModel.ShouldPlay contract

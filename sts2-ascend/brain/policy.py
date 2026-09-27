@@ -3743,6 +3743,53 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _lethal_playable_reject_observation_note(
+            self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
+            combat, kill_race, race_allin) -> str:
+        """Expose lethal score-rejection separately from resource exhaustion."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "lethal_playable_reject_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled or not lethal_now:
+            return ""
+        _rows = []
+        for _card in hand or []:
+            if (not _card.get("playable")
+                    or self._card_unavailable(_card)):
+                continue
+            try:
+                _cost = (energy if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _cost > float(energy):
+                continue
+            try:
+                _damage, _block, _hits = card_numbers(_card)
+                _damage_total = float(_damage) * max(1, int(_hits))
+                _block_total = float(_block)
+            except (TypeError, ValueError, OverflowError):
+                _damage_total = 0.0
+                _block_total = 0.0
+            _card_id = str(_card.get("card_id") or "?").upper()
+            _name = _card.get("name") or _card_id
+            _rows.append(
+                f"{_name}[{_card_id}]@{_cost:g}"
+                f"/dmg={_damage_total:g}/block={_block_total:g}")
+        if not _rows:
+            return ""
+        return (
+            f"；致死可牌拒绝观测：hp={float(my_hp):g}"
+            f"/block={float(my_block):g}/incoming={float(incoming):g}"
+            f"/energy={float(energy):g}"
+            f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
+            f"/kill_race={'yes' if kill_race else 'no'}"
+            f"/race_allin={'yes' if race_allin else 'no'}"
+            f"/cards={'|'.join(_rows)}"
+            "（LETHAL_PLAYABLE_REJECT_OBS）")
+
     def _boss_free_turn_attack_veto_observation_note(
             self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
             incoming, energy, round_no, pol) -> str:
@@ -7904,6 +7951,10 @@ class Policy:
             # 未上线→自损无相位缩放」切片验证；评分、候选资格、放行、动作零改动，
             # 键=0 注记消失（旧行为零差异），非白绮角色零改动。
             _ritual_skip_note = ""
+            _lethal_playable_reject_note = (
+                self._lethal_playable_reject_observation_note(
+                    pol, hand, energy, my_hp, my_block, incoming, lethal_now,
+                    combat, kill_race, race_allin))
             try:
                 _ritual_skip_obs = bool(int(float(pol.get(
                     "ritual_window_skip_obs", 1) or 0)))
@@ -7953,7 +8004,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

@@ -15835,6 +15835,60 @@ def main() -> int:
         and "KILL_RACE_TERMINAL_AUDIT_OBS" not in d_race_terminal_off.reason, \
         f"竞速终端对账关闭后动作或尾缀漂移: {d_race_terminal_off and d_race_terminal_off.reason}"
 
+    # 3z-6) 致死可牌评分拒绝观测（LETHAL_PLAYABLE_REJECT_OBS）：
+    #       1602-F31-T6 的形态——9 血/0 甲面对 24 意图，仍有可玩但低分的
+    #       JUGGLING，策略收口 end_turn 后下一条 GAME_OVER；它不是资源耗尽，
+    #       必须与 LETHAL_UNAVAILABLE_END_TURN_OBS 分开记录。只追加观测，
+    #       关闭键后 action/params 与理由主体严格回滚。
+    def _lethal_playable_reject_state():
+        state = _lethal_unavailable_state(True)
+        state["combat"]["player"]["energy"] = 3
+        state["combat"]["player"]["block"] = 0
+        state["combat"]["end_turn_will_kill_player"] = True
+        state["combat"]["hand"] = [{
+            "index": 0, "card_id": "JUGGLING", "name": "杂耍",
+            "playable": True, "energy_cost": 1, "requires_target": False,
+            "card_type": "Power", "dynamic_values": [],
+        }]
+        state["combat"]["enemies"][0]["current_hp"] = 45
+        state["combat"]["enemies"][0]["intents"] = [{"total_damage": 24}]
+        return state
+
+    lethal_playable_know = knowledge.Knowledge(tmp)
+    lethal_playable_pol = policy.Policy(lethal_playable_know)
+    lethal_playable_ctx = _SettleCtx()
+    d_lethal_playable = None
+    for _ in range(6):
+        d_candidate = lethal_playable_pol.decide(
+            _lethal_playable_reject_state(), lethal_playable_ctx)
+        if d_candidate.action == "end_turn":
+            d_lethal_playable = d_candidate
+            break
+    assert d_lethal_playable is not None \
+        and d_lethal_playable.params == {} \
+        and "LETHAL_PLAYABLE_REJECT_OBS" in d_lethal_playable.reason \
+        and "hp=9/block=0/incoming=24/energy=3" in d_lethal_playable.reason \
+        and "JUGGLING" in d_lethal_playable.reason \
+        and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_playable.reason, \
+        f"致死可牌拒绝观测缺失: {d_lethal_playable and d_lethal_playable.reason}"
+
+    lethal_playable_off_know = knowledge.Knowledge(tmp)
+    lethal_playable_off_know.policy["lethal_playable_reject_obs"] = False
+    lethal_playable_off_pol = policy.Policy(lethal_playable_off_know)
+    lethal_playable_off_ctx = _SettleCtx()
+    d_lethal_playable_off = None
+    for _ in range(6):
+        d_candidate = lethal_playable_off_pol.decide(
+            _lethal_playable_reject_state(), lethal_playable_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_lethal_playable_off = d_candidate
+            break
+    assert d_lethal_playable_off is not None \
+        and d_lethal_playable_off.action == d_lethal_playable.action \
+        and d_lethal_playable_off.params == d_lethal_playable.params \
+        and "LETHAL_PLAYABLE_REJECT_OBS" not in d_lethal_playable_off.reason, \
+        f"致死可牌拒绝观测关闭后动作或尾缀漂移: {d_lethal_playable_off and d_lethal_playable_off.reason}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存

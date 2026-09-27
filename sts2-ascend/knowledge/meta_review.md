@@ -12233,3 +12233,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
   progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1602 局复盘（LETHAL_PLAYABLE_REJECT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：致死 `end_turn` 收口时若仍有可负担、可玩牌，但该牌被评分拒绝，现有 `LETHAL_UNAVAILABLE_END_TURN_OBS` 会把“评分拒绝”与“资源耗尽”混为一类；新增只读分层可证伪该归因，不预设应改变动作。
+- **EVIDENCE**：精确 run `8XDA70Q0US57`（第 1602 局）完整 390 条决策已逐条核读。F31 D388 为 HP=9、格挡=0、来袭=24、能量=3，手牌仍有原生可玩 `JUGGLING`；理由为“评估后无值得出的牌”，下一条 D389 即 `GAME_OVER`。该窗口不满足既有“无可负担牌”条件，故没有 `LETHAL_UNAVAILABLE_END_TURN_OBS`。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Ironclad 致死 `end_turn` 窗口中，只要至少一张可负担可玩牌仍在手，应出现 `LETHAL_PLAYABLE_REJECT_OBS` 并记录 `hp/block/incoming/energy/forced/kill_race/race_allin/cards`；无可玩牌、安全回合或关闭键时不得出现。`action`/`params` 必须保持旧值；若 marker 在安全/不可玩窗口出现，或同型窗口漏记，则假设被削弱。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `lethal_playable_reject_obs`。
+- `sts2-ascend/brain/policy.py`：在既有评分拒绝后最终 `end_turn` 返回点追加只读 helper，枚举可负担可玩牌及伤害/格挡摘要；不进入评分、候选、排序、竞速判定或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：加入 F31 形态夹具，验证 `JUGGLING` marker、资源耗尽 marker 不误挂、关闭键只移除尾缀且 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 局按 `run_id`、floor/turn、`cards`、候选分、kill-race 状态、下一状态与 `GAME_OVER` 分层；若可玩格挡/功能牌仍能稳定翻转生存，另立行为改动假设；若牌已被原生锁定或 marker 与 trace 不一致，先修正观测边界。
+- **撤回**：将 `lethal_playable_reject_obs` 设为 `False`；预期只移除 `LETHAL_PLAYABLE_REJECT_OBS`，评分、候选、action、params 和既有致死/资源耗尽观测不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 `git diff --check` → **exit 0**。未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: 20260927-145032-1790491832675858100-3c63a9fc integrated`
