@@ -12150,3 +12150,43 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `lethal_unavailable_end_turn_obs` 设为 `False`；预期只消失 marker，动作/参数保持旧值。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **TARGET_DIFF_CHECK_OK**；未写入运行时状态、runs、archive、policy、lessons 或 review prompt。
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1600 局复盘（BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速有效火力比值偏低时，缺口可能来自敌方格挡吸收，而不是
+  竞速投影普遍高估；若不把格挡端点和净降窗口绑定，后续无法证伪这两个解释。
+- **EVIDENCE**：精确 run `JB2R06KZ0QFS`（第 1600 局）F17 的持久决策 217 记录
+  `敌血净降11.0/回合 vs 投影21.8/回合`、实际/投影比 `0.50`；同一窗口的
+  `BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS` 显示乐加维林族母格挡 `12`，当前
+  状态显示格挡 `0`。原生 `mechanics/monsters.jsonl` 确认族母初始血池 222，
+  `PLATING_POWER` 是其格挡来源。当前 DPT 观测已有状态文本，但没有可直接聚合的
+  格挡起止读数。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 竞速窗口同时记录
+  `BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS` 与 `BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS`；按
+  `实际/投影比`、格挡下降量和 Boss 遭遇分层。低比值伴随格挡下降支持“格挡吸收”，
+  低比值且格挡不变则支持另立“投影高估/其他机制”假设；观测关闭时 action/params
+  必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `brain/knowledge.py`：新增默认开启、可回滚的
+  `boss_race_effective_dpt_block_obs`。
+- `brain/policy.py`：在已有 Boss DPT 跨回合快照中汇总存活敌方格挡起止值，并追加
+  `BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS`；不进入评分、判决、排序或动作。
+- `brain/selfcheck.py`：新增格挡 `12→0` 夹具，并验证关闭开关只删除 marker、
+  `action/params` 严格不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：统计未来 3~10 局的 Boss DPT marker 数、独立 run 数、实际/投影比、格挡
+  下降量及随后 `GAME_OVER`；先完成归因分层，不因单局比值直接改竞速行为。
+- **调整**：若低比值窗口格挡不变，按 Boss/能力/回合另立投影假设；若格挡端点与
+  状态载荷不一致，先修正观测边界。
+- **撤回**：将 `boss_race_effective_dpt_block_obs` 设为 `False`，保留本批失败样本；
+  预期只消失格挡端点 marker，评分、动作和参数不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；
+  `git diff --check` → **OK**；未写入运行时状态、runs、archive、stats、progression、
+  policy、lessons 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

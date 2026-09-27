@@ -11239,6 +11239,8 @@ def main() -> int:
                           boss_focus_switch_obs=True, focus_switches=0,
                           boss_state_obs=True, boss_state_powers=None,
                           boss_state_powers_next=None,
+                          boss_block_obs=True, boss_block_start=0,
+                          boss_block_next=None,
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
@@ -11269,7 +11271,8 @@ def main() -> int:
                 ],
                 "enemies": [{"index": 0, "enemy_id": "CAP_BOSS",
                               "name": "攻坚巨兽", "current_hp": 185,
-                              "max_hp": 341, "block": 0, "is_alive": True,
+                              "max_hp": 341, "block": boss_block_start,
+                              "is_alive": True,
                               "is_hittable": True,
                               "intents": [{"total_damage": 0}],
                               "powers": (([{"id": "SLIPPERY_POWER", "amount": 8}]
@@ -11328,6 +11331,8 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_effective_dpt_state_obs"] = boss_state_obs
         cap_pol.know.policy[
+            "boss_race_effective_dpt_block_obs"] = boss_block_obs
+        cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
         cap_pol.know.policy[
             "longfight_joint_survival_margin_obs"] = longfight_joint_survival_obs
@@ -11347,6 +11352,8 @@ def main() -> int:
                 cap_pol._focus_played_identity = "CAP_BOSS"
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            if boss_block_next is not None:
+                cap_state["combat"]["enemies"][0]["block"] = boss_block_next
             if boss_state_powers_next is not None:
                 cap_state["combat"]["enemies"][0]["powers"] = (
                     boss_state_powers_next)
@@ -11446,6 +11453,25 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS" not in
             d_combat_boss_state_off.reason), \
         f"Boss 有效火力状态观测开关未严格回滚: {d_combat_boss_state_off.reason}"
+    # 3br-boss-effective-dpt-block：1600-F17 的实际/投影比 0.50 同时伴随
+    # Boss 格挡 12→0；格挡端点必须进入同一跨回合观测，才能在后续窗口区分
+    # 格挡吸收与投影高估。只读且可关闭，action/params 不变。
+    assert knowledge.DEFAULT_POLICY["boss_race_effective_dpt_block_obs"] is True
+    d_combat_boss_block = combat_flip_probe(
+        1.5, sample_effective_round=True, boss_block_start=12,
+        boss_block_next=0)
+    assert ("BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS" in
+            d_combat_boss_block.reason
+            and "Boss格挡端点=12→0" in d_combat_boss_block.reason), \
+        f"Boss DPT 格挡端点观测缺失: {d_combat_boss_block.reason}"
+    d_combat_boss_block_off = combat_flip_probe(
+        1.5, sample_effective_round=True, boss_block_start=12,
+        boss_block_next=0, boss_block_obs=False)
+    assert (d_combat_boss_block_off.action == d_combat_boss_block.action
+            and d_combat_boss_block_off.params == d_combat_boss_block.params
+            and "BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS" not in
+            d_combat_boss_block_off.reason), \
+        f"Boss DPT 格挡端点开关未严格回滚: {d_combat_boss_block_off.reason}"
     # 3br-boss-effective-dpt-window：1589-F17 的 SOUL_FYSH 在上一个 DPT
     # 区间内经历 Fade/Intangible，当前回合首状态已经恢复为 none；只记录当前
     # 状态会把瞬态能力错挂到下一个区间。区间起始状态与当前状态必须并列，且

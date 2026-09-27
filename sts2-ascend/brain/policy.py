@@ -884,6 +884,7 @@ class Policy:
         self._boss_effective_dpt_round = None
         self._boss_effective_dpt_start_hp = None
         self._boss_effective_dpt_start_state = ""
+        self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_projected = 0.0
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
         # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
@@ -1465,6 +1466,19 @@ class Policy:
                 f"hittable={value_text('is_hittable')},block={block_text},"
                 f"powers={power_text}]")
         return "、".join(parts)
+
+    @staticmethod
+    def _boss_effective_dpt_block(enemies: list[dict]) -> float:
+        """Return the live Boss block total for DPT attribution only."""
+        total = 0.0
+        for enemy in enemies or []:
+            if not isinstance(enemy, dict) or enemy.get("is_alive") is False:
+                continue
+            try:
+                total += max(0.0, float(enemy.get("block") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+        return total
 
     def _record_focus_identity_flip(self, target_enemy: dict | None,
                                     enemies: list[dict], why: str,
@@ -4671,6 +4685,7 @@ class Policy:
                             self._boss_effective_dpt_round = None
                             self._boss_effective_dpt_start_hp = None
                             self._boss_effective_dpt_start_state = ""
+                            self._boss_effective_dpt_start_block = 0.0
                             self._boss_effective_dpt_projected = 0.0
                         if (self._boss_effective_dpt_round != round_no):
                             _boss_prev_round = self._boss_effective_dpt_round
@@ -4693,10 +4708,13 @@ class Policy:
                                     float(_boss_prev_start_hp),
                                     float(enemy_hp_total),
                                     float(self._boss_effective_dpt_projected),
-                                    _boss_prev_state)
+                                    _boss_prev_state,
+                                    float(self._boss_effective_dpt_start_block))
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
                                 float(enemy_hp_total))
+                            self._boss_effective_dpt_start_block = (
+                                self._boss_effective_dpt_block(enemies))
                             self._boss_effective_dpt_start_state = (
                                 self._boss_effective_dpt_state(enemies)
                                 if bool(pol.get(
@@ -4707,7 +4725,7 @@ class Policy:
                     if _boss_effective_dpt_pending is not None:
                         (_boss_prev_round, _boss_span, _boss_start_hp,
                          _boss_end_hp, _boss_projected,
-                         _boss_start_state) = (
+                         _boss_start_state, _boss_start_block) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
@@ -4777,6 +4795,15 @@ class Policy:
                             _boss_state_window_tail = (
                                 f"；区间起始状态={_boss_start_state}"
                                 "（BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS）")
+                        _boss_block_tail = ""
+                        if bool(pol.get(
+                                "boss_race_effective_dpt_block_obs", True)):
+                            _boss_end_block = self._boss_effective_dpt_block(
+                                enemies)
+                            _boss_block_tail = (
+                                f"；Boss格挡端点={_boss_start_block:g}→"
+                                f"{_boss_end_block:g}"
+                                "（BOSS_RACE_EFFECTIVE_DPT_BLOCK_OBS）")
                         danger_note += (
                             f"；Boss竞速有效火力对账：采样{_boss_prev_round}→"
                             f"{round_no}回合，敌血净降{_boss_net_dpt:.1f}/回合"
@@ -4785,7 +4812,8 @@ class Policy:
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
                             + _boss_encounter_tail
                             + _boss_ratio_tail + _boss_focus_tail
-                            + _boss_state_tail + _boss_state_window_tail)
+                            + _boss_state_tail + _boss_state_window_tail
+                            + _boss_block_tail)
                     # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                     # F21 OVICOPTER 现场已有长战 TTK 投影与迟滞锁，但普通/精英大血池
                     # 没有 Boss 对等的实际敌血净降读数。沿用既有 power_commit_pool_min
