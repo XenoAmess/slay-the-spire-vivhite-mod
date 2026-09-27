@@ -214,6 +214,8 @@ DEFAULT_POLICY = {
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn.
     "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
+    "vivhite_hp_pressure_playable_reject_obs": True,  # Audit-only Vivhite low-HP LifeCost-card rejection marker; False removes only the marker.
+    "vivhite_hp_pressure_playable_reject_hp_pct": 0.35,  # HP fraction at or below which the low-HP rejection marker is eligible.
     "potion_reserve_end_turn_obs": True,  # Audit-only raw potion-slot snapshot on a lethal no-card end-turn; False removes only this marker.
     "native_mandatory_card_priority": True,  # Native mandatory-card behavior gate:
                                              # ENTHRALLED is playable in the live payload but

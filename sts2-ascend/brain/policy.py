@@ -3960,6 +3960,82 @@ class Policy:
             f"/cards={'|'.join(_rows)}"
             "（LETHAL_PLAYABLE_REJECT_OBS）")
 
+    def _vivhite_hp_pressure_playable_reject_observation_note(
+            self, pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
+            lethal_now, combat, kill_race, race_allin, player_powers) -> str:
+        """Audit affordable LifeCost cards rejected while HP is under pressure.
+
+        This is deliberately called only from the existing score-to-end-turn
+        boundary.  It records the candidate and its effective HP payment but
+        never changes eligibility, score, action, or parameters.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "vivhite_hp_pressure_playable_reject_obs", 1) or 0)))
+            _hp_pct = float(pol.get(
+                "vivhite_hp_pressure_playable_reject_hp_pct", 0.35) or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+            _hp_pct = 0.0
+        if (not _enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or lethal_now
+                or float(incoming) <= 0.0
+                or bool(combat.get("end_turn_will_kill_player"))
+                or float(my_hp) / max(1.0, float(my_max_hp)) > _hp_pct):
+            return ""
+
+        _energy = float(energy)
+        try:
+            _margin = max(0.0, float(character_power_amount(
+                player_powers or [], VIVHITE_MARGIN_POWER_ID)))
+        except (TypeError, ValueError, OverflowError):
+            _margin = 0.0
+        _rows = []
+        for _card in hand or []:
+            if (not _card.get("playable")
+                    or self._card_unavailable(_card)):
+                continue
+            try:
+                _cost = (_energy if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _cost > _energy:
+                continue
+            try:
+                _life = max(0.0, float(self._vivhite_life_cost_raw(
+                    _card, player_powers or []) or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _life <= 0.0:
+                continue
+            _margin_used = min(_life, _margin)
+            try:
+                _damage, _block, _hits = card_numbers(_card)
+                _damage_total = float(_damage) * max(1, int(_hits))
+                _block_total = float(_block)
+            except (TypeError, ValueError, OverflowError):
+                _damage_total = 0.0
+                _block_total = 0.0
+            _card_id = str(_card.get("card_id") or "?").upper()
+            _rows.append(
+                f"{_card_id}@{_cost:g}/life={_life:g}"
+                f"/margin={_margin_used:g}/pay={_life - _margin_used:g}"
+                f"/dmg={_damage_total:g}/block={_block_total:g}")
+        if not _rows:
+            return ""
+        _gap = max(0.0, float(incoming) - float(my_block))
+        return (
+            f";VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS"
+            f":hp={float(my_hp):g}/max_hp={float(my_max_hp):g}"
+            f"/block={float(my_block):g}/incoming={float(incoming):g}"
+            f"/gap={_gap:g}/energy={_energy:g}"
+            f"/kill_race={'yes' if kill_race else 'no'}"
+            f"/race_allin={'yes' if race_allin else 'no'}"
+            f"/cards={'|'.join(_rows)}")
+
     def _boss_free_turn_attack_veto_observation_note(
             self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
             incoming, energy, round_no, pol) -> str:
@@ -8188,6 +8264,11 @@ class Policy:
                 self._lethal_playable_reject_observation_note(
                     pol, hand, energy, my_hp, my_block, incoming, lethal_now,
                     combat, kill_race, race_allin))
+            _hp_pressure_playable_reject_note = (
+                self._vivhite_hp_pressure_playable_reject_observation_note(
+                    pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
+                    lethal_now, combat, kill_race, race_allin,
+                    player.get("powers") or []))
             try:
                 _ritual_skip_obs = bool(int(float(pol.get(
                     "ritual_window_skip_obs", 1) or 0)))
@@ -8237,7 +8318,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

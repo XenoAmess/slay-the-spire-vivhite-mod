@@ -5326,3 +5326,35 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1528~1531 批：低血量非致死 LifeCost 可牌拒绝观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1531-F17-T9 的 `hp=21/block=0/incoming=12` 被现有 12% pyrrhic 致死线归入 `LETHAL_PLAYABLE_REJECT_OBS`，但该标记没有记录 LifeCost、Margin 或实际支付额，无法与“非致死低血量、可支付生命牌被生命门/评分拒绝”切片区分。假设是：在 `incoming>0`、非致死且非强制死亡、HP≤35% 的白绮回合中，若仍有能量足够的 LifeCost 可出牌却最终 `end_turn`，记录原始 LifeCost、Margin 抵扣、有效支付、伤害/格挡和缺口，未来可以把生命门拒绝与原生不可出/hook 锁分开对账；若字段与实际回执不符或动作漂移，假设即证伪。
+- **EVIDENCE**：完整运行文件 `runs/20260928-005043_LVCVFRQVKQ1L.json` 的 F17-T9（决策 284 附近）保留了变身式可出描述与 `LETHAL_PLAYABLE_REJECT_OBS`，随后同一战斗进入 T10 低血支付、T11 `native_blocked_by_hook` 终端锁并 GAME_OVER；由于 `21-12` 落在 12% pyrrhic 线内，现有致死标记不能回答非致死切片。1528~1531 四个 exact-batch run 均在 F17 失败，故本批只补可证伪观测，不把单局链条升级为因果结论。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 combat 按 combat/run/floor 对账；非致死低血拒绝样本应出现 `VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS`，并能核对 `hp/max_hp/block/incoming/gap/energy`、每张牌的 `life/margin/pay/dmg/block`、实际 `applied end_turn {}`、下一回合掉血及终局。致死、强制死亡、能量不足、不可出或非白绮样本不应出现该标记；若标记误报、字段不一致或 action/params 漂移，则关闭开关并保留证据复盘。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有“评估后无值得出的牌”收口处新增白绮专用旁路观测，只接受 `incoming>0`、非 `lethal_now`、非 `end_turn_will_kill_player`、HP 比例不高于 0.35 且仍有能量足够的 LifeCost 可牌；按现有 `_vivhite_life_cost_raw` 与 Margin 口径记录 `life/margin/pay`、伤害/格挡和缺口。不开启任何新候选，不改评分、放行、目标、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_pressure_playable_reject_obs` 与 `vivhite_hp_pressure_playable_reject_hp_pct=0.35`；前者置 `0` 仅移除观测。
+- `sts2-ascend/brain/selfcheck.py`：新增 3z-7 非致死低血对照夹具（21/80 HP、10 incoming、变身式 LifeCost 4，复用既有 `vivhite_hp_cost_play_margin=3.0` 形成拒绝），并验证关闭键下 action/params 不变且 marker 消失。
+- 未修改 `runs/`、`stats`、`progression`、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或原始证据。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
+- 生产三文件 diff 已在报告写入前回读；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 Vivhite combat，按 combat/run/floor 核对 marker 适用边界、LifeCost/Margin/pay 与原生状态、`applied` 回执、下一回合掉血和 GAME_OVER/胜负，不把单次 marker 当作结果修复。
+- 若 marker 出现在致死/强制/能量不足/不可出样本，或数值与原生状态、action/params 不符，先将 `vivhite_hp_pressure_playable_reject_obs=0`；必要时回滚本地提交并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

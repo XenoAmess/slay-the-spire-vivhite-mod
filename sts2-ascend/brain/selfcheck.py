@@ -16219,6 +16219,70 @@ def main() -> int:
         and "LETHAL_PLAYABLE_REJECT_OBS" not in d_lethal_playable_off.reason, \
         f"致死可牌拒绝观测关闭后动作或尾缀漂移: {d_lethal_playable_off and d_lethal_playable_off.reason}"
 
+    # 3z-7) 白绮低血量可支付生命牌的非致死拒绝观测：1531-F17-T9 的
+    #       21 血/0 甲低血窗口作为边界，使用 10 点来袭伤害构造非致死对照；
+    #       变身式仍可出且能量足够，却落入「评估后无值得出的牌」。只增加牌面、
+    #       LifeCost、Margin 和缺口的可证伪观测；关闭键必须保持 action/params 不变。
+    assert abs(float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_pressure_playable_reject_hp_pct"]) - 0.35) < 1e-9, \
+        "DEFAULT_POLICY 缺少白绮低血量可牌拒绝观测阈值"
+
+    def _hp_pressure_playable_reject_state():
+        return _krh_state(1, 21, [{
+            "index": 0,
+            "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+            "name": "白绮的变身式+",
+            "card_type": "Power",
+            "playable": True,
+            "energy_cost": 1,
+            "requires_target": False,
+            "dynamic_values": [
+                {"name": "LifeCost", "current_value": 4},
+                {"name": "Strength", "current_value": 2},
+                {"name": "Dexterity", "current_value": 2},
+            ],
+        }], incoming=10)
+
+    hp_pressure_know = _vivhite_know("sts2-selfcheck-vivhite-hp-pressure-")
+    hp_pressure_know.policy["vivhite_hp_cost_play_margin"] = 3.0
+    hp_pressure_pol = policy.Policy(hp_pressure_know)
+    hp_pressure_ctx = _krh_ctx()
+    d_hp_pressure = None
+    for _ in range(6):
+        d_candidate = hp_pressure_pol.decide(
+            _hp_pressure_playable_reject_state(), hp_pressure_ctx)
+        if d_candidate.action == "end_turn":
+            d_hp_pressure = d_candidate
+            break
+    assert d_hp_pressure is not None \
+        and d_hp_pressure.params == {} \
+        and "VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS" in d_hp_pressure.reason \
+        and "hp=21/max_hp=80/block=0/incoming=10/gap=10/energy=3" in d_hp_pressure.reason \
+        and "VIVHITE_CARD_VIVHITE_TRANSFORMATION" in d_hp_pressure.reason \
+        and "/life=4/margin=0/pay=4" in d_hp_pressure.reason \
+        and "LETHAL_PLAYABLE_REJECT_OBS" not in d_hp_pressure.reason, \
+        f"白绮低血可牌拒绝观测缺失: {d_hp_pressure and d_hp_pressure.reason}"
+
+    hp_pressure_off_know = _vivhite_know(
+        "sts2-selfcheck-vivhite-hp-pressure-off-")
+    hp_pressure_off_know.policy["vivhite_hp_cost_play_margin"] = 3.0
+    hp_pressure_off_know.policy[
+        "vivhite_hp_pressure_playable_reject_obs"] = False
+    hp_pressure_off_pol = policy.Policy(hp_pressure_off_know)
+    hp_pressure_off_ctx = _krh_ctx()
+    d_hp_pressure_off = None
+    for _ in range(6):
+        d_candidate = hp_pressure_off_pol.decide(
+            _hp_pressure_playable_reject_state(), hp_pressure_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_hp_pressure_off = d_candidate
+            break
+    assert d_hp_pressure_off is not None \
+        and d_hp_pressure_off.action == d_hp_pressure.action \
+        and d_hp_pressure_off.params == d_hp_pressure.params \
+        and "VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS" not in d_hp_pressure_off.reason, \
+        f"白绮低血可牌拒绝观测关闭后动作或尾缀漂移: {d_hp_pressure_off and d_hp_pressure_off.reason}"
+
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
     #    否则重启后的一次性修复会被标记跳过、灌水数据永久留存
