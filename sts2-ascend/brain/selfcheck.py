@@ -7577,6 +7577,27 @@ def main() -> int:
     assert "滑溜烧墙审计" not in why_zero_layers, \
         f"无滑溜目标误挂烧墙审计注: {why_zero_layers}"
 
+    # 同折算产出且同分时，烧层应使用低费牌；键关闭必须严格回滚。
+    assert knowledge.DEFAULT_POLICY["slippery_burn_cost_tiebreak"] is True, \
+        "DEFAULT_POLICY 缺少滑溜烧层低费 tie-break 或默认值被改"
+    _, _, why_sl_strike = sl_score(
+        sl_strike, sl_enemy(layers=8))
+    sl_burn_high = sl_pol._slippery_burn_cost_key(
+        why_sl_bludgeon, 0, 3, sl_pol.know.policy)
+    sl_burn_low = sl_pol._slippery_burn_cost_key(
+        why_sl_strike, 0, 1, sl_pol.know.policy)
+    assert sl_burn_high == (1.0, 3.0) and sl_burn_low == (1.0, 1.0) \
+            and sl_pol._slippery_burn_tiebreak_wins(
+                1.0, 1.0, sl_burn_low, sl_burn_high) \
+            and not sl_pol._slippery_burn_tiebreak_wins(
+                1.0, 1.0, sl_burn_high, sl_burn_low), \
+        f"滑溜低费 tie-break 口径错误: high={sl_burn_high} low={sl_burn_low}"
+    sl_burn_off = dict(sl_pol.know.policy)
+    sl_burn_off["slippery_burn_cost_tiebreak"] = False
+    assert sl_pol._slippery_burn_cost_key(
+        why_sl_bludgeon, 0, 3, sl_burn_off) is None, \
+        "滑溜低费 tie-break 关闭后未严格回滚"
+
     # block 必须先逐段吸收：全挡不掉层；部分穿甲只让该 hit 限伤并掉一层。
     s_full_block, _, why_full_block = sl_score(sl_bludgeon, sl_enemy(block=40, layers=8))
     s_full_plain, _, _ = sl_score(sl_bludgeon, sl_enemy(block=40, layers=None))

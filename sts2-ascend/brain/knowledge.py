@@ -98,6 +98,7 @@ DEFAULT_POLICY = {
                                                      # 旧的「任一组合可行即放行」口径（1132/1137/1147
                                                      # 三例 KIN 实际阵亡暴露了存在性放行的风险）
     # --- combat ---
+    "slippery_burn_cost_tiebreak": True,  # 同折算产出且同分时，滑溜烧层优先低费；False 严格回滚旧候选顺序
     "sleep_guard_min_stacks": 2.0,  # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：
                                       # 敌人沉睡计数（ASLEEP_POWER）≥本值且攻击将造成未格挡
                                       # 伤害且非击杀时，攻击候选压到禁玩线——LAGAVULIN_MATRIARCH

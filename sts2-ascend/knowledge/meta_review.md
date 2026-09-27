@@ -11516,6 +11516,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-28｜第 1622 局复盘（SLIPPERY_BURN_COST_TIEBREAK）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：VANTOM 的 `SLIPPERY_POWER` 逐 hit 将伤害压成 1，现有 `SLIPPERY_BURN_AUDIT` 已反复显示高费单发与低费单发产生相同折算输出，但外层候选在同分时仍按手牌顺序保留高费牌；因此烧墙期可能无谓消耗更多能量，缩短后续可防御回合。该假设可证伪：未来 3~10 个独立滑溜战斗中，若同分同折算输出样本的低费 tie-break 命中后仍不降低高费单发选择，或低费选择与更高损失稳定相关，则撤回。
+- **EVIDENCE**：精确失败 run `16PX082G9Y8S`（第 1622 局，`sts2-ascend/knowledge/runs/20260928-063355_16PX082G9Y8S.json`）完整链 192 条已核读。F17 VANTOM 原生初始 HP=173、`SLIPPERY_POWER×8`；D166、D170、D173~D183 多次记录单次命中只破 1 层，且已有 `SLIPPERY_BURN_AUDIT`。D166~D190 的竞速链将有效输出远低于投影，D191 仍为 `POTION_RESERVE_END_TURN_OBS`/`KILL_RACE_TERMINAL_AUDIT_OBS` 后无法行动，D192 `GAME_OVER`。历史同一审计已跨 76 个 run 文件出现，超过既定 3 局行为化门槛；native mechanics 记录 Vantom 的 8 层 Slippery 与逐 hit 破层语义，支持按折算输出而非牌面伤害做 tie-break。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立滑溜战斗按 `run_id`、floor/turn、折算输出、旧/新能量费、是否出现 `SLIPPERY_BURN_COST_TIEBREAK`、后续敌血进展与终局分层；同分同折算输出时应只见低费胜出。非滑溜、AOE、不同折算输出或分数不相等的候选不得出现该 marker。若信号不成立，关闭策略键并保留旧审计继续观测。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `slippery_burn_cost_tiebreak`。
+- `sts2-ascend/brain/policy.py`：复用 `_score_play` 已生成的“逐段折算”文本，在外层候选仅于“同分+同折算输出+实际单体目标”时偏向更低能量费，并追加 `SLIPPERY_BURN_COST_TIEBREAK`；不改伤害模型、目标选择、AOE 或不同分数排序。设为 `False` 严格回滚。
+- `sts2-ascend/brain/selfcheck.py`：覆盖高费/低费同输出比较、反向比较及关闭键回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集未来 3~10 个独立窗口，重点核对 tie-break 命中后的剩余能量、敌血净降/回合与 `GAME_OVER`；若仍出现同输出高费胜出，先检查分数是否实际不相等或审计文本缺失，再决定是否扩展行为范围。
+- **撤回**：将 `slippery_burn_cost_tiebreak` 设为 `False`；预期仅恢复旧的同分候选顺序并移除新 marker，保留既有 `SLIPPERY_BURN_AUDIT` 与竞速审计。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
 ## 2026-09-20｜第 1566 局复盘（exact run V6RT4KXQNTD5；MINION_ILLUSION_FOCUS_OBS）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL

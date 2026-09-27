@@ -6536,6 +6536,7 @@ class Policy:
                                 + "（ENEMY_POWERS_SNAPSHOT_OBS）")
 
         best = None  # (policy_score, card, target_index, why)
+        _best_slippery_burn_key = None
         # If the policy threshold suppresses every option, a separately-accounted
         # positive immediate margin may still spend otherwise-wasted energy.  The
         # fifth tuple field records whether this is a normal fallback or a single
@@ -7305,6 +7306,8 @@ class Policy:
                                                    player_powers=player.get("powers") or [],
                                                    observed_hand_count=len(hand),
                                                    race_lethal_cover=race_lethal_cover)
+            _slippery_burn_key = self._slippery_burn_cost_key(
+                why, target, cost, pol)
             _free_function_base_score = score
             _free_function_candidate = (
                 cost == 0
@@ -7700,8 +7703,21 @@ class Policy:
                 _tax_watch[c.get("index")][1] = (
                     f"参选{score:.1f}"
                     + ("含止损" if "手牌税止损计价" in why else "无附加"))
-            if eligible_for_best and (best is None or score > best[0]):
+            _slippery_burn_tiebreak = (
+                best is not None
+                and self._slippery_burn_tiebreak_wins(
+                    score, best[0], _slippery_burn_key,
+                    _best_slippery_burn_key))
+            if eligible_for_best and (
+                    best is None or score > best[0] or _slippery_burn_tiebreak):
+                if _slippery_burn_tiebreak:
+                    why += (
+                        f"｜同折算产出{_slippery_burn_key[0]:g}时优先低费："
+                        f"{_slippery_burn_key[1]:g}费<旧"
+                        f"{_best_slippery_burn_key[1]:g}费"
+                        "（SLIPPERY_BURN_COST_TIEBREAK）")
                 best = (score, c, target, why)
+                _best_slippery_burn_key = _slippery_burn_key
 
             if immediate_score > 0.0 and safe_trial and not _hp_gate_hit:
                 if successful_plays > 0:
@@ -10654,6 +10670,54 @@ class Policy:
     def _enemy_slippery_stack(self, enemy: dict) -> float:
         """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "slipper", "滑溜")
+
+    def _slippery_burn_cost_key(
+            self, why: str, target, cost: float, pol: dict
+    ) -> tuple[float, float] | None:
+        """Return the folded-output/cost key for a single-target Slippery play.
+
+        The output is read from the same text produced by ``_score_play`` so
+        the tiebreak cannot create a second damage model.  It is deliberately
+        limited to an actual target and an existing burn audit; AOE and cards
+        without a readable audit keep the old ordering.
+        """
+        if not bool(pol.get("slippery_burn_cost_tiebreak", True)):
+            return None
+        if target is None or not isinstance(why, str):
+            return None
+        if "滑溜烧墙审计：每费破层" not in why:
+            return None
+        folded = re.search(r"逐段折算≈([0-9]+(?:\.[0-9]+)?)", why)
+        if folded is None:
+            return None
+        try:
+            folded_output = float(folded.group(1))
+            energy_cost = float(cost)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if folded_output < 0.0 or energy_cost < 0.0:
+            return None
+        return round(folded_output, 6), round(energy_cost, 6)
+
+    @staticmethod
+    def _slippery_burn_tiebreak_wins(
+            candidate_score: float, best_score: float,
+            candidate_key: tuple[float, float] | None,
+            best_key: tuple[float, float] | None,
+    ) -> bool:
+        """Prefer lower cost only for an exact score/output tie."""
+        if candidate_key is None or best_key is None:
+            return False
+        try:
+            return (
+                math.isclose(candidate_score, best_score, rel_tol=0.0,
+                             abs_tol=1e-9)
+                and math.isclose(candidate_key[0], best_key[0], rel_tol=0.0,
+                                 abs_tol=1e-9)
+                and candidate_key[1] + 1e-9 < best_key[1]
+            )
+        except (TypeError, ValueError, IndexError):
+            return False
 
     def _enemy_intangible_stack(self, enemy: dict) -> float:
         """读取敌人的无实体层数（INTANGIBLE_POWER），兼容 id/power_id/name 载荷。"""
