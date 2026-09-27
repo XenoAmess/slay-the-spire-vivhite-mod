@@ -16485,3 +16485,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.327556343566647局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.5389267131616986局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.519832816172557局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：3/1495 胜，当前目标进阶 3
+
+## 第 1496 局复盘（2026-09-27 17:13）
+- 结果：💀 失败｜进阶 3｜到达层数 11｜当局评分 11
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：无
+- 本局遗物：RED_MASK, WAR_PAINT, REPTILE_TRINKET
+- 战斗记录：F2 Monster战 掉血19｜自损18（可行动段18/非行动段17，SELF_LOSS_PHASE_OBS）; F3 Unknown战 掉血0｜自损16（可行动段16/非行动段0，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血14｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）; F7 Elite战 掉血42｜自损32（可行动段32/非行动段26，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血47｜自损28（可行动段28/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/4.978652619746801局)，THINKING_AHEAD(36分/6.958221457658102局)，FISTICUFFS(35分/6.989665643361626局)，VIVHITE_CARD_GEODESIC_VEIL(35分/3.8974700307833507局)，AUTOMATION(35分/4.397898383880652局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.319409896364164局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.526540469665633局)，VIVHITE_CARD_DIFFERENTIAL_SAMPLING(22分/2.5110134013159535局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：3/1496 胜，当前目标进阶 3
