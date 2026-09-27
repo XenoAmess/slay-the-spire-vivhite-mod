@@ -13317,3 +13317,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.4786384584227275局)，BASH(14分/2.9434633109730792局)，BODY_SLAM(15分/2.1221503952032954局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1611 胜，当前目标进阶 0
+
+## 第 1612 局复盘（2026-09-27 23:24）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：CINDER, TRUE_GRIT, ANGER, VICIOUS, CINDER, SHRUG_IT_OFF, SHRUG_IT_OFF, CINDER, CINDER, DISMANTLE, OMNISLICE, IRON_WAVE, IMPERVIOUS, CINDER, THUNDERCLAP, HAND_OF_GREED, UNRELENTING
+- 本局遗物：CANDELABRA, JUZU_BRACELET
+- 战斗记录：F14 Monster战 掉血1; F15 Monster战 掉血10; F17 Boss战 掉血67｜竞速审计：T2判死→实战14回合获胜; F19 Monster战 掉血27; F20 Monster战 掉血27; F22 Monster战 掉血26｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.8238696448761043局)，OFFERING(26分/17.494320293752587局)，FEED(25分/35.09314301397099局)，PACTS_END(25分/66.56424606916943局)，BRAND(25分/2.0592706149056634局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.466463223818248局)，BASH(14分/2.9331611893846734局)，BODY_SLAM(15分/2.114722868820084局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.39 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F22——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F22——药水交药线部分胜利回收）
+- 生涯战绩：0/1612 胜，当前目标进阶 0
