@@ -245,6 +245,70 @@ def kill_race_free_energy_function_note(
         "（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）")
 
 
+def vivhite_lethal_end_turn_function_note(
+        hand: list | None, energy, my_hp, incoming, *, enabled: bool = True,
+        is_unavailable=None, card_type=None, life_pay=None,
+        native_reason=None) -> str:
+    """Audit safe-vs-fatal functional cards left in a lethal Boss end turn.
+
+    This is deliberately a pure observation helper. The caller supplies the
+    profile-specific type and realized LifeCost callbacks; the helper never
+    changes eligibility, scoring, or the selected action.
+    """
+    if not enabled:
+        return ""
+    try:
+        current_energy = max(0.0, float(energy or 0.0))
+        hp_value = float(my_hp or 0.0)
+        incoming_value = float(incoming or 0.0)
+    except (TypeError, ValueError, OverflowError):
+        return ""
+    unavailable = is_unavailable or (lambda _card: False)
+    type_of = card_type or (lambda card: card.get("card_type") or "")
+    pay_for = life_pay or (lambda _card: 0.0)
+    native_for = native_reason or (
+        lambda card: card.get("unplayable_reason") or "none")
+    rows = []
+    for card in hand or []:
+        if (not isinstance(card, dict) or not card.get("playable")
+                or unavailable(card) or card.get("costs_x")):
+            continue
+        try:
+            cost = float(card.get("energy_cost") or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if cost < 0.0 or cost > current_energy:
+            continue
+        damage, block, _hits = card_numbers(card)
+        if damage > 0 or block > 0:
+            continue
+        kind = str(type_of(card) or "").casefold()
+        if kind not in {"skill", "power", "ability"}:
+            continue
+        try:
+            paid = max(0.0, float(pay_for(card) or 0.0))
+        except (TypeError, ValueError, OverflowError):
+            paid = 0.0
+        post_hp = hp_value - paid
+        try:
+            native = str(native_for(card) or "none").replace("/", "_")
+        except Exception:
+            native = "none"
+        label = str(card.get("card_id") or card.get("name") or "unknown")
+        rows.append(
+            f"{label}:type={kind}/energy={cost:g}/pay={paid:g}"
+            f"/hp_after={post_hp:g}/safe={'yes' if post_hp >= 1.0 else 'no'}"
+            f"/native={native}")
+    if not rows:
+        return ""
+    return (
+        "; lethal Boss end-turn function audit:"
+        f"count={len(rows)}/cards={'|'.join(rows)}"
+        f"/hp={hp_value:g}/energy={current_energy:g}"
+        f"/incoming={incoming_value:g}"
+        " (VIVHITE_LETHAL_END_TURN_FUNCTION_OBS)")
+
+
 # 幕边界常量（生涯 320 场一幕 Boss 全部 F17、24 场二幕 Boss 全部 F33 实证；
 # 三幕按 51 估算）——_floor_act/_floors_to_boss 的唯一口径，不再各写一份
 _ACT_BOSS_FLOORS = (17, 33, 51)
@@ -7580,6 +7644,31 @@ class Policy:
                     _ritual_skip_note += _lethal_note.replace(
                         "KILL_RACE_FREE_ENERGY_FUNCTION_OBS",
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
+            _lethal_function_note = ""
+            try:
+                _lethal_function_obs = bool(int(float(pol.get(
+                    "vivhite_lethal_end_turn_function_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _lethal_function_obs = False
+            if (_lethal_function_obs and lethal_now
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID
+                    and cctx.get("node_type") == "Boss"):
+                def _lethal_function_type(_card):
+                    _entry = self._strategy_card(_card)
+                    return (_entry.card_type if _entry is not None
+                            else str(_card.get("card_type") or "").casefold())
+
+                _lethal_function_note = (
+                    vivhite_lethal_end_turn_function_note(
+                        hand, energy, my_hp, incoming,
+                        is_unavailable=self._card_unavailable,
+                        card_type=_lethal_function_type,
+                        life_pay=lambda _card: self._vivhite_hp_pay(
+                            _card, player.get("powers") or []),
+                        native_reason=self._native_card_unplayable_reason))
+                if _lethal_function_note:
+                    _ritual_skip_note += _lethal_function_note
             return Decision("end_turn", {},
                             f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_resc_invuln_note}{_invuln_end_turn_note}{_ritual_skip_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)

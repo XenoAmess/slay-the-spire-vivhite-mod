@@ -5040,3 +5040,34 @@ production_code_commit: `b96f7698e6f496384f4f2a3860d0b4d02a7d7a24`
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1464~1466 批：Boss 致死空过中的功能牌 LifeCost 观测
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 见交接）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1466-F50 的最后 `end_turn` 可能把“面板可执行”误当成“生命支付后可执行”。若致死 Boss 空过时存在 `safe=yes` 的非伤害/格挡功能牌，则它是可行动救场候选；若只出现 `safe=no` 或没有候选，说明该终局不是漏掉安全功能牌，假设被证伪。
+- **EVIDENCE**：精确批次为 1464~1466；完整失败运行文件为 `runs/20260927-090113_9LLYXFDJYHGT.json`。1466-F50 末段在 HP=1、incoming=36、energy=3 时，`end_turn` 的手牌摘要仍把 `回溯咒文+` 标为可玩；该牌是 Skill、能量1，但白绮 LifeCost=6，支付后会低于1血。既有手牌摘要没有记录实付血/支付后 HP，既有致死功能观测只覆盖0费回能牌，无法区分这种致命假阳性与真正安全功能牌。该运行链为完整文件中的选定定位证据，不把截断 packet 当作完整聚合。
+- **EXPECTED_SIGNAL**：未来3~10场独立白绮 Boss 战中，致死 `end_turn` reason 只在适用场景追加 `VIVHITE_LETHAL_END_TURN_FUNCTION_OBS`，逐牌披露 type/energy/pay/hp_after/safe/native。出现 `safe=yes` 时可直接定位后续行为候选；持续 `safe=no`/无行则支持“本批是 LifeCost 假阳性而非漏救场”。开关为0时注记消失，action/params 保持一致。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_lethal_end_turn_function_obs=1`，设为0严格关闭观测。
+- `sts2-ascend/brain/policy.py`：新增纯观测 helper，筛选白绮 Boss 致死空过中面板可玩、能量可负担、非伤害/格挡的 Skill/Power/Ability，调用实际 `_vivhite_hp_pay` 计算支付后 HP，并把结果追加到既有 end_turn reason；不改评分、候选、门槛、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 `Backtracking Spell` 类致命 `safe=no`、零血税 `safe=yes`、开关回滚和默认键迁移。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档或原始证据；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 最终生产 diff 已逐文件回读；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计3~10场独立 Boss 战，按 `combat` 对账标记行、实际支付、支付后 HP、下一意图与存活/终局；同一战斗多条 tick 不算独立样本。若 `safe` 与原生结果不符、非适用场景误挂或 action/params 漂移，将 `vivhite_lethal_end_turn_function_obs` 设为0，必要时回滚本地提交。若稳定出现 `safe=yes`，再基于新证据单独立项行为改动。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

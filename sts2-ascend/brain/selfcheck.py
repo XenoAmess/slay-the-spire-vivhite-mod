@@ -16865,6 +16865,43 @@ def main() -> int:
         "kill_race_lethal_free_energy_function_obs") is True, \
         "lethal free-energy observation default key missing"
 
+    # 3klt) A lethal Boss end_turn must expose whether a payload-playable
+    #       functional card is actually safe after Vivhite LifeCost. This is
+    #       audit-only: a Backtracking Spell-like card at hp=1 remains a
+    #       fatal false-positive despite its payload checkmark.
+    klt_card = {
+        "card_id": "VIVHITE_CARD_BACKTRACKING_SPELL",
+        "name": "Backtracking Spell",
+        "playable": True,
+        "energy_cost": 1,
+        "card_type": "skill",
+    }
+    klt_note = policy.vivhite_lethal_end_turn_function_note(
+        [klt_card], 3, 1, 36,
+        is_unavailable=lambda _card: False,
+        life_pay=lambda _card: 6,
+        native_reason=lambda _card: "none")
+    assert "VIVHITE_LETHAL_END_TURN_FUNCTION_OBS" in klt_note \
+        and "type=skill/energy=1/pay=6/hp_after=-5/safe=no/native=none" in klt_note \
+        and "hp=1/energy=3/incoming=36" in klt_note, \
+        f"lethal function audit missed unsafe playable card: {klt_note}"
+    assert policy.vivhite_lethal_end_turn_function_note(
+        [klt_card], 3, 1, 36, enabled=False,
+        is_unavailable=lambda _card: False,
+        life_pay=lambda _card: 6) == "", \
+        "lethal function audit did not roll back"
+    klt_safe = dict(klt_card, card_id="VIVHITE_CARD_EVENT_LOOP")
+    klt_safe_note = policy.vivhite_lethal_end_turn_function_note(
+        [klt_safe], 3, 4, 12,
+        is_unavailable=lambda _card: False,
+        life_pay=lambda _card: 0,
+        native_reason=lambda _card: "none")
+    assert "/pay=0/hp_after=4/safe=yes/native=none" in klt_safe_note, \
+        f"lethal function audit did not classify safe functional card: {klt_safe_note}"
+    assert kfe_know.policy.get(
+        "vivhite_lethal_end_turn_function_obs") == 1, \
+        "lethal end-turn function observation default key missing"
+
     print("SELFCHECK OK")
     return 0
 
