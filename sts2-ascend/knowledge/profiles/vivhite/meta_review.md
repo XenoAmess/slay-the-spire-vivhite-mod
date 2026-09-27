@@ -5389,34 +5389,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 1539~1540 批：斩杀竞速与原生生命支付终端锁链路观测
-
-日期：2026-09-28
-production_code_commit: pending local commit（最终 SHA 见交接）
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：1540-F22 的失败链不是普通能量耗尽空过，而是同一场已进入 `kill_race`，随后在 HP=1 时因全部非诅咒手牌被原生 `blocked_by_hook` 锁住，只能 `end_turn` 并进入 `GAME_OVER`。现有竞速终端审计只覆盖无可负担/可玩牌分支，因而可能丢失“竞速投影→生命支付终端锁→终局”的可证伪连接。
-- **EVIDENCE**：完整运行文件 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-021722_ZFXP8VSJXMMV.json` 的 F22 决策 364~373 保留了该链：364/365 仍以竞速不可行投影强攻，366 记录 HP=25、incoming=14 的低血拒绝，368~371 连续生命支付并继续报告 `ttk` 大于可存活回合，372 能量耗尽，373 为 HP=1、incoming=20、`end_turn_lethal=yes`、5/5 张非诅咒牌 `blocked_by_hook` 的 `VIVHITE_HP_TERMINAL_LOCK_OBS`，374 紧接 `GAME_OVER`。此前 `KILL_RACE_TERMINAL_AUDIT_OBS` 只在普通无牌资源耗尽收口出现。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat 中，仅当同一 Policy 已有有效竞速锁存/投影且进入生命支付终端锁、至少一张非诅咒牌为原生 `blocked_by_hook` 时，`end_turn` reason 才追加 `KILL_RACE_TERMINAL_LOCK_OBS`，字段包含 `terminal_round/lock_round/last_round/pool/dpt/ttk/tsurv/hp/block/incoming/energy/hook_blocked`；随后既有 `KILL_RACE_TERMINAL_OUTCOME_OBS` 应能在 `GAME_OVER` 恢复相同终端回合。`action/params` 必须逐条不变；关闭 `kill_race_terminal_lock_obs=0` 应只移除新 marker。若无锁存、非终端锁或字段与原始状态不符仍出现 marker，则假设被证伪。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_terminal_lock_obs`，仅控制该只读 marker。
-- `sts2-ascend/brain/policy.py`：在白绮原生生命支付终端锁分支追加竞速锁存对账，并把终端快照交给既有 `GAME_OVER` 结局链；扩展进程重载解析以识别新 marker。未改变评分、候选、生命支付资格、动作或参数。
-- `sts2-ascend/brain/selfcheck.py`：覆盖两次终端锁确认、字段连接、`GAME_OVER` 结局、重载恢复及开关回滚；未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime` 或原始证据。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
-- 代码 diff 已完整回读，`git diff --check` 通过；最终报告写入后仍会再次执行 selfcheck、diff 检查并只提交本批目标文件。
-
-## FOLLOW-UP / ROLLBACK
-
-- 后续只统计 3~10 个独立 Boss combat，按 combat/run/floor 核对锁存投影、终端字段、真实 `applied` action/params、支付后掉血与 `GAME_OVER`/胜负；marker 本身不作为行为改善证据。
-- 若 marker 出现在无竞速锁存、非白绮/非终端锁分支，或字段/回执不一致，先将 `kill_race_terminal_lock_obs=0`，必要时回滚本地 commit，并保留本批原始证据。
-
-## REPLAY
-
-retry_resolution: none (no failed_review_replay packages requested)

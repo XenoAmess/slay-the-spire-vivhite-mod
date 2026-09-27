@@ -3829,56 +3829,6 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
-    def _kill_race_terminal_lock_observation_note(
-            self, pol, terminal_round, my_hp, my_block, incoming, energy,
-            hook_blocked, card_count, end_turn_lethal) -> str:
-        """Link a native life-cost lock to the latest kill-race projection.
-
-        A terminal ``blocked_by_hook`` hand is not the same resource boundary
-        as an energy-exhausted end turn. Keep this as an audit-only companion
-        so the two terminal paths can be separated without changing action
-        selection or life-cost eligibility.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "kill_race_terminal_lock_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            _enabled = False
-        if not _enabled or not bool(getattr(self, "_krace_latch", False)):
-            return ""
-        _projection = getattr(self, "_race_terminal_projection", None)
-        if not isinstance(_projection, dict):
-            return ""
-        try:
-            _pool = float(_projection["enemy_hp"])
-            _dpt = float(_projection["dpt"])
-            _ttk = float(_projection["ttk"])
-            _tsurv = float(_projection["tsurv"])
-            _hook_blocked = int(hook_blocked)
-            _card_count = int(card_count)
-        except (KeyError, TypeError, ValueError, OverflowError):
-            return ""
-        if _hook_blocked <= 0 or _card_count <= 0:
-            return ""
-
-        def _round_text(value) -> str:
-            try:
-                return str(int(value))
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        return (
-            f"；竞速终端锁对账：terminal_round={_round_text(terminal_round)}"
-            f"/lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
-            f"/last_round={_round_text(_projection.get('round'))}"
-            f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
-            f"/hp={float(my_hp):g}/block={float(my_block):g}"
-            f"/incoming={float(incoming):g}/energy={float(energy):g}"
-            f"/hook_blocked={_hook_blocked}/{_card_count}"
-            "/native=blocked_by_hook"
-            f"/end_turn_lethal={'yes' if end_turn_lethal else 'no'}"
-            "（KILL_RACE_TERMINAL_LOCK_OBS）")
-
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
         """Expose raw potion slots at a lethal no-card boundary.
 
@@ -3987,22 +3937,11 @@ class Policy:
                 and str(row.get("floor")) != str(floor)):
             return
         reason = str(row.get("reason") or "")
-        marker = ""
-        audit_prefix = ""
-        lock_marker = False
-        marker_at = -1
-        for candidate, prefix, is_lock in (
-                ("KILL_RACE_TERMINAL_AUDIT_OBS", "竞速终端对账：", False),
-                ("KILL_RACE_TERMINAL_LOCK_OBS", "竞速终端锁对账：", True)):
-            candidate_at = reason.rfind(candidate)
-            if candidate_at >= 0 and candidate_at > marker_at:
-                marker = candidate
-                audit_prefix = prefix
-                lock_marker = is_lock
-                marker_at = candidate_at
+        marker = "KILL_RACE_TERMINAL_AUDIT_OBS"
+        marker_at = reason.rfind(marker)
         if marker_at < 0:
             return
-        audit_at = reason.rfind(audit_prefix, 0, marker_at)
+        audit_at = reason.rfind("竞速终端对账：", 0, marker_at)
         if audit_at < 0:
             return
         audit = reason[audit_at:marker_at]
@@ -4028,11 +3967,9 @@ class Policy:
                 "ttk": _number("ttk"),
                 "tsurv": _number("tsurv"),
             }
-            _terminal_round = (_number("terminal_round")
-                               if lock_marker else _last_round)
             _pending = {
                 "projection": _projection,
-                "terminal_round": _terminal_round,
+                "terminal_round": _last_round,
                 "lock_round": _lock_round,
                 "hp": _number("hp"),
                 "block": _number("block"),
@@ -4421,13 +4358,6 @@ class Policy:
                 _ff_tax_note = (f"｜手牌滞留税HAND_END_TAX=每回合{_ff_tax_total}"
                                 f"（{_ff_tax_detail}）" if _ff_tax_total > 0 else "")
                 _terminal_lock_note = ""
-                _hook_blocked = 0
-                if (getattr(self.character_strategy, "profile_id", None)
-                        == VIVHITE_PROFILE_ID):
-                    _hook_blocked = sum(
-                        1 for _card in non_curse_cards
-                        if self._native_card_unplayable_reason(
-                            _card).casefold().startswith("blocked_by_hook"))
                 try:
                     _terminal_lock_obs = bool(int(float(pol.get(
                         "vivhite_hp_terminal_lock_obs", 1) or 0)))
@@ -4452,6 +4382,10 @@ class Policy:
                 if (_terminal_lock_obs
                         and getattr(self.character_strategy, "profile_id", None)
                         == VIVHITE_PROFILE_ID):
+                    _hook_blocked = sum(
+                        1 for _card in non_curse_cards
+                        if self._native_card_unplayable_reason(
+                            _card).casefold().startswith("blocked_by_hook"))
                     _terminal_rows = []
                     _terminal_margin = max(0.0, character_power_amount(
                         player.get("powers") or [], VIVHITE_MARGIN_POWER_ID))
@@ -4502,30 +4436,6 @@ class Policy:
                         f"/cards={'|'.join(_terminal_rows)}"
                         f"{_terminal_chain_note}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
-                _terminal_race_lock_note = (
-                    self._kill_race_terminal_lock_observation_note(
-                        pol, round_no, my_hp, my_block, incoming, energy,
-                        _hook_blocked, len(non_curse_cards),
-                        bool(combat.get("end_turn_will_kill_player"))))
-                if _terminal_race_lock_note:
-                    _terminal_lock_note += _terminal_race_lock_note
-                    _projection = getattr(
-                        self, "_race_terminal_projection", None)
-                    if (isinstance(_projection, dict)
-                            and (self._race_terminal_outcome_pending is None
-                                 or self._race_terminal_outcome_pending.get(
-                                     "terminal_round") != round_no)):
-                        self._race_terminal_outcome_pending = {
-                            "projection": dict(_projection),
-                            "terminal_round": round_no,
-                            "lock_round": getattr(
-                                self, "_krace_latch_round", None),
-                            "hp": my_hp,
-                            "block": my_block,
-                            "incoming": incoming,
-                            "energy": energy,
-                        }
-                        self._race_terminal_outcome_reported = False
                 return Decision(
                     "end_turn", {},
                     f"战斗：当前{my_hp}生命，全部非诅咒手牌因謦欬会令生命低于1，"
