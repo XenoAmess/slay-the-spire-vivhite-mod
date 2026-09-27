@@ -12190,3 +12190,46 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
   `git diff --check` → **OK**；未写入运行时状态、runs、archive、stats、progression、
   policy、lessons 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1601 局复盘（KILL_RACE_TERMINAL_AUDIT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss/长战在 `kill_race` 已锁定后进入致死无牌空过时，终局资源耗尽
+  主要是此前已证实的 `ttk > tsurv` 竞速必败，而不是终端回合仍有可选救场牌却主动
+  `end_turn`。该假设可证伪：若新标记在没有同场竞速锁、没有最近投影，或记录的
+  `ttk <= tsurv` 时出现，则当前归因不成立。
+- **EVIDENCE**：精确 run `QTJ5TM93ZTQA`（第 1601 局）完整 244 条持久决策链的
+  F17 记录中，D233 已写出“击杀还需 4 回合 > 可存活 1 回合”；D239-D241 仍为
+  `ttk=2 > tsurv=0` 的全攻竞速，随后 D242 为 HP=10、格挡=0、来袭=22、能量=0
+  的 `end_turn`，手牌仅剩两张 1 费防御牌且均 `not_enough_energy`，下一条 D243
+  即 `GAME_OVER`。当时两张防御合计 12 格挡仍小于严格存活所需缺口，现有证据支持
+  “终端已不可救”这一观测方向，但不反推更早回合一定没有行为改进空间。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立相关窗口中，已有
+  `LETHAL_UNAVAILABLE_END_TURN_OBS` 且同场 `kill_race` 已锁定时，应追加
+  `KILL_RACE_TERMINAL_AUDIT_OBS`，带 `lock_round/last_round/pool/dpt/ttk/tsurv`
+  与终端 `hp/block/incoming/energy`；关闭专用键、无竞速锁、无最近投影或安全窗口
+  时不得追加。后续应按同一 run 的下一状态、`GAME_OVER`、手牌可负担性验证该归因。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的
+  `kill_race_terminal_audit_obs`，不改受保护的 `knowledge/policy.json`。
+- `sts2-ascend/brain/policy.py`：在竞速判死 tick 保存最近一次 `pool/dpt/ttk/tsurv`
+  快照；仅在既有致死无牌空过尾缀和同场竞速锁同时成立时追加终端对账文本。该路径
+  不参与评分、排序、竞速判决、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：增加真实竞速投影保存断言，并验证新尾缀、关闭
+  开关后的回滚，以及 action/params 和既有致死观测保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 个独立 run，按 run_id、floor/turn、竞速锁回合、最近
+  `ttk/tsurv/dpt/pool`、终端 HP/block/incoming/energy、`energy_locked`、下一决策
+  与 `GAME_OVER` 分层。样本成熟前不改竞速全攻或防守行为；若对账值与同场投影不一致，
+  先修正快照边界。
+- **撤回**：将 `kill_race_terminal_audit_obs` 设为 `False`；预期只移除新尾缀，
+  `LETHAL_UNAVAILABLE_END_TURN_OBS`、action 与 params 保持不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标
+  文件 `git diff --check` 通过；未修改 `.runtime/`、runs、archive、stats、
+  progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

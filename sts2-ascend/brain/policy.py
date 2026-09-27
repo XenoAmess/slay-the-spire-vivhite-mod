@@ -871,6 +871,7 @@ class Policy:
         self._krace_latch_round = None  # 入锁回合号（RACE_UPSHIFT_STALE 新鲜窗账）
         self._krace_dmg_sustained = 0.0  # 剔除药水回合后的持续输出累计（第708局复盘）
         self._krace_potion_rounds = set()  # 本场使用过药水的回合号（竞速输出账剔除）
+        self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -3677,6 +3678,46 @@ class Policy:
             f"{float(incoming):.0f}、我方{my_hp}/{my_max_hp}血、{my_block}甲"
             "（LOW_POOL_BURST_RACE_OBS）")
 
+    def _kill_race_terminal_audit_note(
+            self, pol, my_hp, my_block, incoming, energy) -> str:
+        """Link a lethal no-card end-turn to the last latched race projection.
+
+        This is deliberately an observation-only tail.  It requires the
+        existing lethal-unavailable marker and a same-combat race latch, so
+        it cannot alter action selection or manufacture a race sample.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_terminal_audit_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled or not bool(getattr(self, "_krace_latch", False)):
+            return ""
+        _projection = getattr(self, "_race_terminal_projection", None)
+        if not isinstance(_projection, dict):
+            return ""
+        try:
+            _pool = float(_projection["enemy_hp"])
+            _dpt = float(_projection["dpt"])
+            _ttk = float(_projection["ttk"])
+            _tsurv = float(_projection["tsurv"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return ""
+
+        def _round_text(value) -> str:
+            try:
+                return str(int(value))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        return (
+            f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
+            f"/last_round={_round_text(_projection.get('round'))}"
+            f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
+            f"/hp={float(my_hp):g}/block={float(my_block):g}"
+            f"/incoming={float(incoming):g}/energy={float(energy):g}"
+            "（KILL_RACE_TERMINAL_AUDIT_OBS）")
+
     def _combat_readiness_wait(
             self, state, ctx, combat, player, hand, energy, round_no, pol,
             can_end, my_hp, my_block, incoming) -> Decision | None:
@@ -3781,6 +3822,8 @@ class Policy:
                     f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
+                _lethal_unavailable_note += self._kill_race_terminal_audit_note(
+                    pol, my_hp, my_block, incoming, energy)
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
@@ -5097,6 +5140,13 @@ class Policy:
                                                 f"{_tax_fire_note}")
                     if race_lost:
                         kill_race = True
+                        self._race_terminal_projection = {
+                            "round": round_no,
+                            "enemy_hp": float(enemy_hp_total),
+                            "dpt": float(dpt),
+                            "ttk": float(ttk),
+                            "tsurv": float(tsurv),
+                        }
                         danger_note += (f"；斩杀竞速投影：击杀还需{ttk:.0f}回合>"
                                         f"可存活{tsurv:.0f}回合（{dpt_src}），全攻提速"
                                         f"{_tax_fire_note}")
@@ -5254,6 +5304,7 @@ class Policy:
             self._krace_latch_round = None
             self._krace_dmg_sustained = 0.0
             self._krace_potion_rounds = set()
+            self._race_terminal_projection = None
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None

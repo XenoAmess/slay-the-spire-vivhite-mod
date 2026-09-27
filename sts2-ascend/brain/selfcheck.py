@@ -6006,6 +6006,10 @@ def main() -> int:
     assert d_kr.action == "play_card" and d_kr.params.get("card_index") == 0, \
         f"斩杀竞速失败时奢侈格挡仍胜出: {d_kr.action}（{d_kr.reason}）"
     assert "斩杀竞速投影" in d_kr.reason, f"竞速投影未留痕: {d_kr.reason}"
+    _race_terminal = getattr(pol_kr, "_race_terminal_projection", None)
+    assert isinstance(_race_terminal, dict) \
+        and _race_terminal.get("ttk", 0) > _race_terminal.get("tsurv", 0), \
+        f"竞速判死未保存终端对账投影: {_race_terminal}"
     # 对照：意图轻微（5/回合，血量账宽裕）时同一战斗不得触发竞速——防守路线可行
     krc.credit_tags = []
     pol_kr2 = policy.Policy(know, random.Random(11))
@@ -15703,6 +15707,66 @@ def main() -> int:
         and d_lethal_empty_off.params == d_lethal_empty.params \
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_empty_off.reason, \
         f"致死资源耗尽观测关闭后动作或标记漂移: {d_lethal_empty_off and d_lethal_empty_off.reason}"
+
+    # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
+    #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
+    #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能
+    #       改变 action/params。关闭专用键后必须保留原有致死观测而只去掉
+    #       新尾缀。
+    race_terminal_know = knowledge.Knowledge(tmp)
+    race_terminal_pol = policy.Policy(race_terminal_know)
+    race_terminal_ctx = _SettleCtx()
+    race_terminal_ctx.combat = {}
+    assert race_terminal_pol.decide(
+        _lethal_unavailable_state(True), race_terminal_ctx).action == "play_card", \
+        "竞速终端对账夹具热身帧未进入出牌状态"
+    race_terminal_pol._krace_latch = True
+    race_terminal_pol._krace_latch_round = 5
+    race_terminal_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    d_race_terminal = None
+    for _ in range(6):
+        d_candidate = race_terminal_pol.decide(
+            _lethal_unavailable_state(False), race_terminal_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal = d_candidate
+            break
+    assert d_race_terminal is not None \
+        and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal.reason \
+        and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal.reason \
+        and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
+            in d_race_terminal.reason, \
+        f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
+
+    race_terminal_off_know = knowledge.Knowledge(tmp)
+    race_terminal_off_know.policy["kill_race_terminal_audit_obs"] = False
+    race_terminal_off_pol = policy.Policy(race_terminal_off_know)
+    race_terminal_off_ctx = _SettleCtx()
+    race_terminal_off_ctx.combat = {}
+    assert race_terminal_off_pol.decide(
+        _lethal_unavailable_state(True), race_terminal_off_ctx).action == "play_card", \
+        "竞速终端对账关闭夹具热身帧未进入出牌状态"
+    race_terminal_off_pol._krace_latch = True
+    race_terminal_off_pol._krace_latch_round = 5
+    race_terminal_off_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    d_race_terminal_off = None
+    for _ in range(6):
+        d_candidate = race_terminal_off_pol.decide(
+            _lethal_unavailable_state(False), race_terminal_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal_off = d_candidate
+            break
+    assert d_race_terminal_off is not None \
+        and d_race_terminal_off.action == d_race_terminal.action \
+        and d_race_terminal_off.params == d_race_terminal.params \
+        and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal_off.reason \
+        and "KILL_RACE_TERMINAL_AUDIT_OBS" not in d_race_terminal_off.reason, \
+        f"竞速终端对账关闭后动作或尾缀漂移: {d_race_terminal_off and d_race_terminal_off.reason}"
 
     # 4) 真实知识库可加载（验证数据结构兼容性——若复盘改了 stats/policy 结构这里会暴露）。
     #    repair_phantoms=False：自检不得抢先改写运行中大脑的统计并置修复标记，
