@@ -11475,7 +11475,11 @@ class Policy:
             self._trace_gate(
                 "RANK 奖励卡价值", "pass", f"{len(scored)} 个当前可选候选")
             _overcap_skip_note = ""
-            if "skip_reward_cards" in actions and not thin_take:
+            # A thin deck still must not accumulate an all-LifeCost offer once
+            # the deck-tax soft cap is exceeded.  The thin-deck guard remains
+            # responsible for positive mixed offers and low-value protection;
+            # it must not override this narrower, explicit supply stop.
+            if "skip_reward_cards" in actions:
                 _overcap_skip_note = self._vivhite_life_cost_overcap_skip_note(
                     deck, [c for _v, c, _d in all_scored], source="REWARD")
             if _overcap_skip_note:
@@ -12004,7 +12008,9 @@ class Policy:
                 # 置顶均在前面的语义分支，不会污染 offered/seen。
                 self._record_card_offer("CARD_SELECTION", state, cards)
             _thin_take = self._thin_deck_must_pick(deck, best_v)
-            if _has_skip and not _thin_take:
+            # Apply the same supply stop on the actual CARD_SELECTION path.
+            # Thin-deck pickup remains unchanged for mixed or below-cap offers.
+            if _has_skip:
                 _overcap_skip_note = self._vivhite_life_cost_overcap_skip_note(
                     deck, [c for _v, c in scored], source="CARD_SELECTION")
                 if _overcap_skip_note:

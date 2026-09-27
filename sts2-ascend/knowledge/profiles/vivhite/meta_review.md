@@ -5073,3 +5073,35 @@ production_code_commit: `93f4f36510e3b0d39db2a8415d2f9f08d35f05ba`
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1469~1472 批：薄卡组血税超顶 offer 被保底门接回
+
+日期：2026-09-27
+production_code_commit: pending local commit（最终 SHA 在交接回执中）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：已有 `vivhite_life_cost_overcap_skip` 能拦截“超软顶且全为生命支付”的可选 offer，但两个真实拿牌入口额外要求 `not thin_take`；因此薄卡组会以“正价值保底”为由继续堆血税。若撤掉这一层冲突，薄卡组的超顶全生命 offer 应跳过，同时混合 offer、强制入组、软顶以下和非白绮行为不变。
+- **EVIDENCE**：exact batch 覆盖 1469~1472；最新失败局 `5PY4F4579P65` 的完整 runs 文件有 163 条决策（packet 仅保留 92 条、遗漏 71 条，我已逐条核对完整链）。1472 局 F3/F5/F6/F11 的选牌审计分别出现 `deck_tax=22/20`、`26/20`、`32/20`、`38/20`，且 offer 为 `3/3`、`3/3`、`3/3`、`3/3` 生命支付牌，但没有 `VIVHITE_LIFE_COST_OVERCAP_SKIP`；F13 T12/T13 随后在 HP=2 时 5/5、4/4 非诅咒牌均 `native=blocked_by_hook`，第二次为 `incoming=34/end_turn_lethal=yes` 并 GAME_OVER。该链支持“薄卡组保底绕过供给闸”的可证伪因果假设，不把终端锁单独当作唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮 run 按 offer 对账 `deck_tax/cap`、`offer_life`、`thin_take` 与跳过标记；超顶全生命可选 offer 的跳过率和后续生命支付牌数/自损占比应下降，且强制/混合/软顶以下样本不得误跳过。继续以终端锁、`SELF_LOSS_PHASE_OBS`、精英/战斗后存活和胜负核对，不把跳过本身当成胜因。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：REWARD 与实际 `CARD_SELECTION` 两条拿牌路径都允许既有 `VIVHITE_LIFE_COST_OVERCAP_SKIP` 在薄卡组命中；薄卡组保底仍只作用于混合或低于软顶 offer，强制屏与其他筛选不变。
+- `sts2-ascend/brain/selfcheck.py`：新增 6 张高生命成本牌、目录血税 72、非基础牌少于 8 的薄卡组正例，断言动作为 `skip_reward_cards` 并带既有审计标记。
+- 未修改 `runs`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始资产。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- `git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过。
+- 报告写入前已回读生产 diff；当前仅有上述两个生产 Python 文件的改动。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只计 3~10 个独立 run；同一 offer 的轮询与同一战斗多条 tick 不重复计数。逐项记录超顶全生命 offer、薄卡组状态、实际 `skip_reward_cards` 回执、后续牌组血税、自损/敌方掉血、终端锁与结果。
+- 若出现强制/混合/软顶以下误跳过、回执与标记不符、动作参数漂移，或跳过后到达层数/存活显著恶化，将 `vivhite_life_cost_overcap_skip=0`；必要时回滚本地 commit，保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

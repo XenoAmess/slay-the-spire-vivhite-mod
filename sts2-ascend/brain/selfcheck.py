@@ -5005,6 +5005,21 @@ def main() -> int:
             and "deck_tax=72/60" in d_lc_optional.reason
             and "offer_life=1/1" in d_lc_optional.reason), \
         f"超顶全生命支付可选 offer 未跳过: {d_lc_optional.action}（{d_lc_optional.reason}）"
+    # 薄卡组也是血税闸的有效命中点：正价值保底不能把已经超顶的
+    # 全生命支付 offer 强行接回卡组，否则早期连续拿牌会把终端锁提前。
+    _lc_thin_state = dict(_lc_optional_state)
+    _lc_thin_state["run"] = dict(
+        _lc_optional_state["run"],
+        deck=[dict(_lc_high) for _ in range(6)],  # 6×12=72，非基础牌<8
+    )
+    _lc_thin_ctx = DummyCtx()
+    _lc_thin_ctx.run_id = "RUN_VLCTAX_OPTIONAL_THIN"
+    _lc_thin_know = _vivhite_know("sts2-selfcheck-vlctax-optional-thin-")
+    _lc_thin_pol = policy.Policy(_lc_thin_know, random.Random(19))
+    d_lc_thin = _lc_thin_pol.decide(_lc_thin_state, _lc_thin_ctx)
+    assert (d_lc_thin.action == "skip_reward_cards"
+            and "VIVHITE_LIFE_COST_OVERCAP_SKIP" in d_lc_thin.reason), \
+        f"薄卡组超顶全生命支付 offer 未跳过: {d_lc_thin.action}（{d_lc_thin.reason}）"
     vknow_lc_optional_off = _vivhite_know(
         "sts2-selfcheck-vlctax-optional-off-")
     vknow_lc_optional_off.policy["vivhite_life_cost_overcap_skip"] = 0
