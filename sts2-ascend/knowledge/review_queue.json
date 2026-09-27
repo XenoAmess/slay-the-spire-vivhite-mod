@@ -31,41 +31,50 @@
    "every": 5,
    "source": "queued",
    "run_id": "JPXLS1YEDTK7"
-  },
-  {
-   "run": 1602,
-   "time": "2026-09-27 14:19",
-   "profile_id": "ironclad",
-   "backend_key": "luna-max",
-   "priority": 2,
-   "runner": "codex",
-   "model": "gpt-5.6-luna",
-   "variant": "",
-   "reasoning_effort": "max",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 1,
-   "source": "fallback",
-   "run_id": "8XDA70Q0US57",
-   "queue_id": "26192-1790491448524308000-0",
-   "retry_same_model": false,
-   "salvage_packages": [
-    "20260927-145032-1790491832675858100-3c63a9fc"
-   ],
-   "salvage_attempts": [
-    "20260927-152350-1790493830011396700-c31a8d8f",
-    "20260927-155844-1790495924338254500-61fa43df",
-    "20260927-162926-1790497766581691800-211a1998",
-    "20260927-170126-1790499686303569800-aacbcba7"
-   ],
-   "retry_group": "20260927-145032-1790491832675858100-3c63a9fc",
-   "replay_target": "20260927-145032-1790491832675858100-3c63a9fc",
-   "retry_count": 5,
-   "retry_after": 1790500725.540684,
-   "deferred_count": 0,
-   "deferred_hold_until": 0,
-   "review_epoch": ""
   }
  ],
- "reviewing": null
+ "reviewing": {
+  "runs": [
+   1602
+  ],
+  "items": [
+   {
+    "run": 1602,
+    "time": "2026-09-27 14:19",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "8XDA70Q0US57",
+    "queue_id": "26192-1790491448524308000-0",
+    "retry_same_model": true,
+    "salvage_packages": [
+     "20260927-145032-1790491832675858100-3c63a9fc"
+    ],
+    "salvage_attempts": [
+     "20260927-152350-1790493830011396700-c31a8d8f",
+     "20260927-155844-1790495924338254500-61fa43df",
+     "20260927-162926-1790497766581691800-211a1998",
+     "20260927-170126-1790499686303569800-aacbcba7"
+    ],
+    "retry_group": "20260927-145032-1790491832675858100-3c63a9fc",
+    "replay_target": "20260927-145032-1790491832675858100-3c63a9fc",
+    "retry_count": 5,
+    "retry_after": 1790500725.540684,
+    "deferred_count": 0,
+    "deferred_hold_until": 0,
+    "review_epoch": ""
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "20260927-145032-1790491832675858100-3c63a9fc",
+  "started": "2026-09-27 17:24:10"
+ }
 }
