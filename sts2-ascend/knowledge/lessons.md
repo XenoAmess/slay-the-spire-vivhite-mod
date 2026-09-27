@@ -13163,3 +13163,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.6536509219327313局)，BASH(14分/3.091550780096928局)，BODY_SLAM(15分/2.2289171009251816局)
 - 策略进化：block_safety: 2.02 → 2.07（高速失血爆毙（5回合掉血79，每回合16≥14）——按「没挡住」证据上调防御权重）；kill_race_prior_eff: 0.35 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.07 → 2.06（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）
 - 生涯战绩：0/1597 胜，当前目标进阶 0
+
+## 第 1598 局复盘（2026-09-27 09:58）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：SPITE, MOLTEN_FIST, RAMPAGE, SWORD_BOOMERANG, HEMOKINESIS, TRUE_GRIT, CINDER, SHRUG_IT_OFF, STONE_ARMOR, SPITE, UPPERCUT, IMPERVIOUS, CONFLAGRATION, HOWL_FROM_BEYOND, CINDER, RUPTURE, POMMEL_STRIKE
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F15 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血13｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战6回合获胜; F19 Monster战 掉血13｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血18｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血19｜自损2（可行动段2/非行动段23，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血30｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：ASHEN_STRIKE(26分/2.142584177447452局)，OFFERING(25分/17.360347061154503局)，FEED(25分/34.801606179948706局)，PACTS_END(25分/68.87745138099262局)，BRAND(25分/2.162873799788467局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.640863143705967局)，BASH(14分/3.080730352366589局)，BODY_SLAM(15分/2.2211158910719435局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.37 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F22——药水交药线部分胜利回收）
+- 生涯战绩：0/1598 胜，当前目标进阶 0
