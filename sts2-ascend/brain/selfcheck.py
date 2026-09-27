@@ -15854,7 +15854,7 @@ def main() -> int:
                              "intents": [{"total_damage": 20}]}],
             },
             "run": {"current_hp": 9, "max_hp": 80, "gold": 0,
-                    "floor": 33, "deck": []},
+                    "floor": 33, "deck": [], "potions": []},
         }
 
     lethal_empty_know = knowledge.Knowledge(tmp)
@@ -15874,8 +15874,57 @@ def main() -> int:
         and d_lethal_empty.params == {} \
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_lethal_empty.reason \
         and "hp=9/block=6/incoming=20/energy=0" in d_lethal_empty.reason \
-        and "/energy_locked=2" in d_lethal_empty.reason, \
+        and "/energy_locked=2" in d_lethal_empty.reason \
+        and "state=present/slots=0/occupied=0/can_use=0/ids=none/ready_ids=none" \
+            in d_lethal_empty.reason, \
         f"致死资源耗尽空过观测缺失: {d_lethal_empty and d_lethal_empty.reason}"
+
+    potion_reserve_state = _lethal_unavailable_state(False)
+    potion_reserve_state["run"]["potions"] = [
+        {"index": 0, "occupied": True, "can_use": False,
+         "potion_id": "BLOCK_P", "name": "格挡药水"},
+        {"index": 1, "occupied": False, "can_use": False},
+    ]
+    potion_reserve_know = knowledge.Knowledge(tmp)
+    potion_reserve_pol = policy.Policy(potion_reserve_know)
+    potion_reserve_ctx = _SettleCtx()
+    assert potion_reserve_pol.decide(
+        _lethal_unavailable_state(True), potion_reserve_ctx).action == "play_card", \
+        "药水储备观测夹具热身帧未进入出牌状态"
+    d_potion_reserve = None
+    for _ in range(6):
+        d_candidate = potion_reserve_pol.decide(
+            potion_reserve_state, potion_reserve_ctx)
+        if d_candidate.action == "end_turn":
+            d_potion_reserve = d_candidate
+            break
+    assert (d_potion_reserve is not None
+            and d_potion_reserve.action == d_lethal_empty.action
+            and d_potion_reserve.params == d_lethal_empty.params
+            and "state=present/slots=2/occupied=1/can_use=0/ids=BLOCK_P/ready_ids=none"
+            in d_potion_reserve.reason), \
+        f"药水储备原始读数缺失或动作漂移: {d_potion_reserve and d_potion_reserve.reason}"
+
+    potion_reserve_off_know = knowledge.Knowledge(tmp)
+    potion_reserve_off_know.policy["potion_reserve_end_turn_obs"] = False
+    potion_reserve_off_pol = policy.Policy(potion_reserve_off_know)
+    potion_reserve_off_ctx = _SettleCtx()
+    assert potion_reserve_off_pol.decide(
+        _lethal_unavailable_state(True), potion_reserve_off_ctx).action == "play_card", \
+        "药水储备观测关闭夹具热身帧未进入出牌状态"
+    d_potion_reserve_off = None
+    for _ in range(6):
+        d_candidate = potion_reserve_off_pol.decide(
+            potion_reserve_state, potion_reserve_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_potion_reserve_off = d_candidate
+            break
+    assert (d_potion_reserve_off is not None
+            and d_potion_reserve_off.action == d_potion_reserve.action
+            and d_potion_reserve_off.params == d_potion_reserve.params
+            and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_potion_reserve_off.reason
+            and "POTION_RESERVE_END_TURN_OBS" not in d_potion_reserve_off.reason), \
+        f"药水储备观测关闭后动作或既有标记漂移: {d_potion_reserve_off and d_potion_reserve_off.reason}"
 
     lethal_empty_off_know = knowledge.Knowledge(tmp)
     lethal_empty_off_know.policy["lethal_unavailable_end_turn_obs"] = False

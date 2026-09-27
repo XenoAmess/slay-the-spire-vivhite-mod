@@ -3819,6 +3819,46 @@ class Policy:
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
+        """Expose raw potion slots at a lethal no-card boundary.
+
+        This is an audit-only companion to the card-resource marker.  It keeps
+        an omitted potion payload distinct from an explicitly empty inventory,
+        and reports the API's ``occupied``/``can_use`` bits without reusing
+        potion selection or changing the end-turn decision.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "potion_reserve_end_turn_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        if not isinstance(run, dict) or "potions" not in run:
+            return ("；终端药水储备观测：state=missing"
+                    "（POTION_RESERVE_END_TURN_OBS）")
+        _slots = run.get("potions")
+        if not isinstance(_slots, list):
+            return ("；终端药水储备观测：state=invalid"
+                    "（POTION_RESERVE_END_TURN_OBS）")
+        _occupied = []
+        _ready = []
+        for _potion in _slots:
+            if not isinstance(_potion, dict) or not _potion.get("occupied"):
+                continue
+            _potion_id = str(
+                _potion.get("potion_id") or _potion.get("name") or "?")
+            _occupied.append(_potion_id)
+            if _potion.get("can_use"):
+                _ready.append(_potion_id)
+        _occupied_ids = "|".join(_occupied) or "none"
+        _ready_ids = "|".join(_ready) or "none"
+        return (
+            f"；终端药水储备观测：state=present/slots={len(_slots)}"
+            f"/occupied={len(_occupied)}/can_use={len(_ready)}"
+            f"/ids={_occupied_ids}/ready_ids={_ready_ids}"
+            "（POTION_RESERVE_END_TURN_OBS）")
+
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
@@ -4105,6 +4145,10 @@ class Policy:
                     f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
+                _potion_reserve_note = (
+                    self._potion_reserve_end_turn_observation_note(
+                        pol, state.get("run") or {}))
+                _lethal_unavailable_note += _potion_reserve_note
                 _terminal_audit_note = self._kill_race_terminal_audit_note(
                     pol, my_hp, my_block, incoming, energy)
                 _lethal_unavailable_note += _terminal_audit_note

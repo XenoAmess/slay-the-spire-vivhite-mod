@@ -12404,3 +12404,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_hopeless_hp_pay_obs` 设为 `False`；预期只移除该观测尾缀，选牌、action 和 params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 通过；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-27｜第 1612 局复盘（POTION_RESERVE_END_TURN_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：致死无牌空过观测能证明卡牌/能量资源耗尽，却不能证明药水槽为空、占用但不可用，还是仍有可用药水未进入动作链；因此当前终局无法把“无救命资源”与“药水调用遗漏”区分开。该假设可证伪。
+- **EVIDENCE**：精确 run `LGTC02LHPXYX`（第1612局，`sts2-ascend/knowledge/runs/20260927-231519_LGTC02LHPXYX.json`）完整持久链 326 条，已逐条核读。F22 T1 的资源耗尽前置记录为 `hp=26/block=5/incoming=15/energy=1/cards=0`；T2 记录 `hp=16/block=7/incoming=23/energy=0/cards=0/forced=yes/gap=yes`，并带 `KILL_RACE_TERMINAL_AUDIT_OBS`（`ttk=3.09068/tsurv=1.6`），下一条即 `GAME_OVER`。全链只有 F6 1 次、F17 3 次 `use_potion`，F17 后没有药水状态快照；既有终端 marker 因而无法机械确认 F22 是否还有药水。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立致死无牌空过窗口应追加 `POTION_RESERVE_END_TURN_OBS`，披露 `state=missing|invalid|present`、槽位数、`occupied`、`can_use` 与药水 ID。`occupied=0` 支持资源耗尽解释；`can_use>0` 且此前未出现 `use_potion` 则支持另立药水动作遗漏假设；`missing/invalid` 重复出现则先修状态载荷。开关关闭时仅该 marker 消失，既有终端 marker、action 与 params 不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `potion_reserve_end_turn_obs`。
+- `sts2-ascend/brain/policy.py`：在既有 `LETHAL_UNAVAILABLE_END_TURN_OBS` 后只读追加原始药水槽快照；显式区分字段缺失、类型无效和空槽，不调用选药逻辑、不改变评分、候选、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增空槽、占用但 `can_use=false` 以及关闭开关夹具，验证 `end_turn` 与空参数严格不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：按 `run_id`、floor/turn、终端竞速 `ttk/tsurv`、药水 `occupied/can_use` 与下一条 `GAME_OVER` 分层收集 3~10 局；若出现 `can_use>0` 的终端空过，回放同帧药水分类、冷却和动作回执，再单独决定是否行为化；若连续样本均为空槽，维持资源耗尽归因。
+- **撤回**：将 `potion_reserve_end_turn_obs` 设为 `False`，预期只移除 `POTION_RESERVE_END_TURN_OBS`；或删除该快照方法及对应 selfcheck，既有 `LETHAL_UNAVAILABLE_END_TURN_OBS`、终端审计、action 与 params 应保持不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → exit 0（仅既有超长资产路径警告）；未修改 `.runtime`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
