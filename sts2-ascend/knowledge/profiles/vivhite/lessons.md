@@ -17112,3 +17112,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.8978629485166176局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.2629367822928486局)，IMPATIENCE(22分/2.9763576670812206局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1552 胜，当前目标进阶 3
+
+## 第 1553 局复盘（2026-09-28 04:51）
+- 结果：💀 失败｜进阶 3｜到达层数 11｜当局评分 11
+- 死因：敌人组合 PUNCH_CONSTRUCT
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, PANIC_BUTTON
+- 本局遗物：ODDLY_SMOOTH_STONE, CENTENNIAL_PUZZLE
+- 战斗记录：F2 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血7｜自损12（可行动段12/非行动段7，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血4｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血22｜自损16（可行动段16/非行动段12，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血45｜自损18（可行动段18/非行动段25，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=45/dpt=14.0378/ttk=3.20563/tsurv=1.57143（RACE_PROJ_CALIB_AUDIT）｜竞速审计：T6判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.076787718333356局)，MAYHEM(36分/4.5551596439563局)，THINKING_AHEAD(36分/5.697764826473645局)，FISTICUFFS(35分/7.607787409594504局)，ROLLING_BOULDER(34分/5.7410306884803495局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.8877204281968094局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.2550165035548235局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/38.30962376839359局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（12回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1553 胜，当前目标进阶 3
