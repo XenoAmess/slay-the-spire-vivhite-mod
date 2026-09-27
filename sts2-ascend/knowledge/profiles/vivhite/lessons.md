@@ -16782,3 +16782,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.11732431450948局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.219279996273836局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.513930867502471局)
 - 策略进化：block_safety: 1.86 → 1.91（高速失血爆毙（4回合掉血74，每回合18≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.43 → 0.46（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.91 → 1.90（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 22.50 → 25.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1522 胜，当前目标进阶 3
+
+## 第 1523 局复盘（2026-09-27 23:07）
+- 结果：💀 失败｜进阶 3｜到达层数 25｜当局评分 25
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_GOLDEN_COMPOSITION
+- 本局遗物：MERCURY_HOURGLASS
+- 战斗记录：F17 Boss战 掉血32｜自损29（可行动段29/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速审计：T4判死→实战8回合获胜; F19 Monster战 掉血0｜自损11（可行动段11/非行动段4，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血20｜自损12（可行动段12/非行动段0，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血0｜自损6（可行动段6/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速审计：T3判死→实战5回合获胜; F24 Monster战 掉血0｜自损11（可行动段11/非行动段27，SELF_LOSS_PHASE_OBS）; F25 Elite战 掉血84｜自损9（可行动段9/非行动段53，SELF_LOSS_PHASE_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/4.528965442414597局)，MAYHEM(36分/5.060396085718572局)，THINKING_AHEAD(36分/6.329733550280106局)，FISTICUFFS(35分/6.35833760067143局)，VIVHITE_CARD_GEODESIC_VEIL(35分/4.531511910215944局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(20分/2.109913679408697局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/3.208012516286878局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.5051321094662122局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿12张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.46 → 0.49（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.90 → 1.89（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F25——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F25——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 25.00 → 27.50（行至 F25——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：3/1523 胜，当前目标进阶 3
