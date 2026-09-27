@@ -3704,8 +3704,7 @@ class Policy:
             "（LOW_POOL_BURST_RACE_OBS）")
 
     def _kill_race_terminal_audit_note(
-            self, pol, my_hp, my_block, incoming, energy,
-            enemies=None) -> str:
+            self, pol, my_hp, my_block, incoming, energy) -> str:
         """Link a lethal no-card end-turn to the last latched race projection.
 
         This is deliberately an observation-only tail.  It requires the
@@ -3730,35 +3729,6 @@ class Policy:
         except (KeyError, TypeError, ValueError, OverflowError):
             return ""
 
-        # The aggregate race projection cannot explain whether a terminal
-        # loss also carried a multi-target focus problem.  Keep this context
-        # observation-only: it describes the live payload and the already
-        # recorded focus counters without feeding either back into scoring.
-        _live_enemies = [
-            enemy for enemy in (enemies or [])
-            if isinstance(enemy, dict) and enemy.get("is_alive", True)
-        ]
-        _hittable_count = sum(
-            1 for enemy in _live_enemies if enemy.get("is_hittable", True))
-        _focus_label = "?"
-        _focus_index = getattr(self, "_focus_played_index", None)
-        if _focus_index is not None:
-            _focus_enemy = next((
-                enemy for enemy in (enemies or [])
-                if isinstance(enemy, dict)
-                and enemy.get("index") == _focus_index), None)
-            if _focus_enemy is not None:
-                _focus_identity = self._focus_enemy_identity(_focus_enemy)
-                if _focus_identity:
-                    _focus_label = f"{_focus_identity}#{_focus_index}"
-        try:
-            _focus_switches = max(
-                int(getattr(self, "_focus_drift_flips", 0) or 0),
-                int(getattr(self, "_focus_identity_flips", 0) or 0),
-            )
-        except (TypeError, ValueError, OverflowError):
-            _focus_switches = 0
-
         def _round_text(value) -> str:
             try:
                 return str(int(value))
@@ -3771,8 +3741,6 @@ class Policy:
             f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
             f"/hp={float(my_hp):g}/block={float(my_block):g}"
             f"/incoming={float(incoming):g}/energy={float(energy):g}"
-            f"/live={len(_live_enemies)}/hittable={_hittable_count}"
-            f"/focus={_focus_label}/focus_switches={_focus_switches}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _lethal_playable_reject_observation_note(
@@ -3996,8 +3964,7 @@ class Policy:
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
                 _lethal_unavailable_note += self._kill_race_terminal_audit_note(
-                    pol, my_hp, my_block, incoming, energy,
-                    combat.get("enemies") or [])
+                    pol, my_hp, my_block, incoming, energy)
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()

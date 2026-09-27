@@ -15820,8 +15820,6 @@ def main() -> int:
     assert race_terminal_pol.decide(
         _lethal_unavailable_state(True), race_terminal_ctx).action == "play_card", \
         "竞速终端对账夹具热身帧未进入出牌状态"
-    race_terminal_pol._focus_played_index = 0
-    race_terminal_pol._focus_drift_flips = 2
     race_terminal_pol._krace_latch = True
     race_terminal_pol._krace_latch_round = 5
     race_terminal_pol._race_terminal_projection = {
@@ -15839,8 +15837,6 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal.reason \
         and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal.reason \
         and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
-            in d_race_terminal.reason \
-        and "/live=1/hittable=1/focus=BOSS#0/focus_switches=2" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
 
