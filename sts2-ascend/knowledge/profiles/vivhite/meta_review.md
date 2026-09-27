@@ -5389,3 +5389,36 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1541~1546 批：竞速入锁投影快照与实际结局对账
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有竞速审计只保留“判死→实战结局”，丢掉入锁时的血池、有效 DPT、TTK 和可存活回合；1546-F31 的 T7 判死→实战 24 回合获胜与 F33 的 T2 判死→实战 5 回合阵亡，无法反推误差来自哪一项投影。假设是：把首次入锁投影快照写入同一条战斗记录后，可以按投影值与实际回合/胜负切片校准，且不改变任何决策。
+- **EVIDENCE**：完整失败链为 `runs/20260928-032701_90TEPXUVSAWJ.json`（1546，393 条 decisions）。F31 Elite 为 `T7判死→实战24回合获胜`；F33 Boss `CRUSHER+ROCKET` 为 `T2判死→实战5回合阵亡`，终端审计已有 `pool=191/dpt=19.2/ttk=9.94792/tsurv=0.952381`。原生知识 `knowledge/game/v0.111.0/runtime/monsters.jsonl` 核对 CRUSHER=209 HP、ROCKET=199 HP；旧战斗摘要没有上述投影快照。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立竞速审计战斗中，同一摘要应同时出现 `pool/dpt/ttk/tsurv`、实际回合和胜负；非竞速战斗不出现该段，观测键关闭时 action/params 与旧摘要保持不变。字段、回执或动作任一对不上即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_projection_obs`，False 严格回滚为既有“判死→实战”摘要。
+- `sts2-ascend/brain/policy.py`：首次实测竞速入锁时，把 `_race_terminal_projection` 的血池/有效 DPT/TTK/可存活回合复制进审计账；仅供收官观测，不参与判定。
+- `sts2-ascend/brain/agent.py`：收官时将投影快照与实际回合/胜负拼入 `RACE_PROJ_CALIB_AUDIT`，数值非法则不写入。
+- `sts2-ascend/brain/selfcheck.py`：增加启用时同条留痕与关闭键回滚夹具，保留原有统计分桶断言。
+- 未修改 `runs/`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始资产；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已完整回读四个生产/自检文件 diff；`git diff --check` 通过，仅有仓库既有 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立竞速审计 combat，按 combat/run/floor 对账投影字段、真实 `applied` action/params、实际回合与 GAME_OVER/胜负；不把观测字段当作行为修复。
+- 若投影快照缺失/错位、非竞速样本显形或 action/params 漂移，先将 `race_audit_projection_obs=0`；必要时回滚本地 commit，保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

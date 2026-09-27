@@ -5693,6 +5693,34 @@ class Policy:
                                 if _ra_audit.get("latch_round") is None:
                                     _ra_audit["latch_round"] = int(round_no)
                                 _ra_audit["esc"] = bool(esc_gate)
+                                # RACE_PROJ_CALIB_AUDIT：保存首次实测入锁时的
+                                # 投影快照。只进入收官观测账，不参与后续判定；
+                                # 保留首次值，避免后续 tick 覆盖真正的入锁现场。
+                                if (bool(self.know.policy.get(
+                                        "race_audit_projection_obs", True))
+                                        and "projection_ttk" not in _ra_audit):
+                                    _projection = getattr(
+                                        self, "_race_terminal_projection", None)
+                                    if isinstance(_projection, dict):
+                                        try:
+                                            _projection_audit = {
+                                                "projection_pool": float(
+                                                    _projection["enemy_hp"]),
+                                                "projection_dpt": float(
+                                                    _projection["dpt"]),
+                                                "projection_ttk": float(
+                                                    _projection["ttk"]),
+                                                "projection_tsurv": float(
+                                                    _projection["tsurv"]),
+                                            }
+                                            if all(
+                                                    math.isfinite(value)
+                                                    and value >= 0.0
+                                                    for value in _projection_audit.values()):
+                                                _ra_audit.update(_projection_audit)
+                                        except (KeyError, TypeError, ValueError,
+                                                OverflowError):
+                                            pass
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
             # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。
@@ -10838,8 +10866,8 @@ class Policy:
         """弹出本场战斗的竞速投影审计账（RACE_PROJ_CALIB_AUDIT 观测位）。
 
         agent 在战斗收官时调用一次：仅当实测口径判死入锁过才返回账本快照
-        （latched/latch_round/esc），否则返回空 dict；调用后无论有无账本一律
-        清空，防止跨场残留污染下一条战斗记录。
+        （latched/latch_round/esc 以及可选的入锁投影快照），否则返回空 dict；
+        调用后无论有无账本一律清空，防止跨场残留污染下一条战斗记录。
         """
         _a = getattr(self, "_race_audit", None)
         self._race_audit = None

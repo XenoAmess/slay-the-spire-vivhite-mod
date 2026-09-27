@@ -14342,19 +14342,33 @@ def main() -> int:
                 "hp_start_pct": 0.8, "open": False, "from_event": False,
                 "obs_hp_pool": 250.0, "obs_fire_sum": 40.0, "obs_fire_rounds": 3}
 
-    ra_agent.policy._race_audit = {"latched": True, "latch_round": 3, "esc": True}
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 3, "esc": True,
+        "projection_pool": 250.0, "projection_dpt": 40.0,
+        "projection_ttk": 6.25, "projection_tsurv": 3.0,
+    }
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
     assert _ra_stats == {"latched": 1, "won": 1, "esc_won": 1}, \
         f"判死→获胜未按 esc 分桶落库: {_ra_stats}"
+    assert ("pool=250/dpt=40/ttk=6.25/tsurv=3"
+            "（RACE_PROJ_CALIB_AUDIT）") in ra_agent.ctx.combat_notes[-1], \
+        f"竞速入锁投影未与实战结局同条留痕: {ra_agent.ctx.combat_notes[-1]}"
 
-    ra_agent.policy._race_audit = {"latched": True, "latch_round": 2, "esc": False}
+    ra_agent.know.policy["race_audit_projection_obs"] = False
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 2, "esc": False,
+        "projection_pool": 191.0, "projection_dpt": 19.2,
+        "projection_ttk": 9.94792, "projection_tsurv": 0.952381,
+    }
     ra_agent.ctx.combat_agg = _ra_agg(False, True)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
     assert _ra_stats == {"latched": 2, "won": 1, "esc_won": 1,
                          "died": 1}, f"判死→阵亡未按 esc 分桶落库: {_ra_stats}"
+    assert "RACE_PROJ_CALIB_AUDIT" not in ra_agent.ctx.combat_notes[-1], \
+        "关闭竞速投影观测键后不应新增投影段"
 
     ra_agent.policy._race_audit = {"latched": False, "latch_round": None, "esc": False}
     ra_agent.ctx.combat_agg = _ra_agg(True, False)

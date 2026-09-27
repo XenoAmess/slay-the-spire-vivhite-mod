@@ -3694,6 +3694,24 @@ class Agent:
         learning_allowed = getattr(self.know, "_learning_write_allowed", None)
         if (_ra.get("latched")
                 and (not callable(learning_allowed) or learning_allowed())):
+            if bool(self.know.policy.get("race_audit_projection_obs", True)):
+                try:
+                    _projection_values = (
+                        float(_ra["projection_pool"]),
+                        float(_ra["projection_dpt"]),
+                        float(_ra["projection_ttk"]),
+                        float(_ra["projection_tsurv"]),
+                    )
+                    if all(math.isfinite(value) and value >= 0.0
+                           for value in _projection_values):
+                        note += (
+                            f"｜竞速投影审计：pool={_projection_values[0]:g}"
+                            f"/dpt={_projection_values[1]:g}"
+                            f"/ttk={_projection_values[2]:g}"
+                            f"/tsurv={_projection_values[3]:g}"
+                            "（RACE_PROJ_CALIB_AUDIT）")
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    pass
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))
