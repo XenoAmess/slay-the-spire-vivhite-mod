@@ -13394,3 +13394,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3943014940351026局)，BASH(14分/2.8721012641835504局)，BODY_SLAM(15分/2.0707004602805967局)
 - 策略进化：elite_grey_safety_mult: 1.80 → 2.00（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.35 → 0.37（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.09 → 2.08（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F31——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F31——药水交药线部分胜利回收）
 - 生涯战绩：0/1618 胜，当前目标进阶 0
+
+## 第 1619 局复盘（2026-09-28 04:46）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：FLAME_BARRIER, BLUDGEON, BATTLE_TRANCE, RUPTURE, SPITE, SHRUG_IT_OFF, POMMEL_STRIKE, NOT_YET, INFLAME, CINDER, PREDATOR, STRANGLE, SERPENT_FORM, BREAKTHROUGH, UNRELENTING, SALVO, EVIL_EYE, HELLRAISER, CINDER, SPITE, CINDER, DRUM_OF_BATTLE, CINDER, SWORD_BOOMERANG
+- 本局遗物：PRAYER_WHEEL, VAMBRACE, BOOK_OF_FIVE_RINGS
+- 战斗记录：F21 Monster战 掉血13; F23 Monster战 掉血22｜自损10（可行动段10/非行动段18，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血11｜自损1（可行动段1/非行动段16，SELF_LOSS_PHASE_OBS）; F27 Elite战 掉血39; F30 Monster战 掉血6｜自损1（可行动段1/非行动段11，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血53｜竞速投影审计：pool=83/dpt=12.825/ttk=6.47173/tsurv=3.41667（RACE_PROJ_CALIB_AUDIT）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.755407056273782局)，OFFERING(25分/18.059720406852552局)，FEED(25分/34.242336243450474局)，PACTS_END(25分/64.95044615367894局)，BRAND(25分/2.009345152806182局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.38242143880598局)，BASH(14分/2.862048909758908局)，BODY_SLAM(15分/2.063453008669615局)
+- 策略进化：elite_grey_safety_mult: 1.95 → 2.15（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.40（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1619 胜，当前目标进阶 0
