@@ -9202,7 +9202,7 @@ def main() -> int:
 
     # 3etf) 前期精英闸门未通过仍被地图拓扑选中时的只读对账（第1609局复盘）：
     #       F7 仅6张非基础牌而前期门槛为7，仍因替代路线更差进入 Elite；
-    #       先记录「唯一候选/取损失最小项」与门槛读数，暂不改变选路。
+    #       只有唯一候选时仍保留强制进场语义并记录门槛读数。
     etf_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-forced-"))
     etf_know = knowledge.Knowledge(etf_dir)
     etf_pol = policy.Policy(etf_know)
@@ -9232,6 +9232,55 @@ def main() -> int:
     assert d_etf_off.action == d_etf.action and d_etf_off.params == d_etf.params \
         and "ELITE_FORCED_ENTRY_OBS" not in d_etf_off.reason, \
         f"强制精英观测关闭未严格回滚: {d_etf_off.reason}"
+
+    # 3etg) 失败精英闸门的存活替代行为门（ELITE_FAILED_GATE_SURVIVOR_VETO）：
+    #       1516-F27 在 38/78 HP 时精英首战投影已低于生存线，却被精英后续
+    #       价值路径抬过篝火；仅在存在整条路径未投影死亡且终点仍过地板的
+    #       非精英替代时压下失败精英。唯一候选和开关关闭必须保持旧动作。
+    esv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-survivor-veto-"))
+    esv_know = knowledge.Knowledge(esv_dir)
+    # 放大精英房间的下游价值，稳定复现“旧评分会选 Elite”的冲突；行为门
+    # 不依赖这个测试权重，只验证失败闸门能压过任意下游正分。
+    esv_know.policy["room_weights"]["Elite"] = 5000.0
+    esv_know.policy["boss_entry_min_hp_pct"] = 0.0
+    esv_know.policy["path_graveyard_penalty"] = 0.0
+    esv_pol = policy.Policy(esv_know)
+    esv_elite = {"index": 0, "row": 1, "col": 0, "node_type": "Elite",
+                 "children": [{"row": 2, "col": 0}]}
+    esv_rest = {"index": 1, "row": 1, "col": 1, "node_type": "RestSite",
+                "children": [{"row": 2, "col": 1}]}
+    esv_nodes = [
+        esv_elite, esv_rest,
+        {"row": 2, "col": 0, "node_type": "Shop",
+         "children": [{"row": 3, "col": 0}]},
+        {"row": 2, "col": 1, "node_type": "Event",
+         "children": [{"row": 3, "col": 1}]},
+        {"row": 3, "col": 0, "node_type": "Boss"},
+        {"row": 3, "col": 1, "node_type": "Boss"},
+    ]
+    esv_state = {
+        "screen": "MAP", "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [esv_elite, esv_rest],
+                "nodes": esv_nodes, "boss_node": {"row": 3}},
+        "run": {"current_hp": 38, "max_hp": 78, "gold": 876, "floor": 27,
+                "deck": [{"card_id": f"ESV_CARD_{i}",
+                          "card_type": "Attack", "energy_cost": 1,
+                          "dynamic_values": [{"name": "Damage",
+                                               "current_value": 8}]}
+                         for i in range(6)]}}
+    esv_ctx = type("C", (), {"credit_tags": []})()
+    esv_know.policy["elite_failed_gate_survivor_veto"] = False
+    d_esv_off = esv_pol.decide(esv_state, esv_ctx)
+    esv_know.policy["elite_failed_gate_survivor_veto"] = True
+    d_esv_on = esv_pol.decide(esv_state, esv_ctx)
+    assert d_esv_off.params == {"option_index": 0}, \
+        f"关闭失败精英存活替代门未复现旧 Elite 选择: {d_esv_off.params} {d_esv_off.reason}"
+    assert d_esv_on.params == {"option_index": 1} \
+        and "ELITE_FAILED_GATE_SURVIVOR_VETO" in d_esv_on.reason \
+        and d_esv_on.action == d_esv_off.action, \
+        f"失败精英闸门未让位投影可存活替代: {d_esv_on.action} {d_esv_on.params} {d_esv_on.reason}"
+    assert "ELITE_FAILED_GATE_SURVIVOR_VETO" not in d_esv_off.reason, \
+        f"关闭失败精英存活替代门仍留痕: {d_esv_off.reason}"
 
     # 3xz) 绝境投影篝火回血（第 96 局复盘）：F22 篝火在 79% 血按常规线锻造，
     #      而地图端全路径投影早已给出「照此打下去进 Boss 仅 36%」的死局预警——

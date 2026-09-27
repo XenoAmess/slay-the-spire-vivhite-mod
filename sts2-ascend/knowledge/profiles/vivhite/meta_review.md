@@ -5201,3 +5201,34 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1516 局：失败精英闸门让位于可存活替代
+
+日期：2026-09-27
+production_code_commit: local commit；最终 SHA 由交接结果给出
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当精英闸门已失败、但非精英候选仍有整条路径未投影死亡且终点高于 `path_hp_floor_pct` 时，精英后续篝火/奖励价值会吞掉眼前首战风险，导致策略仍进入精英。若把失败精英压到最佳可存活替代之下，应减少这类即时风险入口；若唯一候选、所有替代均投影死亡或开关关闭，则不应改变旧语义。
+- **EVIDENCE**：第 1516 局 `16BW8CBFBD57` 在 F27 为 38/78 HP（49%），选择 `Elite(10,3)`，其记录已写明“进精英预计战后仅剩 13%（需求≥40%），规避精英”，但 Elite 路径仍得 1.586，压过 `RestSite(10,4)` 的 -91.863；下一层 F28 的千足虫分段战两回合后在 HP 23、incoming 28 时终止并 GAME_OVER。独立批次还出现 1496/F11、1505/F24、1509/F31 的精英后阵亡；这些是支持该失效链的重复迹象，不单独视为因果证明。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 run 中，逐条对账 `ELITE_FAILED_GATE_SURVIVOR_VETO`、地图候选、`projected_hp`、实际首战掉血/终局；在有可存活非精英替代时，`applied` 不再选择失败精英，且精英后即时阵亡率/入口数下降。若动作回执、适用场景或存活没有改善，假设即被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `elite_failed_gate_survivor_veto=1`；设为 `0` 可回滚到旧排序。
+- `sts2-ascend/brain/policy.py`：地图候选评分后、绝境资源加分前，若精英闸门失败且存在非精英、未投影死亡、终点仍高于 `path_hp_floor_pct` 的替代，将所有失败精英分数压到最高该替代分以下，并留下 `ELITE_FAILED_GATE_SURVIVOR_VETO`；唯一精英、全替代死亡或开关关闭保留旧动作。
+- `sts2-ascend/brain/selfcheck.py`：新增开关关闭/开启对照夹具，验证旧 Elite 选择可复现、开启后让位 RestSite、动作类型不变且标记只在开启时出现。
+- 未修改 `runs`、`stats`、`progression`、`policy.json`、`lessons.md`、`.runtime`、归档或原始资产；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`。
+- 生产三文件完整 diff 已回读，`git diff --check` 通过；报告加入后已完成最终 diff 检查与 amend，最终 SHA 见交接结果。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只在后续 3~10 个独立 run 中验证，不把单次让位直接宣称为胜因；异常时先将 `elite_failed_gate_survivor_veto` 置 `0`，必要时回滚本地 commit，并保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

@@ -3283,6 +3283,46 @@ class Policy:
             cand.append({"node": n, "nt": nt, "ps": best_ps, "notes": best_pnotes,
                          "proj": best_pproj, "path": best_ppath,
                          "doomed": any("投影中途死亡" in x for x in best_pnotes)})
+        # 失败精英闸门的窄行为门（ELITE_FAILED_GATE_SURVIVOR_VETO）：
+        # 1516-F27 在 38/78 HP 时已经写出「进精英预计战后仅剩 13%（需求≥40%），
+        # 规避精英」，但 Elite 的下游篝火/奖励价值仍把候选抬到 1.59，压过了
+        # 直接休整的 -91.86；下一层 F28 精英两回合阵亡。精英闸门问的是「眼前
+        # 第一场能否活过」，不能被路径末端回血的正分吞掉。仅当：①当前精英闸门
+        # 已失败；②至少有一个非精英候选整条路径未投影死亡且终点仍在
+        # path_hp_floor_pct 之上，才把失败精英候选压到该替代之下。唯一精英、
+        # 所有替代均投影死亡或开关关闭时保留旧的强制进场/排序语义。
+        try:
+            _elite_survivor_veto = bool(int(float(pol.get(
+                "elite_failed_gate_survivor_veto", True) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _elite_survivor_veto = False
+        if _elite_survivor_veto and elite_gate_f < 1.0:
+            try:
+                _path_floor = float(pol.get("path_hp_floor_pct", 0.35) or 0.0)
+            except (TypeError, ValueError, OverflowError):
+                _path_floor = 0.35
+            _survivor_alternatives = [
+                c for c in cand
+                if c["nt"] != "Elite"
+                and not c["doomed"]
+                and float(c.get("proj", 0.0) or 0.0) >= _path_floor
+            ]
+            _failed_elites = [c for c in cand if c["nt"] == "Elite"]
+            if _survivor_alternatives and _failed_elites:
+                _survivor_best = max(
+                    _survivor_alternatives, key=lambda c: c["ps"])
+                _veto_score = float(_survivor_best["ps"]) - 1e-6
+                _veto_note = (
+                    "失败精英闸门：存在投影可存活的非精英替代，"
+                    f"将精英候选压至替代分{float(_survivor_best['ps']):.2f}以下"
+                    "（ELITE_FAILED_GATE_SURVIVOR_VETO）")
+                for _elite_candidate in _failed_elites:
+                    _elite_candidate["ps"] = min(
+                        float(_elite_candidate["ps"]), _veto_score)
+                    _elite_candidate["notes"].append(_veto_note)
+                _survivor_best["notes"].append(
+                    "采用投影可存活的非精英替代，避免闸门失败精英的即时风险"
+                    "（ELITE_FAILED_GATE_SURVIVOR_VETO）")
         # 绝境资源节点偏好（403~406 批次复盘）：全部候选都投影中途死亡时，
         # 死亡罚分经软饱和后候选差只剩 <1 分的噪声级，评分退化为比拼死得早晚；
         # 此时金币/宝箱/事件换卡牌、删诅咒、买药水是唯一还能改变时间线的杠杆
