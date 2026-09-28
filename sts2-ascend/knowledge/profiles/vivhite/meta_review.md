@@ -5549,34 +5549,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 1577~1587 批：终端生命锁连续链与致死转场对账观测
-
-日期：2026-09-28
-production_code_commit: pending local commit（最终 SHA 见交接回执）
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：现有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 能记录单个终端锁快照，但不能证明相邻的终端锁属于同一条连续链。若在不改变评分、候选、动作或参数的前提下追加链首与上一锁快照，就能区分“覆盖/零意图的安全锁→下一回合致死锁”和孤立终端锁；若链号、回合边界或字段与实际回执不符，该假设即证伪。
-- **EVIDENCE**：完整链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-102642_FYA2KBX5CV1P.json`（1587 局，153 条 decisions；packet 保留 90、遗漏 63，完整链按 `full_chain_available_in` 回读）。F14-T8 的终端锁为 `hp=1/block=18/incoming=16/gap=0/end_turn_lethal=no`，T9 为 `hp=1/block=0/incoming=0/gap=0/end_turn_lethal=no`，T10 为 `hp=1/block=0/incoming=14/gap=14/end_turn_lethal=yes`，随后 GAME_OVER；旧 marker 三次各自存在，但没有跨回合关联。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite combat 按 combat/run/floor 对账；连续终端锁应得到递增 `lock_chain`，并保留 `start_*` 与 `previous_*` 的 `hp/block/incoming/gap/lethal`，非连续锁应重新从 1 开始。每条记录必须对应真实 `applied end_turn {}`、下一回合状态及 GAME_OVER/胜负；字段错位、跨战斗串账或 action/params 漂移即否证。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/policy.py`：在既有 `vivhite_hp_terminal_lock_obs` 开关下维护同一战斗的相邻终端锁链，并把链首/上一锁快照追加到既有 marker；按 run/combat 边界重置。该状态只用于审计文本，不参与评分、候选、放行、目标、动作或参数。
-- `sts2-ascend/brain/selfcheck.py`：扩展终端锁夹具覆盖 T8 覆盖、T9 零意图、T10 致死三回合，验证 `lock_chain=1/2/3`、快照字段、两次确认和 `end_turn {}` 保持不变；既有观测关闭回滚断言继续有效。
-- 未修改 `runs/`、`stats`、`progression`、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程。
-
-## VALIDATION
-
-- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
-- 已完整回读目标 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有既有 LF/CRLF 提示。
-
-## FOLLOW-UP / ROLLBACK
-
-- 后续只统计 3~10 个独立终端锁 combat，逐条核对链号、首/前一快照、原始状态、真实 `applied` 回执、下一 tick 掉血和 GAME_OVER/胜负；不把新增 marker 当作行为修复。
-- 若链字段与原始状态不符、跨战斗串账或 action/params 漂移，先将 `vivhite_hp_terminal_lock_obs=0` 关闭整段观测；必要时回滚本地提交并保留本批证据。
-
-## REPLAY
-
-retry_resolution: none (failed_review_replay.requested_packages=[]; no replay targets)

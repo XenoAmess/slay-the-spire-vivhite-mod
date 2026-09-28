@@ -726,12 +726,6 @@ class Policy:
         self._saw_playable_this_turn = False  # 本回合是否进入过可出牌状态（区分"还没就绪"与"真出完了"）
         self._terminal_life_lock_signature = None
         self._terminal_life_lock_stall = 0
-        # Consecutive terminal-lock snapshots are kept only for the existing
-        # audit marker.  They never participate in scoring or action choice.
-        self._terminal_lock_chain_round = None
-        self._terminal_lock_chain_count = 0
-        self._terminal_lock_chain_first = None
-        self._terminal_lock_chain_previous = None
         self._shop_done_floor = -1  # floor of the shop we already finished evaluating
         self._reward_floor = -1     # reward screen identity tracking
         self._reward_instance_key = None  # root reward list, retained while its card overlay is open
@@ -2238,10 +2232,6 @@ class Policy:
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
-            self._terminal_lock_chain_round = None
-            self._terminal_lock_chain_count = 0
-            self._terminal_lock_chain_first = None
-            self._terminal_lock_chain_previous = None
             self._failed_this_turn = set()
             self._card_cooldowns = {}
             self._failed_hand_len = -1
@@ -3653,10 +3643,6 @@ class Policy:
             self._hp_gate_stall_early_fired = False
             self._hp_repeat_plays = {}
             self._hp_repeat_round = None
-            self._terminal_lock_chain_round = None
-            self._terminal_lock_chain_count = 0
-            self._terminal_lock_chain_first = None
-            self._terminal_lock_chain_previous = None
         if self._stall_turn_seen != round_no:
             if enemy_hp_total < self._stall_min_hp:
                 self._stall_min_hp = enemy_hp_total
@@ -4428,74 +4414,6 @@ class Policy:
             f"/cards={'|'.join(_rows)}"
             "（LETHAL_PLAYABLE_REJECT_OBS）")
 
-    def _vivhite_terminal_lock_chain_observation_note(
-            self, pol, round_no, my_hp, my_block, incoming, combat) -> str:
-        """Link adjacent Vivhite terminal-lock end turns for later replay.
-
-        The per-turn terminal-lock marker already records the current snapshot.
-        This audit-only suffix preserves the first and immediately previous
-        lock in a consecutive round chain so a safe lock followed by a lethal
-        lock can be separated from an isolated lock.  It never affects policy.
-        """
-        try:
-            enabled = bool(int(float(
-                pol.get("vivhite_hp_terminal_lock_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            enabled = False
-        if (not enabled
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID):
-            return ""
-        try:
-            current_round = int(round_no)
-            current = {
-                "round": current_round,
-                "hp": float(my_hp),
-                "block": float(my_block),
-                "incoming": float(incoming),
-                "gap": max(0.0, float(incoming) - float(my_block)),
-                "lethal": bool(combat.get("end_turn_will_kill_player")),
-            }
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            return ""
-
-        previous = self._terminal_lock_chain_previous
-        previous_round = self._terminal_lock_chain_round
-        if (isinstance(previous, dict)
-                and previous_round is not None
-                and current_round == int(previous_round) + 1):
-            count = max(1, int(self._terminal_lock_chain_count)) + 1
-            first = self._terminal_lock_chain_first or previous
-        else:
-            count = 1
-            first = current
-        self._terminal_lock_chain_round = current_round
-        self._terminal_lock_chain_count = count
-        self._terminal_lock_chain_first = dict(first)
-        self._terminal_lock_chain_previous = current
-
-        def _yes_no(value):
-            return "yes" if bool(value) else "no"
-
-        note = (
-            f"/lock_chain={count}"
-            f"/start_round={int(first['round'])}"
-            f"/start_hp={float(first['hp']):g}"
-            f"/start_block={float(first['block']):g}"
-            f"/start_incoming={float(first['incoming']):g}"
-            f"/start_gap={float(first['gap']):g}"
-            f"/start_lethal={_yes_no(first['lethal'])}"
-        )
-        if isinstance(previous, dict):
-            note += (
-                f"/previous_round={int(previous['round'])}"
-                f"/previous_hp={float(previous['hp']):g}"
-                f"/previous_block={float(previous['block']):g}"
-                f"/previous_incoming={float(previous['incoming']):g}"
-                f"/previous_gap={float(previous['gap']):g}"
-                f"/previous_lethal={_yes_no(previous['lethal'])}")
-        return note
-
     def _vivhite_hp_pressure_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
             lethal_now, combat, kill_race, race_allin, player_powers) -> str:
@@ -4842,7 +4760,6 @@ class Policy:
                 except (TypeError, ValueError):
                     _terminal_chain_obs = False
                 _ctx_combat = getattr(ctx, "combat", None) or {}
-                _terminal_lock_chain_note = ""
                 if (_terminal_chain_obs
                         and getattr(self.character_strategy, "profile_id", None)
                         == VIVHITE_PROFILE_ID
@@ -4900,9 +4817,6 @@ class Policy:
                             f"/unavailable={_unavailable}"
                             f"/energy={_energy_cost:g}"
                             f"/native={_native_reason}")
-                    _terminal_lock_chain_note = (
-                        self._vivhite_terminal_lock_chain_observation_note(
-                            pol, round_no, my_hp, my_block, incoming, combat))
                     _terminal_lock_note = (
                         f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
                         f"native_blocked_by_hook={_hook_blocked}/"
@@ -4913,7 +4827,7 @@ class Policy:
                         f"/incoming={float(incoming):g}/end_turn_lethal="
                         f"{'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                         f"/cards={'|'.join(_terminal_rows)}"
-                        f"{_terminal_chain_note}{_terminal_lock_chain_note}"
+                        f"{_terminal_chain_note}"
                         "（VIVHITE_HP_TERMINAL_LOCK_OBS）")
                 return Decision(
                     "end_turn", {},
