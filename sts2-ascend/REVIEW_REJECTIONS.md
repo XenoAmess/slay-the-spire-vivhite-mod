@@ -447,3 +447,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-09-27 17:32:14 | 第 1602 局 | `9bb2f953` | stall | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `51ccb89d` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 51ccb89d 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260928-225022-1790607022514189100-165fefb5 -->
 | 2026-09-28 22:50:22 | 第 1643 局 | `165fefb5` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `9d878ea2` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 9d878ea2 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20260929-053756-1790631476900090800-181d8167 -->
+| 2026-09-29 05:37:56 | 第 1665~1666 局 | `181d8167` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260929-053756-1790631476900090800-181d8167` | 复盘 patch 触碰 deny-only 路径边界：docs/2026-09-29-sts2-ascend-review-1665-1666.md (Git/outside/unsafe) |
