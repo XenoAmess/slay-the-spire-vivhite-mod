@@ -17409,3 +17409,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.6361190774047016局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.0585413902395175局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/35.90079863119819局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1579 胜，当前目标进阶 3
+
+## 第 1580 局复盘（2026-09-28 09:22）
+- 结果：💀 失败｜进阶 3｜到达层数 4｜当局评分 4
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血44｜自损52（可行动段52/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=12/dpt=2.1/ttk=5.71429/tsurv=0.615385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=18/projected_ttk=5.71429/actual_over_projected=3.15（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T17判死→实战18回合获胜; F4 Monster战 掉血18｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=30/dpt=13.9903/ttk=2.14434/tsurv=0.25（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=2.14434/actual_over_projected=3.26（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T7判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.7085597454941586局)，MAYHEM(37分/5.1092697877028765局)，THINKING_AHEAD(36分/5.183125228652107局)，FISTICUFFS(35分/6.920628712802758局)，ROLLING_BOULDER(34分/5.222483185278252局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.6268926606337852局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.0513364953736795局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/35.775145835989局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1580 胜，当前目标进阶 3
