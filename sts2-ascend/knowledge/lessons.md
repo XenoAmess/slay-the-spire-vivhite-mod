@@ -13702,3 +13702,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.0769107583998534局)，BASH(14分/2.603539872492184局)，JACKPOT(16分/5.897960730466432局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1646 胜，当前目标进阶 0
+
+## 第 1647 局复盘（2026-09-28 23:31）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：TWIN_STRIKE, BREAKTHROUGH, EVIL_EYE, WHIRLWIND, HELLRAISER, SHRUG_IT_OFF, MOLTEN_FIST, TAUNT, DISMANTLE, THRASH, SHRUG_IT_OFF, ROLLING_BOULDER, SPITE, FEEL_NO_PAIN, IRON_WAVE, TRUE_GRIT, THUNDERCLAP, FEEL_NO_PAIN
+- 本局遗物：STRAWBERRY, JUZU_BRACELET
+- 战斗记录：F7 Monster战 掉血17｜自损2（可行动段2/非行动段20，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损1（可行动段1/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血38｜自损1（可行动段1/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=183/dpt=10.8/ttk=16.9444/tsurv=4.42105（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=16.9444/actual_over_projected=0.59（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战10回合获胜; F19 Monster战 掉血8｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血23｜自损1（可行动段1/非行动段28，SELF_LOSS_PHASE_OBS）; F24 Elite战 掉血48｜自损1（可行动段1/非行动段31，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=148/dpt=8.775/ttk=16.8661/tsurv=3.4058（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=16.8661/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4977573825184765局)，HELLRAISER(26分/5.177242540075589局)，FEED(25分/34.80345785127335局)，PACTS_END(25分/59.80289368982472局)，OFFERING(24分/18.27531519409369局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.066141570745454局)，BASH(14分/2.5944274829384613局)，JACKPOT(16分/5.8773178679098局)
+- 策略进化：elite_grey_safety_mult: 2.40 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.48 → 0.51（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1647 胜，当前目标进阶 0
