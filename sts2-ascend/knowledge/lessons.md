@@ -13790,3 +13790,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9918052821227423局)，BASH(14分/2.5315275464115516局)，STOKE(16分/2.8812221644845617局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.44 → 0.44（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.99 → 1.98（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1654 胜，当前目标进阶 0
+
+## 第 1655 局复盘（2026-09-29 02:12）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：EXPECT_A_FIGHT, BREAKTHROUGH, SHRUG_IT_OFF, BATTLE_TRANCE, HEADBUTT, UNRELENTING, JUGGLING, THUNDERCLAP, HEADBUTT, COLOSSUS
+- 本局遗物：BAG_OF_MARBLES, LETTER_OPENER
+- 战斗记录：F6 Monster战 掉血0｜自损2（可行动段2/非行动段1，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0; F9 Monster战 掉血17｜自损1（可行动段1/非行动段19，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0; F17 Boss战 掉血57｜竞速投影审计：pool=207/dpt=4.05/ttk=51.1111/tsurv=3.16667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=51.1111/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.428670935638732局)，HELLRAISER(26分/5.034043166817072局)，PROWESS(25分/6.682993921113106局)，FEED(25分/33.84081541894511局)，PACTS_END(25分/59.12796499348145局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9813339636353127局)，BASH(14分/2.5226671999991113局)，STOKE(16分/2.871137886908866局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.44（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1655 胜，当前目标进阶 0
