@@ -18058,3 +18058,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.272861765682875局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.05959017965612局)，IMPATIENCE(22分/2.201573454378565局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧）
 - 生涯战绩：4/1638 胜，当前目标进阶 4
+
+## 第 1639 局复盘（2026-09-28 20:57）
+- 结果：💀 失败｜进阶 4｜到达层数 6｜当局评分 6
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_NEGATIVE_SPACE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血37｜自损24（可行动段24/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=19/dpt=3.15/ttk=6.03175/tsurv=1.15385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=6.03175/actual_over_projected=1.82（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T11判死→实战11回合获胜; F3 Monster战 掉血0｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血53｜自损18（可行动段18/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=45/dpt=15.8849/ttk=2.83288/tsurv=1.27778（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=2.83288/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T7判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/13.590538077658088局)，REND(38分/3.015547398448586局)，PANIC_BUTTON(38分/16.566784918620048局)，THINKING_AHEAD(37分/5.086760761634417局)，MAYHEM(37分/4.1545091015451305局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.2649067495029853局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.0488816140273234局)，IMPATIENCE(22分/2.1938679472882403局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（10回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；smith_min_hp_pct: 0.50 → 0.45（饥饿带顶格，非 Boss 长战磨死证据改接常规锻造线（一次性回血换永久升级，惠及每一场走廊战））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1639 胜，当前目标进阶 4
