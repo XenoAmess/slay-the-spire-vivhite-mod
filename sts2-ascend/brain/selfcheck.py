@@ -4079,12 +4079,13 @@ def main() -> int:
                 {"name": "LifeCost", "current_value": 3}],
         }]
 
-    def _terminal_lock_state():
-        _st = _krh_state(12, 2, _terminal_lock_hand(), incoming=42)
-        _st["combat"]["player"]["block"] = 16
+    def _terminal_lock_state(turn_no=12, hp_now=2, incoming=42, block=16,
+                             energy=2, lethal=True):
+        _st = _krh_state(turn_no, hp_now, _terminal_lock_hand(), incoming=incoming)
+        _st["combat"]["player"]["block"] = block
         _st["available_actions"] = ["end_turn"]
-        _st["combat"]["player"]["energy"] = 2
-        _st["combat"]["end_turn_will_kill_player"] = True
+        _st["combat"]["player"]["energy"] = energy
+        _st["combat"]["end_turn_will_kill_player"] = lethal
         return _st
 
     vknow_tll = _vivhite_know("sts2-selfcheck-vterminal-lock-")
@@ -4114,6 +4115,38 @@ def main() -> int:
         f"终端锁观测关闭不得改变确认/动作: on={d_tll_wait}/{d_tll} off={d_tll0_wait}/{d_tll0}"
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
+
+    # 3tll-chain) 同一战斗中连续终端锁的首/前一快照必须可对账：1587-F14
+    #      T8 覆盖来袭、T9 零意图、T10 致死，旧 marker 各自完整但无法证明
+    #      这是同一条锁链。只追加链字段，不改变确认次数、动作或参数。
+    vpol_tll_chain = policy.Policy(
+        _vivhite_know("sts2-selfcheck-vterminal-lock-chain-audit-"),
+        random.Random(11))
+    vctx_tll_chain = _krh_ctx()
+    d_tll_chain_1_wait = vpol_tll_chain.decide(
+        _terminal_lock_state(8, 1, 16, 18, 0, False), vctx_tll_chain)
+    d_tll_chain_1 = vpol_tll_chain.decide(
+        _terminal_lock_state(8, 1, 16, 18, 0, False), vctx_tll_chain)
+    d_tll_chain_2_wait = vpol_tll_chain.decide(
+        _terminal_lock_state(9, 1, 0, 0, 3, False), vctx_tll_chain)
+    d_tll_chain_2 = vpol_tll_chain.decide(
+        _terminal_lock_state(9, 1, 0, 0, 3, False), vctx_tll_chain)
+    d_tll_chain_3_wait = vpol_tll_chain.decide(
+        _terminal_lock_state(10, 1, 14, 0, 3, True), vctx_tll_chain)
+    d_tll_chain_3 = vpol_tll_chain.decide(
+        _terminal_lock_state(10, 1, 14, 0, 3, True), vctx_tll_chain)
+    assert (d_tll_chain_1_wait.action is None
+            and d_tll_chain_2_wait.action is None
+            and d_tll_chain_3_wait.action is None
+            and all(d.action == "end_turn" and d.params == {}
+                    for d in (d_tll_chain_1, d_tll_chain_2, d_tll_chain_3)) \
+        and "/lock_chain=1/start_round=8/start_hp=1/start_block=18" in d_tll_chain_1.reason \
+        and "/lock_chain=2/start_round=8/start_hp=1/start_block=18/start_incoming=16/start_gap=0/start_lethal=no" in d_tll_chain_2.reason \
+        and "/previous_round=8/previous_hp=1/previous_block=18/previous_incoming=16/previous_gap=0/previous_lethal=no" in d_tll_chain_2.reason \
+        and "/lock_chain=3/start_round=8/start_hp=1/start_block=18/start_incoming=16/start_gap=0/start_lethal=no" in d_tll_chain_3.reason \
+        and "/previous_round=9/previous_hp=1/previous_block=0/previous_incoming=0/previous_gap=0/previous_lethal=no" in d_tll_chain_3.reason \
+        and "/incoming=14/end_turn_lethal=yes" in d_tll_chain_3.reason), \
+        f"终端锁连续链字段或动作漂移: {d_tll_chain_1}/{d_tll_chain_2}/{d_tll_chain_3}"
 
     # 3tllc) Boss 零意图生命支付链观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS）：
     #      1451-F33 在首个正伤害前连续支付后进入终端锁；只消费成功回执中的
