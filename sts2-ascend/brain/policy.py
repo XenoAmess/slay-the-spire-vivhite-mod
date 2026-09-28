@@ -904,6 +904,7 @@ class Policy:
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
+        self._longfight_joint_flip_terminal_outcome_reported = False
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -4616,6 +4617,83 @@ class Policy:
                 return
             self._elite_forced_entry_reported = False
             return
+
+    def _consume_longfight_joint_flip_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a long-fight flip-cap decision to the authoritative terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "longfight_joint_flip_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+        if getattr(self, "_longfight_joint_flip_terminal_outcome_reported", False):
+            # If the GAME_OVER Decision was lost before persistence, allow the
+            # next authoritative poll to rebuild the same audit.  A durable
+            # marker above is the only commit proof.
+            self._longfight_joint_flip_terminal_outcome_reported = False
+
+        source = None
+        source_match = None
+        for row in reversed(decisions):
+            if not isinstance(row, dict):
+                continue
+            if row.get("screen") not in (None, "COMBAT"):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                continue
+            reason = str(row.get("reason") or "")
+            marker_at = reason.rfind("LONGFIGHT_JOINT_FLIP_TTK_CAP")
+            if marker_at < 0:
+                continue
+            match = re.search(
+                r"击杀需([0-9]+(?:\.[0-9]+)?)回合[＞>]"
+                r"([0-9]+(?:\.[0-9]+)?)×可存活"
+                r"([0-9]+(?:\.[0-9]+)?)回合",
+                reason[:marker_at])
+            if match is None:
+                continue
+            source = row
+            source_match = match
+            break
+        if source is None or source_match is None:
+            return ""
+        self._longfight_joint_flip_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；长战翻盘上限终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(source.get('turn', source.get('round')))}"
+            f"/source_action={source.get('action') or '?'}"
+            f"/source_hp={_num(source.get('hp'))}"
+            f"/source_energy={_num(source.get('energy'))}"
+            f"/ttk={_num(source_match.group(1))}"
+            f"/tsurv={_num(source_match.group(3))}"
+            f"/cap={_num(source_match.group(2))}"
+            f"/final_hp={_num(final_hp)}"
+            "（LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS）")
 
     def _consume_low_pool_burst_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -16383,6 +16461,9 @@ class Policy:
         _elite_forced_entry_outcome_note = (
             self._consume_elite_forced_entry_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
+        _longfight_joint_flip_terminal_outcome_note = (
+            self._consume_longfight_joint_flip_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
@@ -16419,6 +16500,7 @@ class Policy:
             return Decision("continue_game_over", {},
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
+                            f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
@@ -16447,6 +16529,7 @@ class Policy:
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
+                        f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
@@ -16461,6 +16544,7 @@ class Policy:
                 return Decision("return_to_main_menu", {},
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
+                                f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"

@@ -9960,6 +9960,72 @@ def main() -> int:
         and "ELITE_FORCED_ENTRY_OBS" not in d_etf_off.reason, \
         f"强制精英观测关闭未严格回滚: {d_etf_off.reason}"
 
+    # 3etf2) 长战联合翻盘上限的终局对账（LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS）：
+    #        1670-F7 在来源回合以 LONGFIGHT_JOINT_FLIP_TTK_CAP 否决“可行”的防守线，
+    #        随后同楼层 GAME_OVER；终局必须保留来源回合、TTK/生还线/上限和 final_hp，
+    #        但不得改变 continue_game_over 或其空参数。持久 decisions 重载和开关关闭
+    #        都是回滚锚，避免把观测误变成评分/动作路径。
+    lfj_source = {
+        "screen": "COMBAT", "floor": 7, "turn": 3, "hp": 66,
+        "energy": 3, "action": "play_card", "params": {"card_index": 4},
+        "reason": ("防守线复核虽报可行但击杀需12回合＞1.5×可存活3回合，"
+                   "翻盘比超限不予放行（LONGFIGHT_JOINT_FLIP_TTK_CAP）"),
+    }
+    lfj_state = {
+        "screen": "GAME_OVER", "run_id": "LONGFIGHT-FLIP-CHECK",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 7, "can_continue": True},
+        "run": {"current_hp": 0},
+    }
+    lfj_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [lfj_source],
+        "run_id": "LONGFIGHT-FLIP-CHECK", "run_finalized": False,
+        "finalize_requested": False,
+    })()
+    lfj_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-longfight-terminal-"))))
+    d_lfj = lfj_pol.decide(lfj_state, lfj_ctx)
+    assert (d_lfj.action == "continue_game_over" and d_lfj.params == {}
+            and "LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS" in d_lfj.reason
+            and "/floor=7/source_round=3/source_action=play_card" in d_lfj.reason
+            and "/source_hp=66/source_energy=3/ttk=12/tsurv=3/cap=1.5" in d_lfj.reason
+            and "/final_hp=0" in d_lfj.reason), \
+        f"长战翻盘上限终局对账缺失或动作漂移: {d_lfj.action}/{d_lfj.params}/{d_lfj.reason}"
+    lfj_ctx.decisions.append({"screen": "GAME_OVER", "floor": 7,
+                              "action": d_lfj.action, "params": d_lfj.params,
+                              "reason": d_lfj.reason})
+    d_lfj_duplicate = lfj_pol.decide(lfj_state, lfj_ctx)
+    assert "LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS" not in d_lfj_duplicate.reason, \
+        f"长战翻盘上限终局观测非幂等: {d_lfj_duplicate.reason}"
+    lfj_reload_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [dict(lfj_source)],
+        "run_id": "LONGFIGHT-FLIP-CHECK", "run_finalized": False,
+        "finalize_requested": False,
+    })()
+    lfj_reload_pol = policy.Policy(
+        knowledge.Knowledge(lfj_pol.know.root))
+    d_lfj_reload = lfj_reload_pol.decide(lfj_state, lfj_reload_ctx)
+    assert (d_lfj_reload.action == d_lfj.action
+            and d_lfj_reload.params == d_lfj.params
+            and "LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+            in d_lfj_reload.reason), \
+        f"长战翻盘上限终局观测重载未恢复: {d_lfj_reload.reason}"
+    lfj_off_know = knowledge.Knowledge(lfj_pol.know.root)
+    lfj_off_know.policy["longfight_joint_flip_terminal_outcome_obs"] = False
+    lfj_off_pol = policy.Policy(lfj_off_know)
+    lfj_off_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [dict(lfj_source)],
+        "run_id": "LONGFIGHT-FLIP-CHECK", "run_finalized": False,
+        "finalize_requested": False,
+    })()
+    d_lfj_off = lfj_off_pol.decide(lfj_state, lfj_off_ctx)
+    assert (d_lfj_off.action == d_lfj.action
+            and d_lfj_off.params == d_lfj.params
+            and "LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+            not in d_lfj_off.reason), \
+        f"长战翻盘上限终局观测关闭未严格回滚: {d_lfj_off.reason}"
+
     # 3etg) 失败精英闸门的存活替代行为门（ELITE_FAILED_GATE_SURVIVOR_VETO）：
     #       1516-F27 在 38/78 HP 时精英首战投影已低于生存线，却被精英后续
     #       价值路径抬过篝火；仅在存在整条路径未投影死亡且终点仍过地板的

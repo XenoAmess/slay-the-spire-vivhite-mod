@@ -557,6 +557,8 @@ DEFAULT_POLICY = {
                                                # 换线次数按敌人身份（instance/uuid/spawn/id/name）补记，
                                                # 避免敌人列表重排把同一数字索引误报为未换线；
                                                # 纯观测不改评分、判决或动作；False=严格回滚
+    "longfight_joint_flip_terminal_outcome_obs": True,  # 将同楼层 LONGFIGHT_JOINT_FLIP_TTK_CAP 来源回接权威 GAME_OVER；
+                                                         # 记录来源回合、击杀/生还投影上限、胜负与终局生命；纯观测，False=严格回滚
     "longfight_joint_survival_margin_obs": True,  # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
                                                    # 联合能量复核放行攻防节奏时，披露当前回合
                                                    # 手牌在现有能量下的最大可得格挡、剩余受击缺口
