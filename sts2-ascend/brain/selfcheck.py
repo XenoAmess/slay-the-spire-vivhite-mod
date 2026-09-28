@@ -4358,6 +4358,25 @@ def main() -> int:
     assert "hp=45->43" in d_krh.reason \
         and "incoming=22" in d_krh.reason, \
         f"判死竞速实付观测缺支付前后生命/敌意图: {d_krh.reason}"
+    assert float(knowledge.DEFAULT_POLICY[
+        "kill_race_hopeless_hp_pay_budget_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 kill_race_hopeless_hp_pay_budget_obs 静态键或默认值被改"
+    assert "KILL_RACE_HOPELESS_HP_PAY_BUDGET_OBS" in d_krh.reason \
+        and "ttk=" in d_krh.reason \
+        and "post_tsurv=" in d_krh.reason \
+        and "budget=" in d_krh.reason, \
+        f"判死竞速自付后预算观测字段缺失: {d_krh.reason}"
+    vknow_krh_budget0 = _vivhite_know(
+        "sts2-selfcheck-krhopeless-budget-off-")
+    vknow_krh_budget0.policy["kill_race_hopeless_hp_pay_budget_obs"] = 0
+    vpol_krh_budget0 = policy.Policy(vknow_krh_budget0, random.Random(11))
+    d_krh_budget0 = _krh_drive(
+        vpol_krh_budget0, _krh_ctx(), _krh_hand_vivhite)
+    assert d_krh_budget0.action == d_krh.action \
+        and d_krh_budget0.params == d_krh.params, \
+        f"自付后预算观测关闭不得改变动作/参数: on={d_krh} off={d_krh_budget0}"
+    assert "KILL_RACE_HOPELESS_HP_PAY_BUDGET_OBS" not in d_krh_budget0.reason, \
+        f"自付后预算观测关闭后不得出现注记: {d_krh_budget0.reason}"
     # 出牌后的同回合快照应把请求值与观察到的掉血分开记录；手牌已移除
     # 才允许结算，避免把 action 发送后的重复旧快照误判成零支付。
     # Re-arm with a named policy so the pending audit can be reconciled on the

@@ -4594,6 +4594,7 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 retry_resolution: none (no failed_review_replay packages requested)
 
+
 # 1485~1488 批：敌血推进后重新武装 VIVHITE_HP_GATE_STALL_ANY 生命门
 
 日期：2026-09-27
@@ -5703,6 +5704,38 @@ production_code_commit: `083275c8bc2acf9408f52ec7ae2a27920c981ec4`
 
 - 后续只收集 3~10 个独立致死可牌拒绝 combat，按 run/floor/turn 对账原始候选、真实 `applied end_turn {}`、同楼层 `GAME_OVER` 与最终胜负；观测出现本身不等于应改变评分或竞速策略。
 - 若 marker 在非匹配楼层/非终局显形、候选字段与原始决策不符、重复消费或 action/params 漂移，将 `lethal_playable_reject_outcome_obs=0`；必要时回滚该本地提交并保留本批证据，重复核验前不调整评分门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
+
+# 1613~1619 批：斩杀竞速生命支付后的预算观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 只记录竞速判死时选中牌的实付生命，不能说明支付是否进一步吃掉了剩余斩杀预算。假设是：在同一选中牌上追加当前 `ttk/tsurv` 与按支付后生命缩放的 `post_tsurv/budget/status`，能证伪“自付仍有竞速余量”和“自付后已无预算”两种解释，且不改变 action/params。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-161850_KQ5EK1L52UJL.json` 为 1619 局、507 条 decisions、F33 Boss defeat。决策 502（F33-T7）选中 `切线星光+`，理由记录实付 2 血、`hp=31->29`、`incoming=30`，同条竞速投影为“击杀还需 7 回合 > 可存活 4 回合”；决策 504 再实付 2 血至 27，决策 505 以 `block=8/incoming=30/gap=22` 空过，决策 506 GAME_OVER。按本次观测代理，决策 502 的支付后生存预算约为 `4×29/31-7=-3.26`；这支持补齐观测，但不单独证明应立即禁用该牌。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 斩杀竞速战斗中，选中生命支付牌应带 `KILL_RACE_HOPELESS_HP_PAY_BUDGET_OBS` 及 `ttk/tsurv/post_tsurv/budget/status`，并可与下一回合真实掉血、`applied` action/params 和 GAME_OVER/胜负对账。`status=insufficient` 后频繁败局支持假设；`covered` 或成功翻盘占主导、或字段与投影不符则证伪/需要重定义代理。任何 action/params 漂移都证伪本改动的纯观测契约。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_hopeless_hp_pay_budget_obs`，关闭只移除预算观测。
+- `sts2-ascend/brain/policy.py`：在既有判死竞速自付注记旁读取已计算的 `_race_terminal_projection`，按支付后生命比例缩放 `tsurv` 并记录预算状态；这是 audit proxy，不参与评分、候选、门、放行、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：验证默认字段、预算字段出现、关闭键后 action/params 不变且 marker 消失。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
+- 已回读三处生产/自检 diff；`git diff --check` 通过。工作区原有素材删除与 `.review-cache/` 保持未纳入本批。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite 竞速 combat，按 run/floor/turn 对账投影、支付前后 HP、真实动作回执、下一 tick 掉血和终局；观测出现本身不等于应调整生命支付策略。
+- 若投影缺失、比例缩放与原生状态不符、marker 在非自付竞速样本显形或 action/params 漂移，将 `kill_race_hopeless_hp_pay_budget_obs=0`；必要时回滚本地提交并保留本批证据，重复核验前不改放行逻辑。
 
 ## REPLAY
 
