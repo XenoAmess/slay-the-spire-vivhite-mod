@@ -17816,3 +17816,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.4551179194702453局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.3049324819154022局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/25.275658366057822局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1616 胜，当前目标进阶 3
+
+## 第 1617 局复盘（2026-09-28 16:02）
+- 结果：💀 失败｜进阶 3｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损50（可行动段50/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=18/dpt=1.8/ttk=10/tsurv=1.07692（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=17/projected_ttk=10/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T15判死→实战17回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.2573579998247872局)，THINKING_AHEAD(37分/5.494657742282276局)，MAYHEM(37分/4.487650721134452局)，ROLLING_BOULDER(36分/5.529227214980859局)，FISTICUFFS(35分/6.078630748460919局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.4465250067520996局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.2933652182286983局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/25.18719356177662局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（17回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1617 胜，当前目标进阶 3
