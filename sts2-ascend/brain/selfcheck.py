@@ -17147,11 +17147,48 @@ def main() -> int:
         and "LETHAL_PLAYABLE_REJECT_OBS" in d_lethal_playable.reason \
         and "hp=9/block=0/incoming=24/energy=3" in d_lethal_playable.reason \
         and "JUGGLING" in d_lethal_playable.reason \
+        and "/hp_loss=0/energy_gain=0/pay_hp_after=9/pay_energy_after=2" \
+            in d_lethal_playable.reason \
         and "/score=" in d_lethal_playable.reason \
         and "/threshold=" in d_lethal_playable.reason \
         and "/status=eligible" in d_lethal_playable.reason \
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_playable.reason, \
         f"致死可牌拒绝观测缺失: {d_lethal_playable and d_lethal_playable.reason}"
+
+    # The current failed run's boundary: BLOODLETTING is free, pays native
+    # HpLoss=3, and grants Energy=2.  Keep it below the play threshold so this
+    # fixture checks only the new audit fields and proves the action remains
+    # end_turn; it must not turn the observation into a rescue rule.
+    lethal_payment_know = knowledge.Knowledge(tmp)
+    lethal_payment_know.policy["play_threshold"] = 100.0
+    lethal_payment_pol = policy.Policy(lethal_payment_know)
+    lethal_payment_ctx = _SettleCtx()
+    lethal_payment_state = _lethal_playable_reject_state()
+    lethal_payment_state["combat"]["player"]["energy"] = 0
+    lethal_payment_state["combat"]["hand"] = [{
+        "index": 0, "card_id": "BLOODLETTING", "name": "放血",
+        "playable": True, "energy_cost": 0, "requires_target": False,
+        "card_type": "Skill",
+        "resolved_rules_text": "失去3点生命。获得2点能量。",
+        "dynamic_values": [
+            {"name": "HpLoss", "current_value": 3},
+            {"name": "Energy", "current_value": 2},
+        ],
+    }]
+    d_lethal_payment = None
+    for _ in range(6):
+        d_candidate = lethal_payment_pol.decide(
+            lethal_payment_state, lethal_payment_ctx)
+        if d_candidate.action == "end_turn":
+            d_lethal_payment = d_candidate
+            break
+    assert d_lethal_payment is not None \
+        and d_lethal_payment.action == d_lethal_playable.action \
+        and d_lethal_payment.params == d_lethal_playable.params \
+        and "BLOODLETTING" in d_lethal_payment.reason \
+        and "/hp_loss=3/energy_gain=2/pay_hp_after=6/pay_energy_after=2" \
+            in d_lethal_payment.reason, \
+        f"致死可牌支付/回能观测缺失或动作漂移: {d_lethal_payment}"
 
     lethal_playable_off_know = knowledge.Knowledge(tmp)
     lethal_playable_off_know.policy["lethal_playable_reject_obs"] = False
