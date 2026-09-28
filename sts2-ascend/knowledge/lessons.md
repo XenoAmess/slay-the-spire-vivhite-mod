@@ -13999,3 +13999,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.79899473984496局)，BASH(14分/2.368380164484197局)，STOKE(16分/2.6955382861664927局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1673 胜，当前目标进阶 0
+
+## 第 1674 局复盘（2026-09-29 07:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：FIGHT_ME, TAUNT, CINDER, ARMAMENTS, PACTS_END, MOLTEN_FIST, STOMP, HEADBUTT, STONE_ARMOR
+- 本局遗物：WHETSTONE
+- 战斗记录：F6 Monster战 掉血17｜自损1（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=67/dpt=8.4/ttk=7.97619/tsurv=5（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=7.97619/actual_over_projected=0.63（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战5回合获胜; F8 Monster战 掉血20; F12 Monster战 掉血13; F14 Monster战 掉血8; F15 Monster战 掉血17; F17 Boss战 掉血55｜竞速投影审计：pool=171/dpt=10.8/ttk=15.8333/tsurv=6.47059（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=15.8333/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.272152273507571局)，HELLRAISER(26分/4.709618111936797局)，PROWESS(25分/7.228055977289556局)，FEED(25分/32.61534611801956局)，PACTS_END(24分/58.27232978555012局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7891982582555026局)，BASH(14分/2.3600908339085027局)，STOKE(16分/2.68610390216491局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1674 胜，当前目标进阶 0
