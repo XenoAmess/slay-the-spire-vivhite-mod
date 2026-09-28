@@ -13460,3 +13460,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3236419625760343局)，BASH(14分/2.8123124298720312局)，BODY_SLAM(15分/2.027594470853132局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1624 胜，当前目标进阶 0
+
+## 第 1625 局复盘（2026-09-28 09:06）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：INFLAME, HOWL_FROM_BEYOND, SWORD_BOOMERANG, EQUILIBRIUM, MOLTEN_FIST, PACTS_END, BLUDGEON, INFLAME, BLUDGEON, UNMOVABLE, DISMANTLE, JUGGERNAUT
+- 本局遗物：BOOK_OF_FIVE_RINGS
+- 战斗记录：F14 Monster战 掉血4; F15 Monster战 掉血9; F17 Boss战 掉血49｜竞速投影审计：pool=171/dpt=13.5/ttk=12.6667/tsurv=6.58824（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=12.6667/actual_over_projected=0.79（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T2判死→实战10回合获胜; F19 Monster战 掉血12; F20 Monster战 掉血35; F21 Monster战 掉血33｜竞速投影审计：pool=94/dpt=28.35/ttk=3.3157/tsurv=1.35714（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=3.3157/actual_over_projected=0.60（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.6980474575706443局)，OFFERING(25分/17.683769306317586局)，FEED(25分/34.512131997788735局)，PACTS_END(25分/64.5983658799197局)，NOT_YET(24分/3.2030343029081423局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3120092157070182局)，BASH(14分/2.802469336367479局)，BODY_SLAM(15分/2.0204978902051463局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.38 → 0.40（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F21——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F21——药水交药线部分胜利回收）
+- 生涯战绩：0/1625 胜，当前目标进阶 0
