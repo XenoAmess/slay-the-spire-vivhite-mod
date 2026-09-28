@@ -17651,3 +17651,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5876933550864485局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.4404262676365422局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.953565660478542局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1601 胜，当前目标进阶 3
+
+## 第 1602 局复盘（2026-09-28 13:19）
+- 结果：💀 失败｜进阶 3｜到达层数 9｜当局评分 9
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血4｜自损16（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血36｜自损20（可行动段20/非行动段29，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血48｜自损26（可行动段26/非行动段21，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=118/dpt=13.524/ttk=8.72523/tsurv=1.27273（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=8.72523/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T5判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.433254095226135局)，THINKING_AHEAD(37分/5.791367174431342局)，MAYHEM(37分/4.7299821564311095局)，ROLLING_BOULDER(36分/5.827803385532059局)，FISTICUFFS(35分/6.406874501250252局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5786364283436463局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.4318847756998143局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.88022818066687局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：3/1602 胜，当前目标进阶 3
