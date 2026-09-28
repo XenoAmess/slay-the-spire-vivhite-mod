@@ -13834,3 +13834,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.950139393215612局)，BASH(14分/2.496271794259365局)，STOKE(16分/2.8410963303136305局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1658 胜，当前目标进阶 0
+
+## 第 1659 局复盘（2026-09-29 03:31）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：MOLTEN_FIST, INFLAME, SHRUG_IT_OFF, ANGER, JUGGLING, BLUDGEON, BREAKTHROUGH, FEEL_NO_PAIN, THRASH, HEMOKINESIS, TWIN_STRIKE, UNRELENTING
+- 本局遗物：STRAWBERRY
+- 战斗记录：F7 Monster战 掉血13; F8 Monster战 掉血0; F11 Monster战 掉血4｜自损1（可行动段1/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损1（可行动段1/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血13｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血65｜自损1（可行动段1/非行动段23，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=194/dpt=27.45/ttk=7.0674/tsurv=3.36842（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=7.0674/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T4判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.394847633700947局)，HELLRAISER(26分/4.963935702071412局)，PROWESS(25分/6.589922061140135局)，FEED(25分/33.36952550439157局)，PACTS_END(25分/58.30450925742663局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9398139053393577局)，BASH(14分/2.4875348429794575局)，STOKE(16分/2.831152493157533局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1659 胜，当前目标进阶 0
