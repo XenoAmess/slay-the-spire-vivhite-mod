@@ -13944,3 +13944,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8484956929051815局)，BASH(14分/2.4102655863043845局)，STOKE(16分/2.7432095848210047局)
 - 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.41 → 0.44（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.94 → 1.93（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1668 胜，当前目标进阶 0
+
+## 第 1669 局复盘（2026-09-29 06:07）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：TAUNT, TRUE_GRIT, CINDER, SECOND_WIND, SWORD_BOOMERANG
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血11; F3 Monster战 掉血2; F4 Monster战 掉血13; F5 Monster战 掉血26; F6 Monster战 掉血10｜竞速投影审计：pool=30/dpt=7.2/ttk=4.16667/tsurv=1.4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.16667/actual_over_projected=1.68（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战7回合获胜; F7 Elite战 掉血29｜竞速投影审计：pool=98/dpt=11.475/ttk=8.54031/tsurv=1.26087（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=8.54031/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3123358799415024局)，HELLRAISER(26分/4.792908938379531局)，PROWESS(25分/7.355886035186801局)，FEED(25分/33.19215703311273局)，PACTS_END(25分/58.28520589710761局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8385259579800133局)，BASH(14分/2.4018296567523194局)，STOKE(16分/2.7336083512741314局)
+- 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1669 胜，当前目标进阶 0
