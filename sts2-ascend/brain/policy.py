@@ -11645,6 +11645,34 @@ class Policy:
             if cost == 0:
                 score += pol["free_card_bonus"]
             why = f"功能牌（抽牌{dr}/回能）" + _hp_cost_note
+            # HP_COST_UTILITY_REJECT_OBS：1661-F22-T1 暴露出非致死且可支付的
+            # Offering 被血价扣到门槛下、随后整手牌能量锁定的上游候选。只在
+            # 计价分支实际把仍可支付的功能牌压到普通出牌门槛下时记录；不重算、
+            # 不放宽门槛，也不改变 marginal fallback 的既有选择。开关关闭时
+            # 该尾缀与分数严格消失，保留 action/params 不变的回滚锚。
+            try:
+                _hp_utility_reject_obs = bool(int(float(pol.get(
+                    "hp_cost_utility_reject_obs", 1) or 0)))
+                _hp_utility_threshold = float(pol.get(
+                    "play_threshold", 0.4))
+            except (TypeError, ValueError, OverflowError):
+                _hp_utility_reject_obs = False
+                _hp_utility_threshold = 0.4
+            if (_hp_utility_reject_obs
+                    and "HP_COST_UTILITY_PRICING" in _hp_cost_note
+                    and self_cost > 0
+                    and my_hp - self_cost > 0
+                    and score <= _hp_utility_threshold):
+                _hp_utility_card = (
+                    card.get("card_id") or card.get("name") or "?")
+                why += (
+                    f"｜耗血功能牌低于出牌门槛：卡={_hp_utility_card}"
+                    f"/self={self_cost:g}/hp={my_hp:g}"
+                    f"/after_hp={my_hp - self_cost:g}"
+                    f"/energy={cur_energy:g}/draw={dr}"
+                    f"/score={score:.2f}/threshold={_hp_utility_threshold:.2f}"
+                    f"/incoming={incoming:g}/block={my_block:g}"
+                    "（HP_COST_UTILITY_REJECT_OBS）")
             if kill_race_lethal:
                 why += "｜致死竞速抽牌续攻"
             return score, None, why

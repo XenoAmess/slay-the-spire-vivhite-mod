@@ -162,6 +162,10 @@ DEFAULT_POLICY = {
                                    # 可行动段自损 18，非致死回合白烧 8 血把可存活分母烧穿。
                                    # 与攻击分支同一把血价尺扣分，判死语境半价，自付归零直死
                                    # 禁玩；0 = 关闭（严格回滚旧口径）
+    "hp_cost_utility_reject_obs": True,  # 耗血功能牌低于出牌门槛的只读对账：记录非致死、
+                                          # 可支付功能牌因 HP_COST_UTILITY_PRICING 落到门槛下
+                                          # 的卡牌/自付/余血/能量/分数，供后续与资源耗尽终局对齐；
+                                          # 不改变评分、候选或动作；False=严格移除该标记
     "kill_race_free_energy_function_obs": True,  # 竞速0费回能盲区观测（KILL_RACE_FREE_ENERGY_FUNCTION_OBS）：
                                                    # 非致死 kill_race 结束回合时，记录可出但未入选的
                                                    # 0费纯回能牌、实付生命与其新增可解锁攻击数；只写

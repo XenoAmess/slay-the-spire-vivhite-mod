@@ -17622,7 +17622,19 @@ def main() -> int:
         my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[])
     assert s_off < s_trn and "耗血6计价（HP_COST_UTILITY_PRICING）" in why_off, \
         f"非致死回合耗血功能牌未被血价压过零自付抽牌: off={s_off}（{why_off}）trn={s_trn}"
+    assert "HP_COST_UTILITY_REJECT_OBS" in why_off \
+        and "/self=6/hp=32/after_hp=26" in why_off \
+        and "/score=" in why_off and "/threshold=0.40" in why_off, \
+        f"耗血功能牌低于门槛观测缺失: {why_off}"
     assert "耗血" not in why_trn, f"零自付功能牌被误加耗血留痕: {why_trn}"
+    hcu_pol.know.policy["hp_cost_utility_reject_obs"] = False
+    s_off_obs_rb, _, why_off_obs_rb = hcu_pol._score_play(
+        hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert "HP_COST_UTILITY_REJECT_OBS" not in why_off_obs_rb \
+        and abs(s_off_obs_rb - s_off) < 1e-9, \
+        f"耗血功能牌观测开关改变评分或未回滚: {s_off_obs_rb}vs{s_off}（{why_off_obs_rb}）"
+    hcu_pol.know.policy["hp_cost_utility_reject_obs"] = True
     s_sui, _, why_sui = hcu_pol._score_play(
         hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
         my_hp=6, my_max_hp=80, cur_energy=3, run_deck=[])

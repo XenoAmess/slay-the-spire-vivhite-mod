@@ -13097,3 +13097,26 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：仓库规定的完整 selfcheck 输出 **SELFCHECK OK**；宿主固定 256 槽池先因现有完整夹具容量报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，随后用 clone 内继承 ACL 的进程级临时根运行同一 selfcheck；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - **replay targets**：none；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1661局复盘（HP_COST_UTILITY_REJECT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **归因**：1661-F22 的资源耗尽链条已经被 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 记录，但上游可疑候选只有 `HP_COST_UTILITY_PRICING`，缺少“可支付耗血功能牌为何被拒、拒绝后是否进入能量锁定”的对账字段。
+- **HYPOTHESIS**：当非致死且支付后仍存活的抽牌/回能功能牌被 `HP_COST_UTILITY_PRICING` 压到普通出牌门槛以下时，策略可能错过补充能量的机会，并在随后回合进入资源耗尽；若未来匹配窗口没有资源耗尽关联，该假设即被证伪。
+- **EVIDENCE**：精确 run `Q0BPFDWGAHQJ`（1661）的完整链 `runs/20260929-034848_Q0BPFDWGAHQJ.json` 在 F22/T1 记录 `hp=35/block=5/incoming=4/energy=0`，可出 `OFFERING`（抽牌3/回能）得分 `-8.639`，因 `HP_COST_UTILITY_PRICING` 被拒；T2 随后七张牌全部 `not_enough_energy`。T3 空过时 `hp=25/block=13/incoming=15/energy_locked=6`，T4 有 3 张格挡候选但可支付数为 0，T6 再次空过时 `hp=18/block=5/incoming=17/energy_locked=5`，随后 GAME_OVER；T5 同一功能牌仍以 `-12.464` 被拒。单局不能证明因果，故只追加观测。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立战斗窗口统计 `hp_cost_utility_reject_count`、`NONLETHAL_UNAVAILABLE_END_TURN_OBS`/`energy_locked` 在后 1~2 回合出现率、后续死亡率及 `pricing_match_rate`。新 marker 应包含 `card/self/hp/after_hp/energy/draw/score/threshold/incoming/block`；若条件满足却缺 marker、支付后已濒死仍被标记、关闭计价后仍出现，或 action/params 漂移，即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `hp_cost_utility_reject_obs` 开关。
+- `sts2-ascend/brain/policy.py`：仅在实际命中 `HP_COST_UTILITY_PRICING`、自付后仍存活且得分不达 `play_threshold` 时，在既有功能牌原因后追加 `HP_COST_UTILITY_REJECT_OBS` 字段；不改分数、候选排序、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：验证 Offering 的卡牌、自付、当前/支付后生命、分数/门槛字段，并关闭开关复核 marker 消失且评分与原值一致。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：先收集 3~10 个满足“非致死、可支付、耗血功能牌”的独立窗口，按上述指标与随后资源耗尽逐窗对账；证据重复前维持只读观测，不调整出牌策略。
+- **撤回**：将 `hp_cost_utility_reject_obs` 设为 `False`；预期只移除新尾缀，既有评分、候选、action 与 params 保持字节级语义不变。
+- **验证**：完整 selfcheck 最终输出 **SELFCHECK OK**；目标三文件 `git diff --check` 无新增错误。全仓 diff 检查仍会报告 clone 中既有的长资产路径/权限问题，未由本批改动产生；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- **replay targets**：none；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
