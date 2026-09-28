@@ -17970,3 +17970,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.3375160345406503局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.146623878342438局)，IMPATIENCE(22分/2.2641998420360503局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.46 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：4/1630 胜，当前目标进阶 4
+
+## 第 1631 局复盘（2026-09-28 19:28）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：GORGET, MINIATURE_CANNON
+- 战斗记录：F6 Unknown战 掉血0｜自损16（可行动段16/非行动段10，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血20｜自损18（可行动段18/非行动段17，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损20（可行动段20/非行动段2，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血88｜自损41（可行动段41/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=170/dpt=8.4/ttk=20.2381/tsurv=4.625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=15/projected_ttk=20.2381/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T6判死→实战15回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(39分/11.948840580857016局)，REND(38分/3.1013282475949846局)，PANIC_BUTTON(38分/17.03804691194043局)，THINKING_AHEAD(37分/5.231459749871866局)，MAYHEM(37分/4.272689077326751局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.329334728419758局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.1356106947682396局)，IMPATIENCE(22分/2.2562751425889243局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：4/1631 胜，当前目标进阶 4
