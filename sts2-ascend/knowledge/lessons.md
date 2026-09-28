@@ -13515,3 +13515,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.2658839518519027局)，BASH(14分/2.763440266951612局)，BULLY(15分/3.0320526007362814局)
 - 策略进化：elite_grey_safety_mult: 2.20 → 2.40（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1629 胜，当前目标进阶 0
+
+## 第 1630 局复盘（2026-09-28 11:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：JUGGLING, TWIN_STRIKE, DISMANTLE, CINDER, RAMPAGE, OFFERING, RUPTURE, DISMANTLE
+- 本局遗物：PEAR, ODDLY_SMOOTH_STONE
+- 战斗记录：F3 Monster战 掉血2; F4 Monster战 掉血8｜自损4（可行动段4/非行动段6，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血12; F12 Elite战 掉血9; F14 Monster战 掉血1; F17 Boss战 掉血65｜竞速投影审计：pool=207/dpt=21.6/ttk=9.58333/tsurv=3.42105（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=9.58333/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T4判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.6511609831118257局)，OFFERING(25分/18.37646203654003局)，FEED(25分/34.90539490279733局)，PACTS_END(25分/63.47578012872708局)，DRAMATIC_ENTRANCE(24分/16.287969179275546局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.254453358020421局)，BASH(14分/2.7537682260172813局)，BULLY(15分/3.0214404166337046局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1630 胜，当前目标进阶 0
