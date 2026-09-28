@@ -3891,75 +3891,8 @@ class Policy:
             f"/selected={_selected_text}"
             f"（{marker}）")
 
-    def _kill_race_terminal_capacity_note(
-            self, pol, hand, my_hp, my_block, incoming, energy,
-            block_locked=False) -> str:
-        """Expose final affordable block capacity at a terminal race boundary.
-
-        This is an observation-only companion to the terminal projection.  It
-        uses the same finite-energy block DP as the existing capacity audit,
-        but is emitted for every latched lethal no-card boundary so the final
-        resource state can be compared with the race outcome directly.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "kill_race_terminal_capacity_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            _enabled = False
-        if not _enabled:
-            return ""
-        try:
-            _energy = max(0.0, float(energy or 0.0))
-            _incoming = float(incoming or 0.0)
-            _hp = float(my_hp or 0.0)
-            _block = float(my_block or 0.0)
-        except (TypeError, ValueError, OverflowError):
-            return ""
-
-        _max_energy = int(_energy)
-        _block_by_energy = [0.0] * (_max_energy + 1)
-        _defense_rows = []
-        for _card in hand or []:
-            if (not isinstance(_card, dict)
-                    or not _card.get("playable")
-                    or self._card_unavailable(_card)
-                    or block_locked):
-                continue
-            try:
-                _cost = (_energy if _card.get("costs_x")
-                         else float(_card.get("energy_cost") or 0.0))
-                _card_block = float(card_numbers(_card)[1])
-            except (TypeError, ValueError, OverflowError, IndexError):
-                continue
-            if (_cost < 0.0 or _cost > _energy + 1e-9
-                    or _card_block <= 0.0 or not _cost.is_integer()):
-                continue
-            _cost_i = int(_cost)
-            _name = str(_card.get("name") or _card.get("card_id") or "?")
-            _defense_rows.append(f"{_name}:{_cost:g}@{_card_block:g}")
-            for _spent in range(_max_energy, _cost_i - 1, -1):
-                _block_by_energy[_spent] = max(
-                    _block_by_energy[_spent],
-                    _block_by_energy[_spent - _cost_i] + _card_block)
-        _max_block = max(_block_by_energy, default=0.0)
-        _post_gap = max(0.0, _incoming - _block - _max_block)
-        _need = max(0.0, _incoming - _block - _hp)
-        _covers = _max_block > _need
-        _survives = _post_gap < _hp
-        return (
-            f"；竞速终端容量对账：hp={_hp:g}/block={_block:g}"
-            f"/incoming={_incoming:g}/energy={_energy:g}"
-            f"/block_locked={'yes' if block_locked else 'no'}"
-            f"/defense={'|'.join(_defense_rows) or 'none'}"
-            f"/need={_need:g}/max_block={_max_block:g}"
-            f"/covers={'yes' if _covers else 'no'}"
-            f"/post_gap={_post_gap:g}"
-            f"/survives={'yes' if _survives else 'no'}"
-            "（KILL_RACE_TERMINAL_CAPACITY_OBS）")
-
     def _kill_race_terminal_audit_note(
-            self, pol, my_hp, my_block, incoming, energy, hand=None,
-            block_locked=False) -> str:
+            self, pol, my_hp, my_block, incoming, energy) -> str:
         """Link a lethal no-card end-turn to the last latched race projection.
 
         This is deliberately an observation-only tail.  It requires the
@@ -3990,7 +3923,7 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return "?"
 
-        _note = (
+        return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
             f"/last_round={_round_text(_projection.get('round'))}"
             f"/pool={_pool:g}/dpt={_dpt:g}/ttk={_ttk:g}/tsurv={_tsurv:g}"
@@ -4000,9 +3933,6 @@ class Policy:
             f"/own_phase={max(0.0, float(getattr(self, '_race_same_round_loss_own', 0.0) or 0.0)):g}"
             f"/foe_phase={max(0.0, float(getattr(self, '_race_same_round_loss_enemy', 0.0) or 0.0)):g}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
-        return _note + self._kill_race_terminal_capacity_note(
-            pol, hand, my_hp, my_block, incoming, energy,
-            block_locked=block_locked)
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
         """Expose raw potion slots at a lethal no-card boundary.
@@ -4967,8 +4897,7 @@ class Policy:
                         pol, state.get("run") or {}))
                 _lethal_unavailable_note += _potion_reserve_note
                 _terminal_audit_note = self._kill_race_terminal_audit_note(
-                    pol, my_hp, my_block, incoming, energy, hand=hand,
-                    block_locked=block_locked)
+                    pol, my_hp, my_block, incoming, energy)
                 _lethal_unavailable_note += _terminal_audit_note
                 if _terminal_audit_note:
                     _projection = getattr(self, "_race_terminal_projection", None)
