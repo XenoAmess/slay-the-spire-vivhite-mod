@@ -13448,43 +13448,6 @@ def main() -> int:
     assert _hem_c is None and _hem_kind == "", \
         f"自残成本型攻击不应作为救场弹药: {(_hem_kind, _hem_c)}"
 
-    # 3br-3a) 白绮残能救场生命支付致死闸（第1666局复盘）：F6-T2 在
-    # hp=8、block=12、incoming=19、energy=1 时，弦光投影的实际支付2血会
-    # 把结算后生命降到6，而剩余缺口仍为7；旧残能兜底因此主动扣血却不改
-    # 终局。默认闸应拒绝该攻击并留下可对账字段；关闭键必须恢复旧选择。
-    resc_luminous = [{
-        "index": 0, "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
-        "name": "弦光投影", "playable": True, "energy_cost": 1,
-        "requires_target": True, "card_type": "Attack",
-        "dynamic_values": [{"name": "Damage", "current_value": 10}],
-    }]
-    vh_resc_know = _vivhite_know("sts2-selfcheck-vh-idleresc-guard-")
-    assert vh_resc_know.policy.get(
-        "vivhite_idle_rescue_hp_lethal_guard") is True, \
-        "DEFAULT_POLICY 缺少白绮残能救场生命支付致死闸键"
-    vh_resc_strategy = policy.Policy(
-        vh_resc_know, random.Random(5)).character_strategy
-    vh_resc_audit = []
-    _vh_guard_c, _vh_guard_kind = policy.idle_energy_rescue_pick(
-        resc_luminous, 1, 19, 12,
-        character_strategy=vh_resc_strategy,
-        player_powers=[], current_hp=8,
-        hp_lethal_guard=True, audit=vh_resc_audit)
-    assert _vh_guard_c is None and _vh_guard_kind == "" \
-        and vh_resc_audit \
-        and "pay=2" in vh_resc_audit[0] \
-        and "/hp=8->6/gap=7" in vh_resc_audit[0], \
-        f"白绮残能生命支付致死闸未阻断或未留痕: {(_vh_guard_kind, _vh_guard_c, vh_resc_audit)}"
-    _vh_rollback_c, _vh_rollback_kind = policy.idle_energy_rescue_pick(
-        resc_luminous, 1, 19, 12,
-        character_strategy=vh_resc_strategy,
-        player_powers=[], current_hp=8,
-        hp_lethal_guard=False, audit=[])
-    assert _vh_rollback_kind == "attack" \
-        and _vh_rollback_c is not None \
-        and _vh_rollback_c.get("card_id") == "VIVHITE_CARD_LUMINOUS_PROJECTION", \
-        f"关闭白绮残能致死闸未恢复旧攻击选择: {(_vh_rollback_kind, _vh_rollback_c)}"
-
     # 3rsl) 残能救场滑溜破层口径（IDLE_RESCUE_SLIPPERY_EST，第744~763局批复盘）：
     #      滑溜每层把一次未格挡命中压到 1 血并减 1 层，单发牌无论面值多高
     #      产出都是破 1 层；救场攻击通道旧口径 est=dmg×hits 按面值选「预估

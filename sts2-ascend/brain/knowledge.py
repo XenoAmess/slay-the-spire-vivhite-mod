@@ -872,10 +872,6 @@ DEFAULT_POLICY = {
                                     # 1层、【终止条件+】预估23→1层、【递推星芒】预估14→1层，同手1费牌破层产出
                                     # 完全相同，高价牌白白摊薄每费破层率。滑溜敌在场时救场攻击估值改按破层数
                                     # （命中超层部分按面值补回），同值取低费；False 一键回滚旧面值口径（零差异）
-    "vivhite_idle_rescue_hp_lethal_guard": True,  # 白绮残能救场生命支付致死闸：
-                                                    # 实际支付后「当前意图-现有格挡」≥剩余生命时，
-                                                    # 不得为了消耗残能主动扣血；仅影响白绮残能攻击兜底，
-                                                    # False 严格回滚旧残能攻击选择。
     "end_turn_settle_recovery_ticks_boss": 40,  # BOSS_SETTLE_TIER3: Boss-only settle recovery budget.
     "end_turn_settle_recovery_ticks_lethal": 50,  # LETHAL_SETTLE_EXTENSION: lethal Boss settle windows get a bounded final 10-tick extension.
     "kill_race_min_enemy_hp": 80.0,  # 敌方剩余总血量超过此值才做投影（一幕Boss≈250/二幕精英级；小怪无需竞速账）

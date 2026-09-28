@@ -5832,35 +5832,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 1645~1666 批：残能救场生命支付致死闸
-
-日期：2026-09-29
-production_code_commit: pending local commit（最终 SHA 见交付回执）
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：残能救场在评分全线拒绝后仍可能选择白绮的生命支付攻击，但只按预估伤害选牌，没有把实际生命支付重新带回结算后缺口。第1666局 F6-T2 的 `hp=8/block=12/incoming=19/energy=1` 中，弦光投影实际支付2血后为 `hp=6`，剩余缺口仍为7；假设是这条兜底出牌会主动扣血却不能改变来袭结算，应该在支付后缺口 `>=` 支付后生命时拒绝该攻击。若后续在支付不致死、余裕可抵扣或非白绮残能路径误拦，则假设被证伪。
-- **EVIDENCE**：本批 packet 精确范围为1645~1666，最新完整运行链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260929-051847_G1D2MKQ4VLD1.json`。该局105条 decisions，F6-T2 先两次闭域映射，生命 `12→10→8`、格挡 `0→6→12`，剩余能量1；随后残能救场选择弦光投影，生命 `8→6`，敌意图19、实际缺口7，下一条为 `GAME_OVER defeat`。这支持“兜底生命支付没有改变终局缺口”的可证伪链，不单独证明若跳过攻击即可生还。
-- **EXPECTED_SIGNAL**：未来3~10个独立白绮 combat 中，若残能攻击的实际支付满足 `incoming-block >= hp-pay`，决策理由应出现 `VIVHITE_IDLE_RESCUE_HP_LETHAL_GUARD`，字段含卡、实付、支付前后生命和缺口，且不发送该残能攻击；关闭键 `vivhite_idle_rescue_hp_lethal_guard=0` 时 action/params 恢复旧选择。非生命支付攻击、Margin 完全抵扣、格挡/覆甲/手牌税止损与非白绮路径应保持原行为；误拦、字段不守恒或 action/params 漂移即证伪。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_idle_rescue_hp_lethal_guard`，关闭即回滚白绮残能攻击闸。
-- `sts2-ascend/brain/policy.py`：残能救场复用 `_rescue_block_tradeoff` 的实际生命支付计算；支付后缺口致死时跳过攻击，并将 `card/pay/hp/gap` 追加到出牌或 `end_turn` 理由，不改变主评分路径。
-- `sts2-ascend/brain/selfcheck.py`：加入第1666局数值夹具，断言默认闸阻断并留痕，关闭闸恢复旧攻击选择。
-- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
-
-## VALIDATION
-
-- 宿主默认 managed selfcheck pool 的直接命令因固定256槽耗尽退出 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后仅在本次 `selfcheck.py` 进程内使用现有受管槽的继承 ACL 创建临时目录，完整运行退出码0并输出 `SELFCHECK OK`。
-- 已完整回读三处生产/自检 diff；限定目标的 `git diff --check` 退出码0，仅有 Git 的 LF/CRLF 提示。
-
-## FOLLOW-UP / ROLLBACK
-
-- 只收集后续3~10个独立 Vivhite combat，按 run/floor/turn 对账 guard marker、实际 `applied`、支付前后 HP、现有格挡、来袭意图、剩余能量及同局终局；marker 只证明拒绝发生，不把失败局自动归因于单张卡。
-- 若非白绮/非残能/无实际支付样本显形，或后续出现本可由支付后状态存活的攻击被误拦，将 `vivhite_idle_rescue_hp_lethal_guard=0`，保留本批证据并回滚本地提交；重复对账前不继续扩大生命支付门。
-
-## REPLAY
-
-retry_resolution: none (no failed_review_replay packages requested)
