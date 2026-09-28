@@ -17695,3 +17695,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5516554001757434局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.4064392530534136局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.661752237915728局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：3/1605 胜，当前目标进阶 3
+
+## 第 1606 局复盘（2026-09-28 13:55）
+- 结果：💀 失败｜进阶 3｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损32（可行动段32/非行动段12，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=19/dpt=2.8/ttk=6.78571/tsurv=1.15385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=14/projected_ttk=6.78571/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T11判死→实战14回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.3854402937810937局)，THINKING_AHEAD(37分/5.710712707126222局)，MAYHEM(37分/4.664109249447426局)，ROLLING_BOULDER(36分/5.746641483089702局)，FISTICUFFS(35分/6.3176480656910465局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5427246062751285局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.3980167156677266局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.589436105083024局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（14回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1606 胜，当前目标进阶 3
