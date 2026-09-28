@@ -8005,6 +8005,65 @@ def main() -> int:
         why_sl_bludgeon, 0, 3, sl_burn_off) is None, \
         "滑溜低费 tie-break 关闭后未严格回滚"
 
+    # 3xg-burn-reject) Boss 零意图烧层拒绝观测：同一评分 pass 已知有单体
+    # 攻击可破滑溜层、实际支付为 0，但分数低于普通门槛时，end_turn 证据必须
+    # 披露候选，而不改变任何动作侧字段；关闭键后注记严格消失。
+    assert knowledge.DEFAULT_POLICY[
+        "vivhite_slippery_zero_intent_burn_reject_obs"] is True, \
+        "DEFAULT_POLICY 缺少 Boss 零意图滑溜烧层拒绝观测键或默认值被改"
+    sl_burn_obs_ctx = SimpleNamespace(
+        combat={"node_type": "Boss"})
+    sl_vivhite_pol = policy.Policy.__new__(policy.Policy)
+    sl_vivhite_pol.character_strategy = SimpleNamespace(profile_id="vivhite")
+    sl_vivhite_policy = dict(knowledge.DEFAULT_POLICY)
+    sl_burn_obs_combat = {
+        "enemies": [sl_enemy(hp=173, layers=8)],
+        "end_turn_will_kill_player": False,
+    }
+    sl_burn_obs_candidates = [
+        (2, "弦光投影", "VIVHITE_CARD_LUMINOUS_PROJECTION", 1,
+         -0.23, 0.40, 0.0, 0, why_sl_strike),
+    ]
+    sl_burn_obs_note = (
+        sl_vivhite_pol._vivhite_slippery_zero_intent_burn_reject_observation_note(
+            sl_burn_obs_ctx, sl_burn_obs_combat, sl_burn_obs_candidates,
+            78, 85, 0, 0, 3, 1, False, False, False,
+            sl_vivhite_policy))
+    assert "VIVHITE_SLIPPERY_ZERO_INTENT_BURN_REJECT_OBS" in sl_burn_obs_note \
+        and "score=-0.23" in sl_burn_obs_note \
+        and "/layers=8/breaks=1" in sl_burn_obs_note \
+        and "/pay=0" in sl_burn_obs_note, \
+        f"Boss 零意图滑溜烧层拒绝观测字段缺失: {sl_burn_obs_note}"
+    sl_burn_obs_off = dict(sl_vivhite_policy)
+    sl_burn_obs_off["vivhite_slippery_zero_intent_burn_reject_obs"] = False
+    assert sl_vivhite_pol._vivhite_slippery_zero_intent_burn_reject_observation_note(
+        sl_burn_obs_ctx, sl_burn_obs_combat, sl_burn_obs_candidates,
+        78, 85, 0, 0, 3, 1, False, False, False, sl_burn_obs_off) == "", \
+        "Boss 零意图滑溜烧层拒绝观测关闭后未严格回滚"
+    sl_burn_paid = list(sl_burn_obs_candidates[0])
+    sl_burn_paid[6] = 1.0
+    assert sl_vivhite_pol._vivhite_slippery_zero_intent_burn_reject_observation_note(
+        sl_burn_obs_ctx, sl_burn_obs_combat, [tuple(sl_burn_paid)],
+        78, 85, 0, 0, 3, 1, False, False, False,
+        sl_vivhite_policy) == "", \
+        "存在实际生命支付时不得误挂零支付滑溜烧层拒绝观测"
+    sl_vivhite_state = _krh_state(
+        1, 78, _krh_hand_vivhite(), incoming=0,
+        powers=[{"power_id": "VIVHITE_POWER_INFINITE_MARGIN_POWER",
+                 "amount": 3}])
+    sl_vivhite_state["combat"]["enemies"][0]["enemy_id"] = "VANTOM"
+    sl_vivhite_state["combat"]["enemies"][0]["powers"] = [{
+        "power_id": "SLIPPERY_POWER", "name": "滑溜", "amount": 8}]
+    sl_vivhite_ctx = _krh_ctx()
+    sl_vivhite_decision = policy.Policy(
+        _vivhite_know("sts2-selfcheck-vivhite-slippery-wire-"),
+        random.Random(5)).decide(sl_vivhite_state, sl_vivhite_ctx)
+    assert sl_vivhite_decision.action == "end_turn" \
+        and sl_vivhite_decision.params == {} \
+        and "VIVHITE_SLIPPERY_ZERO_INTENT_BURN_REJECT_OBS" \
+        in sl_vivhite_decision.reason, \
+        f"评分 pass 到 end_turn 的滑溜拒绝观测未接线或动作漂移: {sl_vivhite_decision}"
+
     # block 必须先逐段吸收：全挡不掉层；部分穿甲只让该 hit 限伤并掉一层。
     s_full_block, _, why_full_block = sl_score(sl_bludgeon, sl_enemy(block=40, layers=8))
     s_full_plain, _, _ = sl_score(sl_bludgeon, sl_enemy(block=40, layers=None))
