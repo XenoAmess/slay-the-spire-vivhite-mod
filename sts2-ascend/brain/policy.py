@@ -4929,6 +4929,100 @@ class Policy:
         self._lethal_playable_reject_outcome_pending = _pending
         self._lethal_playable_reject_outcome_reported = False
 
+    def _consume_vivhite_hp_terminal_lock_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a persisted Vivhite terminal life-lock audit to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "vivhite_hp_terminal_lock_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if (not _enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID):
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+
+        def _floor(value):
+            try:
+                return int(float(value))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        terminal_floor = _floor(floor)
+        if terminal_floor is None:
+            return ""
+        combat_rows = [
+            row for row in decisions
+            if (isinstance(row, dict)
+                and row.get("screen") == "COMBAT"
+                and _floor(row.get("floor")) == terminal_floor)
+        ]
+        lock_rows = [
+            row for row in combat_rows
+            if (row.get("action") == "end_turn"
+                and "VIVHITE_HP_TERMINAL_LOCK_OBS"
+                in str(row.get("reason") or ""))
+        ]
+        if not lock_rows or lock_rows[-1] is not combat_rows[-1]:
+            return ""
+        row = lock_rows[-1]
+        reason = str(row.get("reason") or "")
+        prefix = "生命支付终端锁观测："
+        prefix_at = reason.rfind(prefix)
+        marker_at = reason.rfind("（VIVHITE_HP_TERMINAL_LOCK_OBS）")
+        if prefix_at < 0 or marker_at <= prefix_at:
+            return ""
+        audit = reason[prefix_at + len(prefix):marker_at]
+
+        def _token(name):
+            match = re.search(
+                rf"(?:^|/){re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else "?"
+
+        def _pair(name):
+            match = re.search(
+                rf"(?:^|[/，,]){re.escape(name)}="
+                r"([^/；（）()\s]+/[^/；（）()\s]+)", audit)
+            return match.group(1) if match else "?"
+
+        def _num(value):
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value):
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        cards_match = re.search(r"(?:^|/)cards=(.+)$", audit)
+        cards = cards_match.group(1) if cards_match else "?"
+        terminal_round = row.get("turn", row.get("round"))
+        return (
+            f"；生命支付终端锁终局对账：outcome="
+            f"{'victory' if victory else 'defeat'}"
+            f"/floor={terminal_floor}"
+            f"/terminal_round={_round(terminal_round)}"
+            f"/final_hp={_num(final_hp)}"
+            f"/hp={_token('hp')}"
+            f"/block={_token('block')}"
+            f"/gap={_token('gap')}"
+            f"/incoming={_token('incoming')}"
+            f"/energy={_token('energy')}"
+            f"/native_blocked_by_hook={_pair('native_blocked_by_hook')}"
+            f"/end_turn_lethal={_token('end_turn_lethal')}"
+            f"/cards={cards}"
+            "（VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS）")
+
     def _lethal_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
             combat, kill_race, race_allin, candidate_audit=None) -> str:
@@ -15629,6 +15723,9 @@ class Policy:
         _lethal_playable_reject_outcome_note = (
             self._consume_lethal_playable_reject_outcome_note(
                 self.know.policy, victory, go.get("floor")))
+        _terminal_lock_outcome_note = (
+            self._consume_vivhite_hp_terminal_lock_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         _ritual_window_outcome_note = (
             self._consume_ritual_window_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
@@ -15647,6 +15744,7 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
+                            f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}", wait=1.0)
 
@@ -15672,6 +15770,7 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
+                        f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}",
                         wait=0.5)
@@ -15682,6 +15781,7 @@ class Policy:
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_terminal_outcome_note}"
+                                f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
                                 f"{_sandpit_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)

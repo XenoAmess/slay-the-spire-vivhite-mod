@@ -5800,3 +5800,35 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1641~1644 批：生命支付终端锁与权威终局的最小对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1644-F11-T9 在 `hp=1/block=0/incoming=26/energy=2` 时四张非诅咒牌均被生命支付门拦截，T10 紧接 `GAME_OVER defeat`；现有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 只保存终端锁快照，无法验证它是否随后进入败局。若在下一条同楼层 `GAME_OVER` 追加终局对账，可验证该连接，且不改变任何 action/params。
+- **EVIDENCE**：精确批次为 1641~1644；最新失败局完整链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-223050_8J7HYSX9L64E.json`，147 条 decisions，packet 保留 71 条、裁剪 76 条，`complete_persisted_chain=false`。已逐条回读完整链：F11-T9 的 `end_turn` 为 `hp=1/block=0/incoming=26/energy=2`、`native_blocked_by_hook=4/4`，随后 T10 为 `GAME_OVER defeat`。这支持补充终局观测，不单独证明终端锁是唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 终端锁 combat 中，下一条同楼层 `GAME_OVER` 应出现 `VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS`，带 `outcome/floor/terminal_round/final_hp` 及锁定牌、`hp/block/gap/incoming/energy/native_blocked_by_hook/end_turn_lethal`；进程重载、首次回执丢失重试只保留一次 marker。错楼层、重复消费、字段串账或 action/params 漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_terminal_lock_outcome_obs`；置 0 只关闭新增终局观测。
+- `sts2-ascend/brain/policy.py`：`GAME_OVER` 只读同楼层、最新已持久化的终端锁 `end_turn` marker，追加 `VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS` 与权威 `outcome/final_hp`；支持进程重载和丢动作重试幂等，不重评分、不改候选、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认接线、跨楼层拒绝、进程重载、丢动作重试去重、关闭键以及关闭后的 action/params 不变。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 宿主 managed selfcheck pool 的直接命令先因固定 256 槽耗尽退出 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后以同一 `sts2-ascend/brain/selfcheck.py` 的无字节码进程级临时目录适配执行，退出码 0，输出 `SELFCHECK OK`。
+- 已完整回读三处生产/自检 diff；限定目标的 `git diff --check` 退出码 0，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite 终端锁 combat，按 run/floor/turn 对账原始锁快照、真实 `applied end_turn {}`、同楼层 `GAME_OVER`、最终 HP 与胜负；观测出现本身不等于应改变生命门或出牌策略。
+- 若 marker 在非终端/错楼层显形、重复写入、字段与原始决策或终局不符，或 action/params 漂移，将 `vivhite_hp_terminal_lock_outcome_obs=0`；必要时回滚本地 commit并保留本批证据，重复对账前不调整生命支付评分。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

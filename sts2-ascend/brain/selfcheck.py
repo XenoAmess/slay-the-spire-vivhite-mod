@@ -4329,6 +4329,95 @@ def main() -> int:
     assert "VIVHITE_HP_TERMINAL_LOCK_OBS" not in d_tll0.reason, \
         f"终端锁观测关闭后不得出现注记: {d_tll0.reason}"
 
+    # 3tllo) 生命支付终端锁终局对账（VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS）：
+    #        1644-F11-T9 的终端锁紧接 GAME_OVER；把同楼层已落盘的锁定牌
+    #        与权威 outcome/final_hp 连接，只追加终局观测，不改变 Continue。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_hp_terminal_lock_outcome_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_hp_terminal_lock_outcome_obs 静态键或默认值被改"
+    terminal_lock_outcome_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+        "run": {"current_hp": 0, "max_hp": 80, "floor": 33},
+    }
+    vctx_tllo = _krh_ctx()
+    vctx_tllo.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33, "turn": 9,
+        "reason": d_tll.reason,
+    }]
+    vpol_tllo = policy.Policy(_vivhite_know(
+        "sts2-selfcheck-vterminal-lock-outcome-"), random.Random(11))
+    d_tllo = vpol_tllo.decide(terminal_lock_outcome_state, vctx_tllo)
+    assert (d_tllo.action == "continue_game_over"
+            and d_tllo.params == {}
+            and "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS" in d_tllo.reason
+            and "outcome=defeat/floor=33/terminal_round=9/final_hp=0" in d_tllo.reason
+            and "/native_blocked_by_hook=2/2" in d_tllo.reason
+            and "/end_turn_lethal=yes" in d_tllo.reason
+            and "/cards=VIVHITE_CARD_LUMINOUS_PROJECTION:" in d_tllo.reason), \
+        f"终端锁终局对账缺失或动作漂移: {d_tllo}"
+
+    vpol_tllo_replay = policy.Policy(_vivhite_know(
+        "sts2-selfcheck-vterminal-lock-outcome-replay-"), random.Random(11))
+    vctx_tllo_replay = _krh_ctx()
+    vctx_tllo_replay.decisions = list(vctx_tllo.decisions)
+    d_tllo_replay = vpol_tllo_replay.decide(
+        terminal_lock_outcome_state, vctx_tllo_replay)
+    assert (d_tllo_replay.action == d_tllo.action
+            and d_tllo_replay.params == d_tllo.params
+            and "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS"
+            in d_tllo_replay.reason), \
+        f"进程重载后未恢复终端锁终局对账: {d_tllo_replay}"
+    vctx_tllo_retry = _krh_ctx()
+    vctx_tllo_retry.decisions = list(vctx_tllo.decisions)
+    d_tllo_retry_first = vpol_tllo_replay.decide(
+        terminal_lock_outcome_state, vctx_tllo_retry)
+    d_tllo_retry = vpol_tllo_replay.decide(
+        terminal_lock_outcome_state, vctx_tllo_retry)
+    assert ("VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS"
+            in d_tllo_retry_first.reason
+            and "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS"
+            in d_tllo_retry.reason), \
+        "终端锁终局对账丢动作后未重试"
+    vctx_tllo_retry.decisions.append({
+        "screen": "GAME_OVER", "action": d_tllo_retry.action,
+        "floor": 33, "reason": d_tllo_retry.reason,
+    })
+    d_tllo_retry_committed = vpol_tllo_replay.decide(
+        terminal_lock_outcome_state, vctx_tllo_retry)
+    assert "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS" \
+        not in d_tllo_retry_committed.reason, \
+        "终端锁终局对账已提交后重复写入 marker"
+
+    vknow_tllo_off = _vivhite_know(
+        "sts2-selfcheck-vterminal-lock-outcome-off-")
+    vknow_tllo_off.policy["vivhite_hp_terminal_lock_outcome_obs"] = 0
+    vpol_tllo_off = policy.Policy(vknow_tllo_off, random.Random(11))
+    vctx_tllo_off = _krh_ctx()
+    vctx_tllo_off.decisions = list(vctx_tllo.decisions)
+    d_tllo_off = vpol_tllo_off.decide(
+        terminal_lock_outcome_state, vctx_tllo_off)
+    assert (d_tllo_off.action == d_tllo.action
+            and d_tllo_off.params == d_tllo.params
+            and "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS"
+            not in d_tllo_off.reason), \
+        f"终端锁终局对账关闭后动作或 marker 漂移: {d_tllo_off}"
+
+    terminal_lock_wrong_floor = dict(terminal_lock_outcome_state)
+    terminal_lock_wrong_floor["game_over"] = dict(
+        terminal_lock_outcome_state["game_over"], floor=34)
+    terminal_lock_wrong_floor["run"] = dict(
+        terminal_lock_outcome_state["run"], floor=34)
+    vctx_tllo_wrong = _krh_ctx()
+    vctx_tllo_wrong.decisions = list(vctx_tllo.decisions)
+    d_tllo_wrong = vpol_tllo.decide(
+        terminal_lock_wrong_floor, vctx_tllo_wrong)
+    assert "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS" \
+        not in d_tllo_wrong.reason, \
+        "终端锁终局对账不得跨楼层串接"
+
     # 3tllc) Boss 零意图生命支付链观测（VIVHITE_BOSS_FREE_TURN_HP_PAY_CHAIN_OBS）：
     #      1451-F33 在首个正伤害前连续支付后进入终端锁；只消费成功回执中的
     #      扩展字段，把已应用的实付/次数带到终端锁收口。未确认的 proposed
