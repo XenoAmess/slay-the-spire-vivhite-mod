@@ -13482,3 +13482,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.3004171834520437局)，BASH(14分/2.792660693690193局)，BODY_SLAM(15分/2.013426147589428局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1626 胜，当前目标进阶 0
+
+## 第 1627 局复盘（2026-09-28 10:04）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 PHANTASMAL_GARDENER
+- 本局拿牌：DARK_EMBRACE, SHRUG_IT_OFF, DEMON_FORM, SHRUG_IT_OFF, NOT_YET, SWORD_BOOMERANG, THUNDERCLAP
+- 本局遗物：GAME_PIECE
+- 战斗记录：F2 Monster战 掉血10; F3 Monster战 掉血3; F4 Unknown战 掉血2; F7 Elite战 掉血65｜竞速投影审计：pool=98/dpt=10.8/ttk=9.07407/tsurv=2.68421（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=9.07407/actual_over_projected=0.66（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.6791941764490055局)，OFFERING(25分/17.560199547347366局)，FEED(25分/34.27096984742119局)，PACTS_END(25分/64.1469686487423局)，DRAMATIC_ENTRANCE(24分/16.46019704170309局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.2888657233099616局)，BASH(14分/2.7828863812622773局)，BODY_SLAM(15分/2.006379156072865局)
+- 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1627 胜，当前目标进阶 0
