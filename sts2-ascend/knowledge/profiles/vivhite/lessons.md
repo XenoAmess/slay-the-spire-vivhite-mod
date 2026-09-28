@@ -18157,3 +18157,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.202260809215807局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/2.964551406800493局)，IMPATIENCE(22分/2.133186896973947局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1647 胜，当前目标进阶 4
+
+## 第 1648 局复盘（2026-09-28 23:54）
+- 结果：💀 失败｜进阶 4｜到达层数 12｜当局评分 12
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_TERMINATION_CONDITION, SALVO, VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：CANDELABRA, POTION_BELT
+- 战斗记录：F2 Monster战 掉血2｜自损14（可行动段14/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Unknown战 掉血7｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血0｜自损11（可行动段11/非行动段16，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血28｜自损20（可行动段20/非行动段16，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血37｜自损20（可行动段20/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=104/dpt=19.6914/ttk=5.2815/tsurv=3.42857（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=5.2815/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/13.168380865252127局)，REND(38分/2.921876708124714局)，PANIC_BUTTON(38分/16.052177792705653局)，THINKING_AHEAD(37分/4.928752835013923局)，MAYHEM(37分/4.025459319174358局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.194552896383552局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/2.9541754768766912局)，IMPATIENCE(22分/2.125720742834538局)
+- 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Elite战实测自损20/掉血37（54%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1648 胜，当前目标进阶 4
