@@ -13075,3 +13075,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_lethal_output_capacity_obs` 设为 `False`；end-turn 与终端结局容量尾部均消失，既有终端审计、action 与 params 保持不变。
 - **验证**：宿主固定 256 槽 bootstrap 先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 `.review-cache/selfcheck-pool` 的本地继承 ACL 进程内临时分配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1657~1658局复盘（BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 Boss 有效 DPT 只对账敌方总血池端点；1658-F17 的 KIN_FOLLOWER+KIN_PRIEST 含 `MINION_POWER` 随从与身份不确定/重复实例，敌方召唤、缩池或编制变化可能把净血量差误读为纯伤害投影误差。该假设可由后续编制稳定性与血池端点证伪。
+- **EVIDENCE**：精确 run `20260929-024203_AXVAJ792QMRG.json`（1657）与 `20260929-025840_N6Q08FYBF875.json`（1658）均为 F17 Boss 失败。1657 的终端审计为 `lock_round=8/last_round=9/pool=59/dpt=24.6667/tsurv=1/hp=22/incoming=22`；1658 起始读数出现 `KIN_FOLLOWER` 的 `MINION_POWER`、`FOCUS_IDENTITY_AMBIGUITY_OBS` 与 `RESPAWN_ROSTER_READ_OBS`，其 T2/T3/T4/T5/T6/T7/T8 的实际净降分别相对投影 `16.4/16.4/41/33.4/25.2/27.7/24.6` 多次偏离，终端 T9 的 `BLOODLETTING` 仍因评分 `-2.21` 被拒。v0.111 原生 mechanics 还确认 `MinionPower` 的 owner 是 secondary enemy，故编制是可核验的混杂因素，而不是假定的纯伤害缺口。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss DPT 窗口应追加 `Boss编制=.../count=.../pool_delta=.../roster_changed=...`。若低/负实际 DPT 与 `roster_changed=yes` 或正 `pool_delta` 重合，支持编制污染；若编制稳定且 `pool_delta=0` 仍持续偏离，则转查真实伤害、格挡/阶段或投影；ID 缺失、跨战斗继承或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `boss_race_effective_dpt_roster_obs`。
+- `sts2-ascend/brain/policy.py`：在既有 Boss DPT marker 追加有界的存活/可命中敌方 ID、数量、带符号敌方血池端点差和编制变化布尔值；仅读 `enemies`，不进入评分、排序、目标、门控、action 或 params；关闭键严格移除尾部。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认编制变化 `count=1→2/pool_delta=+10.0`、已有 intent 探针的关闭回滚，以及 action/params 一致性。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立 Boss 窗口，按 `run_id/floor/round/roster_changed/pool_delta/outcome` 对账；在重复证据前保持只读观测，不调整竞速或转火行为。
+- **撤回**：将 `boss_race_effective_dpt_roster_obs` 设为 `False`；预期只移除编制尾部，既有 DPT/状态/格挡/意图 marker、action 与 params 保持不变。
+- **验证**：仓库规定的完整 selfcheck 输出 **SELFCHECK OK**；宿主固定 256 槽池先因现有完整夹具容量报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，随后用 clone 内继承 ACL 的进程级临时根运行同一 selfcheck；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- **replay targets**：none；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

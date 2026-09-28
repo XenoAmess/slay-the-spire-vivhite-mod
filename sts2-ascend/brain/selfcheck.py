@@ -12147,6 +12147,7 @@ def main() -> int:
                           boss_focus_switch_obs=True, focus_switches=0,
                           boss_state_obs=True, boss_state_powers=None,
                           boss_state_powers_next=None,
+                          boss_roster_obs=True, boss_roster_next=None,
                           boss_block_obs=True, boss_block_start=0,
                           boss_block_next=None,
                           boss_intent_ramp_obs=True, boss_intent_next=None,
@@ -12240,6 +12241,8 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_effective_dpt_state_obs"] = boss_state_obs
         cap_pol.know.policy[
+            "boss_race_effective_dpt_roster_obs"] = boss_roster_obs
+        cap_pol.know.policy[
             "boss_race_effective_dpt_block_obs"] = boss_block_obs
         cap_pol.know.policy[
             "boss_race_intent_ramp_obs"] = boss_intent_ramp_obs
@@ -12263,6 +12266,8 @@ def main() -> int:
                 cap_pol._focus_played_identity = "CAP_BOSS"
             cap_state["turn"] = 2
             cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp - 10
+            if boss_roster_next is not None:
+                cap_state["combat"]["enemies"] = boss_roster_next
             if boss_block_next is not None:
                 cap_state["combat"]["enemies"][0]["block"] = boss_block_next
             if boss_state_powers_next is not None:
@@ -12348,18 +12353,45 @@ def main() -> int:
             and "hittable=1" in d_combat_boss_effective.reason
             and "block=0" in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
+    assert knowledge.DEFAULT_POLICY["boss_race_effective_dpt_roster_obs"] is True
+    _boss_roster_next = [
+        {"index": 0, "enemy_id": "CAP_BOSS", "name": "攻坚巨兽",
+         "current_hp": 185, "max_hp": 341, "block": 0,
+         "is_alive": True, "is_hittable": True,
+         "intents": [{"total_damage": 0}], "powers": []},
+        {"index": 1, "enemy_id": "CAP_MINION", "name": "随从",
+         "current_hp": 10, "max_hp": 10, "block": 0,
+         "is_alive": True, "is_hittable": True,
+         "intents": [{"total_damage": 0}],
+         "powers": [{"id": "MINION_POWER", "amount": 1}]},
+    ]
+    d_combat_boss_roster = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_roster_next=_boss_roster_next)
+    assert ("BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS"
+            in d_combat_boss_roster.reason
+            and "Boss编制=CAP_BOSS#0→CAP_BOSS#0、CAP_MINION#1"
+            in d_combat_boss_roster.reason
+            and "count=1→2" in d_combat_boss_roster.reason
+            and "pool_delta=+10.0" in d_combat_boss_roster.reason
+            and "roster_changed=yes" in d_combat_boss_roster.reason), \
+        f"Boss DPT 编制/血池变化观测缺失: {d_combat_boss_roster.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
     assert knowledge.DEFAULT_POLICY["boss_race_intent_ramp_obs"] is True
     d_combat_boss_intent_ramp = combat_flip_probe(
-        1.5, sample_effective_round=True, boss_intent_next=12)
+        1.5, sample_effective_round=True, boss_intent_next=12,
+        boss_roster_next=_boss_roster_next)
     assert ("BOSS_RACE_INTENT_RAMP_OBS" in
             d_combat_boss_intent_ramp.reason
-            and "intent=0->12" in d_combat_boss_intent_ramp.reason), \
+            and "intent=0->12" in d_combat_boss_intent_ramp.reason
+            and "BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS" in
+            d_combat_boss_intent_ramp.reason), \
         f"Boss intent ramp observation missing: {d_combat_boss_intent_ramp.reason}"
     d_combat_boss_intent_ramp_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_intent_next=12,
-        boss_intent_ramp_obs=False)
+        boss_intent_ramp_obs=False, boss_roster_next=_boss_roster_next,
+        boss_roster_obs=False)
     assert (d_combat_boss_intent_ramp_off.action
             == d_combat_boss_intent_ramp.action
             and d_combat_boss_intent_ramp_off.params
@@ -12367,6 +12399,8 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_OBS" in
             d_combat_boss_intent_ramp_off.reason
             and "BOSS_RACE_INTENT_RAMP_OBS" not in
+            d_combat_boss_intent_ramp_off.reason
+            and "BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS" not in
             d_combat_boss_intent_ramp_off.reason), \
         f"Boss intent ramp observation rollback changed behavior: {d_combat_boss_intent_ramp_off.reason}"
     # 3br-boss-effective-dpt-state：1583-F17 的 CEREMONIAL_BEAST 在相邻

@@ -914,6 +914,8 @@ class Policy:
         self._boss_effective_dpt_round = None
         self._boss_effective_dpt_start_hp = None
         self._boss_effective_dpt_start_state = ""
+        self._boss_effective_dpt_start_roster = "none"
+        self._boss_effective_dpt_start_roster_count = 0
         self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_start_incoming = None
         self._boss_effective_dpt_projected = 0.0
@@ -1698,6 +1700,21 @@ class Policy:
                 f"hittable={value_text('is_hittable')},block={block_text},"
                 f"powers={power_text}]")
         return "、".join(parts)
+
+    @staticmethod
+    def _boss_effective_dpt_roster(enemies: list[dict]) -> tuple[str, int]:
+        """Format a bounded live/hittable roster for Boss DPT observations only."""
+        labels = []
+        for enemy in (enemies or [])[:8]:
+            if not isinstance(enemy, dict):
+                continue
+            label = str(enemy.get("enemy_id") or enemy.get("name") or "敌人").strip() or "敌人"
+            index = enemy.get("index")
+            if index is not None:
+                label += f"#{index}"
+            labels.append(label)
+        labels.sort()
+        return "、".join(labels) or "none", len(labels)
 
     @staticmethod
     def _boss_effective_dpt_block(enemies: list[dict]) -> float:
@@ -6788,6 +6805,8 @@ class Policy:
                             self._boss_effective_dpt_round = None
                             self._boss_effective_dpt_start_hp = None
                             self._boss_effective_dpt_start_state = ""
+                            self._boss_effective_dpt_start_roster = "none"
+                            self._boss_effective_dpt_start_roster_count = 0
                             self._boss_effective_dpt_start_block = 0.0
                             self._boss_effective_dpt_start_incoming = None
                             self._boss_effective_dpt_projected = 0.0
@@ -6797,6 +6816,10 @@ class Policy:
                                 self._boss_effective_dpt_start_hp)
                             _boss_prev_state = (
                                 self._boss_effective_dpt_start_state)
+                            _boss_prev_start_roster = (
+                                self._boss_effective_dpt_start_roster)
+                            _boss_prev_start_roster_count = (
+                                self._boss_effective_dpt_start_roster_count)
                             _boss_prev_start_incoming = (
                                 self._boss_effective_dpt_start_incoming)
                             _boss_span = 0
@@ -6816,6 +6839,8 @@ class Policy:
                                     float(enemy_hp_total),
                                     float(self._boss_effective_dpt_projected),
                                     _boss_prev_state,
+                                    _boss_prev_start_roster,
+                                    int(_boss_prev_start_roster_count),
                                     float(self._boss_effective_dpt_start_block),
                                     float(_boss_prev_start_incoming))
                             self._boss_effective_dpt_round = round_no
@@ -6830,12 +6855,25 @@ class Policy:
                                 if bool(pol.get(
                                     "boss_race_effective_dpt_state_obs", True))
                                 else "")
+                            if bool(pol.get(
+                                    "boss_race_effective_dpt_roster_obs", True)):
+                                (_boss_current_roster,
+                                 _boss_current_roster_count) = (
+                                    self._boss_effective_dpt_roster(enemies))
+                                self._boss_effective_dpt_start_roster = (
+                                    _boss_current_roster)
+                                self._boss_effective_dpt_start_roster_count = (
+                                    _boss_current_roster_count)
+                            else:
+                                self._boss_effective_dpt_start_roster = "none"
+                                self._boss_effective_dpt_start_roster_count = 0
                         if dpt > 0.0:
                             self._boss_effective_dpt_projected = float(dpt)
                     if _boss_effective_dpt_pending is not None:
                         (_boss_prev_round, _boss_span, _boss_start_hp,
                          _boss_end_hp, _boss_projected,
-                         _boss_start_state, _boss_start_block,
+                         _boss_start_state, _boss_start_roster,
+                         _boss_start_roster_count, _boss_start_block,
                          _boss_start_incoming) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
@@ -6869,6 +6907,23 @@ class Policy:
                             _boss_ratio_tail = (
                                 f"；实际/投影比{_boss_ratio:.2f}"
                                 "（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）")
+                        _boss_roster_tail = ""
+                        if bool(pol.get(
+                                "boss_race_effective_dpt_roster_obs", True)):
+                            (_boss_end_roster,
+                             _boss_end_roster_count) = (
+                                self._boss_effective_dpt_roster(enemies))
+                            _boss_roster_changed = (
+                                _boss_start_roster != _boss_end_roster)
+                            _boss_roster_tail = (
+                                f"；Boss编制={_boss_start_roster}→"
+                                f"{_boss_end_roster}/count="
+                                f"{_boss_start_roster_count}→"
+                                f"{_boss_end_roster_count}/pool_delta="
+                                f"{(_boss_end_hp - _boss_start_hp):+.1f}/"
+                                f"roster_changed="
+                                f"{'yes' if _boss_roster_changed else 'no'}"
+                                "（BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS）")
                         _boss_focus_tail = ""
                         if bool(pol.get("boss_race_focus_switch_obs", True)):
                             try:
@@ -6933,6 +6988,7 @@ class Policy:
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
                             + _boss_encounter_tail
                             + _boss_ratio_tail + _boss_focus_tail
+                            + _boss_roster_tail
                             + _boss_state_tail + _boss_state_window_tail
                             + _boss_block_tail + _boss_intent_ramp_tail)
                     # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
@@ -7435,6 +7491,8 @@ class Policy:
             self._boss_effective_dpt_round = None
             self._boss_effective_dpt_start_hp = None
             self._boss_effective_dpt_start_state = ""
+            self._boss_effective_dpt_start_roster = "none"
+            self._boss_effective_dpt_start_roster_count = 0
             self._boss_effective_dpt_start_incoming = None
             self._boss_effective_dpt_projected = 0.0
             self._longfight_effective_dpt_combat = ctx.combat
