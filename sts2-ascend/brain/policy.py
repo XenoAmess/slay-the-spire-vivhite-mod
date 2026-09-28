@@ -4102,8 +4102,11 @@ class Policy:
             f"（{marker}）")
 
     def _race_allin_lethal_output_capacity_note(
-            self, hand, enemies, energy, my_hp, my_block, incoming, pol) -> str:
-        """Expose raw attack capacity beside the all-in lethal snapshot.
+            self, hand, enemies, energy, my_hp, my_block, incoming, pol, *,
+            enabled_key="race_allin_lethal_output_capacity_obs",
+            marker="RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS",
+            label="race-allin lethal output capacity") -> str:
+        """Expose raw attack capacity beside a lethal race snapshot.
 
         This is deliberately observation-only.  The capacity is a one-frame
         upper bound over affordable attack cards; it is never used for scoring,
@@ -4111,7 +4114,7 @@ class Policy:
         """
         try:
             _enabled = bool(int(float(pol.get(
-                "race_allin_lethal_output_capacity_obs", 1) or 0)))
+                enabled_key, 1) or 0)))
         except (TypeError, ValueError, OverflowError, AttributeError):
             _enabled = False
         if not _enabled:
@@ -4186,13 +4189,13 @@ class Policy:
                     _damage_by_energy[_spent - _cost_i] + _card_damage)
         _max_damage = max(_damage_by_energy, default=0.0)
         return (
-            f"; race-allin lethal output capacity: hp={_hp:g}"
+            f"; {label}: hp={_hp:g}"
             f"/block={_block:g}/incoming={_incoming:g}/energy={_energy:g}"
             f"/target_hp={_target_hp:g}/target_block={_target_block:g}"
             f"/attack_candidates={len(_attack_rows)}"
             f"/raw_damage_cap={_max_damage:g}"
             f"/cards={'|'.join(_attack_rows) or 'none'}"
-            " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)")
+            f" ({marker})")
 
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy, *,
@@ -5619,6 +5622,15 @@ class Policy:
                     kill_race=_kill_race_state,
                     race_allin=_race_allin_state)
                 _lethal_unavailable_note += _terminal_audit_note
+                if _kill_race_state:
+                    _lethal_unavailable_note += (
+                        self._race_allin_lethal_output_capacity_note(
+                            hand, combat.get("enemies", []), energy,
+                            my_hp, my_block, incoming, pol,
+                            enabled_key=(
+                                "kill_race_lethal_output_capacity_obs"),
+                            marker="KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS",
+                            label="kill-race lethal output capacity"))
                 if _terminal_audit_note:
                     _projection = getattr(self, "_race_terminal_projection", None)
                     if (isinstance(_projection, dict)

@@ -16911,6 +16911,7 @@ def main() -> int:
     assert d_race_terminal is not None \
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_race_terminal.reason \
         and "KILL_RACE_TERMINAL_AUDIT_OBS" in d_race_terminal.reason \
+        and "KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS" in d_race_terminal.reason \
         and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
             in d_race_terminal.reason \
         and "/self_loss=31/own_phase=31/foe_phase=41" \
@@ -16918,6 +16919,44 @@ def main() -> int:
         and "/kill_race=yes/race_allin=no" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
+
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_lethal_output_capacity_obs"] is True, \
+        "DEFAULT_POLICY 缺少 kill_race_lethal_output_capacity_obs 静态键或默认值被改"
+    assert "/target_hp=200/target_block=0/attack_candidates=0/raw_damage_cap=0/cards=none" \
+        in d_race_terminal.reason, \
+        f"竞速致死输出容量观测缺失: {d_race_terminal.reason}"
+
+    race_terminal_output_off_know = knowledge.Knowledge(tmp)
+    race_terminal_output_off_know.policy[
+        "kill_race_lethal_output_capacity_obs"] = False
+    race_terminal_output_off_pol = policy.Policy(race_terminal_output_off_know)
+    race_terminal_output_off_ctx = _SettleCtx()
+    race_terminal_output_off_ctx.combat = {}
+    assert race_terminal_output_off_pol.decide(
+        _lethal_unavailable_state(True), race_terminal_output_off_ctx).action == "play_card", \
+        "竞速致死输出容量关闭夹具热身帧未进入出牌状态"
+    race_terminal_output_off_pol._krace_latch = True
+    race_terminal_output_off_pol._krace_latch_round = 5
+    race_terminal_output_off_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    d_race_terminal_output_off = None
+    for _ in range(6):
+        d_candidate = race_terminal_output_off_pol.decide(
+            _lethal_unavailable_state(False), race_terminal_output_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal_output_off = d_candidate
+            break
+    assert (d_race_terminal_output_off is not None
+            and d_race_terminal_output_off.action == d_race_terminal.action
+            and d_race_terminal_output_off.params == d_race_terminal.params
+            and "KILL_RACE_TERMINAL_AUDIT_OBS"
+            in d_race_terminal_output_off.reason
+            and "KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS"
+            not in d_race_terminal_output_off.reason), \
+        f"竞速致死输出容量关闭后动作或既有审计漂移: {d_race_terminal_output_off and d_race_terminal_output_off.reason}"
 
     race_terminal_off_know = knowledge.Knowledge(tmp)
     race_terminal_off_know.policy["kill_race_terminal_audit_obs"] = False

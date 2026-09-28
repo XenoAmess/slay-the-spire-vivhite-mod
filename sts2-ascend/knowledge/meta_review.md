@@ -12970,3 +12970,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **ROLLBACK**: set `kill_race_mode_flip_obs` to `False`; the marker and its stateful observation must disappear while action and params remain unchanged.
 - **VALIDATION**: `py -3 -B sts2-ascend/brain/selfcheck.py` completed with **SELFCHECK OK** using a local inherited-ACL temporary root after the host's fixed 256-slot pool exhausted; target-source `git diff --check` passed. No online state, run/archive data, policy/learning ledgers, or review prompt was written.
 - `retry_resolution: 20260928-225022-1790607022514189100-165fefb5 integrated`
+
+## 2026-09-29 · 第 1648 局复盘（KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`kill_race` 已锁定的致死无牌空过目前只有格挡容量与竞速终端投影；当 `race_allin=no` 时，现有 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS` 不会出现，因而无法区分“当前没有可负担攻击输出”与“仍有输出但竞速/选牌或原生结算有偏差”。该假设可证伪，且本批只增加观测。
+- **EVIDENCE**：本批 packet 为 1644~1648 exact_batch，最新失败局 `N92YEMNFYXBZ`（第1648局）原始链 225 条、packet 保留 117 条并明确 `complete_persisted_chain=false`；已逐条核读保留片段。F17/T8 的致死 `end_turn` 为 `hp=18/block=0/incoming=21/energy=0/cards=3`，已有格挡读数为 `hand_block_candidates=1/hand_affordable_block_candidates=0`，下一条即 `GAME_OVER`；同一终端竞速对账为 `kill_race=yes/race_allin=no`、最后投影池 `47`，但没有当前目标血池或可负担攻击容量。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `kill_race` 致死无牌窗口按 `run_id/floor/turn` 对账 `target_hp/target_block/energy/attack_candidates/raw_damage_cap/cards` 与下一条 `GAME_OVER`/胜负。正目标血量配零候选/零容量支持“资源耗尽”；若反复有正容量仍阵亡，转查竞速模式、选牌拒绝、有效伤害或原生目标结算；字段缺失、越界或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `kill_race_lethal_output_capacity_obs`。
+- `sts2-ascend/brain/policy.py`：将既有攻击容量动态规划参数化，在已锁定 `kill_race` 的致死无牌分支追加 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS`；只读取当前手牌、敌方血池/格挡与能量，不进入评分、排序、目标、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认 `target_hp=200/attack_candidates=0/raw_damage_cap=0`、独立关闭，以及关闭后既有终端审计和 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立终端窗口，按 `kill_race/race_allin`、能量、目标血池和终局分层；在证据重复前不改变抢斩杀或防守行为。
+- **撤回**：将 `kill_race_lethal_output_capacity_obs` 设为 `False`；新 marker 应消失，`LETHAL_UNAVAILABLE_END_TURN_OBS`、终端竞速审计、action 与 params 保持不变。
+- **验证**：完整 selfcheck 在进程级继承 ACL 临时根下两次输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。直接使用宿主固定 256 槽池先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，未把该工具环境故障混入代码结论。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
