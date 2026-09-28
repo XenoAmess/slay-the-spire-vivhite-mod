@@ -9343,6 +9343,41 @@ class Policy:
                     _waterfall_blow_enemy.get("name")
                     or _waterfall_blow_enemy.get("enemy_id")
                     or "WATERFALL_GIANT")
+                # 仅披露当前救场手牌中可支付的原始格挡容量，不把它升级为
+                # 行为条件：这样可区分「确无防御资源」与「有防御资源但本轮
+                # 救场未选中」。raw 口径沿用残能救场的可玩/可支付边界，且
+                # block_locked 或 X 费牌不计入，避免把无效容量误报为可救命。
+                _waterfall_block_candidates = 0
+                _waterfall_raw_max_block = 0.0
+                if not block_locked:
+                    for _waterfall_card in _resc_hand:
+                        if (not isinstance(_waterfall_card, dict)
+                                or not _waterfall_card.get("playable")
+                                or self._card_unavailable(_waterfall_card)
+                                or _waterfall_card.get("costs_x")
+                                or _exhausts_other_cards(_waterfall_card)):
+                            continue
+                        try:
+                            _waterfall_cost = int(
+                                _waterfall_card.get("energy_cost") or 0)
+                            _, _waterfall_card_block, _ = card_numbers(
+                                _waterfall_card)
+                        except (TypeError, ValueError, OverflowError):
+                            continue
+                        if (_waterfall_cost < 1
+                                or _waterfall_cost > energy
+                                or _waterfall_card_block <= 0):
+                            continue
+                        _waterfall_block_candidates += 1
+                        _waterfall_raw_max_block = max(
+                            _waterfall_raw_max_block,
+                            float(_waterfall_card_block))
+                _waterfall_raw_post_gap = max(
+                    0.0,
+                    float(incoming) - float(my_block)
+                    - _waterfall_raw_max_block)
+                _waterfall_raw_survival = (
+                    _waterfall_raw_post_gap < float(my_hp))
                 _waterfall_blow_end_turn_note = (
                     f"；瀑布巨兽自爆相终端观测：enemy={_waterfall_blow_name}"
                     f",enemy_hp={_waterfall_blow_hp:.0f}"
@@ -9351,6 +9386,11 @@ class Policy:
                     f",energy={float(energy):g}"
                     f",vetoed_attacks={_resc_invuln_attack_count}"
                     f",non_attack_candidates={_resc_invuln_non_attack_count}"
+                    f",raw_block_candidates={_waterfall_block_candidates}"
+                    f",raw_max_block={_waterfall_raw_max_block:g}"
+                    f",raw_post_gap={_waterfall_raw_post_gap:g}"
+                    f",raw_survival={'yes' if _waterfall_raw_survival else 'no'}"
+                    f",block_locked={'yes' if block_locked else 'no'}"
                     "（WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS）")
             _gate_note = ""
             if self._hp_gate_stall_round != round_no:

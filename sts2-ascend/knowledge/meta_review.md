@@ -12844,3 +12844,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `nonlethal_unavailable_end_turn_obs` 设为 `False`，预期移除包含 `hook_locked/hook_ids` 的整条非致死前兆 marker，保留评分、action、params 与致死审计。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第 1636 局复盘（WATERFALL_ABOUT_TO_BLOW_SURVIVAL_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS` 只记录 `non_attack_candidates`，无法区分“非攻击牌存在但没有可支付防御容量”和“仍有格挡资源却未救场”；在不改变禁攻、评分、action 或 params 的前提下，追加原始格挡容量分层后，未来样本可以证伪这一归因假设。
+- **EVIDENCE**：精确 run `76RQE6Z3MC4N`（第 1636 局，`sts2-ascend/knowledge/runs/20260928-163835_76RQE6Z3MC4N.json`）完整持久链 211 条已核读。F17 WaterfallGiant AboutToBlow 终端回合为 `hp=6/block=5/incoming=36/energy=2`，现有记录为 `vetoed_attacks=2/non_attack_candidates=2`，手牌没有可支付格挡；原生 v0.111.0 mechanics 证据确认 `TriggerAboutToBlowState` 将 HP 设为 999999999，随后 `ExplodeMove` 造成蒸汽伤害并结束敌人。该链条证明当前缺口是“防御容量不可观测”，尚不足以支持改行为。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Waterfall AboutToBlow 致死空过窗口按 `run_id/floor/turn/hp/block/incoming/energy` 分层，新增 `raw_block_candidates/raw_max_block/raw_post_gap/raw_survival/block_locked`。若 `raw_block_candidates=0` 或 `raw_survival=no` 与终局稳定对应，支持资源不可救假设；若 `raw_survival=yes` 仍反复 end_turn 致死，才另立救场行为假设；字段错挂、容量与实际可支付边界不符或 action/params 变化则立即回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：沿用既有观测开关，在 WaterfallGiant 自爆相终端 marker 中统计已过滤救场手牌的可玩、可支付、非 X 费原始格挡候选与最大格挡，并计算格挡后的原始缺口/生存分层；不参与评分、排序、目标、资源、判决或动作。
+- `sts2-ascend/brain/knowledge.py`：补充既有开关的静态契约，明确新增字段仍为纯观测。
+- `sts2-ascend/brain/selfcheck.py`：为无格挡 Waterfall 夹具断言新增字段，同时保留 enemy ID 边界、开关关闭和 action/params 不变断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立 marker，按 raw 格挡容量、实际救场动作、下一状态与 `GAME_OVER` 对账；未取得重复正容量样本前不升级防守行为。
+- **撤回**：将 `waterfall_about_to_blow_end_turn_obs` 设为 `False`；预期移除整条 Waterfall marker（含新增字段），保留禁攻、评分、action 与 params。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

@@ -6665,7 +6665,11 @@ def main() -> int:
     assert d_waterfall.action == "end_turn" \
         and d_waterfall.params == d_itv.params \
         and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" in d_waterfall.reason \
-        and "enemy_hp=999999999" in d_waterfall.reason, \
+        and "enemy_hp=999999999" in d_waterfall.reason \
+        and "raw_block_candidates=0" in d_waterfall.reason \
+        and "raw_max_block=0" in d_waterfall.reason \
+        and "raw_post_gap=33" in d_waterfall.reason \
+        and "raw_survival=no" in d_waterfall.reason, \
         f"瀑布巨兽自爆相终端观测缺失或改写动作: {d_waterfall.action} {d_waterfall.params}（{d_waterfall.reason}）"
     waterfall_generic = itv_combat_state([dict(itv_strike)], incoming=33)
     waterfall_generic["combat"]["enemies"][0]["current_hp"] = 999999999

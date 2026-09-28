@@ -207,7 +207,9 @@ DEFAULT_POLICY = {
                                                     # 999999999，并移除蒸汽喷发层；当该
                                                     # 无敌相在致死 end_turn 过滤攻击时，
                                                     # 追加 WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS。
-                                                    # 纯观测，不改变资源/动作；False=关闭。
+                                                    # 追加当前救场手牌的原始可支付格挡候选数、最大格挡、
+                                                    # 格挡后缺口与 raw_survival 分层；仍为纯观测，不改变
+                                                    # 资源/动作；False=关闭。
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——
