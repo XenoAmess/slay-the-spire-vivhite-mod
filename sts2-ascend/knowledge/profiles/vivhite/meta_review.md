@@ -5581,25 +5581,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-## 2026-09-28｜第1593~1597局复盘（VIVHITE_BOSS_FREE_TURN_HP_PAY_OUTCOME_OBS）
-
-### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：现有 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS` 能记录 Boss 零意图回合的单次生命支付，却不能把这些支付与权威 `GAME_OVER` 胜负绑定；因此无法区分“付血帮助赢下 Boss”与“付血后仍在终局阵亡”。新增终局对账后，未来样本应能按结局、支付次数/总量和支付前后敌血池直接证伪该判断。
-- **EVIDENCE**：精确批次 1593、1594、1597 分别出现 7、9、6 次 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS`；1594 同批既有 F17 Boss 胜利又有 F35 Boss 阵亡，1597 F33 知识恶魔战 T1 连续两次付 2 血（84→82→80，敌血 379→369）后最终阵亡。现有链没有对应的普通 `GAME_OVER` outcome join；1595/1596 未进入 Boss，不应制造该观测。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss 窗口中，只要当前终局楼层存在已落盘的单次支付，就应在 `GAME_OVER` 看到一次 `VIVHITE_BOSS_FREE_TURN_HP_PAY_OUTCOME_OBS`，含 `outcome/floor/plays/total_pay` 及首末 HP、敌血字段；同一终局重试不得重复，关闭开关时 action/params 不变。若出现跨楼层串账、缺少对应终局或字段解析失败，该假设/实现即被证伪并停止扩大范围。
-
-### MINIMUM_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `vivhite_boss_free_turn_hp_pay_outcome_obs`。
-- `sts2-ascend/brain/policy.py`：`GAME_OVER` 只读扫描当前终局楼层的持久 `play_card` 单次支付标记，汇总胜负和首末字段；以已持久 outcome marker 去重，不参与评分、候选、目标、动作或参数。
-- `sts2-ascend/brain/selfcheck.py`：新增失败/胜利、丢回执重试、持久后幂等、开关关闭四组对照，锁定动作参数不变。
-
-### CONTINUE / ADJUST / ROLLBACK / VALIDATION
-
-- **继续/调整**：采集未来 3~10 个独立 Boss 窗口，按 `run_id/floor/outcome/plays/total_pay/first_hp/last_hp/first_enemy_hp/last_enemy_hp` 分层；至少 3 个可比样本后再判断付血与胜负的关联，期间不扩大行为门。
-- **撤回**：将 `vivhite_boss_free_turn_hp_pay_outcome_obs` 设为 `0`；预期只移除终局对账尾缀，保留既有单次支付观测和全部 action/params。
-- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
-
-retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])

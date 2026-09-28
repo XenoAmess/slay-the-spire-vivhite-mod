@@ -4178,109 +4178,6 @@ class Policy:
         except (TypeError, ValueError, OverflowError):
             return False
 
-    @staticmethod
-    def _boss_free_turn_hp_pay_outcome_enabled(pol) -> bool:
-        try:
-            return bool(int(float(pol.get(
-                "vivhite_boss_free_turn_hp_pay_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            return False
-
-    def _consume_boss_free_turn_hp_pay_outcome_note(
-            self, pol, ctx, victory, floor=None) -> str:
-        """Join durable Boss zero-intent HP-pay rows to GAME_OVER.
-
-        The per-card marker is emitted only after a selected card is known to
-        be a real Boss free-turn payment.  This method only reconstructs the
-        current terminal-floor slice from durable decisions, so it is an
-        observation and cannot alter scoring, eligibility, or action params.
-        """
-        if (not self._boss_free_turn_hp_pay_outcome_enabled(pol)
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID):
-            return ""
-        decisions = getattr(ctx, "decisions", None)
-        if not isinstance(decisions, list) or not decisions:
-            return ""
-        marker = "VIVHITE_BOSS_FREE_TURN_HP_PAY_OUTCOME_OBS"
-        if any(marker in str(row.get("reason") or "")
-               for row in decisions if isinstance(row, dict)):
-            return ""
-
-        def _floor(value):
-            try:
-                return int(float(value))
-            except (TypeError, ValueError, OverflowError):
-                return None
-
-        terminal_floor = _floor(floor)
-        if terminal_floor is None:
-            for row in reversed(decisions):
-                if not isinstance(row, dict) or row.get("screen") != "COMBAT":
-                    continue
-                terminal_floor = _floor(row.get("floor"))
-                if terminal_floor is not None:
-                    break
-        if terminal_floor is None:
-            return ""
-
-        combat_rows = [
-            row for row in decisions
-            if (isinstance(row, dict)
-                and row.get("screen") == "COMBAT"
-                and _floor(row.get("floor")) == terminal_floor)
-        ]
-        pay_rows = [
-            row for row in combat_rows
-            if row.get("action") == "play_card"
-            and "VIVHITE_BOSS_FREE_TURN_HP_PAY_OBS" in str(
-                row.get("reason") or "")
-        ]
-        if not pay_rows:
-            return ""
-
-        def _field(reason, name):
-            match = re.search(
-                rf"(?<![A-Za-z_]){re.escape(name)}=([^/\uFF0C,\uFF09)]+)",
-                reason)
-            return match.group(1).strip() if match else None
-
-        def _payment(reason):
-            match = re.search(
-                r"\u5B9E\u4ED8(?P<pay>[-+]?\d+(?:\.\d+)?)\u8840",
-                reason)
-            return float(match.group("pay")) if match else None
-
-        parsed = []
-        for row in pay_rows:
-            reason = str(row.get("reason") or "")
-            pay = _payment(reason)
-            round_no = _field(reason, "round")
-            hp = _field(reason, "hp")
-            enemy_hp = _field(reason, "enemy_hp")
-            if pay is None or round_no is None or hp is None or enemy_hp is None:
-                return ""
-            parsed.append((pay, round_no, hp, enemy_hp))
-
-        def _num(value):
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return str(value)
-
-        outcome = "victory" if victory else "defeat"
-        first_pay, first_round, first_hp, first_enemy_hp = parsed[0]
-        last_pay, last_round, last_hp, last_enemy_hp = parsed[-1]
-        return (
-            "; boss free-turn HP-pay outcome:"
-            f"outcome={outcome}/floor={terminal_floor}"
-            f"/plays={len(parsed)}/total_pay={_num(sum(item[0] for item in parsed))}"
-            f"/first_pay={_num(first_pay)}/first_round={first_round}"
-            f"/first_hp={first_hp}/first_enemy_hp={first_enemy_hp}"
-            f"/last_pay={_num(last_pay)}/last_round={last_round}"
-            f"/last_hp={last_hp}/last_enemy_hp={last_enemy_hp}"
-            " (VIVHITE_BOSS_FREE_TURN_HP_PAY_OUTCOME_OBS)")
-
     def _consume_ritual_window_outcome_note(
             self, pol, ctx, victory, floor=None) -> str:
         """Join ritual-window skips on the terminal floor to GAME_OVER.
@@ -14906,9 +14803,6 @@ class Policy:
         _ritual_window_outcome_note = (
             self._consume_ritual_window_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
-        _boss_free_turn_hp_pay_outcome_note = (
-            self._consume_boss_free_turn_hp_pay_outcome_note(
-                self.know.policy, ctx, victory, go.get("floor")))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -14920,8 +14814,7 @@ class Policy:
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_terminal_outcome_note}"
-                            f"{_ritual_window_outcome_note}"
-                            f"{_boss_free_turn_hp_pay_outcome_note}", wait=1.0)
+                            f"{_ritual_window_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -14944,8 +14837,7 @@ class Policy:
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_terminal_outcome_note}"
-                        f"{_ritual_window_outcome_note}"
-                        f"{_boss_free_turn_hp_pay_outcome_note}",
+                        f"{_ritual_window_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -14954,8 +14846,7 @@ class Policy:
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_terminal_outcome_note}"
-                                f"{_ritual_window_outcome_note}"
-                                f"{_boss_free_turn_hp_pay_outcome_note}",
+                                f"{_ritual_window_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)
