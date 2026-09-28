@@ -11694,6 +11694,7 @@ def main() -> int:
                           boss_state_powers_next=None,
                           boss_block_obs=True, boss_block_start=0,
                           boss_block_next=None,
+                          boss_intent_ramp_obs=True, boss_intent_next=None,
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
@@ -11786,6 +11787,8 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_effective_dpt_block_obs"] = boss_block_obs
         cap_pol.know.policy[
+            "boss_race_intent_ramp_obs"] = boss_intent_ramp_obs
+        cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
         cap_pol.know.policy[
             "longfight_joint_survival_margin_obs"] = longfight_joint_survival_obs
@@ -11810,6 +11813,9 @@ def main() -> int:
             if boss_state_powers_next is not None:
                 cap_state["combat"]["enemies"][0]["powers"] = (
                     boss_state_powers_next)
+            if boss_intent_next is not None:
+                cap_state["combat"]["enemies"][0]["intents"] = [
+                    {"total_damage": boss_intent_next}]
             return cap_pol.decide(cap_state, cap_ctx)
         return decision
 
@@ -11889,6 +11895,25 @@ def main() -> int:
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
     d_combat_boss_effective_off = combat_flip_probe(
         1.5, sample_effective_round=True, boss_effective_dpt_obs=False)
+    assert knowledge.DEFAULT_POLICY["boss_race_intent_ramp_obs"] is True
+    d_combat_boss_intent_ramp = combat_flip_probe(
+        1.5, sample_effective_round=True, boss_intent_next=12)
+    assert ("BOSS_RACE_INTENT_RAMP_OBS" in
+            d_combat_boss_intent_ramp.reason
+            and "intent=0->12" in d_combat_boss_intent_ramp.reason), \
+        f"Boss intent ramp observation missing: {d_combat_boss_intent_ramp.reason}"
+    d_combat_boss_intent_ramp_off = combat_flip_probe(
+        1.5, sample_effective_round=True, boss_intent_next=12,
+        boss_intent_ramp_obs=False)
+    assert (d_combat_boss_intent_ramp_off.action
+            == d_combat_boss_intent_ramp.action
+            and d_combat_boss_intent_ramp_off.params
+            == d_combat_boss_intent_ramp.params
+            and "BOSS_RACE_EFFECTIVE_DPT_OBS" in
+            d_combat_boss_intent_ramp_off.reason
+            and "BOSS_RACE_INTENT_RAMP_OBS" not in
+            d_combat_boss_intent_ramp_off.reason), \
+        f"Boss intent ramp observation rollback changed behavior: {d_combat_boss_intent_ramp_off.reason}"
     # 3br-boss-effective-dpt-state：1583-F17 的 CEREMONIAL_BEAST 在相邻
     # 回合出现 43.0→0.0 的净降跳变；原生 PlowPower/第二阶段状态必须跟随
     # 零样本留痕，才能区分原生阶段/不可命中与竞速投影高估。状态观测只读

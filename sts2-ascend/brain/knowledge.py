@@ -784,6 +784,7 @@ DEFAULT_POLICY = {
     "deck_thin_discount": 0.35,   # 单薄期每缺 1 张核心牌降低拾取门槛的幅度（门槛只升不降曾让 91 局整场只拿 6 张牌）
     # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
     "kill_race_enabled": True,
+    "boss_race_intent_ramp_obs": True,  # read-only raw intent delta between Boss DPT windows
     "race_audit_projection_obs": True,  # 竞速判死审计的投影快照观测位：把入锁时
                                          # 的血池/有效DPT/TTK/可存活回合与实际结局
                                          # 放在同一条战斗记录中，纯用于校准，不改变判定；

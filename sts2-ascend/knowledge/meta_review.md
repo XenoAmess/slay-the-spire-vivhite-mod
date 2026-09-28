@@ -11516,6 +11516,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-28：第 1628 局复盘，BOSS_RACE_INTENT_RAMP_OBS
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 Boss 竞速有效 DPT 对账记录了敌血净降与投影差值，但没有保存相邻 DPT 窗的原始来袭意图增量；若把该增量作为窗边界观测，正向增量应能在后续 3~10 个独立 Boss 竞速窗中解释部分低血量/终局风险，否则假设被否证。
+- **EVIDENCE**：精确 run 1628（`388QW2GSNEKG`，F17 CEREMONIAL_BEAST，终局回合 9）完整决策链显示 D225~D247 的来袭值在 18、20、16/15、17/18 间波动，并同步出现力量层；D227~D230 的有效 DPT 比值从 1.45 到 3.70，D235 又降至 0.70，随后 D247 仍为 18 伤害而玩家仅 5 HP。运行时记录给出 CEREMONIAL_BEAST Boss 初始 HP 252；本地 `sts2.dll` 机制抽取给出 Crush 17/施加 3 Strength、Plow 18/施加 2 Strength、Stomp 15，说明来袭增长不是静态伤害常数。
+- **EXPECTED_SIGNAL**：后续 3~10 个独立 Boss DPT 窗至少出现带 `BOSS_RACE_INTENT_RAMP_OBS` 的 `intent=a->b` 观测，并可按 `run_id/floor/窗口` 与之后的来袭、低 HP、terminal 结局对齐；若正增量不出现或与终局无稳定关系，停止把它作为预测特征。action/params 应始终不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启且可回滚的 `boss_race_intent_ramp_obs`。
+- `sts2-ascend/brain/policy.py` 仅在已有 Boss 有效 DPT 窗边界保存起始 incoming；当前值严格大于起始值时追加 `Boss intent=a->b (+delta) (BOSS_RACE_INTENT_RAMP_OBS)`，不写入评分、TTK、判死、候选或动作。
+- `sts2-ascend/brain/selfcheck.py` 增加正增量 marker、关闭开关和 action/params 等价性夹具。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立 Boss 窗，按上述键对齐来袭斜率与终局；只有达到稳定关联才考虑后续决策层改动，本批不改决策。
+- **回滚**：将 `boss_race_intent_ramp_obs` 设为 `False`，只移除新 marker，保留既有 DPT 对账及 action/params。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` 输出 **SELFCHECK OK**；`git diff --check` 通过；未写入 `.runtime/`、`runs/`、`archive/`、`stats`、`progression`、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
 ## 2026-09-28｜第 1622 局复盘（SLIPPERY_BURN_COST_TIEBREAK）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
