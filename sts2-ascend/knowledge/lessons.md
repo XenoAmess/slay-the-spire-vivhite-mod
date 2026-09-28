@@ -13647,3 +13647,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.131326728838754局)，BASH(14分/2.649584155171254局)，JACKPOT(16分/6.002267706508131局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.46 → 0.49（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1641 胜，当前目标进阶 0
+
+## 第 1642 局复盘（2026-09-28 21:43）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：CRUELTY, TAUNT, BREAKTHROUGH, SHRUG_IT_OFF, DISMANTLE, RUPTURE, MOLTEN_FIST, BLUDGEON, SHRUG_IT_OFF, SETUP_STRIKE
+- 本局遗物：FESTIVE_POPPER
+- 战斗记录：F5 Monster战 掉血10; F6 Monster战 掉血2｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血18｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血2; F13 Monster战 掉血18; F17 Boss战 掉血80｜竞速投影审计：pool=193/dpt=4.05/ttk=47.6543/tsurv=5.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=47.6543/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.541930874232404局)，FEED(25分/35.41896609389502局)，PACTS_END(25分/60.860523485002325局)，OFFERING(24分/18.59851891673937局)，ULTIMATE_STRIKE(24分/22.28321453292385局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1203670852878185局)，BASH(14分/2.6403106106281546局)，JACKPOT(16分/5.981259769535352局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.49 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1642 胜，当前目标进阶 0
