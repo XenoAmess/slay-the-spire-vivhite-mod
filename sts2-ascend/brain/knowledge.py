@@ -1511,6 +1511,9 @@ DEFAULT_POLICY = {
                                          # buff/debuff/self_defense/unknown 归类；不改变评分、目标或动作。用于验证
                                          # 零伤害减益体是否被误当成会强化队友的辅助体；False 严格回滚
                                          # 该观测尾缀。
+    "support_target_summon_obs": True,  # 原生 SummonIntent 的零伤害目标观测分类（SUPPORT_TARGET_INTENT_OBS）：
+                                         # 仅把 role 从 unknown 细分为 summon，不改变评分、目标或动作；
+                                         # False 严格回滚为 unknown，供同一批次做行为等价核验。
     "support_target_debuff_gate": True,  # 已知原生 DebuffIntent 不得获得辅助体转火加分：
                                          # 该意图作用于玩家而非队友；仅 role=debuff 被窄门拦截，
                                          # buff、mixed 与未知载荷保留旧行为。关闭即恢复旧评分/目标，

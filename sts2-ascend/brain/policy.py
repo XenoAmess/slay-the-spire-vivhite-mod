@@ -9834,6 +9834,8 @@ class Policy:
                 _support_intent_role = "unknown"
                 _support_debuff_gated = False
                 if _base_support:
+                    _summon_observation_enabled = bool(
+                        pol.get("support_target_summon_obs", True))
                     _intent_labels = []
                     for _intent in e.get("intents") or []:
                         if not isinstance(_intent, dict):
@@ -9860,10 +9862,19 @@ class Policy:
                             for _token in ("defend", "block", "shield"))
                         or any(_token in _intent_text
                                for _token in ("防御", "格挡", "护盾")))
+                    # Native SummonIntent is a supply/spawn action (for
+                    # example Ovicopter laying Tough Eggs), not a teammate
+                    # buff. Keep it observational for now so the existing
+                    # target score and action remain exactly reversible.
+                    _has_summon = _summon_observation_enabled and (
+                        "summon" in _intent_lower
+                        or any(_token in _intent_text
+                               for _token in ("召唤", "产卵", "孵化")))
                     _intent_role = ("mixed" if _has_buff and _has_debuff
                                     else "buff" if _has_buff
                                     else "debuff" if _has_debuff
                                     else "self_defense" if _has_self_defense
+                                    else "summon" if _has_summon
                                     else "unknown")
                     _support_intent_role = _intent_role
                     _support_intent_obs = (

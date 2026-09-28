@@ -1414,7 +1414,7 @@ def main() -> int:
     #      的神官本回合零伤害意图（治疗/增益型）——威胁分成恒为 0，旧评分永远把它排
     #      最后，信徒被持续强化、意图逐轮滚升，拖长战斗正是死因形态。零伤害意图的
     #      辅助体获得定向转火加分；负例：辅助体转为攻击意图后恢复常规威胁评分。
-    def support_state(sup_threat):
+    def support_state(sup_threat, intent_type=None):
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"], "turn": 2,
             "combat": {"player": {"current_hp": 70, "max_hp": 80, "block": 0, "energy": 3},
@@ -1426,7 +1426,10 @@ def main() -> int:
                            {"index": 0, "enemy_id": "KIN_PRIEST_T", "name": "同族神官",
                             "current_hp": 30, "max_hp": 50, "block": 0, "is_alive": True,
                             "is_hittable": True,
-                            "intents": [{"total_damage": sup_threat}]},
+                            "intents": ([{"total_damage": sup_threat}]
+                                         if intent_type is None else
+                                         [{"total_damage": sup_threat,
+                                           "intent_type": intent_type}])},
                            {"index": 1, "enemy_id": "KIN_FOLLOWER_T", "name": "同族信徒",
                             "current_hp": 120, "max_hp": 190, "block": 0, "is_alive": True,
                             "is_hittable": True,
@@ -1483,6 +1486,30 @@ def main() -> int:
         and "intent=Defend" in d_crossbow_obs.reason \
         and "role=self_defense" in d_crossbow_obs.reason, \
         f"Defend 意图未归类为自我防御或改写动作: {d_crossbow_obs.reason}"
+    # 1631-F23 观测收口：原生 SummonIntent（Ovicopter 产卵）不得再与
+    # 未知意图混为一谈；该键只改审计标签，关闭时必须恢复 unknown，且
+    # 两种状态的动作/目标完全相同。
+    pol._focus_index = None
+    pol._focus_drift_flips = 0
+    pol._focus_played_index = None
+    d_summon_obs = pol.decide(support_state(0, "Summon"), ctx)
+    assert d_summon_obs.action == "play_card" \
+        and d_summon_obs.params.get("target_index") == 0 \
+        and "SUPPORT_TARGET_INTENT_OBS" in d_summon_obs.reason \
+        and "intent=Summon" in d_summon_obs.reason \
+        and "role=summon" in d_summon_obs.reason, \
+        f"Summon 意图未归类为 summon 或改写动作: {d_summon_obs.reason}"
+    pol.know.policy["support_target_summon_obs"] = False
+    pol._focus_index = None
+    pol._focus_drift_flips = 0
+    pol._focus_played_index = None
+    d_summon_rb = pol.decide(support_state(0, "Summon"), ctx)
+    assert d_summon_rb.action == d_summon_obs.action \
+        and d_summon_rb.params == d_summon_obs.params \
+        and "role=summon" not in d_summon_rb.reason \
+        and "role=unknown" in d_summon_rb.reason, \
+        f"support_target_summon_obs=False 未严格回滚且行为不等价: {d_summon_rb.reason}"
+    pol.know.policy["support_target_summon_obs"] = True
     pol.know.policy["support_target_debuff_gate"] = False
     d_shrinker_gate_rb = pol.decide(shrinker_obs_state, ctx)
     assert d_shrinker_gate_rb.action == "play_card" \

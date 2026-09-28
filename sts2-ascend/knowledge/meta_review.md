@@ -12760,3 +12760,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将既有 `kill_race_free_energy_function_obs` 与 `kill_race_lethal_free_energy_function_obs` 设为 `False`；预期移除该旁观尾缀及新增字段，保留评分、action、目标和 params。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1631 局复盘（SUPPORT_TARGET_SUMMON_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：多敌战斗中，原生 `SummonIntent` 被现有零伤害辅助体审计压成 `role=unknown`，使产卵/补充敌人的窗口无法与未知载荷分层；本批只增加角色观测，不改变转火评分或动作。若后续原生召唤意图仍记录为 unknown，假设或意图字段边界即被证伪。
+- **EVIDENCE**：精确 run `EGNZXHSDE8XQ`（第 1631 局，`sts2-ascend/knowledge/runs/20260928-130049_EGNZXHSDE8XQ.json`）完整持久链已核读。F23 的 D275、D285、D288 分别在 Ovicopter/Tough Egg 交互中出现 `intent=Summon role=unknown`；原生 v0.111.0 knowledge 显示 Ovicopter 的 `LAY_EGGS_MOVE` 使用 `SummonIntent` 并生成 Tough Egg/MinionPower，`OvicopterNormal` 同时声明 Ovicopter 与 ToughEgg 槽位。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立多敌战斗按 `run_id/floor/turn/enemy_id/intent/role` 汇总；原生 `Summon` 应出现 `role=summon`，并与后续目标、动作参数及终局分层。若非召唤意图被误标、动作/目标发生变化，立即撤回。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `support_target_summon_obs`。
+- `sts2-ascend/brain/policy.py`：在既有 `SUPPORT_TARGET_INTENT_OBS` 解析中，把 `Summon`/召唤/产卵/孵化标签细分为 `role=summon`；不参与评分、排序、目标判决或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 Summon 启用/关闭夹具，断言关闭回到 `unknown` 且 action/params 完全相同。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立召唤观测，按召唤者、目标槽位、回合、后续处理顺序、战损与终局分层；至少 3 个稳定样本后才评估是否需要独立召唤目标行为。
+- **撤回**：将 `support_target_summon_obs` 设为 `False`；预期仅把 `role=summon` 恢复为 `role=unknown`，保留评分、action、目标和 params。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
