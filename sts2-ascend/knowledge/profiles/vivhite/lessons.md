@@ -17585,3 +17585,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.4923089248460895局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.39903155260451局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/33.94227582682943局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（14回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1595 胜，当前目标进阶 3
+
+## 第 1596 局复盘（2026-09-28 11:50）
+- 结果：💀 失败｜进阶 3｜到达层数 5｜当局评分 5
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_SUCCESSOR_FORMULA, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_ISOPERIMETRIC_WARD
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血42｜自损28（可行动段28/非行动段0，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血27｜自损16（可行动段16/非行动段10，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/3.506243944457843局)，MAYHEM(37分/4.830540016377051局)，THINKING_AHEAD(36分/4.900366366864765局)，FISTICUFFS(35分/6.543082539141469局)，ROLLING_BOULDER(34分/4.937577199791029局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.6334573879661516局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.4835858436091285局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.324134942170396局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Monster战实测自损16/掉血27（59%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1596 胜，当前目标进阶 3
