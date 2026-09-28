@@ -17706,3 +17706,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5427246062751285局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.3980167156677266局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/20.589436105083024局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（14回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1606 胜，当前目标进阶 3
+
+## 第 1607 局复盘（2026-09-28 14:10）
+- 结果：💀 失败｜进阶 3｜到达层数 31｜当局评分 31
+- 死因：敌人组合 INFESTED_PRISM
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_PERFECT_SYNTHESIS
+- 本局遗物：GIRYA, RED_MASK, STRAWBERRY, REGAL_PILLOW
+- 战斗记录：F20 Unknown战 掉血0｜自损8（可行动段8/非行动段0，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血0｜自损6（可行动段6/非行动段13，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=117/dpt=16.7362/ttk=6.99082/tsurv=3.16667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=6.99082/actual_over_projected=1.00（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战7回合获胜; F22 Monster战 掉血21｜自损16（可行动段16/非行动段11，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血0｜自损35（可行动段35/非行动段3，SELF_LOSS_PHASE_OBS）; F29 Elite战 掉血48｜自损16（可行动段16/非行动段35，SELF_LOSS_PHASE_OBS）; F31 Elite战 掉血33｜自损14（可行动段14/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=139/dpt=21.1992/ttk=6.55684/tsurv=4.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=6.55684/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.37359125275286局)，THINKING_AHEAD(37分/5.69072521265128局)，MAYHEM(37分/4.6477848670743604局)，ROLLING_BOULDER(36分/5.726528237898888局)，FISTICUFFS(35分/6.295536297461128局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.5338250701531657局)，VIVHITE_CARD_PREFETCH_FUTURE(21分/2.3896236571628897局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/26.085955515474局)
+- 策略进化：elite_grey_safety_mult: 1.85 → 2.05（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.37 → 0.37（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.99 → 1.98（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F31——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F31——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F31——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F31——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：3/1607 胜，当前目标进阶 3
