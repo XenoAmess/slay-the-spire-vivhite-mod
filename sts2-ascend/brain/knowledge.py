@@ -955,6 +955,10 @@ DEFAULT_POLICY = {
                                         # 的牌」空过收口且仪式在手可出时披露回合/血量比例/意图/竞速与致死投影
                                         # 状态；不改评分、候选资格、放行或动作。0=关闭（一键回滚注记消失，
                                         # 旧行为零差异），非白绮角色零改动
+    "ritual_window_outcome_obs": 1,     # 引擎仪式窗口终局对账（VIVHITE_RITUAL_WINDOW_OUTCOME_OBS）：
+                                         # 在 GAME_OVER 将同一终局楼层已落盘的窗口空过次数、首末
+                                         # 回合上下文、仪式是否后来实际打出与权威胜负绑定；只读
+                                         # ctx.decisions，不参与评分、候选、动作或参数。0=关闭，非白绮零改动
     "vivhite_hp_gate_free_turn_relief": 1.0,  # 謦欬门意图0自由回合减免（VIVHITE_HP_GATE_FREE_TURN_RELIEF，
                                        # 第 505~511 局批复盘新增，静态键）：511 局 F11 旧日雕像精英战 T1
                                        # 意图 0、我方 45 血，余量门拦下弦光投影/绯色面积+/终止条件合计

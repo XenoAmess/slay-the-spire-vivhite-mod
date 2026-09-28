@@ -7222,6 +7222,89 @@ def main() -> int:
     del d_rws, d_rws_off, d_rws_no, d_rws_iron, \
         rws_pol, rws_off, rws_no, rws_iron
 
+    # 3rwo（当前批次 F17 终局）：把同一终局楼层的仪式空过窗口与权威
+    # GAME_OVER outcome 绑定，验证只增加终局观测、不改变动作；重试看到已
+    # 落盘 marker 时不得重复消费，键=0 也必须严格回滚。
+    rwo_rows = [
+        {"screen": "COMBAT", "floor": 17, "turn": 1, "hp": 88,
+         "action": "end_turn",
+         "reason": "引擎仪式可出未出（回合1，血量92%，意图0，竞速=False，"
+                   "致死投影=False，VIVHITE_RITUAL_WINDOW_SKIP_OBS）"},
+        {"screen": "COMBAT", "floor": 17, "turn": 5, "hp": 67,
+         "action": "end_turn",
+         "reason": "引擎仪式可出未出（回合5，血量70%，意图13，竞速=True，"
+                   "致死投影=False，VIVHITE_RITUAL_WINDOW_SKIP_OBS）"},
+        {"screen": "COMBAT", "floor": 17, "turn": 5,
+         "action": "play_card",
+         "reason": "战斗：残能救场：剩余能量1打出【闭域映射】；原裁决："
+                   "评估后无值得出的牌（白绮的猩红转化仪式✓）"},
+        {"screen": "COMBAT", "floor": 17, "turn": 8, "hp": 37,
+         "action": "end_turn",
+         "reason": "引擎仪式可出未出（回合8，血量39%，意图10，竞速=True，"
+                   "致死投影=False，VIVHITE_RITUAL_WINDOW_SKIP_OBS）"},
+    ]
+    rwo_ctx = type("RWOCtx", (), {
+        "decisions": list(rwo_rows),
+        "combat_notes": ["F17 Boss战 掉血36（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    rwo_pol = policy.Policy(_vivhite_know("sts2-selfcheck-rwo-"), random.Random(5))
+    rwo_note = rwo_pol._consume_ritual_window_outcome_note(
+        rwo_pol.know.policy, rwo_ctx, False, 17)
+    assert ("VIVHITE_RITUAL_WINDOW_OUTCOME_OBS" in rwo_note
+            and "outcome=defeat" in rwo_note
+            and "room=Boss" in rwo_note
+            and "skips=3" in rwo_note
+            and "first_round=1" in rwo_note
+            and "first_hp=92%" in rwo_note
+            and "last_round=8" in rwo_note
+            and "/played=no" in rwo_note), \
+        f"仪式空过终局对账缺字段: {rwo_note}"
+    rwo_go_ctx = type("RWOGoCtx", (), {
+        "decisions": list(rwo_rows),
+        "combat_notes": ["F17 Boss战 掉血36（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+        "run_finalized": True,
+        "finalize_requested": False,
+    })()
+    d_rwo_go = rwo_pol.decide({
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 17,
+                       "can_continue": True},
+    }, rwo_go_ctx)
+    assert d_rwo_go.action == "continue_game_over" \
+        and "VIVHITE_RITUAL_WINDOW_OUTCOME_OBS" in d_rwo_go.reason, \
+        f"GAME_OVER 未携带仪式终局观测或动作漂移: {d_rwo_go.action}（{d_rwo_go.reason}）"
+    rwo_ctx.decisions.append({"screen": "GAME_OVER", "floor": 17,
+                              "reason": rwo_note})
+    assert rwo_pol._consume_ritual_window_outcome_note(
+        rwo_pol.know.policy, rwo_ctx, False, 17) == "", \
+        "仪式空过终局 marker 在重试时重复消费"
+
+    rwo_play_ctx = type("RWOPlayCtx", (), {
+        "decisions": list(rwo_rows) + [{
+            "screen": "COMBAT", "floor": 17, "turn": 9,
+            "action": "play_card", "reason": "战斗：打出【白绮的猩红转化仪式】",
+        }],
+        "combat_notes": ["F17 Boss战 掉血0"],
+        "died_in_combat": None,
+    })()
+    rwo_play_pol = policy.Policy(
+        _vivhite_know("sts2-selfcheck-rwo-play-"), random.Random(5))
+    rwo_play_note = rwo_play_pol._consume_ritual_window_outcome_note(
+        rwo_play_pol.know.policy, rwo_play_ctx, True, 17)
+    assert "outcome=victory" in rwo_play_note and "/played=yes" in rwo_play_note, \
+        f"仪式实际打出或胜局未被终局对账: {rwo_play_note}"
+
+    rwo_off_pol = policy.Policy(
+        _vivhite_know("sts2-selfcheck-rwo-off-"), random.Random(5))
+    rwo_off_pol.know.policy["ritual_window_outcome_obs"] = 0
+    assert rwo_off_pol._consume_ritual_window_outcome_note(
+        rwo_off_pol.know.policy, rwo_ctx, False, 17) == "", \
+        "仪式空过终局对账键=0 未严格回滚"
+    del rwo_pol, rwo_play_pol, rwo_off_pol, rwo_ctx, rwo_play_ctx, rwo_go_ctx
+
     # 3xc（第658~663局批复盘）：开局承诺加成回归对——上一批该功能上线后
     #           首个整批窗口恰逢卡组零力量引擎（658~663 六局无一力量型
     #           能力牌供应），线上零触发、行为未受检验。此处正反例钉死：

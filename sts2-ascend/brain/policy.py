@@ -4165,6 +4165,124 @@ class Policy:
             f"/energy={_num(_pending.get('energy'))}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
+    @staticmethod
+    def _ritual_window_outcome_enabled(pol) -> bool:
+        try:
+            return bool(int(float(pol.get(
+                "ritual_window_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    def _consume_ritual_window_outcome_note(
+            self, pol, ctx, victory, floor=None) -> str:
+        """Join ritual-window skips on the terminal floor to GAME_OVER.
+
+        The per-turn ``VIVHITE_RITUAL_WINDOW_SKIP_OBS`` marker already exists,
+        but it cannot tell whether the same window was later used or whether
+        the combat ended in victory.  Reconstruct the current-floor slice from
+        durable decisions so a policy restart before GAME_OVER stays
+        observation-only and does not need another volatile accumulator.
+        """
+        if (not self._ritual_window_outcome_enabled(pol)
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID):
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "VIVHITE_RITUAL_WINDOW_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+
+        def _floor(value):
+            try:
+                return int(float(value))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        terminal_floor = _floor(floor)
+        if terminal_floor is None:
+            for row in reversed(decisions):
+                if not isinstance(row, dict) or row.get("screen") != "COMBAT":
+                    continue
+                terminal_floor = _floor(row.get("floor"))
+                if terminal_floor is not None:
+                    break
+        if terminal_floor is None:
+            return ""
+
+        combat_rows = [
+            row for row in decisions
+            if (isinstance(row, dict)
+                and row.get("screen") == "COMBAT"
+                and _floor(row.get("floor")) == terminal_floor)
+        ]
+        skip_rows = [
+            row for row in combat_rows
+            if "VIVHITE_RITUAL_WINDOW_SKIP_OBS" in str(
+                row.get("reason") or "")
+        ]
+        if not skip_rows:
+            return ""
+
+        def _skip_context(row):
+            reason = str(row.get("reason") or "")
+            match = re.search(
+                r"引擎仪式可出未出（回合([^，,]+)[，,]血量([^，,]+)"
+                r"[，,]意图([^，,）)]+)", reason)
+            if match:
+                return tuple(value.strip() for value in match.groups())
+            return (
+                str(row.get("turn", "?")),
+                str(row.get("hp", "?")),
+                "?",
+            )
+
+        first_round, first_hp, first_intent = _skip_context(skip_rows[0])
+        last_round, last_hp, last_intent = _skip_context(skip_rows[-1])
+        ritual_ids = (
+            "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL",
+            "白绮的猩红转化仪式",
+        )
+
+        def _played_ritual(row):
+            if row.get("action") != "play_card":
+                return False
+            match = re.search(r"打出【([^】]+)】", str(row.get("reason") or ""))
+            if not match:
+                return False
+            return match.group(1).rstrip("+") == ritual_ids[1]
+
+        ritual_played = any(
+            _played_ritual(row)
+            for row in combat_rows)
+
+        room = "?"
+        combat_notes = getattr(ctx, "combat_notes", None)
+        for note in reversed(combat_notes or []):
+            match = re.search(
+                rf"(?:^|[｜|\s])F{terminal_floor}\s+([^｜|]+?)战",
+                str(note))
+            if match:
+                room = match.group(1).strip()
+                break
+        if room == "?":
+            died = getattr(ctx, "died_in_combat", None)
+            if isinstance(died, dict) and died.get("node_type"):
+                room = str(died.get("node_type"))
+
+        outcome = "victory" if victory else "defeat"
+        return (
+            f"；仪式窗口终局对账：outcome={outcome}/floor={terminal_floor}"
+            f"/room={room}/skips={len(skip_rows)}"
+            f"/first_round={first_round}/first_hp={first_hp}"
+            f"/first_intent={first_intent}"
+            f"/last_round={last_round}/last_hp={last_hp}"
+            f"/last_intent={last_intent}"
+            f"/played={'yes' if ritual_played else 'no'}"
+            "（VIVHITE_RITUAL_WINDOW_OUTCOME_OBS）")
+
     def _restore_kill_race_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
         """Recover a terminal audit after a policy/process reload.
@@ -14481,6 +14599,9 @@ class Policy:
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
+        _ritual_window_outcome_note = (
+            self._consume_ritual_window_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor")))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -14491,7 +14612,8 @@ class Policy:
             return Decision("continue_game_over", {},
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
-                            f"{_terminal_outcome_note}", wait=1.0)
+                            f"{_terminal_outcome_note}"
+                            f"{_ritual_window_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -14513,7 +14635,8 @@ class Policy:
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
-                        f"{_terminal_outcome_note}",
+                        f"{_terminal_outcome_note}"
+                        f"{_ritual_window_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -14521,7 +14644,8 @@ class Policy:
                 return Decision("return_to_main_menu", {},
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
-                                f"{_terminal_outcome_note}",
+                                f"{_terminal_outcome_note}"
+                                f"{_ritual_window_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)

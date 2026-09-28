@@ -5484,3 +5484,36 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1569~1571 批：白绮仪式空过与终局结果对账观测
+
+日期：2026-09-28
+production_code_commit: 4070f08da67c3c47a579076f3d34fd5c8918347c
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `VIVHITE_RITUAL_WINDOW_SKIP_OBS` 只记录单回合“仪式可出未出”，没有把同一场战斗的多次空过、仪式后来是否实际打出和权威胜负连接起来。假设是：在 `GAME_OVER` 追加同一终局楼层的空过链对账后，可以区分“高血量窗口持续被压制”与“后续确实上线/终局正常”，且不改变任何 action/params；若后续高血量空过普遍紧接仪式实际出牌或胜利，则该假设被证伪，不应据此行为化。
+- **EVIDENCE**：`sts2-ascend/knowledge/profiles/vivhite/runs/20260928-075825_AXYFC1AT02Z6.json`（1571 局，234 条 decisions）中，F17 Boss 在 T1/T5/T8 分别出现仪式空过：92%血/意图0、70%血/意图13、39%血/意图10；全场没有实际打出仪式。T12 以 `hp=7/block=0/incoming=24/energy=0` 结束，Boss 战实际12回合、投影TTK 6.83962，战斗摘要自损36并以 defeat GAME_OVER 收口。原有逐回合 marker 不能单独表达这条终局链。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立白绮终局战斗中，只要终局楼层存在仪式空过，应在 `GAME_OVER` 理由追加 `VIVHITE_RITUAL_WINDOW_OUTCOME_OBS`，并正确给出 `skips`、首末回合/血量/意图、`played=yes|no`、`outcome` 和房间类型；无空过、非白绮或非该终局楼层不得显形。marker 缺失、跨楼层串账、把“实际出别的牌但原裁决提到仪式”误判为 `played=yes`，或 action/params 改变，均为证伪条件。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ritual_window_outcome_obs`，关闭时严格不追加终局观测。
+- `sts2-ascend/brain/policy.py`：`GAME_OVER` 只读当前终局楼层已持久化的 COMBAT decisions，汇总仪式空过链并解析实际 `打出【…】` 牌名，再绑定胜负；不参与评分、候选、门槛、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 `GAME_OVER` 接线、三次空过/败局、后续实际出仪式/胜局、重复终局重试去重、关闭键回滚，并固定“实际打出闭域映射但原裁决提到仪式”不误报。
+- 未修改 runs、stats、progression、policy.json、lessons.md、`.runtime`、归档、原始资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 对上述 1571 局原始 JSON 做纯内存只读回放，得到：`outcome=defeat/floor=17/room=Boss/skips=3/first_round=1/first_hp=92%/first_intent=0/last_round=8/last_hp=39%/last_intent=10/played=no`。
+- 目标生产/自检 diff 已回读，`git diff --check` 通过；生产改动已提交至 `4070f08da67c3c47a579076f3d34fd5c8918347c`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只收集 3~10 个独立终局战斗，逐条核对空过行、实际 `applied play_card`、`played` 字段、同楼层边界与 GAME_OVER/胜负；不把本批单局对账直接升级为行为修复。
+- 若字段错位、终局重试重复、非目标样本显形或 action/params 漂移，先将 `ritual_window_outcome_obs=0`；必要时回滚 `4070f08da67c3c47a579076f3d34fd5c8918347c`，保留本批证据。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
