@@ -17004,6 +17004,21 @@ def main() -> int:
             and "KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS"
             not in d_race_terminal_output_off.reason), \
         f"竞速致死输出容量关闭后动作或既有审计漂移: {d_race_terminal_output_off and d_race_terminal_output_off.reason}"
+    d_race_terminal_output_off_outcome = (
+        race_terminal_output_off_pol.decide(
+            {"screen": "GAME_OVER",
+             "available_actions": ["continue_game_over"],
+             "game_over": {"can_continue": True, "is_victory": False,
+                            "floor": 33}},
+            race_terminal_output_off_ctx))
+    assert (d_race_terminal_output_off_outcome.action
+            == "continue_game_over"
+            and d_race_terminal_output_off_outcome.params == {}
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_output_off_outcome.reason
+            and "KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS"
+            not in d_race_terminal_output_off_outcome.reason), \
+        f"终端输出容量关闭后结局尾缀或动作漂移: {d_race_terminal_output_off_outcome}"
 
     race_terminal_off_know = knowledge.Knowledge(tmp)
     race_terminal_off_know.policy["kill_race_terminal_audit_obs"] = False
@@ -17052,6 +17067,10 @@ def main() -> int:
             and "/kill_race=yes/race_allin=no"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局对账缺失或动作漂移: {d_race_terminal_outcome}"
+    assert ("target_hp=200/target_block=0/attack_candidates=0/raw_damage_cap=0"
+            " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
+            in d_race_terminal_outcome.reason), \
+        f"竞速终端结局未继承输出容量: {d_race_terminal_outcome}"
 
     # 3z-5c) 进程重载后的结局恢复：终端审计已随上一条决策持久化，但
     #        Policy 的瞬时 pending 可能在 GAME_OVER 前丢失；新实例只能从
@@ -17075,6 +17094,10 @@ def main() -> int:
             and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
             in d_race_terminal_replay.reason), \
         f"进程重载后未从持久终端审计恢复结局: {d_race_terminal_replay}"
+    assert ("target_hp=200/target_block=0/attack_candidates=0/raw_damage_cap=0"
+            " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复终端输出容量: {d_race_terminal_replay}"
 
     assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_replay.reason, \

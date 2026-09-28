@@ -4103,12 +4103,10 @@ class Policy:
             f"/selected={_selected_text}"
             f"（{marker}）")
 
-    def _race_allin_lethal_output_capacity_note(
-            self, hand, enemies, energy, my_hp, my_block, incoming, pol, *,
-            enabled_key="race_allin_lethal_output_capacity_obs",
-            marker="RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS",
-            label="race-allin lethal output capacity") -> str:
-        """Expose raw attack capacity beside a lethal race snapshot.
+    def _race_allin_lethal_output_capacity_snapshot(
+            self, hand, enemies, energy, pol, *,
+            enabled_key="race_allin_lethal_output_capacity_obs") -> dict | None:
+        """Return a one-frame, affordable raw attack-capacity snapshot.
 
         This is deliberately observation-only.  The capacity is a one-frame
         upper bound over affordable attack cards; it is never used for scoring,
@@ -4120,14 +4118,11 @@ class Policy:
         except (TypeError, ValueError, OverflowError, AttributeError):
             _enabled = False
         if not _enabled:
-            return ""
+            return None
         try:
             _energy = max(0.0, float(energy or 0.0))
-            _hp = float(my_hp or 0.0)
-            _block = float(my_block or 0.0)
-            _incoming = float(incoming or 0.0)
         except (TypeError, ValueError, OverflowError):
-            return ""
+            return None
 
         _target_hp = 0.0
         _target_block = 0.0
@@ -4147,12 +4142,12 @@ class Policy:
             if _enemy.get("index") is not None:
                 _enemy_indices.add(_enemy.get("index"))
         if _target_hp <= 0.0:
-            return ""
+            return None
 
         try:
             _max_energy = int(_energy)
         except (TypeError, ValueError, OverflowError):
-            return ""
+            return None
         _damage_by_energy = [0.0] * (_max_energy + 1)
         _attack_rows = []
         for _card in hand or []:
@@ -4190,11 +4185,49 @@ class Policy:
                     _damage_by_energy[_spent],
                     _damage_by_energy[_spent - _cost_i] + _card_damage)
         _max_damage = max(_damage_by_energy, default=0.0)
+        return {
+            "target_hp": _target_hp,
+            "target_block": _target_block,
+            "attack_candidates": len(_attack_rows),
+            "raw_damage_cap": _max_damage,
+            "cards": tuple(_attack_rows),
+        }
+
+    def _race_allin_lethal_output_capacity_note(
+            self, hand, enemies, energy, my_hp, my_block, incoming, pol, *,
+            enabled_key="race_allin_lethal_output_capacity_obs",
+            marker="RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS",
+            label="race-allin lethal output capacity", snapshot=None) -> str:
+        """Expose raw attack capacity beside a lethal race snapshot."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                enabled_key, 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        if snapshot is None:
+            snapshot = self._race_allin_lethal_output_capacity_snapshot(
+                hand, enemies, energy, pol, enabled_key=enabled_key)
+        if not isinstance(snapshot, dict):
+            return ""
+        try:
+            _target_hp = float(snapshot["target_hp"])
+            _target_block = float(snapshot["target_block"])
+            _attack_candidates = int(snapshot["attack_candidates"])
+            _max_damage = float(snapshot["raw_damage_cap"])
+            _attack_rows = tuple(snapshot.get("cards") or ())
+            _hp = float(my_hp or 0.0)
+            _block = float(my_block or 0.0)
+            _incoming = float(incoming or 0.0)
+            _energy = max(0.0, float(energy or 0.0))
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return ""
         return (
             f"; {label}: hp={_hp:g}"
             f"/block={_block:g}/incoming={_incoming:g}/energy={_energy:g}"
             f"/target_hp={_target_hp:g}/target_block={_target_block:g}"
-            f"/attack_candidates={len(_attack_rows)}"
+            f"/attack_candidates={_attack_candidates}"
             f"/raw_damage_cap={_max_damage:g}"
             f"/cards={'|'.join(_attack_rows) or 'none'}"
             f" ({marker})")
@@ -4591,6 +4624,25 @@ class Policy:
                 f"/esc_latch_hold={'yes' if _hold_count > 0 else 'no'}"
                 " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)")
 
+        _capacity_tail = ""
+        try:
+            _capacity_obs = bool(int(float(pol.get(
+                "kill_race_lethal_output_capacity_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _capacity_obs = False
+        _capacity = _pending.get("output_capacity")
+        if _capacity_obs and isinstance(_capacity, dict):
+            try:
+                _capacity_tail = (
+                    f"；终端输出容量对账：target_hp="
+                    f"{float(_capacity['target_hp']):g}"
+                    f"/target_block={float(_capacity['target_block']):g}"
+                    f"/attack_candidates={int(_capacity['attack_candidates'])}"
+                    f"/raw_damage_cap={float(_capacity['raw_damage_cap']):g}"
+                    " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                _capacity_tail = ""
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -4608,6 +4660,7 @@ class Policy:
             f"/kill_race={_flag(_pending.get('kill_race'))}"
             f"/race_allin={_flag(_pending.get('race_allin'))}"
             f"{_latch_hold_tail}"
+            f"{_capacity_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -4976,6 +5029,35 @@ class Policy:
                     0, int(float(_hold_token))) if _hold_token is not None else 0
             except (TypeError, ValueError, OverflowError):
                 _pending["esc_latch_hold_count"] = 0
+            _capacity_marker_at = reason.rfind(
+                "KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS")
+            if _capacity_marker_at >= 0:
+                _capacity_label = "kill-race lethal output capacity:"
+                _capacity_at = reason.rfind(
+                    _capacity_label, audit_at, _capacity_marker_at)
+                if _capacity_at >= 0:
+                    _capacity_text = reason[
+                        _capacity_at:_capacity_marker_at]
+
+                    def _capacity_token(name: str):
+                        match = re.search(
+                            rf"{re.escape(name)}=([^/；（）()\s]+)",
+                            _capacity_text)
+                        return match.group(1) if match else None
+
+                    try:
+                        _pending["output_capacity"] = {
+                            "target_hp": float(
+                                _capacity_token("target_hp")),
+                            "target_block": float(
+                                _capacity_token("target_block")),
+                            "attack_candidates": int(float(
+                                _capacity_token("attack_candidates"))),
+                            "raw_damage_cap": float(
+                                _capacity_token("raw_damage_cap")),
+                        }
+                    except (TypeError, ValueError, OverflowError):
+                        _pending.pop("output_capacity", None)
         except (TypeError, ValueError, OverflowError):
             return
         self._race_terminal_outcome_pending = _pending
@@ -5745,7 +5827,13 @@ class Policy:
                     kill_race=_kill_race_state,
                     race_allin=_race_allin_state)
                 _lethal_unavailable_note += _terminal_audit_note
+                _terminal_output_capacity = None
                 if _kill_race_state:
+                    _terminal_output_capacity = (
+                        self._race_allin_lethal_output_capacity_snapshot(
+                            hand, combat.get("enemies", []), energy, pol,
+                            enabled_key=(
+                                "kill_race_lethal_output_capacity_obs")))
                     _lethal_unavailable_note += (
                         self._race_allin_lethal_output_capacity_note(
                             hand, combat.get("enemies", []), energy,
@@ -5753,7 +5841,8 @@ class Policy:
                             enabled_key=(
                                 "kill_race_lethal_output_capacity_obs"),
                             marker="KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS",
-                            label="kill-race lethal output capacity"))
+                            label="kill-race lethal output capacity",
+                            snapshot=_terminal_output_capacity))
                 if _terminal_audit_note:
                     _projection = getattr(self, "_race_terminal_projection", None)
                     if (isinstance(_projection, dict)
@@ -5776,6 +5865,15 @@ class Policy:
                                     self, "_race_esc_latch_hold_count", 0)
                                     or 0)),
                         }
+                        if isinstance(_terminal_output_capacity, dict):
+                            self._race_terminal_outcome_pending[
+                                "output_capacity"] = {
+                                _key: _terminal_output_capacity[_key]
+                                for _key in (
+                                    "target_hp", "target_block",
+                                    "attack_candidates", "raw_damage_cap")
+                                if _key in _terminal_output_capacity
+                            }
                         self._race_terminal_outcome_reported = False
             non_curse_cards = [
                 card for card in hand

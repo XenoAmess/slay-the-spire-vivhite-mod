@@ -13054,3 +13054,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_terminal_latch_hold_obs` 设为 `False`；预期只移除锁持尾部，既有终端审计、结局、action 与 params 保持不变。
 - **验证**：使用继承 ACL 的本地临时根运行完整 selfcheck，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; production observation integrated)`
+
+## 2026-09-29 第1654局复盘（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS` 只记录致死无牌 `end_turn` 的目标血池、格挡与可负担攻击容量；随后 `KILL_RACE_TERMINAL_OUTCOME_OBS` 只保留竞速投影与 regime，进程重载后的 GAME_OVER 也无法确认终局时是否确实没有输出。该假设可证伪，且本批只增加终端连接观测。
+- **EVIDENCE**：精确 run `20260929-012403_BYMF87CCGLWR.json`（第1654局）F33/T6 的原始终端空过为 `hp=19/block=0/incoming=26/energy=0`，已有容量尾部为 `target_hp=259/target_block=3/attack_candidates=0/raw_damage_cap=0`；紧随其后的 `GAME_OVER` 竞速结局只有 `kill_race=yes/race_allin=no`，缺少这组可回溯字段。packet 明确 `complete_persisted_chain=false`，因此不把缺失片段推断为其他行为原因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立竞速终端窗口按 `run_id/floor/turn` 对账 `target_hp/target_block/attack_candidates/raw_damage_cap`，并在 end-turn、GAME_OVER 与进程重载恢复中一致；非零容量后仍失败支持“输出未被实际结算/竞速连接有偏差”，零候选零容量支持资源耗尽。字段错配、跨战斗继承、marker 越界或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：明确既有 `kill_race_lethal_output_capacity_obs` 同时控制 end-turn 与终端结局容量尾部。
+- `sts2-ascend/brain/policy.py`：把既有容量计算拆为只读快照；在已有终端 pending 中保存四个字段，追加 `KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS` 到 GAME_OVER 结局，并从持久化的致死 end-turn 在进程重载时恢复；不进入评分、排序、目标、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖正常结局、重载恢复、容量开关关闭后保留既有结局 marker 且 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立窗口，按胜负、目标血池、攻击候选和 raw 容量分层；在重复证据前保持只读观测，不改变抢斩杀或防守行为。
+- **撤回**：将 `kill_race_lethal_output_capacity_obs` 设为 `False`；end-turn 与终端结局容量尾部均消失，既有终端审计、action 与 params 保持不变。
+- **验证**：宿主固定 256 槽 bootstrap 先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 `.review-cache/selfcheck-pool` 的本地继承 ACL 进程内临时分配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
