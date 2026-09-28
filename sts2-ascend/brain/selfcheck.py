@@ -3886,6 +3886,47 @@ def main() -> int:
         and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" not in d_sand0.reason, \
         f"沙坑末格观测关闭不得改变动作/参数或残留注记: on={d_sand} off={d_sand0}"
 
+    assert float(knowledge.DEFAULT_POLICY[
+        "sandpit_eat_end_turn_obs"]) == 1.0, \
+        "DEFAULT_POLICY missing sandpit_eat_end_turn_obs"
+    assert float(knowledge.DEFAULT_POLICY[
+        "sandpit_terminal_outcome_obs"]) == 1.0, \
+        "DEFAULT_POLICY missing sandpit_terminal_outcome_obs"
+    generic_sand_know = knowledge.Knowledge(Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-sandpit-generic-")))
+    generic_sand_pol = policy.Policy(generic_sand_know, random.Random(11))
+    generic_sand_ctx = _krh_ctx()
+    d_generic_sand = None
+    for _ in range(4):
+        d_generic_sand = generic_sand_pol.decide(
+            _sandpit_end_turn_state(), generic_sand_ctx)
+        if d_generic_sand.action == "end_turn":
+            break
+    assert d_generic_sand is not None \
+        and d_generic_sand.action == "end_turn" \
+        and d_generic_sand.params == {} \
+        and "SANDPIT_EAT_END_TURN_OBS" in d_generic_sand.reason \
+        and "clock=1/hp=9/block=24/incoming=20/covered=yes" \
+        in d_generic_sand.reason, \
+        f"generic sandpit end-turn observation/action mismatch: {d_generic_sand}"
+    generic_sand_off_know = knowledge.Knowledge(Path(
+        tempfile.mkdtemp(prefix="sts2-selfcheck-sandpit-generic-off-")))
+    generic_sand_off_know.policy["sandpit_eat_end_turn_obs"] = 0
+    generic_sand_off_pol = policy.Policy(
+        generic_sand_off_know, random.Random(11))
+    generic_sand_off_ctx = _krh_ctx()
+    d_generic_sand_off = None
+    for _ in range(4):
+        d_generic_sand_off = generic_sand_off_pol.decide(
+            _sandpit_end_turn_state(), generic_sand_off_ctx)
+        if d_generic_sand_off.action == "end_turn":
+            break
+    assert d_generic_sand_off is not None \
+        and d_generic_sand_off.action == d_generic_sand.action \
+        and d_generic_sand_off.params == d_generic_sand.params \
+        and "SANDPIT_EAT_END_TURN_OBS" not in d_generic_sand_off.reason, \
+        f"generic sandpit observation rollback drift: on={d_generic_sand} off={d_generic_sand_off}"
+
     vctx_sand_nonboss = _krh_ctx()
     vctx_sand_nonboss.combat["node_type"] = "Monster"
     d_sand_nonboss = vpol_sand.decide(
@@ -3965,6 +4006,50 @@ def main() -> int:
             and "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
             not in spto_off_decision.reason), \
         f"沙坑终局对账关闭后 GAME_OVER 动作或 marker 漂移: {spto_off_decision}"
+    generic_spto_rows = [dict(spto_rows[0])]
+    generic_spto_rows[0]["reason"] = generic_spto_rows[0]["reason"].replace(
+        "VIVHITE_SANDPIT_EAT_END_TURN_OBS", "SANDPIT_EAT_END_TURN_OBS")
+    generic_spto_ctx = type("GenericSPTOCtx", (), {
+        "decisions": list(generic_spto_rows),
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": [],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    generic_spto_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-sandpit-generic-terminal-"))),
+        random.Random(11))
+    generic_spto_note = generic_spto_pol._consume_sandpit_terminal_outcome_note(
+        generic_spto_pol.know.policy, generic_spto_ctx, False, 33, 0)
+    assert ("SANDPIT_TERMINAL_OUTCOME_OBS" in generic_spto_note
+            and "outcome=defeat/floor=33/terminal_round=6" in generic_spto_note
+            and "/clock=1/hp=26/block=20/incoming=20/covered=yes"
+            in generic_spto_note
+            and "/incoming_gap=0/incoming_lethal=no/final_hp=0"
+            in generic_spto_note), \
+        f"generic sandpit terminal audit missing fields: {generic_spto_note}"
+    generic_spto_decision = generic_spto_pol.decide(spto_go, generic_spto_ctx)
+    assert (generic_spto_decision.action == "continue_game_over"
+            and generic_spto_decision.params == {}
+            and "SANDPIT_TERMINAL_OUTCOME_OBS"
+            in generic_spto_decision.reason), \
+        f"generic sandpit GAME_OVER audit/action mismatch: {generic_spto_decision}"
+    generic_spto_off_ctx = type("GenericSPTOOffCtx", (), {
+        "decisions": list(generic_spto_rows),
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": [],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    generic_spto_off_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-sandpit-generic-terminal-off-"))),
+        random.Random(11))
+    generic_spto_off_pol.know.policy["sandpit_terminal_outcome_obs"] = 0
+    assert generic_spto_off_pol._consume_sandpit_terminal_outcome_note(
+        generic_spto_off_pol.know.policy, generic_spto_off_ctx,
+        False, 33, 0) == "", "generic sandpit terminal audit did not roll back"
     del spto_pol, spto_off_pol, spto_ctx, spto_off_ctx
 
     # 3bfloor) Boss 零意图生命支付安全下沿：只拦支付后跌破最大生命比例的非击杀牌，

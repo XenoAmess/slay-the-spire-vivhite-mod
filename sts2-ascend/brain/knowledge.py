@@ -820,6 +820,8 @@ DEFAULT_POLICY = {
                                     # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
                                     # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。
                                     # False 一键回滚旧口径（零差异）
+    "sandpit_eat_end_turn_obs": True,  # Generic audit-only end-turn snapshot for native SANDPIT_POWER.
+    "sandpit_terminal_outcome_obs": True,  # Generic audit-only join from that snapshot to GAME_OVER/Victory.
     "vivhite_sandpit_eat_end_turn_obs": 1,  # 白绮沙坑末格空过观测（VIVHITE_SANDPIT_EAT_END_TURN_OBS，
                                     # 1459-F33 末次 end_turn 后紧接 GAME_OVER：已有投影理由带时钟封底，
                                     # 但收口空过没有把 clock、HP/格挡/意图、服务端致死投影与可用续命牌

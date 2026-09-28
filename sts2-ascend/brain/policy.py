@@ -3908,15 +3908,19 @@ class Policy:
     def _sandpit_end_turn_observation_note(
             self, ctx, combat, hand, energy, my_hp, my_block, incoming, pol):
         """Describe a Boss sandpit end-turn boundary without changing policy."""
+        vivhite_profile = (
+            getattr(self.character_strategy, "profile_id", None)
+            == VIVHITE_PROFILE_ID)
         try:
+            observation_key = (
+                "vivhite_sandpit_eat_end_turn_obs"
+                if vivhite_profile else "sandpit_eat_end_turn_obs")
             enabled = bool(int(float(pol.get(
-                "vivhite_sandpit_eat_end_turn_obs", 1) or 0)))
+                observation_key, 1) or 0)))
         except (TypeError, ValueError, AttributeError):
             enabled = False
         ctx_combat = getattr(ctx, "combat", None) or {}
         if (not enabled
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID
                 or ctx_combat.get("node_type") != "Boss"):
             return ""
         sandpit_clock = 0.0
@@ -3953,6 +3957,9 @@ class Policy:
             incoming_gap = 0.0
             incoming_lethal = False
         rescue_effect = "clock+1" if rescue_available else "none"
+        observation_marker = (
+            "VIVHITE_SANDPIT_EAT_END_TURN_OBS"
+            if vivhite_profile else "SANDPIT_EAT_END_TURN_OBS")
         return (
             f"；沙坑末格空过观测：clock={sandpit_clock:g}"
             f"/hp={float(my_hp):g}/block={float(my_block):g}"
@@ -3963,7 +3970,7 @@ class Policy:
             f"/rescue_effect={rescue_effect}"
             f"/incoming_gap={incoming_gap:g}"
             f"/incoming_lethal={'yes' if incoming_lethal else 'no'}"
-            "（VIVHITE_SANDPIT_EAT_END_TURN_OBS）")
+            f"（{observation_marker}）")
 
     def _low_pool_burst_race_observation_note(
             self, enemies, incoming, my_hp, my_max_hp, my_block, pol):
@@ -4385,10 +4392,14 @@ class Policy:
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
-    def _sandpit_terminal_outcome_enabled(pol) -> bool:
+    def _sandpit_terminal_outcome_enabled(
+            pol, vivhite_profile: bool = False) -> bool:
         try:
+            observation_key = (
+                "vivhite_sandpit_terminal_outcome_obs"
+                if vivhite_profile else "sandpit_terminal_outcome_obs")
             return bool(int(float(pol.get(
-                "vivhite_sandpit_terminal_outcome_obs", 1) or 0)))
+                observation_key, 1) or 0)))
         except (TypeError, ValueError, OverflowError):
             return False
 
@@ -4400,14 +4411,20 @@ class Policy:
         reaches zero.  Rebuild the link from durable decisions so a lost
         GAME_OVER action can retry without changing combat policy.
         """
-        if (not self._sandpit_terminal_outcome_enabled(pol)
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID):
+        vivhite_profile = (
+            getattr(self.character_strategy, "profile_id", None)
+            == VIVHITE_PROFILE_ID)
+        if not self._sandpit_terminal_outcome_enabled(pol, vivhite_profile):
             return ""
         decisions = getattr(ctx, "decisions", None)
         if not isinstance(decisions, list) or not decisions:
             return ""
-        marker = "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
+        marker = (
+            "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
+            if vivhite_profile else "SANDPIT_TERMINAL_OUTCOME_OBS")
+        end_turn_marker = (
+            "VIVHITE_SANDPIT_EAT_END_TURN_OBS"
+            if vivhite_profile else "SANDPIT_EAT_END_TURN_OBS")
         if any(marker in str(row.get("reason") or "")
                for row in decisions if isinstance(row, dict)):
             return ""
@@ -4438,7 +4455,7 @@ class Policy:
         sandpit_rows = [
             row for row in combat_rows
             if (row.get("action") == "end_turn"
-                and "VIVHITE_SANDPIT_EAT_END_TURN_OBS"
+                and end_turn_marker
                 in str(row.get("reason") or ""))
         ]
         if not sandpit_rows:
@@ -4487,7 +4504,7 @@ class Policy:
             f"/incoming_gap={_token('incoming_gap')}"
             f"/incoming_lethal={_token('incoming_lethal')}"
             f"/final_hp={_num(final_hp)}"
-            "（VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS）")
+            f"（{marker}）")
 
     @staticmethod
     def _ritual_window_outcome_enabled(pol) -> bool:
