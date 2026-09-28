@@ -4097,6 +4097,99 @@ class Policy:
             f"/selected={_selected_text}"
             f"（{marker}）")
 
+    def _race_allin_lethal_output_capacity_note(
+            self, hand, enemies, energy, my_hp, my_block, incoming, pol) -> str:
+        """Expose raw attack capacity beside the all-in lethal snapshot.
+
+        This is deliberately observation-only.  The capacity is a one-frame
+        upper bound over affordable attack cards; it is never used for scoring,
+        target selection, or the returned action.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_allin_lethal_output_capacity_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        try:
+            _energy = max(0.0, float(energy or 0.0))
+            _hp = float(my_hp or 0.0)
+            _block = float(my_block or 0.0)
+            _incoming = float(incoming or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            return ""
+
+        _target_hp = 0.0
+        _target_block = 0.0
+        _enemy_indices = set()
+        for _enemy in enemies or []:
+            if not isinstance(_enemy, dict):
+                continue
+            try:
+                _enemy_hp = max(0.0, float(_enemy.get("current_hp") or 0.0))
+                _enemy_block = max(0.0, float(_enemy.get("block") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _enemy_hp <= 0.0:
+                continue
+            _target_hp += _enemy_hp
+            _target_block += _enemy_block
+            if _enemy.get("index") is not None:
+                _enemy_indices.add(_enemy.get("index"))
+        if _target_hp <= 0.0:
+            return ""
+
+        try:
+            _max_energy = int(_energy)
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        _damage_by_energy = [0.0] * (_max_energy + 1)
+        _attack_rows = []
+        for _card in hand or []:
+            if (not isinstance(_card, dict)
+                    or not _card.get("playable")
+                    or self._card_unavailable(_card)):
+                continue
+            try:
+                _cost = (_energy if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+                _damage, _card_block, _hits = card_numbers(_card)
+            except (TypeError, ValueError, OverflowError, IndexError):
+                continue
+            if (_cost < 0.0 or _cost > _energy + 1e-9
+                    or not _cost.is_integer() or _damage <= 0):
+                continue
+            if _card.get("requires_target"):
+                _valid_targets = _card.get("valid_target_indices") or []
+                if (_valid_targets
+                        and not any(_idx in _enemy_indices
+                                    for _idx in _valid_targets)):
+                    continue
+            _card_damage = float(_damage) * max(1, int(_hits or 1))
+            _card_text = _text(_card).lower()
+            if ("all enemies" in _card_text
+                    or str(_card.get("target_type") or "").lower()
+                    == "allenemies"):
+                _card_damage *= max(1, len(_enemy_indices))
+            _cost_i = int(_cost)
+            _attack_rows.append(
+                f"{_card.get('name') or _card.get('card_id') or '?'}:"
+                f"{_cost:g}@{_card_damage:g}")
+            for _spent in range(_max_energy, _cost_i - 1, -1):
+                _damage_by_energy[_spent] = max(
+                    _damage_by_energy[_spent],
+                    _damage_by_energy[_spent - _cost_i] + _card_damage)
+        _max_damage = max(_damage_by_energy, default=0.0)
+        return (
+            f"; race-allin lethal output capacity: hp={_hp:g}"
+            f"/block={_block:g}/incoming={_incoming:g}/energy={_energy:g}"
+            f"/target_hp={_target_hp:g}/target_block={_target_block:g}"
+            f"/attack_candidates={len(_attack_rows)}"
+            f"/raw_damage_cap={_max_damage:g}"
+            f"/cards={'|'.join(_attack_rows) or 'none'}"
+            " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)")
+
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy, *,
             kill_race=True, race_allin=False) -> str:
@@ -7444,6 +7537,9 @@ class Policy:
                 enabled_key="race_allin_lethal_capacity_obs",
                 marker="RACE_ALLIN_LETHAL_CAPACITY_OBS",
                 label="败局竞速致死牌面容量")
+        if (race_allin and bool(kill_race) and reserve_lethal and gap_now > 0):
+            danger_note += self._race_allin_lethal_output_capacity_note(
+                hand, enemies, energy, my_hp, my_block, incoming, pol)
         # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
         # 斩杀竞速局的非致死回合，末点能量保留给最便宜的合格挡牌——
         # 891 局 F28-T2 实证：斩杀竞速「全攻提速」留痕下 6 费全部流向攻击、

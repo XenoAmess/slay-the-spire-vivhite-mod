@@ -1322,6 +1322,9 @@ DEFAULT_POLICY = {
                                         # 在 race_allin 致死窗口披露 need/max_block/covers/
                                         # defense/block_locked，补齐无覆盖样本的资源证据；只读，
                                         # 不改变评分、判决、目标或动作；置 False 严格移除该尾缀。
+      "race_allin_lethal_output_capacity_obs": True,
+                                        # Audit-only raw attack-capacity snapshot beside the
+                                        # all-in lethal defense snapshot; never feeds selection.
       "race_allin_buyback_margin_obs": True,
                                         # 败局竞速买活余量旁观（RACE_ALLIN_BUYBACK_MARGIN_OBS）：
                                         # 现有买活对账为保留一个完整回合的宽松容差；同时披露

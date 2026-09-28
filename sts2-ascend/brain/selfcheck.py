@@ -18404,6 +18404,8 @@ def main() -> int:
         and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_CAPACITY_OBS" in d_rallc1.reason \
+        and "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS" in d_rallc1.reason \
+        and "/target_hp=253/target_block=0/attack_candidates=1/raw_damage_cap=6" in d_rallc1.reason \
         and "/need=2/max_block=5/covers=yes" in d_rallc1.reason \
         and "买活对账：击杀约需13回合（实测20伤/回合）" in d_rallc1.reason \
         and "买活后约可存活0.2回合（净损15/回合）→买活仍必败" in d_rallc1.reason \
@@ -18445,6 +18447,19 @@ def main() -> int:
         f"on={d_rallc1.action}/{d_rallc1.params} " \
         f"off={d_rallc_capacity_off.action}/{d_rallc_capacity_off.params}/" \
         f"{d_rallc_capacity_off.reason}"
+    pol_rallc_output_off = rallc_policy()
+    pol_rallc_output_off.know.policy[
+        "race_allin_lethal_output_capacity_obs"] = False
+    d_rallc_output_off = rallc_decide(
+        pol_rallc_output_off, 25, 27, 1, [lsl_hit, lsl_shld])
+    assert d_rallc_output_off.action == d_rallc1.action \
+        and d_rallc_output_off.params == d_rallc1.params \
+        and "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS" not in d_rallc_output_off.reason \
+        and "RACE_ALLIN_LETHAL_CAPACITY_OBS" in d_rallc_output_off.reason, \
+        f"输出容量观测关闭改变动作/参数或未回滚: " \
+        f"on={d_rallc1.action}/{d_rallc1.params} " \
+        f"off={d_rallc_output_off.action}/{d_rallc_output_off.params}/" \
+        f"{d_rallc_output_off.reason}"
     pol_rallc3 = rallc_policy()
     pol_rallc3.know.policy["race_allin_lethal_cover_obs"] = False
     d_rallc3 = rallc_decide(pol_rallc3, 25, 27, 1, [lsl_hit, lsl_shld])

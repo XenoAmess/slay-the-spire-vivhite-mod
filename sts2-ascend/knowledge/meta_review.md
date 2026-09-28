@@ -12928,3 +12928,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **ROLLBACK**: set `kill_race_hopeless_hp_pay_obs` to `False`; both the existing payment marker and the new value marker should disappear while action and params remain unchanged.
 - **VALIDATION**: selfcheck completed with `SELFCHECK OK`; the target-source diff has no whitespace errors. The repository-wide check still reports pre-existing overlong asset paths outside this change.
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 Run 1642 review (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The existing `RACE_ALLIN_LETHAL_CAPACITY_OBS` records the defense side of an all-in lethal window, but it cannot show whether the bought turn still had affordable attack output against the remaining target pool. A raw output-capacity snapshot should separate "the extra turn had no reachable damage" from "damage was available but the kill-race model or native outcome differed" without changing the action.
+- **EVIDENCE**: Exact failed run `828SS72UV1DB` (run 1642), `sts2-ascend/knowledge/runs/20260928-213516_828SS72UV1DB.json`, was read across all 248 decisions. In F17 Waterfall Giant, T10 used `SHRUG_IT_OFF` plus two Strikes to reach a T11 window; T11 then selected `DISMANTLE+` and Strike before D246 ended at `hp=6/block=0/incoming=13/energy=0`, followed by D247 `GAME_OVER`. The existing lethal-capacity and terminal audits expose block capacity and race projection, but not target HP, affordable attack candidates, or raw damage capacity at that boundary.
+- **EXPECTED_SIGNAL**: Over the next 3-10 independent `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS` windows, join `run_id/floor/turn`, `target_hp/target_block`, `energy`, `attack_candidates`, and `raw_damage_cap` to the selected output and next outcome. Repeated terminal windows with positive target HP and zero/insufficient raw capacity support the attribution; repeated windows with enough raw capacity that still fail falsify it and redirect review to effective damage, targetability, or native resolution. Any field mismatch, out-of-gate marker, or action/params drift falsifies this observation change.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: add an audit-only 0/1 energy dynamic-programming snapshot beside the existing all-in lethal defense marker. It reports the current target pool, affordable attack candidates, and `raw_damage_cap`; it never enters scoring, ranking, target selection, gating, or the returned action.
+- `sts2-ascend/brain/knowledge.py`: add the default-on `race_allin_lethal_output_capacity_obs` switch.
+- `sts2-ascend/brain/selfcheck.py`: assert deterministic `target_hp=253`, `attack_candidates=1`, and `raw_damage_cap=6` values, plus switch-off marker removal with identical action/params.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **CONTINUE/ADJUST**: collect 3-10 independent all-in lethal windows and compare raw capacity with actual selected output, target HP/block, next-turn survival, and `GAME_OVER`/victory. Keep behavior unchanged; if raw capacity is repeatedly sufficient at failure, close this hypothesis and investigate effective damage or target resolution instead.
+- **ROLLBACK**: set `race_allin_lethal_output_capacity_obs` to `False`; the new marker must disappear while the existing defense marker, action, and params remain unchanged.
+- **VALIDATION**: `py_compile` passed; the complete selfcheck passed twice with **SELFCHECK OK**; target-file `git diff --check` exited 0. Repository-wide warnings are pre-existing long asset/cache paths and are outside this change.
+- `retry_resolution: none (no replay target; production observation integrated)`
