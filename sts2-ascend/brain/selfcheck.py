@@ -16939,6 +16939,7 @@ def main() -> int:
     race_terminal_pol._race_same_round_loss = 31.0
     race_terminal_pol._race_same_round_loss_own = 31.0
     race_terminal_pol._race_same_round_loss_enemy = 41.0
+    race_terminal_pol._race_esc_latch_hold_count = 3
     d_race_terminal = None
     for _ in range(6):
         d_candidate = race_terminal_pol.decide(
@@ -16964,6 +16965,14 @@ def main() -> int:
     assert "/target_hp=200/target_block=0/attack_candidates=0/raw_damage_cap=0/cards=none" \
         in d_race_terminal.reason, \
         f"竞速致死输出容量观测缺失: {d_race_terminal.reason}"
+
+    assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
+            " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal.reason, \
+        f"RACE_ESC_LATCH_HOLD 终局尾部缺失: {d_race_terminal.reason}"
+
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_terminal_latch_hold_obs"] is True, \
+        "DEFAULT_POLICY 缺少 kill_race_terminal_latch_hold_obs 默认开关"
 
     race_terminal_output_off_know = knowledge.Knowledge(tmp)
     race_terminal_output_off_know.policy[
@@ -17047,6 +17056,10 @@ def main() -> int:
     # 3z-5c) 进程重载后的结局恢复：终端审计已随上一条决策持久化，但
     #        Policy 的瞬时 pending 可能在 GAME_OVER 前丢失；新实例只能从
     #        当前 run 的最近 end_turn 决策恢复，且 action/params 必须不变。
+    assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
+            " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_outcome.reason, \
+        f"GAME_OVER 未继承 RACE_ESC_LATCH_HOLD 尾部: {d_race_terminal_outcome}"
+
     race_terminal_replay_pol = policy.Policy(race_terminal_know)
     race_terminal_replay_ctx = _SettleCtx()
     race_terminal_replay_ctx.decisions = [{
@@ -17062,6 +17075,10 @@ def main() -> int:
             and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
             in d_race_terminal_replay.reason), \
         f"进程重载后未从持久终端审计恢复结局: {d_race_terminal_replay}"
+
+    assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
+            " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_replay.reason, \
+        f"进程重载后未恢复锁持尾部: {d_race_terminal_replay}"
 
     race_terminal_replay_off_know = knowledge.Knowledge(tmp)
     race_terminal_replay_off_know.policy[
@@ -17119,6 +17136,8 @@ def main() -> int:
 
     race_terminal_outcome_off_know = knowledge.Knowledge(tmp)
     race_terminal_outcome_off_know.policy["kill_race_terminal_outcome_obs"] = False
+    race_terminal_outcome_off_know.policy[
+        "kill_race_terminal_latch_hold_obs"] = False
     race_terminal_outcome_off_pol = policy.Policy(race_terminal_outcome_off_know)
     race_terminal_outcome_off_ctx = _SettleCtx()
     race_terminal_outcome_off_ctx.combat = {}
@@ -17131,6 +17150,7 @@ def main() -> int:
         "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
         "ttk": 2.2, "tsurv": 0.5,
     }
+    race_terminal_outcome_off_pol._race_esc_latch_hold_count = 3
     d_race_terminal_outcome_off_end = None
     for _ in range(6):
         d_candidate = race_terminal_outcome_off_pol.decide(
@@ -17140,6 +17160,11 @@ def main() -> int:
             break
     assert d_race_terminal_outcome_off_end is not None, \
         "竞速终端结局关闭夹具未提交终端空过"
+    assert ("KILL_RACE_TERMINAL_AUDIT_OBS"
+            in d_race_terminal_outcome_off_end.reason
+            and "KILL_RACE_TERMINAL_LATCH_HOLD_OBS"
+            not in d_race_terminal_outcome_off_end.reason), \
+        f"终局锁持观测关闭后未严格回滚: {d_race_terminal_outcome_off_end}"
     d_race_terminal_outcome_off = race_terminal_outcome_off_pol.decide(
         race_terminal_outcome_state, race_terminal_outcome_off_ctx)
     assert (d_race_terminal_outcome_off.action

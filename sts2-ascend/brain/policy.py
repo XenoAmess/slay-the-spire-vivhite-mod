@@ -960,6 +960,8 @@ class Policy:
         # 拦截被拉黑动作改发安全替代，不再每 tick 重试注定失败的调用
         self._broken_actions: set = set()
 
+        self._race_esc_latch_hold_count = 0
+
     def _strategy_card(self, card: dict) -> CardCatalogEntry | None:
         card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
         return self.character_strategy.card(card_id)
@@ -4235,6 +4237,23 @@ class Policy:
         # current decision was rebuilt without the transient projection flag.
         _kill_race_state = bool(kill_race or getattr(self, "_krace_latch", False))
 
+        _latch_hold_tail = ""
+        try:
+            _latch_hold_obs = bool(int(float(pol.get(
+                "kill_race_terminal_latch_hold_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _latch_hold_obs = False
+        if _latch_hold_obs:
+            try:
+                _hold_count = max(0, int(getattr(
+                    self, "_race_esc_latch_hold_count", 0) or 0))
+            except (TypeError, ValueError, OverflowError):
+                _hold_count = 0
+            _latch_hold_tail = (
+                f"/esc_latch_hold_count={_hold_count}"
+                f"/esc_latch_hold={'yes' if _hold_count > 0 else 'no'}"
+                " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)")
+
         return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
             f"/last_round={_round_text(_projection.get('round'))}"
@@ -4246,6 +4265,7 @@ class Policy:
             f"/foe_phase={max(0.0, float(getattr(self, '_race_same_round_loss_enemy', 0.0) or 0.0)):g}"
             f"/kill_race={'yes' if _kill_race_state else 'no'}"
             f"/race_allin={'yes' if race_allin else 'no'}"
+            f"{_latch_hold_tail}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _race_mode_flip_observation_note(
@@ -4554,6 +4574,23 @@ class Policy:
             text = str(value or "unknown").casefold()
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
+        _latch_hold_tail = ""
+        try:
+            _latch_hold_obs = bool(int(float(pol.get(
+                "kill_race_terminal_latch_hold_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _latch_hold_obs = False
+        if _latch_hold_obs:
+            try:
+                _hold_count = max(0, int(_pending.get(
+                    "esc_latch_hold_count", 0) or 0))
+            except (TypeError, ValueError, OverflowError):
+                _hold_count = 0
+            _latch_hold_tail = (
+                f"/esc_latch_hold_count={_hold_count}"
+                f"/esc_latch_hold={'yes' if _hold_count > 0 else 'no'}"
+                " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)")
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -4570,6 +4607,7 @@ class Policy:
             f"/energy={_num(_pending.get('energy'))}"
             f"/kill_race={_flag(_pending.get('kill_race'))}"
             f"/race_allin={_flag(_pending.get('race_allin'))}"
+            f"{_latch_hold_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -4932,6 +4970,12 @@ class Policy:
                 "kill_race": _token("kill_race") or "unknown",
                 "race_allin": _token("race_allin") or "unknown",
             }
+            _hold_token = _token("esc_latch_hold_count")
+            try:
+                _pending["esc_latch_hold_count"] = max(
+                    0, int(float(_hold_token))) if _hold_token is not None else 0
+            except (TypeError, ValueError, OverflowError):
+                _pending["esc_latch_hold_count"] = 0
         except (TypeError, ValueError, OverflowError):
             return
         self._race_terminal_outcome_pending = _pending
@@ -5727,6 +5771,10 @@ class Policy:
                             "energy": energy,
                             "kill_race": _kill_race_state,
                             "race_allin": _race_allin_state,
+                            "esc_latch_hold_count": max(
+                                0, int(getattr(
+                                    self, "_race_esc_latch_hold_count", 0)
+                                    or 0)),
                         }
                         self._race_terminal_outcome_reported = False
             non_curse_cards = [
@@ -7050,6 +7098,10 @@ class Policy:
                             # 逐 tick 翻案（零行为差异）。
                             if (_kr_latched and esc_gate and bool(
                                     pol.get("race_esc_latch_hold", True))):
+                                self._race_esc_latch_hold_count = max(
+                                    0, int(getattr(
+                                        self, "_race_esc_latch_hold_count", 0)
+                                        or 0)) + 1
                                 # 手牌税注记去重（HAND_TAX_NOTE_DEDUP，第1399~1403局
                                 # 批复盘）：本分支成立时 race_lost 恒为 True，下方
                                 # 「斩杀竞速投影」行必定同 tick 再拼一次
@@ -7239,6 +7291,7 @@ class Policy:
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
             self._race_combat = ctx.combat
+            self._race_esc_latch_hold_count = 0
             self._hp_pay_result_pending = None
             self._hp_pay_result_note = ""
             self._race_round = None

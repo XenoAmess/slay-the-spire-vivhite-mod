@@ -13033,3 +13033,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期同时移除新增结算尾部与原结局 marker，强制精英选择、action 和 params 保持不变。
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1653局复盘（KILL_RACE_TERMINAL_LATCH_HOLD_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速终端审计目前能连接 `kill_race`/`race_allin` 与致死资源耗尽，却不能证明该战斗此前是否进入过 `RACE_ESC_LATCH_HOLD`。1653 局 F33 的终端结算因此无法检验“锁持路径是否与终局失败相关”这一归因。
+- **EVIDENCE**：精确 run `UEAV0L243M17`（1653）F33 `KNOWLEDGE_DEMON` 初始竞速投影为 `pool=330/dpt=24.975/ttk=13.2132/tsurv=3.58824`；随后在锁定后的回合反复出现 `RACE_ESC_LATCH_HOLD`，D381/T7 以 `hp=26/block=0/incoming=30/energy=0/cards=2` 且无可用攻击容量的终端空过死亡。既有 `KILL_RACE_TERMINAL_AUDIT_OBS` 与后续 `KILL_RACE_TERMINAL_OUTCOME_OBS` 只保留竞速 regime，未持久化锁持是否出现。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立竞速终端窗口应同时出现 `esc_latch_hold_count` 与 `esc_latch_hold=yes|no`，并在 end-turn 审计、GAME_OVER 连接和进程重载恢复中一致；按胜负分层后，若锁持计数与失败重复相关则支持假设，若持续无相关、计数缺失/错配或跨战斗累积则证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `kill_race_terminal_latch_hold_obs` 只读开关。
+- `sts2-ascend/brain/policy.py`：按战斗对象维护锁持计数；仅在既有 `RACE_ESC_LATCH_HOLD` 分支递增，并把计数/布尔结果追加到既有终端审计、GAME_OVER 连接及重载恢复解析；不进入评分、候选、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 end-turn、GAME_OVER、重载恢复和关闭开关后的严格回滚，验证旧终端 marker 与动作契约保留。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立窗口，按 `run_id/floor/turn/esc_latch_hold_count/kill_race/race_allin/outcome` 对账；在重复证据前维持只读观测，不改变竞速或防守行为。
+- **撤回**：将 `kill_race_terminal_latch_hold_obs` 设为 `False`；预期只移除锁持尾部，既有终端审计、结局、action 与 params 保持不变。
+- **验证**：使用继承 ACL 的本地临时根运行完整 selfcheck，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; production observation integrated)`
