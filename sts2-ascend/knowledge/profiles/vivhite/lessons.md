@@ -17365,3 +17365,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.673349943470793局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.087614917095128局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/36.40783863442133局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（99%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1575 胜，当前目标进阶 3
+
+## 第 1576 局复盘（2026-09-28 08:57）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_CHROMATIC_SEQUENCE, VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL
+- 本局遗物：KUSARIGAMA, BRONZE_SCALES
+- 战斗记录：F6 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血14｜自损11（可行动段11/非行动段17，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损10（可行动段10/非行动段5，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血50｜自损23（可行动段23/非行动段40，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血50｜自损23（可行动段23/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=177/dpt=22.8263/ttk=7.75421/tsurv=2.18182（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=7.75421/actual_over_projected=1.29（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.7609370801775848局)，MAYHEM(37分/5.181429858464463局)，THINKING_AHEAD(36分/5.256328386599625局)，FISTICUFFS(35分/7.018371262791499局)，ROLLING_BOULDER(34分/5.296242209925551局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.6639932186686455局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.0803082648852955局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/36.280411199200856局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：3/1576 胜，当前目标进阶 3
