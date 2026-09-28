@@ -1061,12 +1061,6 @@ DEFAULT_POLICY = {
                                         # “高分越带放行”。开启时在选中出牌链追加候选分与
                                         # 门带上限，评分/放行/动作零改动；0=关闭观测，
                                         # 非白绮角色零改动
-    "kill_race_hopeless_hp_pay_budget_obs": 1,  # 竞速判死自付后预算观测：在既有
-                                        # KILL_RACE_HOPELESS_HP_PAY_OBS 旁记录支付后生命
-                                        # 对当前 ttk/tsurv 投影的比例缩放代理值及预算状态，
-                                        # 用来区分“付血仍有竞速余量”和“付血后已无预算”；
-                                        # 只读，不参与评分、候选、放行、动作或参数。0=关闭
-                                        # （注记消失，旧行为零差异）
     "ringing_single_play_obs": 1,  # 昏眩单卡抉择观测（RINGING_SINGLE_PLAY_OBS，
                                         # 第 1505~1513 局批复盘新增，静态键）：RINGING_POWER
                                         # （昏眩，本回合限打 1 张）生效回合，主评分出牌位

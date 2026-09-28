@@ -8768,53 +8768,6 @@ class Policy:
                     why += (f"｜竞速判死自付{_krh_pay:g}血"
                             f"{_krh_margin_note}"
                             "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
-                    # 2026-09 follow-up audit: the selected-card note above
-                    # exposes payment but not whether that payment consumed
-                    # the remaining race budget. Scale the already computed
-                    # projection's tsurv by post-payment HP. This is an
-                    # observation proxy only: it never feeds selection,
-                    # scoring, gating, or action parameters.
-                    try:
-                        _krh_budget_obs = bool(int(float(pol.get(
-                            "kill_race_hopeless_hp_pay_budget_obs", 1) or 0)))
-                    except (TypeError, ValueError):
-                        _krh_budget_obs = False
-                    if _krh_budget_obs:
-                        _krh_projection = getattr(
-                            self, "_race_terminal_projection", None)
-                        try:
-                            _krh_ttk = float(_krh_projection["ttk"])
-                            _krh_tsurv = float(_krh_projection["tsurv"])
-                            _krh_budget_hp_before = float(my_hp)
-                            _krh_budget_hp_after = max(
-                                0.0,
-                                _krh_budget_hp_before - float(_krh_pay))
-                            _krh_post_tsurv = (
-                                _krh_tsurv * _krh_budget_hp_after /
-                                max(1.0, _krh_budget_hp_before))
-                            _krh_budget = _krh_post_tsurv - _krh_ttk
-                            _krh_budget_values = (
-                                _krh_ttk, _krh_tsurv, _krh_post_tsurv,
-                                _krh_budget)
-                            if (any(not math.isfinite(value)
-                                    for value in _krh_budget_values)
-                                    or _krh_ttk < 0.0
-                                    or _krh_tsurv < 0.0):
-                                raise ValueError("invalid race projection")
-                        except (KeyError, TypeError, ValueError, OverflowError,
-                                ZeroDivisionError):
-                            pass
-                        else:
-                            _krh_budget_state = (
-                                "covered" if _krh_budget >= 0.0
-                                else "insufficient")
-                            why += (
-                                f"｜竞速判死自付后预算：ttk={_krh_ttk:.2f}"
-                                f"/tsurv={_krh_tsurv:.2f}"
-                                f"/post_tsurv={_krh_post_tsurv:.2f}"
-                                f"/budget={_krh_budget:.2f}"
-                                f"/status={_krh_budget_state}"
-                                "（KILL_RACE_HOPELESS_HP_PAY_BUDGET_OBS）")
                     # 1195~1196 follow-up observation: a selected self-paying
                     # card must expose why BYPASS_OBS is absent.  The existing
                     # candidate-side note is not enough to distinguish a
