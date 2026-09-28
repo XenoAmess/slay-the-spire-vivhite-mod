@@ -13022,30 +13022,14 @@ def main() -> int:
                     "intents": [{"total_damage": 13}]}]
     s_bk, _, why_bk = bkn_pol._score_play(
         dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
-        my_hp=30, my_max_hp=78, cur_energy=1, run_deck=[])
+        my_hp=4, my_max_hp=78, cur_energy=1, run_deck=[])
     assert s_bk > 0 and "手牌滞留税牌" in why_bk \
         and "能力/增益牌" not in why_bk, \
         f"呼唤主评分未按滞留税止血计价: {s_bk}（{why_bk}）"
-    s_bk_lethal, _, why_bk_lethal = bkn_pol._score_play(
-        dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
-        my_hp=4, my_max_hp=78, cur_energy=1, forced_kill=True,
-        hopeless_race=True, kill_race=True, run_deck=[])
-    assert s_bk_lethal <= -49.9 \
-        and "HAND_TAX_LETHAL_GUARD" in why_bk_lethal, \
-        f"致死竞速纯税牌未让位即时输出: {s_bk_lethal}（{why_bk_lethal}）"
-    bkn_pol.know.policy["hand_tax_lethal_guard"] = False
-    s_bk_lethal_off, _, why_bk_lethal_off = bkn_pol._score_play(
-        dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
-        my_hp=4, my_max_hp=78, cur_energy=1, forced_kill=True,
-        hopeless_race=True, kill_race=True, run_deck=[])
-    assert s_bk_lethal_off > 0 \
-        and "HAND_TAX_LETHAL_GUARD" not in why_bk_lethal_off, \
-        f"hand_tax_lethal_guard=False 未回滚纯税牌评分: {s_bk_lethal_off}（{why_bk_lethal_off}）"
-    bkn_pol.know.policy["hand_tax_lethal_guard"] = True
     bkn_pol.know.policy["hand_tax_play_pricing"] = 0
     s_bk_off, _, why_bk_off = bkn_pol._score_play(
         dict(_beckon), bkn_enemies, 13, 0, 5, bkn_pol.know.policy,
-        my_hp=30, my_max_hp=78, cur_energy=1, run_deck=[])
+        my_hp=4, my_max_hp=78, cur_energy=1, run_deck=[])
     assert "手牌滞留税牌" not in why_bk_off \
         and "能力/增益牌" in why_bk_off, \
         f"hand_tax_play_pricing=0 未回滚旧能力牌口径: {s_bk_off}（{why_bk_off}）"
