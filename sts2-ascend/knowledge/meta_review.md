@@ -12635,3 +12635,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `race_allin_lethal_capacity_obs` 设为 `False`；预期只移除 `RACE_ALLIN_LETHAL_CAPACITY_OBS`，旧覆盖观测、评分、action 与 params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1625 局复盘（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：在 `race_allin` 致死窗口中，若当前可执行格挡确实覆盖本回合，但低血池的严格买活余量仅略低于 0，继续全攻会把投影误差放大为终端阵亡；只对低池开放 `[-2.0, 0)` 的有界负余量宽限，应把决策切到格挡优先，而不影响大池、无覆盖或宽限外窗口。该假设可被后续独立样本证伪。
+- **EVIDENCE**：精确 run `TPYJ38PP8AL2`（第 1625 局，`sts2-ascend/knowledge/runs/20260928-085831_TPYJ38PP8AL2.json`）完整 229 条决策已复核。F21 D226 记录 `pool=94/need=7/max_block=13/covers=yes`，格挡执行后生还，但严格买活余量为 `-1.8`；旧行为门仍选攻击。D227 继续全攻，D226 已记录实战净池仅下降 9，D228 仍无可执行格挡覆盖并写入终端审计，D229 `GAME_OVER`。这构成一个真实覆盖、低池、轻微负余量而全攻终端失败的反例。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `race_allin` 致死窗口中，低池且 `covers=yes`、`-2.0 <= strict_margin < 0` 应出现 `mode=low_pool_relief` 并选择格挡；`covers=no`、`pool>cap` 或 `strict_margin<-2.0` 不得触发该模式。按 `run_id/floor/turn/pool/cap/need/max_block/covers/strict_margin/selected/outcome` 分层；若生还比例不升或出现越界触发，即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增可回滚的 `race_allin_lethal_cover_behavior_min_margin=-2.0`，只作为低池负余量行为门的配置。
+- `sts2-ascend/brain/policy.py`：在既有真实覆盖和 `race_allin` 行为门内，允许 `pool <= kill_race_min_enemy_hp×1.25` 且严格余量不低于配置下限时切换格挡优先，并记录 `mode/pool/cap/margin_floor`；大池、无覆盖、无对象及宽限外负余量保持旧全攻。
+- `sts2-ascend/brain/selfcheck.py`：加入第 1625 局同型低池负余量夹具，并验证行为键关闭后回滚为全攻。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集未来 3~10 个独立窗口，按 `mode=low_pool_relief`、覆盖结果、实际掉池、终端结局和后续生还分层；仅当多个独立样本重复出现覆盖成立却全攻失败时再扩大行为范围。
+- **回滚**：将 `race_allin_lethal_cover_behavior_min_margin` 设为 `0`，或关闭 `race_allin_lethal_cover_behavior`；预期只取消低池宽限/行为切换，保留既有 `RACE_ALLIN_LETHAL_COVER_OBS` 与容量审计。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标代码 `git diff --check` → **exit 0**；未写入 `.runtime/`、`runs/`、`archive/`、`stats`、`progression`、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

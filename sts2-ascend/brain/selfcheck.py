@@ -17919,6 +17919,28 @@ def main() -> int:
         and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv4.reason \
         and "买活余量：严格+0.1/宽松+1.1回合→严格可翻盘" in d_rallcv4.reason, \
         f"严格可翻盘覆盖未切换到格挡行为: {d_rallcv4.action}（{d_rallcv4.reason}）"
+    # ⑤ 第1625局 F21-T2 同型：低池94、9甲支付后严格余量约-1.8，
+    #    但本回合覆盖是真实且在低池宽限[-2,0)内，行为门应优先保住当前回合。
+    d_rallcv_relief = rallc_v_decide(
+        rallc_v_policy(), 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=90.0, measured_turns=2, enemy_hp=94, latched=True)
+    assert d_rallcv_relief.action == "play_card" \
+        and d_rallcv_relief.params.get("card_index") == 1 \
+        and "mode=low_pool_relief" in d_rallcv_relief.reason \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv_relief.reason \
+        and "pool=94/cap=100/margin_floor=-2.0" in d_rallcv_relief.reason, \
+        f"低池负余量覆盖未恢复格挡优先: {d_rallcv_relief.action}（{d_rallcv_relief.reason}）"
+    pol_rallcv_relief_rb = rallc_v_policy(False)
+    d_rallcv_relief_rb = rallc_v_decide(
+        pol_rallcv_relief_rb, 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=90.0, measured_turns=2, enemy_hp=94, latched=True)
+    assert d_rallcv_relief_rb.action == "play_card" \
+        and d_rallcv_relief_rb.params.get("card_index") == 0 \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" not in d_rallcv_relief_rb.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallcv_relief_rb.reason, \
+        f"低池覆盖行为键关闭未回滚全攻: {d_rallcv_relief_rb.action}（{d_rallcv_relief_rb.reason}）"
     pol_rallcv4_rb = rallc_v_policy(False)
     d_rallcv4_rb = rallc_v_decide(
         pol_rallcv4_rb, 10, 13, 2,

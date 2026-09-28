@@ -6905,16 +6905,40 @@ class Policy:
                         _ralc_strict_margin = _ralc_surv - _ralc_ttk
                         # 行为门（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）：
                         # 现有宽松 verdict 允许「买活可翻盘」只因 +1 回合容差命中，
-                        # 这不足以把 race_allin 从全攻改回格挡优先。只有执行模拟已过
-                        # 謦欬锁链、敌方血池有可计价对象，且严格余量>=0时才接入
-                        # LETHAL_SURVIVABLE_LINE；1419 型严格负余量不改变动作。
+                        # 这不足以把 race_allin 从全攻改回格挡优先。严格余量>=0
+                        # 仍是默认边界；但第1625局 F21-T2 暴露了一个更窄的生产
+                        # 缝隙：低血池（94）且当前格挡确实能保住本回合时，投影只差
+                        # 1.8 回合仍坚持全攻，随后攻击实测仅降池9并终端阵亡。对
+                        # kill_race_min_enemy_hp×1.25 以内的低池，允许有界负余量宽限；
+                        # 大池、幻影覆盖、无对象和超过宽限的负余量保持旧全攻。
+                        try:
+                            _ralc_min_margin = float(pol.get(
+                                "race_allin_lethal_cover_behavior_min_margin", 0.0))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_min_margin = 0.0
+                        try:
+                            _ralc_low_pool_cap = max(0.0, float(pol.get(
+                                "kill_race_min_enemy_hp", 80.0)) * 1.25)
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_low_pool_cap = 100.0
+                        _ralc_low_pool_relief = (
+                            _ralc_pool <= _ralc_low_pool_cap
+                            and _ralc_strict_margin >= _ralc_min_margin)
                         if (bool(pol.get("race_allin_lethal_cover_behavior", True))
                                 and _ralc_pool > 0
-                                and _ralc_strict_margin >= 0.0):
+                                and (_ralc_strict_margin >= 0.0
+                                     or _ralc_low_pool_relief)):
                             race_lethal_cover = True
+                            _ralc_behavior_mode = (
+                                "low_pool_relief" if _ralc_strict_margin < 0.0
+                                else "strict_margin")
                             danger_note += (
                                 f"；败局竞速致死生还线：执行覆盖后严格买活余量"
-                                f"{_ralc_strict_margin:+.1f}回合，恢复格挡优先"
+                                f"{_ralc_strict_margin:+.1f}回合，"
+                                f"mode={_ralc_behavior_mode}"
+                                f"/pool={_ralc_pool:.0f}"
+                                f"/cap={_ralc_low_pool_cap:.0f}"
+                                f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
                                 "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
                         _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
                                          else "买活仍必败")
@@ -9047,8 +9071,9 @@ class Policy:
         urgent = gap > 0 and hp_pct < float(st.get("urgent_hp_pct", 0.45))  # 慢性失血下的低血量状态
         # 败局竞速豁免（第514~517批复盘）：判死局的致死回合不再压攻击抬格挡——
         # 买命买不来胜利，输出是唯一可能改写结局的变量；普通局 lethal 原样保留。
-        # 但 RACE_ALLIN_LETHAL_COVER_BEHAVIOR 已证明严格买活余量非负时，当前
-        # 回合存在可验证的生还线，恢复普通致死守卫；无该门的 race_allin 仍全攻。
+        # 但 RACE_ALLIN_LETHAL_COVER_BEHAVIOR 已证明当前覆盖通过其行为门时，
+        # 存在可验证的生还线，恢复普通致死守卫；低池负余量宽限也只在
+        # 该门已把 race_lethal_cover 置真时生效，无该门的 race_allin 仍全攻。
         if lethal and (not race_allin or race_lethal_cover) and not kill_race_lethal:
             atk_damp, blk_boost = 0.55, 1.8
         elif urgent and not kill_race_lethal:
