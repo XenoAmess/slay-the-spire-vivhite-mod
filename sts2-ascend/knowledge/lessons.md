@@ -13900,3 +13900,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8887260309583476局)，BASH(14分/2.44430664158014局)，STOKE(16分/2.7819529289738187局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1664 胜，当前目标进阶 0
+
+## 第 1665 局复盘（2026-09-29 05:01）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：HEADBUTT, ULTIMATE_STRIKE, JACKPOT, RAMPAGE, SHRUG_IT_OFF, HEADBUTT, INFLAME, RAMPAGE, TRUE_GRIT, CINDER, SHRUG_IT_OFF, MOLTEN_FIST, EXPECT_A_FIGHT, FEEL_NO_PAIN, SWORD_BOOMERANG, CONFLAGRATION, EXPECT_A_FIGHT, FLAME_BARRIER
+- 本局遗物：UNCEASING_TOP
+- 战斗记录：F14 Monster战 掉血0; F15 Monster战 掉血7; F17 Boss战 掉血57｜自损6（可行动段6/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=189/dpt=6.075/ttk=31.1111/tsurv=4.6（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=31.1111/actual_over_projected=0.26（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血20; F21 Monster战 掉血19; F22 Monster战 掉血41（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3449938384471842局)，HELLRAISER(26分/4.86060093009618局)，PROWESS(25分/6.45273895998951局)，FEED(25分/33.66094190840035局)，PACTS_END(25分/57.090778151536234局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8786154898499934局)，BASH(14分/2.43575156833461局)，STOKE(16分/2.7722160937224105局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.41 → 0.42（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.96 → 1.95（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.40 → 2.35（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1665 胜，当前目标进阶 0
