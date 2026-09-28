@@ -13526,3 +13526,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.254453358020421局)，BASH(14分/2.7537682260172813局)，BULLY(15分/3.0214404166337046局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1630 胜，当前目标进阶 0
+
+## 第 1631 局复盘（2026-09-28 13:09）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：UPPERCUT, CINDER, BREAKTHROUGH, RAGE, SHRUG_IT_OFF, SHRUG_IT_OFF, SWORD_BOOMERANG, POMMEL_STRIKE, HEMOKINESIS, FEED, CONFLAGRATION, SWORD_BOOMERANG, STOMP, MOLTEN_FIST
+- 本局遗物：PEAR, HAPPY_FLOWER
+- 战斗记录：F13 Monster战 掉血1; F17 Boss战 掉血48｜自损3（可行动段3/非行动段51，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=186/dpt=8.775/ttk=21.1966/tsurv=4.78571（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=21.1966/actual_over_projected=0.47（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战10回合获胜; F19 Monster战 掉血10｜自损3（可行动段3/非行动段3，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血4; F21 Monster战 掉血35｜自损2（可行动段2/非行动段39，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血41｜自损3（可行动段3/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=126/dpt=36.3/ttk=3.47107/tsurv=0.466667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=3.47107/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T5判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.641881919670934局)，OFFERING(25分/18.312144419412142局)，FEED(25分/35.78322602063754局)，PACTS_END(25分/63.25361489827654局)，DRAMATIC_ENTRANCE(24分/16.230961287148084局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.2430627712673497局)，BASH(14分/2.744130037226221局)，BULLY(15分/3.0108653751754866局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.36 → 0.37（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.40 → 2.35（行至 F23——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1631 胜，当前目标进阶 0
