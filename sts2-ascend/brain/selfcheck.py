@@ -4470,6 +4470,13 @@ def main() -> int:
     assert "hp=45->43" in d_krh.reason \
         and "incoming=22" in d_krh.reason, \
         f"判死竞速实付观测缺支付前后生命/敌意图: {d_krh.reason}"
+    assert ("KILL_RACE_HP_PAY_VALUE_OBS" in d_krh.reason
+            and "damage_est=10" in d_krh.reason
+            and "target_hp=200" in d_krh.reason
+            and "target_after_est=190" in d_krh.reason
+            and "net=+8" in d_krh.reason
+            and "post_pay_margin=+21" in d_krh.reason), \
+        f"判死竞速自付价值观测缺牌面/目标/余量对账: {d_krh.reason}"
     # 出牌后的同回合快照应把请求值与观察到的掉血分开记录；手牌已移除
     # 才允许结算，避免把 action 发送后的重复旧快照误判成零支付。
     # Re-arm with a named policy so the pending audit can be reconciled on the

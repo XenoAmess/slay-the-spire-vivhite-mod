@@ -8883,6 +8883,50 @@ class Policy:
                     why += (f"｜竞速判死自付{_krh_pay:g}血"
                             f"{_krh_margin_note}"
                             "（KILL_RACE_HOPELESS_HP_PAY_OBS）")
+                    # 1640-F25 exposed the next attribution gap: the existing
+                    # marker proves that HP was paid, but not whether the
+                    # selected card bought enough output to justify that loss.
+                    # Keep this as an audit-only join of values already used by
+                    # the selected card; it must never feed back into scoring.
+                    try:
+                        _krh_card_damage, _krh_card_block, _krh_card_hits = (
+                            card_numbers(card))
+                        _krh_damage_est = max(
+                            0.0, float(_krh_card_damage or 0.0)) * max(
+                                1, int(_krh_card_hits or 1))
+                    except (TypeError, ValueError, OverflowError):
+                        _krh_damage_est = 0.0
+                    _krh_card_id = str(
+                        card.get("card_id") or card.get("id")
+                        or card.get("name") or "?").strip().upper()
+                    _krh_target_hp_text = "none"
+                    _krh_target_after_text = "none"
+                    if target is not None:
+                        _krh_target = next(
+                            (enemy for enemy in enemies
+                             if enemy.get("index") == target), None)
+                        try:
+                            _krh_target_hp = float(
+                                (_krh_target or {}).get("current_hp"))
+                            if math.isfinite(_krh_target_hp):
+                                _krh_target_hp_text = f"{_krh_target_hp:g}"
+                                _krh_target_after_text = f"{max(0.0, _krh_target_hp - _krh_damage_est):g}"
+                        except (TypeError, ValueError, OverflowError):
+                            pass
+                    try:
+                        _krh_post_pay_margin = (
+                            float(my_hp) - _krh_pay
+                            - max(0.0, float(incoming) - float(my_block)))
+                    except (TypeError, ValueError, OverflowError):
+                        _krh_post_pay_margin = 0.0
+                    why += (
+                        f"｜竞速自付价值对账 card={_krh_card_id}"
+                        f"/damage_est={_krh_damage_est:g}"
+                        f"/target_hp={_krh_target_hp_text}"
+                        f"/target_after_est={_krh_target_after_text}"
+                        f"/net={_krh_damage_est - _krh_pay:+g}"
+                        f"/post_pay_margin={_krh_post_pay_margin:+g}"
+                        "（KILL_RACE_HP_PAY_VALUE_OBS）")
                     # 1195~1196 follow-up observation: a selected self-paying
                     # card must expose why BYPASS_OBS is absent.  The existing
                     # candidate-side note is not enough to distinguish a

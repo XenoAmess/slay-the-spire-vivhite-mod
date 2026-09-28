@@ -12907,3 +12907,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `lethal_unavailable_end_turn_obs` 设为 `False`，预期移除整条致死 marker（含容量字段），评分、action、目标和 params 保持不变。
 - **验证**：完整 selfcheck 输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none integrated (no replay target; local production observation)`
+
+## 2026-09-28 · Run 1640 review (KILL_RACE_HP_PAY_VALUE_OBS)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: `KILL_RACE_HOPELESS_HP_PAY_OBS` proves that a selected card paid HP, but it does not join that payment to the card's output. It cannot distinguish HP spent as comeback fuel from pure bloodletting.
+- **EVIDENCE**: Exact failed run `F44DYBQP2L6Z` (run 1640), F25 D347 selected `HEMOKINESIS` at HP 40 in a kill-race projection where kill time exceeded survival time; D348 reconciled the native HP payment as `requested=2`, `observed_delta=2`, `status=matched`. Native knowledge identifies `HEMOKINESIS` as 15 damage for 2 HP, but the existing note had no output/value join.
+- **EXPECTED_SIGNAL**: Over the next 3–10 relevant windows, compare `damage_est`, `target_hp`, `target_after_est`, `net`, and `post_pay_margin` by run/floor/turn and later outcome. If the fields are absent, wrong, or correlate with action/params drift, the hypothesis is falsified and the observation rolls back.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: append the audit-only `KILL_RACE_HP_PAY_VALUE_OBS` segment to the existing self-paying-card note. It derives estimated card damage, target HP, net output after HP payment, and the pre-card post-payment survival margin; it does not enter scoring, ranking, gating, or action selection.
+- `sts2-ascend/brain/knowledge.py`: document the additional fields under the existing `kill_race_hopeless_hp_pay_obs` switch.
+- `sts2-ascend/brain/selfcheck.py`: assert the new marker and deterministic fixture values while retaining the existing action/parameter rollback checks.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **CONTINUE/ADJUST**: collect 3–10 independent relevant windows, then compare the value join with native outcomes. Keep behavior unchanged until the attribution is repeatedly supported.
+- **ROLLBACK**: set `kill_race_hopeless_hp_pay_obs` to `False`; both the existing payment marker and the new value marker should disappear while action and params remain unchanged.
+- **VALIDATION**: selfcheck completed with `SELFCHECK OK`; the target-source diff has no whitespace errors. The repository-wide check still reports pre-existing overlong asset paths outside this change.
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
