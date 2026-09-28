@@ -879,6 +879,8 @@ class Policy:
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
         self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
+        self._lethal_playable_reject_outcome_pending = None  # 最近一次致死可牌拒绝，等待 GAME_OVER 结局对账
+        self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
@@ -4496,6 +4498,130 @@ class Policy:
         self._race_terminal_outcome_pending = _pending
         self._race_terminal_outcome_reported = False
 
+    def _consume_lethal_playable_reject_outcome_note(
+            self, pol, victory, floor=None) -> str:
+        """Join a lethal score-rejection audit to the authoritative GAME_OVER.
+
+        This is an observation-only terminal join.  The preceding end-turn
+        decision already chose the action; this marker only records whether
+        that persisted rejection was followed by defeat or victory.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "lethal_playable_reject_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_lethal_playable_reject_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_lethal_playable_reject_outcome_reported", False))):
+            return ""
+        self._lethal_playable_reject_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(value))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _flag(value) -> str:
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            text = str(value or "unknown").casefold()
+            return text if text in {"yes", "no", "unknown"} else "unknown"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；致死可牌拒绝终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/forced={_flag(_pending.get('forced'))}"
+            f"/kill_race={_flag(_pending.get('kill_race'))}"
+            f"/race_allin={_flag(_pending.get('race_allin'))}"
+            f"/cards={_pending.get('cards', '?')}"
+            "（LETHAL_PLAYABLE_REJECT_OUTCOME_OBS）")
+
+    def _restore_lethal_playable_reject_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the lethal playable-rejection audit after a reload."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_lethal_playable_reject_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS" in _last_reason:
+                return
+            self._lethal_playable_reject_outcome_reported = False
+        if isinstance(getattr(
+                self, "_lethal_playable_reject_outcome_pending", None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker = "LETHAL_PLAYABLE_REJECT_OBS"
+        marker_at = reason.rfind(marker)
+        if marker_at < 0:
+            return
+        audit_at = reason.rfind("致死可牌拒绝观测：", 0, marker_at)
+        if audit_at < 0:
+            return
+        audit = reason[audit_at:marker_at]
+
+        def _token(name: str):
+            match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        _cards_match = re.search(r"/cards=(.+)$", audit)
+        if not _cards_match:
+            return
+        try:
+            _terminal_round = row.get("turn", row.get("round"))
+            if _terminal_round is not None:
+                _terminal_round = int(float(_terminal_round))
+            _pending = {
+                "terminal_round": _terminal_round,
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _number("energy"),
+                "forced": _token("forced") or "unknown",
+                "kill_race": _token("kill_race") or "unknown",
+                "race_allin": _token("race_allin") or "unknown",
+                "cards": _cards_match.group(1),
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._lethal_playable_reject_outcome_pending = _pending
+        self._lethal_playable_reject_outcome_reported = False
+
     def _lethal_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
             combat, kill_race, race_allin, candidate_audit=None) -> str:
@@ -6494,6 +6620,8 @@ class Policy:
             self._race_terminal_projection = None
             self._race_terminal_outcome_pending = None
             self._race_terminal_outcome_reported = False
+            self._lethal_playable_reject_outcome_pending = None
+            self._lethal_playable_reject_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -14995,6 +15123,11 @@ class Policy:
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
+        self._restore_lethal_playable_reject_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _lethal_playable_reject_outcome_note = (
+            self._consume_lethal_playable_reject_outcome_note(
+                self.know.policy, victory, go.get("floor")))
         _ritual_window_outcome_note = (
             self._consume_ritual_window_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
@@ -15012,6 +15145,7 @@ class Policy:
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_terminal_outcome_note}"
+                            f"{_lethal_playable_reject_outcome_note}"
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}", wait=1.0)
 
@@ -15036,6 +15170,7 @@ class Policy:
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_terminal_outcome_note}"
+                        f"{_lethal_playable_reject_outcome_note}"
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}",
                         wait=0.5)

@@ -16759,6 +16759,94 @@ def main() -> int:
         and "LETHAL_PLAYABLE_REJECT_OBS" not in d_lethal_playable_off.reason, \
         f"致死可牌拒绝观测关闭后动作或尾缀漂移: {d_lethal_playable_off and d_lethal_playable_off.reason}"
 
+    # 3z-6b) 致死可牌拒绝终局对账（LETHAL_PLAYABLE_REJECT_OUTCOME_OBS）：
+    #        把已落盘的低分拒绝与权威 GAME_OVER 结果相连；只追加结局观测，
+    #        不改变 continue_game_over 的 action/params，并覆盖重载与丢动作重试。
+    lethal_playable_outcome_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+    }
+    lethal_playable_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": d_lethal_playable.reason,
+    }]
+    d_lethal_playable_outcome = lethal_playable_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_ctx)
+    assert (d_lethal_playable_outcome.action == "continue_game_over"
+            and d_lethal_playable_outcome.params == {}
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_lethal_playable_outcome.reason
+            and "outcome=defeat/floor=33/terminal_round=7"
+            in d_lethal_playable_outcome.reason
+            and "/kill_race=no/race_allin=no"
+            in d_lethal_playable_outcome.reason
+            and "/cards=" in d_lethal_playable_outcome.reason), \
+        f"致死可牌拒绝终局对账缺失或动作漂移: {d_lethal_playable_outcome}"
+
+    lethal_playable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_playable_replay_ctx = _SettleCtx()
+    lethal_playable_replay_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": d_lethal_playable.reason,
+    }]
+    d_lethal_playable_replay = lethal_playable_replay_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_replay_ctx)
+    assert (d_lethal_playable_replay.action
+            == d_lethal_playable_outcome.action
+            and d_lethal_playable_replay.params
+            == d_lethal_playable_outcome.params
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_lethal_playable_replay.reason), \
+        f"进程重载后未恢复致死可牌拒绝终局对账: {d_lethal_playable_replay}"
+
+    lethal_playable_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_playable_retry_ctx = _SettleCtx()
+    lethal_playable_retry_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": d_lethal_playable.reason,
+    }]
+    d_lethal_playable_retry_first = lethal_playable_retry_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_retry_ctx)
+    d_lethal_playable_retry = lethal_playable_retry_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_retry_ctx)
+    assert ("LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_lethal_playable_retry_first.reason
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_lethal_playable_retry.reason), \
+        "致死可牌拒绝终局对账丢动作后未重试"
+    lethal_playable_retry_ctx.decisions.append({
+        "action": d_lethal_playable_retry.action,
+        "floor": 33,
+        "reason": d_lethal_playable_retry.reason,
+    })
+    d_lethal_playable_retry_committed = lethal_playable_retry_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_retry_ctx)
+    assert "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS" \
+        not in d_lethal_playable_retry_committed.reason, \
+        "致死可牌拒绝终局对账已提交后重复写入 marker"
+
+    lethal_playable_outcome_off_know = knowledge.Knowledge(tmp)
+    lethal_playable_outcome_off_know.policy[
+        "lethal_playable_reject_outcome_obs"] = False
+    lethal_playable_outcome_off_pol = policy.Policy(
+        lethal_playable_outcome_off_know)
+    lethal_playable_outcome_off_ctx = _SettleCtx()
+    lethal_playable_outcome_off_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": d_lethal_playable.reason,
+    }]
+    d_lethal_playable_outcome_off = lethal_playable_outcome_off_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_outcome_off_ctx)
+    assert (d_lethal_playable_outcome_off.action
+            == d_lethal_playable_outcome.action
+            and d_lethal_playable_outcome_off.params
+            == d_lethal_playable_outcome.params
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            not in d_lethal_playable_outcome_off.reason), \
+        f"致死可牌拒绝终局对账关闭后动作或 marker 漂移: {d_lethal_playable_outcome_off}"
+
     # 3z-7) 白绮低血量可支付生命牌的非致死拒绝观测：1531-F17-T9 的
     #       21 血/0 甲低血窗口作为边界，使用 10 点来袭伤害构造非致死对照；
     #       变身式仍可出且能量足够，却落入「评估后无值得出的牌」。只增加牌面、

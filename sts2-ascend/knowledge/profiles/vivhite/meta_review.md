@@ -5675,3 +5675,35 @@ production_code_commit: pending local commit（最终 SHA 见交接回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1612 批：致死可牌拒绝与权威终局的最小对账
+
+日期：2026-09-28
+production_code_commit: `083275c8bc2acf9408f52ec7ae2a27920c981ec4`
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `LETHAL_PLAYABLE_REJECT_OBS` 能证明致死结束回合仍有可玩牌被低分拒绝，但不能证明该拒绝随后导致 defeat 还是被翻盘；若在下一条同楼层 `GAME_OVER` 追加终局结果和被拒候选摘要，就能在不改变 action/params 的前提下验证这条因果链。字段错楼层、重复消费或终局结果与原生状态不符即证伪。
+- **EVIDENCE**：本批 packet 的精确范围为 1605~1612；最新失败局完整链为 `runs/20260928-150240_TN1Q0QZ1DF59.json`，493 条 decisions。已逐条回读该链；F33-T7 的决策 492 为 `end_turn`，`hp=18/block=14/incoming=30/energy=1`，手牌仍有 `白绮的变身式+`，理由含 `score=-50.41/threshold=0.40/status=eligible` 与 `LETHAL_PLAYABLE_REJECT_OBS`；决策 493 紧接 `GAME_OVER`、defeat、floor 33，但原有理由没有把二者相连。该样本支持补充终局观测，不单独证明低分拒绝是唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立致死可牌拒绝样本中，同楼层下一条 `GAME_OVER` 应出现 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`，带 `outcome/floor/terminal_round/hp/block/incoming/energy/forced/kill_race/race_allin/cards`；进程重载和首次响应丢失重试只能各保留一次已提交 marker，动作与参数漂移为 0。胜利样本应记录 `outcome=victory`，败局应记录 `outcome=defeat`；缺 marker、错楼层、字段串账或重复写入即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `lethal_playable_reject_outcome_obs`，关闭只移除终局观测。
+- `sts2-ascend/brain/policy.py`：在 `GAME_OVER` 只从上一条同楼层、已持久化的 `end_turn` 拒绝 marker 恢复候选与终端快照，追加 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`；不重评分、不改候选、等待、动作或参数，支持进程重载和丢动作重试。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认终局接线、action/params 不变、重载恢复、丢动作重试幂等和关闭开关。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已完整回读三处生产/自检 diff；限定目标的 `git diff --check` 退出码 0。生产改动已提交为 `083275c8bc2acf9408f52ec7ae2a27920c981ec4`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只收集 3~10 个独立致死可牌拒绝 combat，按 run/floor/turn 对账原始候选、真实 `applied end_turn {}`、同楼层 `GAME_OVER` 与最终胜负；观测出现本身不等于应改变评分或竞速策略。
+- 若 marker 在非匹配楼层/非终局显形、候选字段与原始决策不符、重复消费或 action/params 漂移，将 `lethal_playable_reject_outcome_obs=0`；必要时回滚该本地提交并保留本批证据，重复核验前不调整评分门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
