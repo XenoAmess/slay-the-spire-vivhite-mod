@@ -12949,3 +12949,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **ROLLBACK**: set `race_allin_lethal_output_capacity_obs` to `False`; the new marker must disappear while the existing defense marker, action, and params remain unchanged.
 - **VALIDATION**: `py_compile` passed; the complete selfcheck passed twice with **SELFCHECK OK**; target-file `git diff --check` exited 0. Repository-wide warnings are pre-existing long asset/cache paths and are outside this change.
 - `retry_resolution: none (no replay target; production observation integrated)`
+
+## 2026-09-28 Run 1643 review (KILL_RACE_MODE_FLIP_OBS)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The kill-race projection is recomputed after each card, so a single combat round can move from `kill_race`/`race_allin` back to `normal`. Without a same-round marker, a defensive detour is indistinguishable from an ordinary next-round regime change; this is an observation gap, not yet a behavior defect.
+- **EVIDENCE**: Exact run `J3NYT36D1AS9` (run 1643) contains 380 persisted decisions. At F28/T1, decision indexes 355 and 356 move from `提速斩杀（竞速解除防御压制）` to `转防守节奏` while remaining in the same round. The existing chain has no marker naming that transition. The replay target `20260928-225022-1790607022514189100-165fefb5` was complete and its candidate patch was reimplemented against current HEAD; rejected cache/online-runtime paths were not adopted.
+- **EXPECTED_SIGNAL**: Over the next 3–10 relevant combat windows, count `KILL_RACE_MODE_FLIP_OBS` by `run_id/floor/round/from/to`, then compare the next selected action, HP/incoming trajectory, and `GAME_OVER`/victory outcome. No marker should appear on the first sample of a new round, on repeated same-mode samples, or when the switch is false. Any action/params drift, cross-round false positive, or marker without a real mode change falsifies the change and triggers rollback.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on `kill_race_mode_flip_obs` as an audit-only switch.
+- `sts2-ascend/brain/policy.py`: track combat identity, round baseline, last mode, and flip count; append the marker after the existing kill-race projection. The state is reset at combat boundaries and the helper never feeds scoring, ranking, target choice, gating, or action selection.
+- `sts2-ascend/brain/selfcheck.py`: cover first-round baseline, repeated mode, same-round flip, new-round baseline, and switch-off rollback.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **CONTINUE/ADJUST**: collect 3–10 independent same-round flip markers. Keep behavior unchanged; only if repeated flips correlate with avoidable loss should a later batch propose a separate behavior hypothesis.
+- **ROLLBACK**: set `kill_race_mode_flip_obs` to `False`; the marker and its stateful observation must disappear while action and params remain unchanged.
+- **VALIDATION**: `py -3 -B sts2-ascend/brain/selfcheck.py` completed with **SELFCHECK OK** using a local inherited-ACL temporary root after the host's fixed 256-slot pool exhausted; target-source `git diff --check` passed. No online state, run/archive data, policy/learning ledgers, or review prompt was written.
+- `retry_resolution: 20260928-225022-1790607022514189100-165fefb5 integrated`

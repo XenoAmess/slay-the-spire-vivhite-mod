@@ -801,6 +801,8 @@ DEFAULT_POLICY = {
     "race_prelock_defense_obs": True,  # 竞速判死但实测样本尚未达到入锁门槛时，
                                         # 记录实际选中的格挡牌/样本回合；只读观测，
                                         # 不改变评分、目标、判决或动作，False 严格回滚
+    "kill_race_mode_flip_obs": True,   # 同一回合内竞速/普通模式翻转的只读审计；
+                                         # 记录 from/to 与次数，不改变评分、判决或动作
     "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "low_pool_burst_card_audit_obs": True,  # 低池爆发观测补充可负担格挡容量与最终动作；只读、可回滚

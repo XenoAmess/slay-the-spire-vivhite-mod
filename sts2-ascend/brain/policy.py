@@ -893,6 +893,10 @@ class Policy:
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
         self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
+        self._race_mode_combat = None  # KILL_RACE_MODE_FLIP_OBS 的战斗身份
+        self._race_mode_round = None  # 当前回合的模式基线
+        self._race_mode_last = None  # 当前回合上一次已观测模式
+        self._race_mode_flip_count = 0  # 当前战斗内同回合翻转次数
         self._lethal_playable_reject_outcome_pending = None  # 最近一次致死可牌拒绝，等待 GAME_OVER 结局对账
         self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
@@ -4241,6 +4245,52 @@ class Policy:
             f"/race_allin={'yes' if race_allin else 'no'}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _race_mode_flip_observation_note(
+            self, ctx, round_no, kill_race, race_allin, pol) -> str:
+        """Record an observation-only same-round race-mode transition."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_mode_flip_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            self._race_mode_round = None
+            self._race_mode_last = None
+            self._race_mode_flip_count = 0
+            return ""
+
+        _combat = getattr(ctx, "combat", None)
+        if self._race_mode_combat is not _combat:
+            self._race_mode_combat = _combat
+            self._race_mode_round = None
+            self._race_mode_last = None
+            self._race_mode_flip_count = 0
+        try:
+            _round = int(round_no)
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        _mode = ("race_allin" if race_allin
+                 else "kill_race" if kill_race else "normal")
+        if self._race_mode_round != _round:
+            self._race_mode_round = _round
+            self._race_mode_last = _mode
+            return ""
+        _previous = self._race_mode_last
+        self._race_mode_last = _mode
+        if not _previous or _previous == _mode:
+            return ""
+        try:
+            self._race_mode_flip_count = int(
+                getattr(self, "_race_mode_flip_count", 0) or 0) + 1
+        except (TypeError, ValueError, OverflowError):
+            self._race_mode_flip_count = 1
+        return (
+            f"；竞速模式同回合翻转：round={_round}"
+            f"/from={_previous}/to={_mode}"
+            f"/flip={self._race_mode_flip_count}"
+            f"/race_allin={'yes' if race_allin else 'no'}"
+            "（KILL_RACE_MODE_FLIP_OBS）")
+
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
         """Expose raw potion slots at a lethal no-card boundary.
 
@@ -7128,6 +7178,10 @@ class Policy:
             self._race_terminal_projection = None
             self._race_terminal_outcome_pending = None
             self._race_terminal_outcome_reported = False
+            self._race_mode_combat = ctx.combat
+            self._race_mode_round = None
+            self._race_mode_last = None
+            self._race_mode_flip_count = 0
             self._lethal_playable_reject_outcome_pending = None
             self._lethal_playable_reject_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
@@ -7462,6 +7516,8 @@ class Policy:
                 state, cctx, pol, enemies, hand, incoming, my_hp, my_max_hp,
                 my_block, round_no, stance, stance_defensive_tone, race_allin,
                 danger_note))
+        danger_note += self._race_mode_flip_observation_note(
+            ctx, round_no, kill_race, race_allin, pol)
 
         # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
         # _race_joint_feasible 只回答「跨回合是否存在攻防分配」，而第1592局

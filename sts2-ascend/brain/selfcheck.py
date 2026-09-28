@@ -18316,6 +18316,39 @@ def main() -> int:
         f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
         f"on={d_rpre_on} off={d_rpre_off}"
 
+    # 3rpre-b) 同回合竞速模式翻转观测（KILL_RACE_MODE_FLIP_OBS）：
+    #        投影在逐张出牌后重新计算；只记录同一 round 的模式变化，
+    #        新回合先建立基线，不把正常跨回合变化误报为振荡。
+    def mode_flip_notes(enabled):
+        flip_know = knowledge.Knowledge(tmp)
+        flip_know.policy["kill_race_mode_flip_obs"] = enabled
+        flip_pol = policy.Policy(flip_know)
+        flip_ctx = type("ModeFlipCtx", (), {"combat": {}})()
+        first = flip_pol._race_mode_flip_observation_note(
+            flip_ctx, 1, True, False, flip_pol.know.policy)
+        steady = flip_pol._race_mode_flip_observation_note(
+            flip_ctx, 1, True, False, flip_pol.know.policy)
+        flipped = flip_pol._race_mode_flip_observation_note(
+            flip_ctx, 1, False, False, flip_pol.know.policy)
+        next_round = flip_pol._race_mode_flip_observation_note(
+            flip_ctx, 2, True, False, flip_pol.know.policy)
+        return first, steady, flipped, next_round
+
+    assert knowledge.DEFAULT_POLICY["kill_race_mode_flip_obs"] is True, \
+        "DEFAULT_POLICY 缺少 kill_race_mode_flip_obs 静态键或默认值被改"
+    mode_first, mode_steady, mode_flipped, mode_next_round = mode_flip_notes(True)
+    assert mode_first == "" and mode_steady == "" \
+        and "round=1/from=kill_race/to=normal/flip=1/race_allin=no" \
+            in mode_flipped \
+        and "KILL_RACE_MODE_FLIP_OBS" in mode_flipped \
+        and mode_next_round == "", \
+        f"同回合竞速模式翻转观测缺失或误报: " \
+        f"first={mode_first} steady={mode_steady} " \
+        f"flipped={mode_flipped} next={mode_next_round}"
+    mode_off = mode_flip_notes(False)
+    assert all(note == "" for note in mode_off), \
+        f"竞速模式翻转关闭后仍有 marker: {mode_off}"
+
     pol_stale1 = pcap_policy()
     pol_stale1._krace_latch = True
     pol_stale1._krace_latch_round = 1
