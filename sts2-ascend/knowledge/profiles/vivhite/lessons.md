@@ -17519,3 +17519,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.5452945902287665局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.85396790261163局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/34.663877411351294局)
 - 策略进化：block_safety: 2.01 → 2.06（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：3/1589 胜，当前目标进阶 3
+
+## 第 1590 局复盘（2026-09-28 10:58）
+- 结果：💀 失败｜进阶 3｜到达层数 3｜当局评分 3
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血45｜自损42（可行动段42/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=17/dpt=2.1/ttk=8.09524/tsurv=1（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=16/projected_ttk=8.09524/actual_over_projected=1.98（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T15判死→实战16回合获胜; F3 Unknown战 掉血17｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/3.5807855338005665局)，MAYHEM(37分/4.933235703245479局)，THINKING_AHEAD(36分/5.004546538904736局)，FISTICUFFS(35分/6.682186314975195局)，ROLLING_BOULDER(34分/5.042548461860966局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.536386059162966局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.77747901495249局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/34.542553840411564局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1590 胜，当前目标进阶 3
