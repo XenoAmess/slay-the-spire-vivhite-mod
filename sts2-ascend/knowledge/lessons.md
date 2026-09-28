@@ -13658,3 +13658,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1203670852878185局)，BASH(14分/2.6403106106281546局)，JACKPOT(16分/5.981259769535352局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.49 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1642 胜，当前目标进阶 0
+
+## 第 1643 局复盘（2026-09-28 22:08）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：EVIL_EYE, EVIL_EYE, SPITE, CINDER, INFLAME, CINDER, MANGLE, THUNDERCLAP, DEMON_FORM, HEMOKINESIS, CINDER, IRON_WAVE, INFERNAL_BLADE, COLOSSUS
+- 本局遗物：AKABEKO, STRAWBERRY, GREMLIN_HORN
+- 战斗记录：F17 Boss战 掉血31｜竞速投影审计：pool=185/dpt=21.6/ttk=8.56481/tsurv=4.05263（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=8.56481/actual_over_projected=0.70（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战6回合获胜; F19 Monster战 掉血4; F21 Monster战 掉血14｜自损4（可行动段4/非行动段10，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血21; F25 Unknown战 掉血42; F28 Elite战 掉血58｜竞速投影审计：pool=74/dpt=22.2/ttk=3.33333/tsurv=0.34375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.33333/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T5判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.533034116172591局)，FEED(25分/35.294999712566394局)，PACTS_END(25分/60.64751165280482局)，OFFERING(24分/18.533424100530784局)，ULTIMATE_STRIKE(24分/22.20522328205862局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1094458004893113局)，BASH(14分/2.631069523490956局)，JACKPOT(16分/5.960325360341979局)
+- 策略进化：elite_grey_safety_mult: 2.10 → 2.30（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.47 → 0.48（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.04 → 2.03（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.30 → 2.25（行至 F28——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1643 胜，当前目标进阶 0
