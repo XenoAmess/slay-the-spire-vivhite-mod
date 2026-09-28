@@ -4374,8 +4374,13 @@ class Policy:
 
     def _lethal_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
-            combat, kill_race, race_allin) -> str:
-        """Expose lethal score-rejection separately from resource exhaustion."""
+            combat, kill_race, race_allin, candidate_audit=None) -> str:
+        """Expose lethal score-rejection separately from resource exhaustion.
+
+        ``candidate_audit`` is produced by the same scoring pass that chose to
+        end the turn.  Keeping the final score and threshold beside the card
+        shape makes the observation falsifiable without rescoring in telemetry.
+        """
         try:
             _enabled = bool(int(float(pol.get(
                 "lethal_playable_reject_obs", 1) or 0)))
@@ -4383,6 +4388,11 @@ class Policy:
             _enabled = False
         if not _enabled or not lethal_now:
             return ""
+        _audit_by_index = {
+            _row[0]: _row[1:]
+            for _row in (candidate_audit or [])
+            if isinstance(_row, (tuple, list)) and len(_row) == 4
+        }
         _rows = []
         for _card in hand or []:
             if (not _card.get("playable")
@@ -4407,6 +4417,12 @@ class Policy:
             _rows.append(
                 f"{_name}[{_card_id}]@{_cost:g}"
                 f"/dmg={_damage_total:g}/block={_block_total:g}")
+            _audit = _audit_by_index.get(_card.get("index"))
+            if _audit is not None:
+                _score, _threshold, _status = _audit
+                _rows[-1] += (
+                    f"/score={_score:.2f}/threshold={_threshold:.2f}"
+                    f"/status={_status}")
         if not _rows:
             return ""
         return (
@@ -7483,6 +7499,10 @@ class Policy:
             except (TypeError, ValueError):
                 _hp_gate_nm_obs = False
         _hp_gate_blocked: list = []  # (index, name, pay, extra, score, repeat_count)
+        # Candidate scores are captured only for a lethal end-turn audit.  The
+        # list is passed to the existing marker after the scoring pass, so this
+        # adds no second evaluation and cannot alter selection.
+        _lethal_candidate_audit: list = []
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
         # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
@@ -7943,6 +7963,12 @@ class Policy:
                     "（VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
+            if lethal_now:
+                _lethal_candidate_audit.append(
+                    (c.get("index"), float(score),
+                     float(pol["play_threshold"]),
+                     "eligible" if eligible_for_best
+                     else "hp_gate" if _hp_gate_hit else "vetoed"))
             # 竞速判死自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，
             # 第1194局 F33）：现有 KRH 门带只拦「普通阈值到阈值+门带」的边际
             # 候选，高分生命支付牌仍可越带放行。1194-F33 的 [470~472]、
@@ -9019,7 +9045,7 @@ class Policy:
             _lethal_playable_reject_note = (
                 self._lethal_playable_reject_observation_note(
                     pol, hand, energy, my_hp, my_block, incoming, lethal_now,
-                    combat, kill_race, race_allin))
+                    combat, kill_race, race_allin, _lethal_candidate_audit))
             _hp_pressure_playable_reject_note = (
                 self._vivhite_hp_pressure_playable_reject_observation_note(
                     pol, hand, energy, my_hp, my_max_hp, my_block, incoming,

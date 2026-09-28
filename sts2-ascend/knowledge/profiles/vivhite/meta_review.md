@@ -5612,3 +5612,34 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1600 批：致死可牌拒绝的评分归因观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `LETHAL_PLAYABLE_REJECT_OBS` 只能证明致死结束回合时仍有可玩牌，不能区分候选因低分落选，还是门/接口误判。将同一评分轮次的最终 `score`、`threshold` 和 `status` 追加到该标记，可在不重算、不改动作的前提下完成归因。
+- **EVIDENCE**：run1600 `64C90M21ANGQ` 的完整 551 条持久化 decisions 已逐条回读。F42 决策549 为 `hp=20/block=9/incoming=36/energy=1`，`白绮的变身式+` 仍可玩但伤害/格挡均为0，下一条决策550 为 `GAME_OVER`；原标记没有候选分或门槛。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 致死空过样本中，`status=eligible` 且 `score<=threshold` 应支持低分拒绝；`status=hp_gate/vetoed` 或 `score>threshold` 则提示门/候选资格归因。字段与候选 trace、真实 `applied end_turn {}` 或终局不一致即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有致死可牌拒绝标记中复用本次评分循环，逐张追加最终候选 `score/threshold/status`；不重复评分，不改变候选、动作、参数或等待。
+- `sts2-ascend/brain/selfcheck.py`：扩展 3z-6 夹具，断言新增分数、门槛和 `status=eligible` 字段，并保留观测关闭后的 action/params 回滚断言。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已完整回读本批生产与自检 diff；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立 Vivhite combat，按 run/floor/turn 对账 marker 的候选分、门槛、状态、候选 trace、实际 end_turn 回执及 GAME_OVER/胜负；观测出现本身不等于行为修复。
+- 若分数或状态与同轮候选 trace 不符、非致死样本显形，或 action/params 漂移，将 `lethal_playable_reject_obs=0`；必要时回滚本地提交并保留本批证据，重复对账前不改评分门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

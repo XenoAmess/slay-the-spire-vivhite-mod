@@ -16598,8 +16598,9 @@ def main() -> int:
     # 3z-6) 致死可牌评分拒绝观测（LETHAL_PLAYABLE_REJECT_OBS）：
     #       1602-F31-T6 的形态——9 血/0 甲面对 24 意图，仍有可玩但低分的
     #       JUGGLING，策略收口 end_turn 后下一条 GAME_OVER；它不是资源耗尽，
-    #       必须与 LETHAL_UNAVAILABLE_END_TURN_OBS 分开记录。只追加观测，
-    #       关闭键后 action/params 与理由主体严格回滚。
+    #       必须与 LETHAL_UNAVAILABLE_END_TURN_OBS 分开记录。候选最终分与
+    #       play_threshold 一并落账，才能证伪低分拒绝和门/接口误判。只追加
+    #       观测，关闭键后 action/params 与理由主体严格回滚。
     def _lethal_playable_reject_state():
         state = _lethal_unavailable_state(True)
         state["combat"]["player"]["energy"] = 3
@@ -16629,6 +16630,9 @@ def main() -> int:
         and "LETHAL_PLAYABLE_REJECT_OBS" in d_lethal_playable.reason \
         and "hp=9/block=0/incoming=24/energy=3" in d_lethal_playable.reason \
         and "JUGGLING" in d_lethal_playable.reason \
+        and "/score=" in d_lethal_playable.reason \
+        and "/threshold=" in d_lethal_playable.reason \
+        and "/status=eligible" in d_lethal_playable.reason \
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_playable.reason, \
         f"致死可牌拒绝观测缺失: {d_lethal_playable and d_lethal_playable.reason}"
 
