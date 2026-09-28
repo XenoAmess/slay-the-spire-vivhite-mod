@@ -13592,3 +13592,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1867050599280966局)，BASH(14分/2.696442743016083局)，JACKPOT(16分/6.108419378665685局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1636 胜，当前目标进阶 0
+
+## 第 1637 局复盘（2026-09-28 17:42）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：TWIN_STRIKE, DISMANTLE, EXPECT_A_FIGHT, IRON_WAVE, SPITE, BREAKTHROUGH, RAMPAGE, CINDER, TAUNT, BLUDGEON, SPITE, MANGLE, TWIN_STRIKE, ARMAMENTS, RAMPAGE, JUGGLING, MOLTEN_FIST, HEADBUTT, INFLAME, UNRELENTING, RAMPAGE, IMPERVIOUS, BLUDGEON
+- 本局遗物：BEATING_REMNANT, STRAWBERRY
+- 战斗记录：F19 Monster战 掉血32; F20 Monster战 掉血11; F21 Monster战 掉血18; F22 Monster战 掉血12｜自损1（可行动段1/非行动段13，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血9; F33 Boss战 掉血86｜竞速投影审计：pool=221/dpt=16.2/ttk=13.642/tsurv=4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=13.642/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.5868855856852293局)，FEED(25分/35.03832283830224局)，PACTS_END(25分/61.93685773935625局)，OFFERING(24分/18.92743858163954局)，HELLRAISER(24分/3.31217693782511局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1755515922183486局)，BASH(14分/2.687005193415527局)，JACKPOT(16分/6.087039910840356局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（6回合掉血86，每回合14≥14）——按「没挡住」证据上调防御权重）；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.35 → 2.30（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1637 胜，当前目标进阶 0
