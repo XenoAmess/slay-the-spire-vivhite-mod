@@ -13735,3 +13735,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.0447161399844775局)，BASH(14分/2.5762982722945584局)，STOKE(16分/2.9321773310270043局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1649 胜，当前目标进阶 0
+
+## 第 1650 局复盘（2026-09-29 00:19）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, ANGER, ULTIMATE_STRIKE, THUNDERCLAP, SECOND_WIND, CINDER, STOMP, INFLAME, UNRELENTING, INFLAME
+- 本局遗物：WHITE_STAR
+- 战斗记录：F3 Monster战 掉血4; F8 Unknown战 掉血0; F11 Monster战 掉血23; F12 Monster战 掉血1; F15 Monster战 掉血22; F17 Boss战 掉血64｜竞速投影审计：pool=169/dpt=3.6/ttk=46.9444/tsurv=2.11538（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=46.9444/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T3判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.4716226154944922局)，HELLRAISER(26分/5.123071535093871局)，FEED(25分/34.43929907871277局)，PACTS_END(25分/60.1736584983756局)，OFFERING(24分/18.084095218834953局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.034059633494532局)，BASH(14分/2.567281228341528局)，STOKE(16分/2.92191471036841局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.50 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1650 胜，当前目标进阶 0
