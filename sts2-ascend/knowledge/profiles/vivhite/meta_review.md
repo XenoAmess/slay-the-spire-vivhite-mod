@@ -5769,36 +5769,3 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
-
-# 1627~1628 批：Boss 零意图滑溜烧层拒绝的最小观测
-
-日期：2026-09-28
-production_code_commit: pending local commit（最终 SHA 见交付回执）
-
-## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**：Vantom 的 Boss 零意图安全回合中，白绮可用但低于普通出牌阈值的滑溜攻击会被全部拒绝；其中实际不支付生命的攻击本可消耗一层 `Slippery`，却被当作普通低分牌空过。若在同一评分 pass 到 `end_turn` 的边界追加“零支付、可破层、低于阈值”的候选观测，就能验证安全烧层窗口是否被系统性漏掉；观测不改变 action/params。
-- **EVIDENCE**：本批为 1627~1628；1628 完整链 `runs/20260928-183900_0L3LT2BFNH69.json` 共 222 条 decisions（packet 保留 118、裁剪 104），已逐条回读完整持久化链。F17 决策 194 在 `hp=78/incoming=0`、Vantom 血池 173、`Slippery×8` 时结束回合；弦光投影候选分约 `-0.228`、普通阈值 `0.40`，理由含 `hp-cost=0/margin=3/spent=2`、预计破 1 层和零意图烧墙审计，最终仍未出牌。绯色面积+也以约 `-1.311` 低分被拒。原生 v0.111.0 mechanics 证实 `SlipperyPower` 按每个穿甲 hit 把掉血压为 1 并消耗一层，VANTOM 的 `SlipperyAmt=8`；随后 Boss 有效火力对账出现实际/投影比约 `0.08`，终局为 F17-T10 defeat。这支持补观测，不单独证明漏烧层是唯一死因。
-- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat 中，满足 `incoming<=0`、单体滑溜攻击、实际 `pay=0`、`breaks>0` 且 `score<=threshold` 并最终 `end_turn` 时，应出现 `VIVHITE_SLIPPERY_ZERO_INTENT_BURN_REJECT_OBS`，带回合、血量、敌方血池、竞速状态及候选 `score/threshold/pay/layers/breaks`。非 Boss、有来袭伤害、实际付血、无滑溜层/无破层或 AOE 不得误挂；action/params 必须保持不变。缺 marker、字段不守恒或出现动作漂移即证伪。
-
-## PRODUCTION_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_slippery_zero_intent_burn_reject_obs`，设为 0 即移除本批观测。
-- `sts2-ascend/brain/policy.py`：从既有卡牌评分 pass 收集候选，不重评分；在白绮 Boss 零意图、零实际生命支付、单体可破滑溜层且低于普通阈值的最终空过理由中追加拒绝观测。评分、排序、目标、等待、动作和参数均未改变。
-- `sts2-ascend/brain/selfcheck.py`：覆盖默认键、候选字段、关闭键、实际支付排除，以及真实评分 pass 到 `end_turn {}` 的接线；夹具验证动作/参数不漂移。
-- 未修改 `runs/`、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
-
-## VALIDATION
-
-- `git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：通过，仅有 Git 的 LF/CRLF 提示。
-- 标准 `py -3 -B sts2-ascend/brain/selfcheck.py` 被宿主 256-slot 临时池在 259 次分配处以 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 截断，未出现代码断言失败；未改项目文件。随后在当前 clone 既有 selfcheck slot 的 ACL 等价临时环境中执行同一 `selfcheck.py`，退出码 0，输出 `SELFCHECK OK`。
-- 目标 diff 已完整回读；本地提交 SHA 在最终交付回执确认。
-
-## FOLLOW-UP / ROLLBACK
-
-- 只统计后续 3~10 个独立 Boss combat：按 run/floor/round 对账 marker 候选、实际 `applied end_turn {}`、Slippery 层减少、下一回合敌方有效火力及胜负；marker 本身不等于应立刻放宽出牌阈值。
-- 若 marker 在有来袭伤害/实际付血/非 Boss 样本显形，或 `layers/breaks/pay` 与原始候选不一致、action/params 漂移，将 `vivhite_slippery_zero_intent_burn_reject_obs=0`；必要时回滚本地提交，先保留证据再重新核验。
-
-## REPLAY
-
-retry_resolution: none (no failed_review_replay packages requested)

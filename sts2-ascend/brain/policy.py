@@ -4975,94 +4975,6 @@ class Policy:
             f"/race_allin={'yes' if race_allin else 'no'}"
             f"/cards={'|'.join(_rows)}")
 
-    def _vivhite_slippery_zero_intent_burn_reject_observation_note(
-            self, ctx, combat, candidates, my_hp, my_max_hp, my_block,
-            incoming, energy, round_no, lethal_now, kill_race, race_allin,
-            pol) -> str:
-        """Audit free Boss Slippery burns rejected below the normal threshold.
-
-        ``candidates`` is captured during the existing scoring pass.  The
-        marker is deliberately limited to a Vivhite Boss turn with no incoming
-        damage, a single-target burn audit, and zero effective HP payment.  It
-        reports a missed safe burn window without changing candidate
-        eligibility, score, target, action, or parameters.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "vivhite_slippery_zero_intent_burn_reject_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError):
-            _enabled = False
-        _ctx_combat = getattr(ctx, "combat", None) or {}
-        if (not _enabled
-                or getattr(self.character_strategy, "profile_id", None)
-                != VIVHITE_PROFILE_ID
-                or _ctx_combat.get("node_type") != "Boss"
-                or float(incoming) > 0.0
-                or lethal_now
-                or bool(combat.get("end_turn_will_kill_player"))):
-            return ""
-
-        _enemy_hp = 0.0
-        for _enemy in combat.get("enemies") or []:
-            if not isinstance(_enemy, dict) or not _enemy.get("is_alive", True):
-                continue
-            try:
-                _enemy_hp += max(0.0, float(_enemy.get("current_hp") or 0.0))
-            except (TypeError, ValueError, OverflowError):
-                continue
-
-        _rows = []
-        for _candidate in candidates or []:
-            if (not isinstance(_candidate, (tuple, list))
-                    or len(_candidate) < 9):
-                continue
-            (_index, _name, _card_id, _cost, _score, _threshold, _pay,
-             _target, _why) = _candidate[:9]
-            if (not isinstance(_why, str)
-                    or "滑溜烧墙审计：每费破层" not in _why
-                    or "｜零意图回合" not in _why
-                    or _target is None):
-                continue
-            try:
-                _score = float(_score)
-                _threshold = float(_threshold)
-                _pay = float(_pay)
-                _cost = float(_cost)
-            except (TypeError, ValueError, OverflowError):
-                continue
-            if _score > _threshold or _pay > 1e-9:
-                continue
-            _layers_match = re.search(
-                r"滑溜([0-9]+(?:\.[0-9]+)?)层，逐段折算", _why)
-            _breaks_match = re.search(
-                r"预计破([0-9]+(?:\.[0-9]+)?)层", _why)
-            if _layers_match is None or _breaks_match is None:
-                continue
-            try:
-                _layers = float(_layers_match.group(1))
-                _breaks = float(_breaks_match.group(1))
-            except (TypeError, ValueError, OverflowError):
-                continue
-            if _layers <= 0.0 or _breaks <= 0.0:
-                continue
-            _label = str(_card_id or _name or _index or "?").upper()
-            _rows.append(
-                f"{_label}@{_cost:g}/score={_score:.2f}"
-                f"/threshold={_threshold:.2f}/pay={_pay:g}"
-                f"/layers={_layers:g}/breaks={_breaks:g}")
-        if not _rows:
-            return ""
-        _round = str(round_no) if round_no is not None else "?"
-        return (
-            f"；Boss零意图滑溜烧层拒绝观测：round={_round}"
-            f"/hp={float(my_hp):g}/{float(my_max_hp):g}"
-            f"/block={float(my_block):g}/incoming={float(incoming):g}"
-            f"/energy={float(energy):g}/enemy_hp={_enemy_hp:g}"
-            f"/kill_race={'yes' if kill_race else 'no'}"
-            f"/race_allin={'yes' if race_allin else 'no'}"
-            f"/cards={'|'.join(_rows)}"
-            "（VIVHITE_SLIPPERY_ZERO_INTENT_BURN_REJECT_OBS）")
-
     def _vivhite_hp_zero_pressure_attack_reject_observation_note(
             self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
             incoming, energy, lethal_now, kill_race, race_allin, pol) -> str:
@@ -8107,11 +8019,6 @@ class Policy:
         # list is passed to the existing marker after the scoring pass, so this
         # adds no second evaluation and cannot alter selection.
         _lethal_candidate_audit: list = []
-        # Candidate rows are collected from the same scoring pass used for the
-        # final choice.  The end-turn observation below uses them to distinguish
-        # a safe Slippery burn window rejected by the ordinary threshold from a
-        # turn with no such attack; it never rescans or changes selection.
-        _slippery_zero_intent_burn_rejects: list = []
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
         # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
@@ -8572,26 +8479,6 @@ class Policy:
                     "（VIVHITE_LETHAL_FREE_FUNCTION_EXEMPT）")
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
-            if (score <= float(pol["play_threshold"])
-                    and not _hp_gate_hit
-                    and target is not None
-                    and isinstance(why, str)
-                    and "滑溜烧墙审计：每费破层" in why
-                    and "｜零意图回合" in why):
-                # Use the actual payment after the currently observed Margin,
-                # rather than _hp_pay (which is only populated when the
-                # optional LifeCost margin gate is enabled).  This keeps the
-                # audit truthful for the production default margin=0 as well.
-                try:
-                    _zero_intent_burn_pay = max(0.0, float(
-                        self._vivhite_hp_pay(
-                            c, player.get("powers") or []) or 0.0))
-                except (TypeError, ValueError, OverflowError):
-                    _zero_intent_burn_pay = 0.0
-                _slippery_zero_intent_burn_rejects.append(
-                    (c.get("index"), c.get("name") or cid, cid, cost,
-                     score, float(pol["play_threshold"]),
-                     _zero_intent_burn_pay, target, why))
             if lethal_now:
                 _lethal_candidate_audit.append(
                     (c.get("index"), float(score),
@@ -9720,11 +9607,6 @@ class Policy:
                     pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
                     lethal_now, combat, kill_race, race_allin,
                     player.get("powers") or []))
-            _slippery_zero_intent_burn_note = (
-                self._vivhite_slippery_zero_intent_burn_reject_observation_note(
-                    ctx, combat, _slippery_zero_intent_burn_rejects,
-                    my_hp, my_max_hp, my_block, incoming, energy, round_no,
-                    lethal_now, kill_race, race_allin, pol))
             try:
                 _ritual_skip_obs = bool(int(float(pol.get(
                     "ritual_window_skip_obs", 1) or 0)))
@@ -9802,7 +9684,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{_slippery_zero_intent_burn_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

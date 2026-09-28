@@ -100,11 +100,6 @@ DEFAULT_POLICY = {
                                                      # 三例 KIN 实际阵亡暴露了存在性放行的风险）
     # --- combat ---
     "slippery_burn_cost_tiebreak": True,  # 同折算产出且同分时，滑溜烧层优先低费；False 严格回滚旧候选顺序
-    "vivhite_slippery_zero_intent_burn_reject_obs": True,  # Boss 零意图回合中，
-                                                             # 零生命支付且实际可破滑溜层的
-                                                             # 攻击若低于普通出牌阈值，收口
-                                                             # 时记录被拒候选；纯观测，不改
-                                                             # 评分、资格、动作或参数。
     "sleep_guard_min_stacks": 2.0,  # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：
                                       # 敌人沉睡计数（ASLEEP_POWER）≥本值且攻击将造成未格挡
                                       # 伤害且非击杀时，攻击候选压到禁玩线——LAGAVULIN_MATRIARCH
