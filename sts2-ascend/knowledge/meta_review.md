@@ -13120,3 +13120,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：完整 selfcheck 最终输出 **SELFCHECK OK**；目标三文件 `git diff --check` 无新增错误。全仓 diff 检查仍会报告 clone 中既有的长资产路径/权限问题，未由本批改动产生；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - **replay targets**：none；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1662局复盘（LOW_POOL_BURST_TERMINAL_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `LOW_POOL_BURST_CARD_AUDIT` 只在选牌或空过当下记录 `survives=no`，不能确认该帧是否紧接同楼层终局；若 F25/T4 是因不可生存的低池选择进入终局，新 marker 应把来源回合、终局胜负与 `final_hp` 接到同一持久决策链。
+- **EVIDENCE**：精确 run `TQMWM5SL1SVN`（第1662局）F25/T4，`DISMANTLE+` 与 `STRIKE` 的审计均为 `hp=3/block=0/incoming=33/energy=3/need=30/max_block=5/covers=no/post_gap=28/survives=no`；随后 `end_turn` 为 `LETHAL_UNAVAILABLE_END_TURN_OBS`，T4 为 `hp=3/block=5/incoming=15`，约 13 秒后 F25 `GAME_OVER`、`hp=0`。v0.111.0 原生 knowledge 还确认 BOWLBUG_EGG 为 21–22 血、BOWLBUG_NECTAR 为 35–38 血、BOWLBUG_ROCK 为 45–48 血，且 Egg Bite 7/8、ProtectBlock 7/8、Rock Headbutt 15/16，支持这是多敌低池压力而非单一卡牌片段。
+- **EXPECTED_SIGNAL**：未来 3–10 个独立窗口按 `run_id/floor/source_round/source_action/outcome/final_hp` 对账；同楼层 `survives=no` 后到达 `GAME_OVER` 应出现终局 marker，胜利样本应明确为 `outcome=victory`，无来源、跨楼层或 `survives=yes` 不应产生 marker。字段缺失、错配或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `low_pool_burst_terminal_outcome_obs` 只读开关。
+- `sts2-ascend/brain/policy.py`：在 `GAME_OVER` 读取同楼层已持久化的 `LOW_POOL_BURST_CARD_AUDIT`，仅当 `survives=no` 时追加 `LOW_POOL_BURST_TERMINAL_OUTCOME_OBS`，记录来源回合/动作、牌面审计字段、`outcome` 和 `final_hp`；覆盖 Continue、终局提交等待和旧终局返回分支，不进入评分、候选、门控或 action/params。
+- `sts2-ascend/brain/selfcheck.py`：验证默认、重载、丢失决策重试、提交后去重及关闭开关；均保持 `continue_game_over` 与空参数。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：先收集 3–10 个独立低池窗口，按上述字段分层比较失败/胜利；证据成熟前保持只读观测，不调整爆发、格挡或竞速行为。
+- **回滚**：将 `low_pool_burst_terminal_outcome_obs` 设为 `False`；预期只移除终局 marker，既有牌面审计、action 和 params 保持不变。
+- **验证**：完整 selfcheck 输出 `SELFCHECK OK`；目标 Python diff `git diff --check` 通过。自检过程未写入 `.runtime/`、runs、archive、stats、progression、policy.json、lessons.md 或 review prompt。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

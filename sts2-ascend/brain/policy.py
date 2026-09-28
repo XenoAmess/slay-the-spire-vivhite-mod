@@ -899,6 +899,7 @@ class Policy:
         self._race_mode_flip_count = 0  # 当前战斗内同回合翻转次数
         self._lethal_playable_reject_outcome_pending = None  # 最近一次致死可牌拒绝，等待 GAME_OVER 结局对账
         self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
+        self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
@@ -2463,6 +2464,7 @@ class Policy:
             self._hp_pay_result_note = ""
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
+            self._low_pool_burst_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -4588,6 +4590,98 @@ class Policy:
                 return
             self._elite_forced_entry_reported = False
             return
+
+    def _consume_low_pool_burst_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a non-surviving low-pool card audit to the next GAME_OVER.
+
+        The source audit is already persisted in the decision chain.  This
+        terminal join only records whether the observed ``survives=no`` frame
+        was followed by defeat or victory; it never feeds back into scoring or
+        action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "low_pool_burst_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+        if getattr(self, "_low_pool_burst_terminal_outcome_reported", False):
+            # A returned GAME_OVER decision may be lost before POST.  Permit
+            # the next poll to rebuild the same observation, but suppress it
+            # once the marker is actually present in the durable chain.
+            self._low_pool_burst_terminal_outcome_reported = False
+
+        def _token(audit: str, name: str):
+            match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else None
+
+        source = None
+        source_audit = ""
+        for row in reversed(decisions):
+            if not isinstance(row, dict):
+                continue
+            if row.get("screen") not in (None, "COMBAT"):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                continue
+            reason = str(row.get("reason") or "")
+            marker_at = reason.rfind("LOW_POOL_BURST_CARD_AUDIT")
+            if marker_at < 0:
+                continue
+            audit_at = reason.rfind("低池爆发牌面审计：", 0, marker_at)
+            if audit_at < 0:
+                continue
+            audit = reason[audit_at:marker_at]
+            if _token(audit, "survives") != "no":
+                continue
+            source = row
+            source_audit = audit
+            break
+        if source is None:
+            return ""
+        self._low_pool_burst_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(value))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        _source_round = source.get("turn", source.get("round"))
+        return (
+            f"；低池爆发终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source_round)}"
+            f"/source_action={source.get('action') or '?'}"
+            f"/hp={_num(_token(source_audit, 'hp'))}"
+            f"/block={_num(_token(source_audit, 'block'))}"
+            f"/incoming={_num(_token(source_audit, 'incoming'))}"
+            f"/energy={_num(_token(source_audit, 'energy'))}"
+            f"/max_block={_num(_token(source_audit, 'max_block'))}"
+            f"/post_gap={_num(_token(source_audit, 'post_gap'))}"
+            f"/covers={_token(source_audit, 'covers') or '?'}"
+            f"/survives={_token(source_audit, 'survives') or '?'}"
+            f"/selected={_token(source_audit, 'selected') or '?'}"
+            f"/final_hp={_num(final_hp)}"
+            "（LOW_POOL_BURST_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -7482,6 +7576,7 @@ class Policy:
             self._race_mode_flip_count = 0
             self._lethal_playable_reject_outcome_pending = None
             self._lethal_playable_reject_outcome_reported = False
+            self._low_pool_burst_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -16116,6 +16211,9 @@ class Policy:
         _sandpit_terminal_outcome_note = (
             self._consume_sandpit_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _low_pool_burst_terminal_outcome_note = (
+            self._consume_low_pool_burst_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -16130,7 +16228,8 @@ class Policy:
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
-                            f"{_sandpit_terminal_outcome_note}", wait=1.0)
+                            f"{_sandpit_terminal_outcome_note}"
+                            f"{_low_pool_burst_terminal_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -16156,7 +16255,8 @@ class Policy:
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
-                        f"{_sandpit_terminal_outcome_note}",
+                        f"{_sandpit_terminal_outcome_note}"
+                        f"{_low_pool_burst_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -16167,7 +16267,8 @@ class Policy:
                                 f"{_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
-                                f"{_sandpit_terminal_outcome_note}",
+                                f"{_sandpit_terminal_outcome_note}"
+                                f"{_low_pool_burst_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)

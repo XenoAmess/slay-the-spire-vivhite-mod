@@ -12880,6 +12880,116 @@ def main() -> int:
             and not low_pool_pol._krace_latch), \
         f"low-pool observation switch changed action or remained latched: {d_low_pool_off.action}/{d_low_pool_off.reason}"
 
+    # 3br-low-pool-terminal) Join a persisted survives=no low-pool card audit
+    # to the authoritative GAME_OVER result.  The join is observation-only:
+    # source_round/outcome/final_hp become queryable while action/params stay
+    # on the native continue_game_over contract; reload, lost-action retry and
+    # the dedicated rollback switch are all covered here.
+    low_pool_terminal_know = knowledge.Knowledge(tmp)
+    low_pool_terminal_pol = policy.Policy(low_pool_terminal_know)
+    low_pool_terminal_hand = low_pool_audit_state["combat"]["hand"]
+    low_pool_terminal_source = (
+        low_pool_terminal_pol._low_pool_burst_card_audit_note(
+            low_pool_terminal_hand, 3, 33, 3, 0,
+            low_pool_terminal_know.policy,
+            selected=low_pool_terminal_hand[0],
+            selected_action="play_card"))
+    assert ("LOW_POOL_BURST_CARD_AUDIT" in low_pool_terminal_source
+            and "/survives=no" in low_pool_terminal_source), \
+        f"low-pool terminal source fixture is not non-surviving: {low_pool_terminal_source}"
+    class _LowPoolTerminalCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        combat_notes = []
+        pending_event = None
+        died_in_combat = None
+
+    low_pool_terminal_ctx = _LowPoolTerminalCtx()
+    low_pool_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 4, "reason": low_pool_terminal_source,
+    }]
+    low_pool_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "run": {"current_hp": 0},
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 25},
+    }
+    d_low_pool_terminal = low_pool_terminal_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_ctx)
+    assert (d_low_pool_terminal.action == "continue_game_over"
+            and d_low_pool_terminal.params == {}
+            and "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+            in d_low_pool_terminal.reason
+            and "outcome=defeat/floor=25/source_round=4"
+            in d_low_pool_terminal.reason
+            and "survives=no" in d_low_pool_terminal.reason
+            and "/final_hp=0" in d_low_pool_terminal.reason), \
+        f"low-pool terminal outcome join missing or action drifted: {d_low_pool_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "low_pool_burst_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing low_pool_burst_terminal_outcome_obs"
+
+    low_pool_terminal_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    low_pool_terminal_replay_ctx = _LowPoolTerminalCtx()
+    low_pool_terminal_replay_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 4, "reason": low_pool_terminal_source,
+    }]
+    d_low_pool_terminal_replay = low_pool_terminal_replay_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_replay_ctx)
+    assert (d_low_pool_terminal_replay.action
+            == d_low_pool_terminal.action
+            and d_low_pool_terminal_replay.params
+            == d_low_pool_terminal.params
+            and "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+            in d_low_pool_terminal_replay.reason), \
+        f"low-pool terminal outcome did not survive reload: {d_low_pool_terminal_replay}"
+
+    low_pool_terminal_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    low_pool_terminal_retry_ctx = _LowPoolTerminalCtx()
+    low_pool_terminal_retry_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 4, "reason": low_pool_terminal_source,
+    }]
+    d_low_pool_terminal_retry_first = low_pool_terminal_retry_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_retry_ctx)
+    d_low_pool_terminal_retry = low_pool_terminal_retry_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_retry_ctx)
+    assert ("LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+            in d_low_pool_terminal_retry_first.reason
+            and "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+            in d_low_pool_terminal_retry.reason), \
+        "low-pool terminal outcome did not retry after a lost decision"
+    low_pool_terminal_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 25,
+        "reason": d_low_pool_terminal_retry.reason,
+    })
+    d_low_pool_terminal_retry_committed = low_pool_terminal_retry_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_retry_ctx)
+    assert "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS" \
+        not in d_low_pool_terminal_retry_committed.reason, \
+        "low-pool terminal outcome duplicated after commit"
+
+    low_pool_terminal_off_know = knowledge.Knowledge(tmp)
+    low_pool_terminal_off_know.policy[
+        "low_pool_burst_terminal_outcome_obs"] = False
+    low_pool_terminal_off_pol = policy.Policy(low_pool_terminal_off_know)
+    low_pool_terminal_off_ctx = _LowPoolTerminalCtx()
+    low_pool_terminal_off_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 4, "reason": low_pool_terminal_source,
+    }]
+    d_low_pool_terminal_off = low_pool_terminal_off_pol.decide(
+        low_pool_terminal_state, low_pool_terminal_off_ctx)
+    assert (d_low_pool_terminal_off.action == d_low_pool_terminal.action
+            and d_low_pool_terminal_off.params == d_low_pool_terminal.params
+            and "LOW_POOL_BURST_TERMINAL_OUTCOME_OBS"
+            not in d_low_pool_terminal_off.reason), \
+        f"low-pool terminal rollback changed action or kept marker: {d_low_pool_terminal_off}"
+
     class _PerComboNative:
         available = True
         pools: dict = {}
