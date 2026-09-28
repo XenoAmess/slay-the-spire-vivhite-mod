@@ -6692,6 +6692,7 @@ class Policy:
         # RACE_ALLIN 覆盖旁观的謦欬锁链执行模拟逐张计价（第1212~1242局批），
         # 不进入任何评分或资格判定。
         _worthwhile_blk_cards = []
+        _ritual_value_audit = None
         for c in hand:
             cost = energy if c.get("costs_x") else (c.get("energy_cost") or 0)
             _dmg, block, _hits = card_numbers(c)
@@ -7846,6 +7847,17 @@ class Policy:
                      if not _hp_gate_hit else why),
                 target={"index": target,
                         "name": (target_enemy or {}).get("name", "")} if target is not None else None)
+            if (cid == "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
+                    and getattr(self.character_strategy, "profile_id", None)
+                    == VIVHITE_PROFILE_ID):
+                _ritual_value_audit = {
+                    "score": score,
+                    "immediate": immediate_score,
+                    "static": character_estimate,
+                    "threshold": float(pol["play_threshold"]),
+                    "hp_pay": _hp_pay,
+                    "hp_gate": bool(_hp_gate_hit),
+                }
             if _tax_watch and c.get("index") in _tax_watch:
                 _tax_watch[c.get("index")][1] = (
                     f"参选{score:.1f}"
@@ -8857,21 +8869,49 @@ class Policy:
                     "ritual_window_skip_obs", 1) or 0)))
             except (TypeError, ValueError):
                 _ritual_skip_obs = False
-            if (_ritual_skip_obs
-                    and getattr(self.character_strategy, "profile_id", None)
+            _ritual_skipped = False
+            if (getattr(self.character_strategy, "profile_id", None)
                     == VIVHITE_PROFILE_ID):
                 _ritual_skipped = any(
                     c.get("playable")
                     and str(c.get("card_id") or "").upper().rstrip("+")
                     == "VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL"
                     for c in hand)
-                if _ritual_skipped:
+                if _ritual_skip_obs and _ritual_skipped:
                     _ritual_skip_note = (
                         f"；引擎仪式可出未出（回合{round_no}，"
                         f"血量{my_hp / my_max_hp:.0%}，意图{incoming}，"
                         f"竞速={bool(kill_race or race_allin)}，"
                         f"致死投影={bool(combat.get('end_turn_will_kill_player'))}"
                         "，VIVHITE_RITUAL_WINDOW_SKIP_OBS）")
+            _ritual_value_note = ""
+            try:
+                _ritual_value_obs = bool(int(float(pol.get(
+                    "ritual_window_value_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _ritual_value_obs = False
+            if (_ritual_value_obs and _ritual_skipped
+                    and _ritual_value_audit is not None):
+                _ritual_phase, _ritual_damage = vivhite_crimson_ritual_totals(
+                    self.character_strategy, player.get("powers") or [])
+                if _ritual_value_audit["hp_gate"]:
+                    _ritual_value_status = "hp_gate"
+                elif (_ritual_value_audit["score"]
+                      <= _ritual_value_audit["threshold"]):
+                    _ritual_value_status = "below_threshold"
+                else:
+                    _ritual_value_status = "not_selected"
+                _ritual_value_note = (
+                    f"；仪式价值审计：score={_ritual_value_audit['score']:.2f}"
+                    f"/immediate={_ritual_value_audit['immediate']:.2f}"
+                    f"/static={_ritual_value_audit['static']:.2f}"
+                    f"/threshold={_ritual_value_audit['threshold']:.2f}"
+                    f"/hp-pay={_ritual_value_audit['hp_pay']:g}"
+                    f"/hp-gate={int(_ritual_value_audit['hp_gate'])}"
+                    f"/phase={_ritual_phase:g}/damage={_ritual_damage:g}"
+                    f"/status={_ritual_value_status}"
+                    "（VIVHITE_RITUAL_WINDOW_VALUE_AUDIT）")
+                _ritual_skip_note += _ritual_value_note
             try:
                 _free_energy_obs = bool(int(float(
                     pol.get("kill_race_free_energy_function_obs", 1) or 0)))

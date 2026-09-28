@@ -5517,3 +5517,35 @@ production_code_commit: 4070f08da67c3c47a579076f3d34fd5c8918347c
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1572~1576 批：白绮仪式候选分与生命门状态价值审计
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1576-F17 的三次猩红转化仪式空过，主因是仪式的未来长线估值把 0 费候选压到阈值下，而不是生命支付门拦截；若把最终候选分、即时底分、静态长线估值与实际生命门状态写入同一空过决策，就能证伪这一判断，同时保持动作不变。
+- **EVIDENCE**：完整失败链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-085111_EFCH9R811VLL.json`，1576 局共 225 条 decisions，F17 Boss `SOUL_FYSH` 以 defeat 收口。T1（50/80 血、意图0）仪式可出且实付0，候选分 `-72.304`、静态估值约 `-94.94`；T6（18/80 血、意图0）候选分 `-87.429`；T10（11 血、意图13、致死投影）候选分 `-88.387`，0费致死豁免只取消生命门封顶，未把负分提升为可选动作。三处均未证明存在仪式生命支付门拦截。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite combat 中，仪式空过行应带 `VIVHITE_RITUAL_WINDOW_VALUE_AUDIT`，并可逐项核对 `score/immediate/static/threshold/hp-pay/hp-gate/phase/damage/status` 与原生快照、真实 `applied` action/params、后续掉血及 GAME_OVER/胜负。若高血/零意图样本持续 `hp-pay=0`、`hp-gate=0` 且 `static` 负值压低最终分，支持假设；若实际被生命门拦、分数为正仍空过或字段与回执不符，则证伪，不能行为化。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有白绮仪式空过收口中追加候选价值审计；只读当前候选循环和仪式 Power 阶段，完全不参与评分、候选资格、放行、目标、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ritual_window_value_obs`；置 `0` 只移除新增审计，旧 `ritual_window_skip_obs` 与动作保持各自语义。
+- `sts2-ascend/brain/selfcheck.py`：验证默认字段、价值审计关闭后的 action/params 不变、既有空过观测仍在，以及非白绮不显形。
+- 未修改 `runs/`、`stats`、`progression`、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
+- 报告写入前已完整回读目标生产/自检 diff；目标文件 `git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立仪式窗口 combat，按 combat/run/floor 对账新增字段、原生状态、真实回执、下一回合掉血和终局；字段出现本身不代表应当打出仪式。
+- 若审计字段与候选 trace、原生状态或 action/params 不符，或非白绮/非空过样本显形，先将 `ritual_window_value_obs=0`；必要时回滚本地提交并保留本批证据。在重复证据前不改变仪式评分或放行逻辑。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

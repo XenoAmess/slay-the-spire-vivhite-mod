@@ -7195,6 +7195,9 @@ def main() -> int:
     assert d_rws.action == "end_turn" \
         and "评估后无值得出的牌" in d_rws.reason \
         and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" in d_rws.reason \
+        and "VIVHITE_RITUAL_WINDOW_VALUE_AUDIT" in d_rws.reason \
+        and "/static=" in d_rws.reason \
+        and "/hp-pay=0" in d_rws.reason \
         and "血量92%" in d_rws.reason, \
         f"仪式可出空过未产窗口观测: {d_rws.action}（{d_rws.reason}）"
 
@@ -7206,6 +7209,17 @@ def main() -> int:
         and d_rws_off.params == d_rws.params \
         and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_off.reason, \
         f"键=0 未严格回滚注记或动作漂移: {d_rws_off.action}（{d_rws_off.reason}）"
+
+    rws_value_off = policy.Policy(
+        _vivhite_know("sts2-selfcheck-rws-value-off-"), random.Random(5))
+    rws_value_off.know.policy["ritual_window_value_obs"] = 0
+    d_rws_value_off = rws_value_off.decide(
+        _rws_state([rws_ritual, rws_block]), rws_ctx)
+    assert d_rws_value_off.action == d_rws.action \
+        and d_rws_value_off.params == d_rws.params \
+        and "VIVHITE_RITUAL_WINDOW_SKIP_OBS" in d_rws_value_off.reason \
+        and "VIVHITE_RITUAL_WINDOW_VALUE_AUDIT" not in d_rws_value_off.reason, \
+        f"价值审计键=0 未严格回滚注记或动作漂移: {d_rws_value_off.action}（{d_rws_value_off.reason}）"
 
     rws_no = policy.Policy(_vivhite_know("sts2-selfcheck-rws-no-"),
                            random.Random(5))
@@ -7219,8 +7233,10 @@ def main() -> int:
     d_rws_iron = rws_iron.decide(_rws_state([rws_ritual, rws_block]), rws_ctx)
     assert "VIVHITE_RITUAL_WINDOW_SKIP_OBS" not in d_rws_iron.reason, \
         f"非白绮 profile 不得产窗口观测: {d_rws_iron.action}（{d_rws_iron.reason}）"
-    del d_rws, d_rws_off, d_rws_no, d_rws_iron, \
-        rws_pol, rws_off, rws_no, rws_iron
+    assert "VIVHITE_RITUAL_WINDOW_VALUE_AUDIT" not in d_rws_iron.reason, \
+        f"非白绮 profile 不得产价值审计: {d_rws_iron.action}（{d_rws_iron.reason}）"
+    del d_rws, d_rws_off, d_rws_no, d_rws_iron, d_rws_value_off, \
+        rws_pol, rws_off, rws_no, rws_iron, rws_value_off
 
     # 3rwo（当前批次 F17 终局）：把同一终局楼层的仪式空过窗口与权威
     # GAME_OVER outcome 绑定，验证只增加终局观测、不改变动作；重试看到已
