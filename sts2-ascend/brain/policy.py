@@ -10196,6 +10196,16 @@ class Policy:
         # （1.05×block_safety×blk_boost）计价，与格挡/攻击正常竞争能量；
         # hand_tax_play_pricing=0 回落旧能力牌口径（严格回滚锚）。
         if _m_hand_tax and float(pol.get("hand_tax_play_pricing", 1)) > 0:
+            # 致死回合没有“下一回合”的税负窗口：纯税牌既不造成即时伤害，
+            # 也不提供格挡/抽牌/回能，税止损分不能抢走唯一的即时输出能量。
+            # 1624-F17 D210 在 HP=4、incoming=24、RACE_ALLIN_LETHAL_CAPACITY
+            # covers=no 时先选 BECKON，正是该早退分支绕过 lethal floor 的证据。
+            # 只收紧 lethal；非致死税牌仍按原止损价值参与竞拍。关闭旋钮严格
+            # 回滚旧评分与 why 文本。
+            if (lethal and bool(pol.get("hand_tax_lethal_guard", True))):
+                return floor_score, None, (
+                    f"手牌滞留税牌（打出即清零{_tax_save}/回合滞留税，"
+                    "致死回合让位即时输出（HAND_TAX_LETHAL_GUARD））")
             score = _tax_value
             if cost == 0:
                 score += pol["free_card_bonus"]

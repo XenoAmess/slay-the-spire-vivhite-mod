@@ -12635,3 +12635,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `race_allin_lethal_capacity_obs` 设为 `False`；预期只移除 `RACE_ALLIN_LETHAL_CAPACITY_OBS`，旧覆盖观测、评分、action 与 params 不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1624 局复盘（HAND_TAX_LETHAL_GUARD）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_score_play` 的纯手牌税分支在 `lethal/race_allin` 钳制之前提前返回，可能让没有即时伤害、格挡、抽牌或回能面的税牌抢走致死回合能量。该假设可证伪：未来 3~10 局若致死窗口仍选中纯税牌且存在高于禁玩线的即时输出，说明门控位置或“纯税牌”识别仍有漏洞。
+- **EVIDENCE**：精确 run `N7P0PHK81MT7`（第1624局，`sts2-ascend/knowledge/runs/20260928-081354_N7P0PHK81MT7.json`）完整链 215 条；packet 保留 125 条、裁剪 90 条后已回读原始文件。F17 `decisions[210:214]` 在 HP=4、incoming=24、energy=3 时，`RACE_ALLIN_LETHAL_CAPACITY_OBS` 给出 `need=20/max_block=5/covers=no/post_gap=19/survives=no`，纯税 `BECKON` 仍以 `HAND_TAX_PLAY_PRICING` 路径进入选择，随后 `LETHAL_UNAVAILABLE_END_TURN_OBS` 与 `KILL_RACE_TERMINAL_AUDIT_OBS` 收口并死亡。
+- **EXPECTED_SIGNAL**：致死回合的纯税牌应返回禁玩线并带 `HAND_TAX_LETHAL_GUARD`，让即时攻击/其他可改变本回合结果的牌继续竞争；非致死税牌不带该尾缀且保持旧止损评分。关闭 `hand_tax_lethal_guard` 后应逐字回到旧纯税评分。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：纯手牌税分支只在 `lethal` 且 `hand_tax_lethal_guard` 开启时返回 `floor_score`，追加 `HAND_TAX_LETHAL_GUARD`；非致死路径与 `hand_tax_play_pricing` 旧开关不变。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `hand_tax_lethal_guard` 静态键。
+- `sts2-ascend/brain/selfcheck.py`：补充非致死正例、致死竞速禁玩正例和关闭键回滚断言；保留原有手牌税与 `hand_tax_play_pricing=0` 回归锚点。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：未来 3~10 个独立战斗按 `run_id`、floor/turn、税牌 ID、`lethal`、`race_allin`、即时输出候选分数、最终 action、后续 `GAME_OVER` 分层。若纯税牌仍在“存在高于禁玩线即时输出”时中标，继续修正评分收口；若只在没有即时候选时出现，则维持本次边界。
+- **撤回**：将 `hand_tax_lethal_guard` 设为 `False`；预期仅恢复致死纯税牌原止损评分与 why 文本，非致死行为和其他竞速路径不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；`git diff --check` → exit 0（仅仓库既有超长资产路径警告）；未写入在线状态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
