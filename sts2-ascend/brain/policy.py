@@ -904,6 +904,8 @@ class Policy:
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
+        self._longfight_joint_survival_outcome_pending = None
+        self._longfight_joint_survival_outcome_reported = False
         self._slippery_effective_dpt_round = None
         self._slippery_effective_dpt_start_hp = None
         self._slippery_effective_dpt_layers = 0.0
@@ -2446,6 +2448,8 @@ class Policy:
             self._hp_pay_result_note = ""
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
+            self._longfight_joint_survival_outcome_pending = None
+            self._longfight_joint_survival_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -2467,6 +2471,8 @@ class Policy:
             # GAME_OVER outcome; do not carry its pending audit into a later room.
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
+            self._longfight_joint_survival_outcome_pending = None
+            self._longfight_joint_survival_outcome_reported = False
         # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
         # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
         if not self._state_has_explicit_card_offer(state):
@@ -4570,6 +4576,123 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return
             self._elite_forced_entry_reported = False
+            return
+
+    def _consume_longfight_joint_survival_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the latest long-fight survival sample to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "longfight_joint_survival_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_longfight_joint_survival_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_longfight_joint_survival_outcome_reported", False))):
+            return ""
+        if floor is not None and _pending.get("floor") is not None:
+            try:
+                if int(float(floor)) != int(float(_pending.get("floor"))):
+                    return ""
+            except (TypeError, ValueError, OverflowError):
+                return ""
+        self._longfight_joint_survival_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        return (
+            "；长战联合生存结局对账："
+            f"outcome={'victory' if victory else 'defeat'}"
+            f"/floor={_round(floor)}"
+            f"/marker_round={_round(_pending.get('marker_round'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/hand_block_cap={_num(_pending.get('hand_block_cap'))}"
+            f"/post_block_gap={_num(_pending.get('post_block_gap'))}"
+            f"/survives={'yes' if _pending.get('survives') else 'no'}"
+            f"/cards={_pending.get('cards') or 'none'}"
+            " (LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS)")
+
+    def _restore_longfight_joint_survival_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the long-fight survival join after a policy reload."""
+        decisions = getattr(ctx, "decisions", None)
+        marker = "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+        margin_marker = "LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS"
+        if bool(getattr(
+                self, "_longfight_joint_survival_outcome_reported", False)):
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._longfight_joint_survival_outcome_reported = False
+        if isinstance(getattr(
+                self, "_longfight_joint_survival_outcome_pending", None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        for _index in range(len(decisions) - 1, -1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(margin_marker)
+            if _marker_at < 0:
+                continue
+            if (floor is not None and _row.get("floor") is not None
+                    and str(_row.get("floor")) != str(floor)):
+                continue
+            if any(marker in str(_later.get("reason") or "")
+                   for _later in decisions[_index + 1:]
+                   if isinstance(_later, dict)):
+                self._longfight_joint_survival_outcome_reported = True
+                return
+            _audit = _reason[:_marker_at]
+
+            def _token(name):
+                _match = re.search(
+                    rf"(?:^|/|[^A-Za-z0-9_]){re.escape(name)}=([^/\s;()]+)", _audit)
+                return _match.group(1) if _match else None
+
+            _required = (
+                "hp", "block", "incoming", "energy", "hand_block_cap",
+                "post_block_gap", "survives")
+            _values = {name: _token(name) for name in _required}
+            if any(value is None for value in _values.values()):
+                continue
+            _cards_match = re.search(r"/cards=(.+)$", _audit)
+            _cards = (_cards_match.group(1).strip()
+                      if _cards_match else "none")
+            _cards = _cards.split("（", 1)[0].split("(", 1)[0].strip()
+            _marker_round = _row.get("turn", _row.get("round"))
+            self._longfight_joint_survival_outcome_pending = {
+                "floor": _row.get("floor", floor),
+                "marker_round": _marker_round,
+                **_values,
+                "survives": str(_values["survives"]).casefold()
+                in {"yes", "true", "1"},
+                "cards": _cards or "none",
+            }
+            self._longfight_joint_survival_outcome_reported = False
             return
 
     def _consume_kill_race_terminal_outcome_note(
@@ -7426,6 +7549,8 @@ class Policy:
             self._race_mode_flip_count = 0
             self._lethal_playable_reject_outcome_pending = None
             self._lethal_playable_reject_outcome_reported = False
+            self._longfight_joint_survival_outcome_pending = None
+            self._longfight_joint_survival_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -7812,6 +7937,28 @@ class Policy:
             _joint_post_gap = max(
                 0.0, float(incoming) - float(my_block) - _joint_block_cap)
             _joint_survives = _joint_post_gap < float(my_hp)
+            try:
+                _joint_outcome_obs = bool(int(float(pol.get(
+                    "longfight_joint_survival_outcome_obs", True) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _joint_outcome_obs = False
+            if _joint_outcome_obs:
+                _joint_floor = (state.get("floor")
+                                or (state.get("run") or {}).get("floor"))
+                self._longfight_joint_survival_outcome_pending = {
+                    "floor": _joint_floor,
+                    "marker_round": round_no,
+                    "hp": float(my_hp),
+                    "block": float(my_block),
+                    "incoming": float(incoming),
+                    "energy": float(energy),
+                    "hand_block_cap": float(_joint_block_cap),
+                    "post_block_gap": float(_joint_post_gap),
+                    "survives": bool(_joint_survives),
+                    "cards": ("|".join(_joint_block_cards)
+                              if _joint_block_cards else "none"),
+                }
+                self._longfight_joint_survival_outcome_reported = False
             danger_note += (
                 f"；长战联合复核即时生还对账：hp={float(my_hp):g}"
                 f"/block={float(my_block):g}/incoming={float(incoming):g}"
@@ -16012,6 +16159,11 @@ class Policy:
         _elite_forced_entry_outcome_note = (
             self._consume_elite_forced_entry_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
+        self._restore_longfight_joint_survival_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _longfight_joint_survival_outcome_note = (
+            self._consume_longfight_joint_survival_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
@@ -16044,7 +16196,8 @@ class Policy:
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
-                            f"{_sandpit_terminal_outcome_note}", wait=1.0)
+                            f"{_sandpit_terminal_outcome_note}"
+                            f"{_longfight_joint_survival_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger

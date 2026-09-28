@@ -13075,3 +13075,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_lethal_output_capacity_obs` 设为 `False`；end-turn 与终端结局容量尾部均消失，既有终端审计、action 与 params 保持不变。
 - **验证**：宿主固定 256 槽 bootstrap 先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 `.review-cache/selfcheck-pool` 的本地继承 ACL 进程内临时分配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1656批复盘（LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS` 的 `survives=yes` 只证明当前意图的一步生存，不代表后续回合仍有可持续防线；尤其 `hand_block_cap=0/cards=none` 时，终局连接可以证伪该即时信号是否系统性过于乐观。
+- **EVIDENCE**：精确 run `ULQD8RZAWZMT`（1656）F15 `BYGONE_EFFIGY`。D220/D221 T3 最后一条联合生存样本为 `hp=31/block=5/incoming=23/energy=1/hand_block_cap=0/post_block_gap=18/survives=yes/cards=none`；D223 非致死空过后，D228 已为 `hp=13/block=5/incoming=23` 且 `LETHAL_UNAVAILABLE_END_TURN_OBS`，D229 GAME_OVER defeat。原始链：`runs/20260929-021927_ULQD8RZAWZMT.json`。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立非 Boss 长战按 `run_id/floor/marker_round/outcome/final_hp/hand_block_cap/survives` 汇总；`survives=yes + hand_block_cap=0` 后重复败北支持假设，胜利、跨战斗串接、字段错配或 action/params 漂移则证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增可关闭的 `longfight_joint_survival_outcome_obs` 只读开关。
+- `sts2-ascend/brain/policy.py`：保存最近联合生存样本，在匹配楼层的 GAME_OVER 追加 `LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS`；支持进程重载、丢动作重试和提交去重，不进入评分、选牌、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖结局、重载、丢动作重试、提交后去重及关闭开关时 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立长战窗口，比较即时 `survives` 与权威终局；证据不足前保持只读观测，不调整防守或竞速策略。
+- **回滚**：将 `longfight_joint_survival_outcome_obs` 设为 `False`，只移除新终局尾缀，原即时 marker、action 与 params 保持不变。
+- **验证**：完整 selfcheck 输出 **SELFCHECK OK**，`git diff --check` 通过；代码提交 `cb724c7c0`。未写入 `.runtime/`、runs、archive、stats、progression、policy.json、lessons.md 或 review prompt。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -78,6 +78,7 @@ def relic_stats_key(value: object) -> str | None:
 
 
 DEFAULT_POLICY = {
+    "longfight_joint_survival_outcome_obs": True,  # Join the latest long-fight joint survival sample to GAME_OVER; observation-only.
     "enemy_hardened_shell_dmg_cap": True,  # Native HardenedShellPower caps HP loss per turn; disable for strict rollback.
     "decimillipede_reattach_window_obs": True,  # pure observation: track missing_since/elapsed/due and returned_after inside native 2-turn reattach windows
     "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic

@@ -17324,6 +17324,98 @@ def main() -> int:
         not in d_lethal_playable_retry_committed.reason, \
         "致死可牌拒绝终局对账已提交后重复写入 marker"
 
+    # 3z-longfight-survival-outcome: the latest joint survival sample must be
+    # joined to GAME_OVER after reload, while the audit switch keeps behavior
+    # and the preceding margin marker unchanged.
+    assert knowledge.DEFAULT_POLICY[
+        "longfight_joint_survival_outcome_obs"] is True
+    joint_survival_outcome_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+        "run": {"current_hp": 0},
+    }
+    joint_survival_outcome_ctx = _SettleCtx()
+    joint_survival_outcome_ctx.decisions = [{
+        "action": d_joint_survival.action, "floor": 33, "turn": 1,
+        "reason": d_joint_survival.reason,
+    }]
+    joint_survival_outcome_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_joint_survival_outcome = joint_survival_outcome_pol.decide(
+        joint_survival_outcome_state, joint_survival_outcome_ctx)
+    assert (d_joint_survival_outcome.action == "continue_game_over"
+            and d_joint_survival_outcome.params == {}
+            and "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+            in d_joint_survival_outcome.reason
+            and "outcome=defeat/floor=33/marker_round=1/final_hp=0"
+            in d_joint_survival_outcome.reason
+            and "/hand_block_cap=16/post_block_gap=8/survives=no"
+            in d_joint_survival_outcome.reason), \
+        f"长战联合生存结局对账缺失或动作漂移: {d_joint_survival_outcome}"
+
+    joint_survival_replay_ctx = _SettleCtx()
+    joint_survival_replay_ctx.decisions = [{
+        "action": d_joint_survival.action, "floor": 33, "turn": 1,
+        "reason": d_joint_survival.reason,
+    }]
+    joint_survival_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_joint_survival_replay = joint_survival_replay_pol.decide(
+        joint_survival_outcome_state, joint_survival_replay_ctx)
+    assert (d_joint_survival_replay.action
+            == d_joint_survival_outcome.action
+            and d_joint_survival_replay.params
+            == d_joint_survival_outcome.params
+            and "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+            in d_joint_survival_replay.reason), \
+        f"进程重载后未恢复长战联合生存结局对账: {d_joint_survival_replay}"
+
+    joint_survival_retry_ctx = _SettleCtx()
+    joint_survival_retry_ctx.decisions = [{
+        "action": d_joint_survival.action, "floor": 33, "turn": 1,
+        "reason": d_joint_survival.reason,
+    }]
+    joint_survival_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_joint_survival_retry_first = joint_survival_retry_pol.decide(
+        joint_survival_outcome_state, joint_survival_retry_ctx)
+    d_joint_survival_retry = joint_survival_retry_pol.decide(
+        joint_survival_outcome_state, joint_survival_retry_ctx)
+    assert ("LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+            in d_joint_survival_retry_first.reason
+            and "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+            in d_joint_survival_retry.reason), \
+        "长战联合生存结局对账丢动作后未重试"
+    joint_survival_retry_ctx.decisions.append({
+        "action": d_joint_survival_retry.action,
+        "floor": 33,
+        "reason": d_joint_survival_retry.reason,
+    })
+    d_joint_survival_retry_committed = joint_survival_retry_pol.decide(
+        joint_survival_outcome_state, joint_survival_retry_ctx)
+    assert "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS" \
+        not in d_joint_survival_retry_committed.reason, \
+        "长战联合生存结局对账已提交后重复写入 marker"
+
+    joint_survival_outcome_off_know = knowledge.Knowledge(tmp)
+    joint_survival_outcome_off_know.policy[
+        "longfight_joint_survival_outcome_obs"] = False
+    joint_survival_outcome_off_pol = policy.Policy(
+        joint_survival_outcome_off_know)
+    joint_survival_outcome_off_ctx = _SettleCtx()
+    joint_survival_outcome_off_ctx.decisions = [{
+        "action": d_joint_survival.action, "floor": 33, "turn": 1,
+        "reason": d_joint_survival.reason,
+    }]
+    d_joint_survival_outcome_off = joint_survival_outcome_off_pol.decide(
+        joint_survival_outcome_state, joint_survival_outcome_off_ctx)
+    assert (d_joint_survival_outcome_off.action
+            == d_joint_survival_outcome.action
+            and d_joint_survival_outcome_off.params
+            == d_joint_survival_outcome.params
+            and "LONGFIGHT_JOINT_SURVIVAL_OUTCOME_OBS"
+            not in d_joint_survival_outcome_off.reason), \
+        f"长战联合生存结局开关关闭后动作或 marker 漂移: {d_joint_survival_outcome_off}"
+
     lethal_playable_outcome_off_know = knowledge.Knowledge(tmp)
     lethal_playable_outcome_off_know.policy[
         "lethal_playable_reject_outcome_obs"] = False
