@@ -12781,3 +12781,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `support_target_summon_obs` 设为 `False`；预期仅把 `role=summon` 恢复为 `role=unknown`，保留评分、action、目标和 params。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第 1633 局复盘（KILL_RACE_TERMINAL_REGIME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`KILL_RACE_TERMINAL_AUDIT_OBS` 目前只记录竞速投影与致死资源边界，没有明确的 `kill_race`/`race_allin` 分层，导致终端样本无法机械区分普通斩杀竞速与低血败局全攻。
+- **EVIDENCE**：run `NLR4ZZHXF8ZS`（第 1633 局）F17 D278 已有 `lock_round=5/last_round=10/pool=28/dpt=17.3/ttk=1.6185/tsurv=0.88/hp=22/incoming=25/energy=0` 的终端对账，D279 继续绑定 defeat；前置 1623/1625 的容量与低池行为证据均需要该分层，且 `failed_review_replay.requested_packages=[]`，无重放目标。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立终端窗口应能按 `kill_race`/`race_allin` 分层比较 `pool/dpt/ttk/tsurv` 与终局；1633 型窗口预期为 `kill_race=yes/race_allin=no`，并在审计与结局两条记录中保持一致。关闭对应开关时 marker 与新字段同时消失，action/params 不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有终端审计、GAME_OVER 结局及进程重载恢复链上追加两个 regime 字段；从现有竞速锁、净损 EMA、HP 门槛和 horizon 推导 `race_allin`，不参与评分、排序、目标或动作。
+- `sts2-ascend/brain/knowledge.py`：仅更新两个观测键的说明，明确字段可回滚且不改变行为。
+- `sts2-ascend/brain/selfcheck.py`：补充审计和结局字段断言，并保留原有开关关闭后的 action/params 回滚夹具。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立终端窗口，核对 regime 一致性、重载恢复、实际后续 DPT 和终局；若分层仍混淆，再调整判定边界。
+- **撤回**：将 `kill_race_terminal_audit_obs` 或 `kill_race_terminal_outcome_obs` 设为 `False`，预期移除对应 marker/字段而不触碰评分与动作。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过，未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

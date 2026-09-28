@@ -220,8 +220,8 @@ DEFAULT_POLICY = {
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; False removes only the marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; False removes only the marker.
-    "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn.
-    "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result.
+    "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
+    "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result, preserving those regime flags.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
     "vivhite_hp_pressure_playable_reject_obs": True,  # Audit-only Vivhite low-HP LifeCost-card rejection marker; False removes only the marker.
     "vivhite_hp_pressure_playable_reject_hp_pct": 0.35,  # HP fraction at or below which the low-HP rejection marker is eligible.

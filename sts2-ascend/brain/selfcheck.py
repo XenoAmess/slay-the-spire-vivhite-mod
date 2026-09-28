@@ -16511,7 +16511,8 @@ def main() -> int:
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能
     #       改变 action/params。关闭专用键后必须保留原有致死观测而只去掉
-    #       新尾缀。
+    #       新尾缀；同时记录 kill_race/race_allin，便于区分普通斩杀竞速
+    #       与低血败局全攻样本。
     race_terminal_know = knowledge.Knowledge(tmp)
     race_terminal_pol = policy.Policy(race_terminal_know)
     race_terminal_ctx = _SettleCtx()
@@ -16541,6 +16542,8 @@ def main() -> int:
         and "lock_round=5/last_round=6/pool=46/dpt=21/ttk=2.2/tsurv=0.5" \
             in d_race_terminal.reason \
         and "/self_loss=31/own_phase=31/foe_phase=41" \
+            in d_race_terminal.reason \
+        and "/kill_race=yes/race_allin=no" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
 
@@ -16587,6 +16590,8 @@ def main() -> int:
             and d_race_terminal_outcome.params == {}
             and "KILL_RACE_TERMINAL_OUTCOME_OBS" in d_race_terminal_outcome.reason
             and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
+            in d_race_terminal_outcome.reason
+            and "/kill_race=yes/race_allin=no"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局对账缺失或动作漂移: {d_race_terminal_outcome}"
 

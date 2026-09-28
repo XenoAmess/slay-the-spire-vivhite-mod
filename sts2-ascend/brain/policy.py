@@ -3892,7 +3892,8 @@ class Policy:
             f"（{marker}）")
 
     def _kill_race_terminal_audit_note(
-            self, pol, my_hp, my_block, incoming, energy) -> str:
+            self, pol, my_hp, my_block, incoming, energy, *,
+            kill_race=True, race_allin=False) -> str:
         """Link a lethal no-card end-turn to the last latched race projection.
 
         This is deliberately an observation-only tail.  It requires the
@@ -3923,6 +3924,11 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return "?"
 
+        # The latch is itself a kill-race proof.  Keep manually recovered or
+        # process-reloaded audits classified as kill-race even when the
+        # current decision was rebuilt without the transient projection flag.
+        _kill_race_state = bool(kill_race or getattr(self, "_krace_latch", False))
+
         return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
             f"/last_round={_round_text(_projection.get('round'))}"
@@ -3932,6 +3938,8 @@ class Policy:
             f"/self_loss={max(0.0, float(getattr(self, '_race_same_round_loss', 0.0) or 0.0)):g}"
             f"/own_phase={max(0.0, float(getattr(self, '_race_same_round_loss_own', 0.0) or 0.0)):g}"
             f"/foe_phase={max(0.0, float(getattr(self, '_race_same_round_loss_enemy', 0.0) or 0.0)):g}"
+            f"/kill_race={'yes' if _kill_race_state else 'no'}"
+            f"/race_allin={'yes' if race_allin else 'no'}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
@@ -4154,6 +4162,13 @@ class Policy:
                 return "?"
 
         _result = "victory" if victory else "defeat"
+
+        def _flag(value) -> str:
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            text = str(value or "unknown").casefold()
+            return text if text in {"yes", "no", "unknown"} else "unknown"
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -4168,6 +4183,8 @@ class Policy:
             f"/block={_num(_pending.get('block'))}"
             f"/incoming={_num(_pending.get('incoming'))}"
             f"/energy={_num(_pending.get('energy'))}"
+            f"/kill_race={_flag(_pending.get('kill_race'))}"
+            f"/race_allin={_flag(_pending.get('race_allin'))}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -4471,6 +4488,8 @@ class Policy:
                 "block": _number("block"),
                 "incoming": _number("incoming"),
                 "energy": _number("energy"),
+                "kill_race": _token("kill_race") or "unknown",
+                "race_allin": _token("race_allin") or "unknown",
             }
         except (TypeError, ValueError, OverflowError):
             return
@@ -4895,9 +4914,28 @@ class Policy:
                 _potion_reserve_note = (
                     self._potion_reserve_end_turn_observation_note(
                         pol, state.get("run") or {}))
+                # Keep the regime labels observation-only and derive them from
+                # the same state already used by the race scorer.  This
+                # helper runs before _combat's local ``race_allin`` variable
+                # is assembled, so it must not depend on that later local.
+                _kill_race_state = bool(getattr(self, "_krace_latch", False))
+                try:
+                    _race_max_hp = float(
+                        player.get("max_hp", my_hp) or my_hp)
+                    _race_allin_state = (
+                        self._race_rounds >= 1
+                        and self._race_loss_rate >= 1.0
+                        and my_hp <= float(pol.get(
+                            "hopeless_race_hp_frac", 0.6)) * _race_max_hp
+                        and my_hp <= self._race_loss_rate * float(pol.get(
+                            "hopeless_race_horizon", 2.0)))
+                except (AttributeError, TypeError, ValueError, OverflowError):
+                    _race_allin_state = False
                 _lethal_unavailable_note += _potion_reserve_note
                 _terminal_audit_note = self._kill_race_terminal_audit_note(
-                    pol, my_hp, my_block, incoming, energy)
+                    pol, my_hp, my_block, incoming, energy,
+                    kill_race=_kill_race_state,
+                    race_allin=_race_allin_state)
                 _lethal_unavailable_note += _terminal_audit_note
                 if _terminal_audit_note:
                     _projection = getattr(self, "_race_terminal_projection", None)
@@ -4914,6 +4952,8 @@ class Policy:
                             "block": my_block,
                             "incoming": incoming,
                             "energy": energy,
+                            "kill_race": _kill_race_state,
+                            "race_allin": _race_allin_state,
                         }
                         self._race_terminal_outcome_reported = False
             non_curse_cards = [
