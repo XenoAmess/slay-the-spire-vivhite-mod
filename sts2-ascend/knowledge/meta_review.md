@@ -12886,3 +12886,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `nonlethal_unavailable_end_turn_obs` 设为 `False`，预期移除整条 marker（含新增字段），保留评分、action、params 与致死审计。
 - **验证**：完整 selfcheck 输出 **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入在线状态、runs、学习账本或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第 1639 局复盘（LETHAL_HAND_BLOCK_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`LETHAL_UNAVAILABLE_END_TURN_OBS` 只记录 `energy_locked`，会把“没有防御牌”和“手里有防御容量但能量支付不起”混为同一类致死空过；将已有非致死容量读数复用到致死分支，可以在不改变决策的前提下证伪这两个归因。
+- **EVIDENCE**：精确 run `AZQAVNTT1P00`（第 1639 局）的 packet 保留决策切片为 85/283，`complete_persisted_chain=false`，本批只按保留原始切片核读。F28 T2 的 `end_turn` 前为 HP=7、格挡=0、来袭16、能量0，剩余6张牌均为 `not_enough_energy`；其中【火焰屏障】原生为2费、12格挡，native knowledge `runtime/cards.jsonl` 与 `mechanics/cards.jsonl` 均确认该牌面。原有致死 marker 没有原始格挡容量、可支付数量或格挡后缺口。
+- **EXPECTED_SIGNAL**：未来3~10个独立致死空过窗口按 `run_id/floor/turn/energy` 汇总 `hand_block_candidates`、`hand_affordable_block_candidates`、`hand_max_block`、`hand_post_gap`、`hand_raw_survival` 与 `block_locked`。F28型样本应能显示 `raw>0/affordable=0`；若出现可支付候选仍被归入该 marker、字段与原生牌面不符，或 action/params 漂移，则假设被证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `LETHAL_UNAVAILABLE_END_TURN_OBS` 分支调用 `_hand_block_capacity()`，追加原始/可支付格挡候选、最大格挡、格挡后缺口、生还分层和 `block_locked`；不参与评分、排序、目标、资源判决或动作。
+- `sts2-ascend/brain/knowledge.py`：同步 `lethal_unavailable_end_turn_obs` 的静态契约，注明新增字段仍为审计读数。
+- `sts2-ascend/brain/selfcheck.py`：扩展致死资源耗尽夹具，断言容量字段和开关关闭后的 action/params 与 marker 回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集3~10个独立致死空过窗口，核对原始容量、当前可支付容量、下一回合掉血及 `GAME_OVER`；在重复证据前不改变防守或竞速行为。若 `raw_survival=yes/affordable=0` 稳定出现，再另立能量支付或药水交付行为假设。
+- **撤回**：将 `lethal_unavailable_end_turn_obs` 设为 `False`，预期移除整条致死 marker（含容量字段），评分、action、目标和 params 保持不变。
+- **验证**：完整 selfcheck 输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none integrated (no replay target; local production observation)`

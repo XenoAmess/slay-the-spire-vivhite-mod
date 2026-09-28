@@ -5316,11 +5316,24 @@ class Policy:
                     and (bool(combat.get("end_turn_will_kill_player"))
                          or _lethal_by_gap)):
                 _energy_locked = _count_energy_locked_cards()
+                (_lethal_hand_block_candidates,
+                 _lethal_hand_affordable_block_candidates,
+                 _lethal_hand_max_block,
+                 _lethal_hand_post_gap,
+                 _lethal_hand_raw_survival) = _hand_block_capacity()
                 _lethal_unavailable_note = (
                     f"；致死无牌空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
                     f"/energy={float(energy):g}/cards={len(hand)}"
                     f"/energy_locked={_energy_locked}"
+                    f"/hand_block_candidates={_lethal_hand_block_candidates}"
+                    f"/hand_affordable_block_candidates="
+                    f"{_lethal_hand_affordable_block_candidates}"
+                    f"/hand_max_block={_lethal_hand_max_block:g}"
+                    f"/hand_post_gap={_lethal_hand_post_gap:g}"
+                    f"/hand_raw_survival="
+                    f"{'yes' if _lethal_hand_raw_survival else 'no'}"
+                    f"/block_locked={'yes' if block_locked else 'no'}"
                     f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")

@@ -16565,6 +16565,9 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" in d_lethal_empty.reason \
         and "hp=9/block=6/incoming=20/energy=0" in d_lethal_empty.reason \
         and "/energy_locked=2" in d_lethal_empty.reason \
+        and "/hand_block_candidates=1/hand_affordable_block_candidates=0" \
+            "/hand_max_block=5/hand_post_gap=9/hand_raw_survival=no" \
+            "/block_locked=no" in d_lethal_empty.reason \
         and "state=present/slots=0/occupied=0/can_use=0/ids=none/ready_ids=none" \
             in d_lethal_empty.reason, \
         f"致死资源耗尽空过观测缺失: {d_lethal_empty and d_lethal_empty.reason}"
