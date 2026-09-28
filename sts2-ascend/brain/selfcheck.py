@@ -3722,14 +3722,15 @@ def main() -> int:
             stall_analysis_asked=False, stall_analysis_needed=False,
             stall_giveup=False)
 
-    def _krh_state(turn_no, hp_now, hand, incoming=22, deck=None):
+    def _krh_state(turn_no, hp_now, hand, incoming=22, deck=None,
+                   powers=None):
         return {
             "screen": "COMBAT",
             "available_actions": ["play_card", "end_turn"],
             "turn": turn_no,
             "combat": {
                 "player": {"current_hp": hp_now, "max_hp": 80, "block": 0,
-                           "energy": 3, "powers": []},
+                           "energy": 3, "powers": list(powers or [])},
                 "hand": hand,
                 "enemies": [{"index": 0, "enemy_id": "RITUAL_BEAST",
                              "name": "仪式兽", "current_hp": 200,
@@ -4357,6 +4358,21 @@ def main() -> int:
     assert "hp=45->43" in d_krh.reason \
         and "incoming=22" in d_krh.reason, \
         f"判死竞速实付观测缺支付前后生命/敌意图: {d_krh.reason}"
+    # 出牌后的同回合快照应把请求值与观察到的掉血分开记录；手牌已移除
+    # 才允许结算，避免把 action 发送后的重复旧快照误判成零支付。
+    # Re-arm with a named policy so the pending audit can be reconciled on the
+    # same combat object used by the drive.
+    vknow_krh_result = _vivhite_know("sts2-selfcheck-krh-result-")
+    vpol_krh_result = policy.Policy(vknow_krh_result, random.Random(11))
+    vctx_krh_result = _krh_ctx()
+    _krh_drive(vpol_krh_result, vctx_krh_result, _krh_hand_vivhite)
+    d_krh_settle = vpol_krh_result.decide(
+        _krh_state(3, 43, [], incoming=22), vctx_krh_result)
+    assert "KILL_RACE_HP_PAY_RESULT_OBS" in d_krh_settle.reason \
+        and "requested=2" in d_krh_settle.reason \
+        and "observed_delta=2" in d_krh_settle.reason \
+        and "status=matched" in d_krh_settle.reason, \
+        f"判死自付同回合结算对账缺匹配结果: {d_krh_settle.reason}"
     # ② obs=0 一键回滚：同一驱动动作逐参一致、注记全灭、竞速投影本体不变
     vknow_krh0 = _vivhite_know("sts2-selfcheck-krhopeless-off-")
     vknow_krh0.policy["kill_race_hopeless_hp_pay_obs"] = 0
@@ -4370,6 +4386,19 @@ def main() -> int:
         f"obs=0 回滚键下不得出现观测注记: {d_krh0.reason}"
     assert "斩杀竞速投影" in d_krh0.reason, \
         f"obs=0 回滚键下竞速投影本体不得改变: {d_krh0.reason}"
+    vknow_krh_result0 = _vivhite_know(
+        "sts2-selfcheck-krh-result-off-")
+    vknow_krh_result0.policy["kill_race_hp_pay_result_obs"] = 0
+    vpol_krh_result0 = policy.Policy(vknow_krh_result0, random.Random(11))
+    vctx_krh_result0 = _krh_ctx()
+    _krh_drive(vpol_krh_result0, vctx_krh_result0, _krh_hand_vivhite)
+    d_krh_settle0 = vpol_krh_result0.decide(
+        _krh_state(3, 43, [], incoming=22), vctx_krh_result0)
+    assert d_krh_settle0.action == d_krh_settle.action \
+        and d_krh_settle0.params == d_krh_settle.params, \
+        f"结算观测关闭不得改变动作/参数: on={d_krh_settle} off={d_krh_settle0}"
+    assert "KILL_RACE_HP_PAY_RESULT_OBS" not in d_krh_settle0.reason, \
+        f"结算观测关闭后不得出现结算注记: {d_krh_settle0.reason}"
     # ③ 零实付出牌（策略目录外 0 费功能牌）判死竞速下不显形
     def _krh_hand_free():
         return [{
@@ -4396,7 +4425,7 @@ def main() -> int:
     # ④ 非白绮文本自残牌（御血术型）判死竞速下同口径显形
     def _krh_hand_hemo():
         return [{
-            "index": 0, "card_id": "KRH_HEMO", "name": "判死御血",
+            "index": 0, "card_id": "HEMOKINESIS", "name": "判死御血",
             "card_type": "Attack", "playable": True, "energy_cost": 1,
             "requires_target": True, "valid_target_indices": [0],
             "rules_text": "失去2点生命。造成12点伤害。",
@@ -4413,6 +4442,53 @@ def main() -> int:
     assert "竞速判死自付2血" in d_krh_hemo.reason \
         and "KILL_RACE_HOPELESS_HP_PAY_OBS" in d_krh_hemo.reason, \
         f"非白绮文本自残牌缺判死自付注记: {d_krh_hemo.reason}"
+    krh_blocked_settle = _krh_state(3, 43, [], incoming=22)
+    krh_blocked_settle["combat"]["player"]["block"] = 99
+    d_krh_hemo_settle = krh_ipol.decide(krh_blocked_settle, krh_ictx)
+    assert "KILL_RACE_HP_PAY_RESULT_OBS" in d_krh_hemo_settle.reason \
+        and "native=CreatureCmd.Damage[ValueProp.Unblockable|ValueProp.Unpowered|ValueProp.Move]" \
+        in d_krh_hemo_settle.reason, \
+        f"御血术结算观测缺原生 ValueProp 契约: {d_krh_hemo_settle.reason}"
+    def _krh_hand_breakthrough():
+        return [{
+            "index": 0, "card_id": "BREAKTHROUGH", "name": "判死突破",
+            "card_type": "Attack", "playable": True, "energy_cost": 1,
+            "requires_target": False,
+            "rules_text": "Lose 1 HP. Deal 9 damage to ALL enemies.",
+            "dynamic_values": [{"name": "Damage", "current_value": 9}],
+        }]
+    krh_one_pol = policy.Policy(vknow_krh, random.Random(11))
+    krh_one_ctx = _krh_ctx()
+    _krh_drive(krh_one_pol, krh_one_ctx, _krh_hand_breakthrough)
+    d_krh_one_settle = krh_one_pol.decide(
+        _krh_state(3, 44, [], incoming=22), krh_one_ctx)
+    assert "requested=1" in d_krh_one_settle.reason \
+        and "observed_delta=1" in d_krh_one_settle.reason \
+        and "status=matched" in d_krh_one_settle.reason \
+        and "native=CreatureCmd.Damage[ValueProp.Unblockable|ValueProp.Unpowered|ValueProp.Move]" \
+        in d_krh_one_settle.reason, \
+        f"1点原生自付结算观测不完整: {d_krh_one_settle.reason}"
+    # BUFFER 使观察到的掉血为 0 时，只记录 zero_or_not_applied，不能把
+    # 原生结果误报成支付失败；这也覆盖保护层字段的读侧。
+    krh_guard_pol = policy.Policy(vknow_krh, random.Random(11))
+    krh_guard_ctx = _krh_ctx()
+    for _turn, _hp in ((1, 65), (2, 55)):
+        _d = krh_guard_pol.decide(
+            _krh_state(_turn, _hp, _krh_hand_hemo(), incoming=22,
+                       powers=[{"power_id": "BUFFER", "amount": 1}]),
+            krh_guard_ctx)
+        krh_guard_ctx.credit_tags.extend(_d.tags)
+    krh_guard_pol.decide(
+        _krh_state(3, 45, _krh_hand_hemo(), incoming=22,
+                   powers=[{"power_id": "BUFFER", "amount": 1}]),
+        krh_guard_ctx)
+    d_krh_guard_settle = krh_guard_pol.decide(
+        _krh_state(3, 45, [], incoming=22), krh_guard_ctx)
+    assert "KILL_RACE_HP_PAY_RESULT_OBS" in d_krh_guard_settle.reason \
+        and "observed_delta=0" in d_krh_guard_settle.reason \
+        and "status=zero_or_not_applied" in d_krh_guard_settle.reason \
+        and "guard=BUFFER×1" in d_krh_guard_settle.reason, \
+        f"BUFFER 零掉血结算不得丢失保护层/保守状态: {d_krh_guard_settle.reason}"
     # ⑤ 防守可行对照（满血+轻意图，击杀回合数＜可存活回合数）：
     #    投影不判死，实付謦欬攻击也不显形
     vknow_krn = _vivhite_know("sts2-selfcheck-krhopeless-calm-")

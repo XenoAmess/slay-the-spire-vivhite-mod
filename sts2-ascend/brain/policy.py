@@ -57,6 +57,15 @@ RINGING_POWER_ID = "RINGING_POWER"
 # 移除、超出当前意图缺口的部分白费」在该能力存续时不成立。
 BARRICADE_POWER_ID = "BARRICADE_POWER"
 
+# Native self-payment cards use CreatureCmd.Damage before their other effects.
+# Keep this mapping deliberately narrow: an unknown text-only card is still
+# observed, but must not be presented as having a native ValueProp contract we
+# have not verified from the snapshot.
+_HP_PAY_NATIVE_VALUE_PROPS = {
+    "HEMOKINESIS": "ValueProp.Unblockable|ValueProp.Unpowered|ValueProp.Move",
+    "BREAKTHROUGH": "ValueProp.Unblockable|ValueProp.Unpowered|ValueProp.Move",
+}
+
 
 # These cards can recover/copy another card and therefore must never become
 # one another's preferred child.  The static projection already applies the
@@ -835,6 +844,11 @@ class Policy:
         # self_loss_phase_obs=False 即停止分账（不影响主账口径）。
         self._race_same_round_loss_own = 0.0    # 可行动段（我方回合可出牌 tick）扣血
         self._race_same_round_loss_enemy = 0.0  # 非行动段（不可出牌 tick）扣血
+        # KILL_RACE_HP_PAY_RESULT_OBS：出牌后等待同一战斗/回合的下一份
+        # 手牌与生命快照，只做 requested→observed_delta 对账，不参与评分或
+        # 动作。native guard 的零掉血仍记录为结果，不推断支付失败。
+        self._hp_pay_result_pending = None
+        self._hp_pay_result_note = ""
         self._race_prev_same_round_loss = 0.0  # 自损账在上一个回合边界时的累计快照
         self._race_self_loss_dom_ratio = 0.0  # 自付主导比值锚（KILL_RACE_HOPELESS_HP_PAY_DOM_SCALE，投影 tick 刷新，非 DOMINATES 归 0）
         self._race_zero_intent_rounds = 0  # 本场已观察到的零伤害意图回合
@@ -1387,6 +1401,161 @@ class Policy:
                 pay = float(next(g for g in match.groups() if g))
                 break
         return max(0.0, pay)
+
+    def _hp_pay_result_obs_enabled(self) -> bool:
+        try:
+            return float(self.know.policy.get(
+                "kill_race_hp_pay_result_obs", 1) or 0) > 0
+        except (AttributeError, TypeError, ValueError, OverflowError):
+            return True
+
+    @staticmethod
+    def _hp_pay_native_value_prop(card_id) -> str:
+        canonical = str(card_id or "").strip().upper().rstrip("+")
+        for native_id, value_props in _HP_PAY_NATIVE_VALUE_PROPS.items():
+            if canonical == native_id or canonical.endswith("_" + native_id):
+                return f"CreatureCmd.Damage[{value_props}]"
+        return "unresolved"
+
+    @staticmethod
+    def _hp_pay_guard_summary(player_powers) -> str:
+        guards = []
+        for power in player_powers or []:
+            if not isinstance(power, dict):
+                continue
+            ident = str(power.get("power_id") or power.get("id")
+                        or power.get("power") or power.get("name") or "").strip()
+            upper = ident.upper()
+            if not ("BUFFER" in upper or "TUNGSTEN" in upper
+                    or "缓冲" in ident or "钨" in ident):
+                continue
+            amount = power.get("amount", power.get("stack",
+                                  power.get("stacks", power.get("count", 1))))
+            try:
+                amount_text = f"{float(amount):g}"
+            except (TypeError, ValueError, OverflowError):
+                amount_text = "?"
+            guards.append(f"{ident or 'unknown'}×{amount_text}")
+        return ",".join(guards) or "none"
+
+    def _observe_hp_pay_result(self, state: dict, ctx) -> None:
+        """Reconcile one selected HP-payment card with the next live snapshot.
+
+        This is intentionally conservative.  A same-turn HP delta after the
+        selected card leaves the hand is evidence of an observed result, not a
+        substitute for the native DamageResult collection.  In particular,
+        zero observed damage is never labelled as a failed payment.
+        """
+        self._hp_pay_result_note = ""
+        pending = self._hp_pay_result_pending
+        if pending is None:
+            return
+        if not self._hp_pay_result_obs_enabled():
+            self._hp_pay_result_pending = None
+            return
+        if state.get("screen") != "COMBAT":
+            if state.get("screen") in {
+                    "GAME_OVER", "REWARD", "MAP", "MAIN_MENU",
+                    "CHARACTER_SELECT"}:
+                self._hp_pay_result_pending = None
+            return
+        if getattr(ctx, "combat", None) is not pending.get("combat"):
+            self._hp_pay_result_pending = None
+            return
+        if str(state.get("turn")) != str(pending.get("turn")):
+            self._hp_pay_result_pending = None
+            return
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+        try:
+            hp_after = float(player.get("current_hp"))
+            hp_before = float(pending.get("hp_before"))
+            requested = float(pending.get("requested"))
+        except (TypeError, ValueError, OverflowError):
+            return
+        if not (math.isfinite(hp_after) and math.isfinite(hp_before)
+                and math.isfinite(requested)):
+            return
+        pending_index = str(pending.get("card_index"))
+        pending_card_id = str(pending.get("card_id") or "").strip().upper()
+        card_still_in_hand = any(
+            str(card.get("index")) == pending_index
+            and str(card.get("card_id") or "").strip().upper().rstrip("+")
+                == pending_card_id.rstrip("+")
+            for card in (combat.get("hand") or [])
+            if isinstance(card, dict))
+        # A repeated pre-action snapshot means the request has not been
+        # reconciled yet.  Do not turn polling latency into a false zero result.
+        if card_still_in_hand:
+            return
+        observed_delta = max(0.0, hp_before - hp_after)
+        epsilon = 1e-6
+        if observed_delta > requested + epsilon:
+            status = "ambiguous_extra_loss"
+        elif abs(observed_delta - requested) <= epsilon:
+            status = "matched"
+        elif observed_delta > epsilon:
+            status = "partial"
+        elif hp_after > hp_before + epsilon:
+            status = "healed_or_zero"
+        else:
+            status = "zero_or_not_applied"
+        payer = "alive" if hp_after > 0 else "dead_or_terminal"
+        self._hp_pay_result_note = (
+            f"｜竞速自付结算观测 card={pending_card_id or 'unknown'}"
+            f" requested={requested:g}"
+            f" hp={hp_before:g}->{hp_after:g}"
+            f" observed_delta={observed_delta:g}"
+            f" status={status} payer={payer}"
+            f" native={pending.get('native', 'unresolved')}"
+            f" guard={pending.get('guard', 'none')}"
+            " (KILL_RACE_HP_PAY_RESULT_OBS)"
+        )
+        self._hp_pay_result_pending = None
+
+    def _remember_hp_pay_result_pending(self, state: dict, ctx,
+                                        decision: Decision) -> None:
+        """Arm the next-snapshot HP payment audit for a selected race card."""
+        if not self._hp_pay_result_obs_enabled():
+            self._hp_pay_result_pending = None
+            return
+        if (state.get("screen") != "COMBAT"
+                or decision.action != "play_card"
+                or "KILL_RACE_HOPELESS_HP_PAY_OBS" not in (decision.reason or "")
+                or self._hp_pay_result_pending is not None):
+            return
+        combat_identity = getattr(ctx, "combat", None)
+        if combat_identity is None:
+            return
+        card_index = (decision.params or {}).get("card_index")
+        if card_index is None:
+            return
+        combat = state.get("combat") or {}
+        player = combat.get("player") or {}
+        card = next((candidate for candidate in self._enrich_cards(
+            combat.get("hand", []))
+                     if str(candidate.get("index")) == str(card_index)), None)
+        if card is None:
+            return
+        requested = self._observed_hp_pay_for_race(
+            card, player.get("powers") or [])
+        try:
+            hp_before = float(player.get("current_hp"))
+        except (TypeError, ValueError, OverflowError):
+            return
+        if requested <= 0 or not math.isfinite(hp_before):
+            return
+        card_id = str(card.get("card_id") or "").strip().upper().rstrip("+")
+        self._hp_pay_result_pending = {
+            "combat": combat_identity,
+            "turn": state.get("turn"),
+            "card_index": card_index,
+            "card_id": card_id,
+            "requested": requested,
+            "hp_before": hp_before,
+            "native": self._hp_pay_native_value_prop(card_id),
+            "guard": self._hp_pay_guard_summary(player.get("powers") or []),
+        }
 
     def score_character_realized_mechanics(self, **actual_amounts) -> float:
         """Score explicitly realized character effects without integration caps."""
@@ -2249,6 +2418,8 @@ class Policy:
             self._vivhite_vspark_audit_scope = None
             self._vivhite_vspark_audit_pending = None
             self._vivhite_vspark_audit_note = ""
+            self._hp_pay_result_pending = None
+            self._hp_pay_result_note = ""
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
@@ -2314,9 +2485,13 @@ class Policy:
         self._active_trace_builder = trace_builder
         try:
             if screen == "COMBAT":
+                self._observe_hp_pay_result(state, ctx)
                 self._observe_vivhite_vspark_hit(state, ctx)
             decision = handler(state, ctx)
             if screen == "COMBAT":
+                if self._hp_pay_result_note:
+                    decision.reason = (f"{decision.reason or ''}"
+                                       f"{self._hp_pay_result_note}")
                 if self._vivhite_vspark_audit_note:
                     decision.reason = (f"{decision.reason or ''}"
                                        f"{self._vivhite_vspark_audit_note}")
@@ -2355,6 +2530,8 @@ class Policy:
                 return ensure_decision_trace(
                     state, Decision(None, {},
                                     f"动作 {decision.action} 本进程签名不匹配已拉黑，无安全替代，等待", wait=1.5))
+            if screen == "COMBAT":
+                self._remember_hp_pay_result_pending(state, ctx, decision)
             try:
                 decision.trace = trace_builder.finish(decision)
             except Exception:
@@ -6619,6 +6796,8 @@ class Policy:
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
             self._race_combat = ctx.combat
+            self._hp_pay_result_pending = None
+            self._hp_pay_result_note = ""
             self._race_round = None
             self._race_prev_hp = None
             self._race_prev_enemy_hp = None

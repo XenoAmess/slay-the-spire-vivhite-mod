@@ -11516,6 +11516,27 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：若非白绮运行时出现观测污染、回合边界错配或开关关闭不能保持动作/参数一致，将 `boss_race_effective_dpt_obs` 设为 `false`，或恢复角色限制并保留失败样本。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
 
+## 2026-09-28 · 第 1635 局复盘（KILL_RACE_HP_PAY_RESULT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `KILL_RACE_HOPELESS_HP_PAY_OBS` 把卡牌请求的生命支付写成“实付”，但原生 `CreatureCmd.Damage` 的 `DamageResult.UnblockedDamage` 可能被 `Buffer`、`Tungsten Rod` 等保护层变为 0 或部分值；因此请求值不应直接当作实际支付。该假设可由下一份同回合状态快照证伪。
+- **EVIDENCE**：精确 run `JTKTEQJ0B98U`（第 1635 局，`sts2-ascend/knowledge/runs/20260928-155234_JTKTEQJ0B98U.json`）已核读完整 239 条决策链。F17 D229 记录竞速判死自付 1 血（`hp=55->54`），D231 记录自付 2 血（`hp=24->22`）；现有代码只有 `_observed_hp_pay_for_race` 的请求/预测值。v0.111.0 原生 HEMOKINESIS 先以 `CreatureCmd.Damage` 支付生命再攻击，且必须保留 `Unblockable|Unpowered|Move` ValueProp 语义。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立窗口按 `run_id/floor/turn/card` 汇总 `requested`、同战斗同回合下一快照的 `observed_delta`、`status`、`native`、`guard` 与付款者存活状态。匹配、部分、零或额外损失应可机械分层；保护层造成的零掉血只记结果，不判为支付失败。若卡牌未离手、战斗/回合切换或快照不完整，则不生成伪结算。动作与参数必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：新增可回滚的 pending 对账，仅在判死竞速生命支付牌出牌后，等待同一战斗/回合且牌已离手的下一份快照，追加 `KILL_RACE_HP_PAY_RESULT_OBS`；对已核对的 HEMOKINESIS/BREAKTHROUGH ValueProp 和 BUFFER/Tungsten Rod 保护层留痕，不参与评分、放行、排序或动作。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启键 `kill_race_hp_pay_result_obs` 及静态契约。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 1 点、多点、零实际掉血、玩家格挡存在时的 ValueProp 保留，以及开关关闭后的 action/params 回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：先采集 3~10 个独立结算窗口；只有在 `observed_delta` 与保护层/付款者存活证据稳定分层后，才讨论是否调整生命支付估值。
+- **撤回**：将 `kill_race_hp_pay_result_obs` 设为 `0`；预期仅移除结算观测，保留原有评分、动作和参数。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；限定三文件 `git diff --check` 无空白错误；代码提交 `1aec7263b`；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
 ## 2026-09-28：第 1628 局复盘，BOSS_RACE_INTENT_RAMP_OBS
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL

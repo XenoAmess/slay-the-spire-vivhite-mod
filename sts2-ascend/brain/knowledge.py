@@ -1049,6 +1049,11 @@ DEFAULT_POLICY = {
                                        # 时仍在手牌才失血」的滞留税牌打出即清税，不计为即时
                                        # 出牌支付。不改评分/放行/动作（纯观测锚）。0=关闭
                                        # （注记消失，旧行为零差异）
+    "kill_race_hp_pay_result_obs": 1,  # 判死自付原生结算对账观测（KILL_RACE_HP_PAY_RESULT_OBS）：
+                                       # 出牌后仅在同一战斗/回合的下一份快照中对比
+                                       # requested 与 observed_delta，并披露已核对的
+                                       # CreatureCmd.Damage ValueProp/保护层。0=关闭；
+                                       # 不改变评分、放行、动作或参数
     "kill_race_hopeless_hp_pay_bypass_obs": 1,  # 竞速判死自付越过软门观测
                                         # （KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，第1194局
                                         # F33）：高分生命支付牌可以越过 KRH 软门上限，现有
