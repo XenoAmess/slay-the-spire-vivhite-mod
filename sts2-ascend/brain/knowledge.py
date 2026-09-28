@@ -315,7 +315,7 @@ DEFAULT_POLICY = {
                                   # 闸门按 elite_min_deck_cards + 此值 放行。中后期自动回落基础
                                   # 门槛——136~137 批「饥饿卡组靠精英供血」教义不受影响
     "elite_forced_entry_obs": True,  # 精英闸门未通过但仍被选中时追加只读对账；False 只移除该 marker
-    "elite_forced_entry_outcome_obs": True,  # Link forced-Elite entry to the next GAME_OVER outcome; False removes only this marker
+    "elite_forced_entry_outcome_obs": True,  # Link forced-Elite entry to GAME_OVER; defeat joins also expose authoritative combat settlement fields; False removes only this marker
     "elite_failed_gate_survivor_veto": True,  # 精英闸门失败且存在投影可存活的非精英替代时，禁止下游价值分吞掉即时风险；False 恢复旧排序
     "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
     "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数

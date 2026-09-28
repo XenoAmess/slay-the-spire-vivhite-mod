@@ -9894,7 +9894,16 @@ def main() -> int:
                           "card_type": "Attack", "energy_cost": 1}
                          for i in range(6)]}}
     etf_ctx = type("C", (), {"credit_tags": [], "decisions": [],
-                               "run_id": "ELITE-FORCED-CHECK"})()
+                               "run_id": "ELITE-FORCED-CHECK",
+                               "died_in_combat": {
+                                   "comp_id": "TEST_FORCED_ELITE",
+                                   "node_type": "Elite",
+                                   "floor": 8,
+                                   "rounds": 4,
+                                   "hp_lost": 19.0,
+                                   "self_hp_loss": 2.0,
+                                   "stall": False,
+                               }})()
     d_etf = etf_pol.decide(etf_state, etf_ctx)
     assert d_etf.action == "choose_map_node" and d_etf.params == {"option_index": 0}, \
         f"强制精英夹具动作漂移: {d_etf.action} {d_etf.params}"
@@ -9916,7 +9925,13 @@ def main() -> int:
             and "entry_hp=71/80" in d_etf_outcome.reason
             and "good_cards=6/7" in d_etf_outcome.reason
             and "mode=only_candidate" in d_etf_outcome.reason
-            and "outcome=defeat/terminal_floor=8" in d_etf_outcome.reason), \
+            and "outcome=defeat/terminal_floor=8" in d_etf_outcome.reason
+            and "/combat_id=TEST_FORCED_ELITE" in d_etf_outcome.reason
+            and "/combat_rounds=4" in d_etf_outcome.reason
+            and "/combat_hp_lost=19" in d_etf_outcome.reason
+            and "/combat_self_hp_loss=2" in d_etf_outcome.reason
+            and "/combat_stall=no" in d_etf_outcome.reason
+            and "/combat_detail_source=died_in_combat" in d_etf_outcome.reason), \
         f"强制精英结局对账缺失: {d_etf_outcome.reason}"
     # The first GAME_OVER decision may be lost before persistence.  A retry
     # must re-emit the audit; once its marker is durable, a further poll must

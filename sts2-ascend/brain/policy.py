@@ -4366,7 +4366,7 @@ class Policy:
             return False
 
     def _consume_elite_forced_entry_outcome_note(
-            self, pol, victory, floor=None) -> str:
+            self, pol, ctx, victory, floor=None) -> str:
         """Link a forced-Elite map sample to the authoritative GAME_OVER result."""
         if not self._elite_forced_entry_outcome_enabled(pol):
             return ""
@@ -4392,6 +4392,38 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return "?"
 
+        # The map-side marker already explains why the Elite was unavoidable,
+        # but the terminal join used to discard the authoritative combat
+        # settlement that Agent keeps for a defeat.  Preserve that settlement
+        # as an audit-only tail so a forced-entry death can be separated into
+        # a short burst, a long attrition fight, or a self-payment/stall case.
+        # This tail is deliberately optional: a process reload may retain the
+        # durable map/terminal join without reconstructing the in-memory death
+        # object, and must not manufacture values in that case.
+        _combat_tail = ""
+        _died = getattr(ctx, "died_in_combat", None)
+        if not victory and isinstance(_died, dict):
+            _died_floor = _died.get("floor")
+            _floor_matches = True
+            if _died_floor is not None:
+                try:
+                    _floor_matches = int(float(_died_floor)) == _expected_floor
+                except (TypeError, ValueError, OverflowError):
+                    _floor_matches = False
+            _node_type = str(_died.get("node_type") or "")
+            if _floor_matches and (_node_type in ("", "Elite")):
+                _comp_id = str(_died.get("comp_id") or "?")
+                _stall = _died.get("stall")
+                _stall_text = (
+                    "?" if _stall is None else ("yes" if bool(_stall) else "no"))
+                _combat_tail = (
+                    f"/combat_id={_comp_id}"
+                    f"/combat_rounds={_num(_died.get('rounds'))}"
+                    f"/combat_hp_lost={_num(_died.get('hp_lost'))}"
+                    f"/combat_self_hp_loss={_num(_died.get('self_hp_loss'))}"
+                    f"/combat_stall={_stall_text}"
+                    "/combat_detail_source=died_in_combat")
+
         _result = "victory" if victory else "defeat"
         _terminal_floor = "?" if floor is None else str(floor)
         return (
@@ -4404,6 +4436,7 @@ class Policy:
             f"/candidates={_pending.get('candidates', '?')}"
             f"/mode={_pending.get('mode', '?')}"
             f"/outcome={_result}/terminal_floor={_terminal_floor}"
+            f"{_combat_tail}"
             " (ELITE_FORCED_ENTRY_OUTCOME_OBS)")
 
     def _restore_elite_forced_entry_outcome_from_decisions(
@@ -15827,7 +15860,7 @@ class Policy:
             ctx, go.get("floor"))
         _elite_forced_entry_outcome_note = (
             self._consume_elite_forced_entry_outcome_note(
-                self.know.policy, victory, go.get("floor")))
+                self.know.policy, ctx, victory, go.get("floor")))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(

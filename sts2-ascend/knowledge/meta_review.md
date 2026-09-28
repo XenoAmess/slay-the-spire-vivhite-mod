@@ -13012,3 +13012,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `sandpit_terminal_cause_obs` 或 `vivhite_sandpit_terminal_cause_obs` 设为 `False`；既有终端 marker、action 与 params 保持不变，仅不再输出 `terminal_cause`。
 - **验证**：定制本地继承 ACL 引导完整 selfcheck 输出 **SELFCHECK OK**；目标源码 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-29 第1652局复盘（ELITE_FORCED_ENTRY_COMBAT_SETTLEMENT_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `ELITE_FORCED_ENTRY_OUTCOME_OBS` 只把精英门槛、候选模式和最终胜负接起来，无法进一步区分“短回合爆发掉血”“长战磨损”与“自付/僵局”三种强制精英失败。追加已有权威 `died_in_combat` 结算字段即可证伪该归因，且不改变动作。
+- **EVIDENCE**：精确 run `BTEJHQ4U3FHQ`（第1652局）packet 已逐条核读保留的 75 条决策。D48/F8 记录唯一候选精英被迫入场：`entry_hp=57/80`、`good_cards=7/7`、`gate=0.1`；D49~D74 为 F9 `BYGONE_EFFIGY` 战斗，T7 以 `hp=11/block=5/incoming=23` 致死空过，D75 的既有结局 marker 只有入场与胜负字段。运行账同时记录 F9 Elite 掉血 57，说明缺口是可聚合的战斗结算连接，而非缺少终局事实。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立强制精英终局按 `run_id/entry_floor/mode/combat_id/combat_rounds/combat_hp_lost/combat_self_hp_loss/combat_stall/outcome` 分层；本局应得到 `BYGONE_EFFIGY/7/57/0/no/defeat`。若字段错楼层、非 Elite、与 `died_in_combat` 不一致，或 action/params 漂移，假设即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有强制精英 GAME_OVER join 中，仅对匹配楼层且失败的 `died_in_combat` 追加 `combat_id`、回合数、实测掉血、自付掉血、僵局标记和来源；缺失时保持旧 marker，不猜测值。
+- `sts2-ascend/brain/knowledge.py`：补充现有 `elite_forced_entry_outcome_obs` 的静态契约，明确新增字段仍为只读结算观测。
+- `sts2-ascend/brain/selfcheck.py`：扩展强制精英夹具，验证字段、匹配边界、幂等重试、开关关闭及 `choose_map_node {option_index:0}` 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立窗口，比较强制模式与战斗回合数、掉血、自付/僵局及胜负；若 `only_candidate` 的失败主要是短战高掉血或长战尾部，再另开地图门行为批次；在重复证据前不调闸门。
+- **撤回**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期同时移除新增结算尾部与原结局 marker，强制精英选择、action 和 params 保持不变。
+- **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
