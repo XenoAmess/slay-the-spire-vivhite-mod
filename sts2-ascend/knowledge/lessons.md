@@ -13570,3 +13570,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.209129655679571局)，BASH(14分/2.715417400959639局)，JACKPOT(16分/6.151403850924986局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1634 胜，当前目标进阶 0
+
+## 第 1635 局复盘（2026-09-28 16:00）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：ARMAMENTS, THUNDERCLAP, HEMOKINESIS, RAGE, BREAKTHROUGH, SHRUG_IT_OFF, TWIN_STRIKE, TRUE_GRIT, ARMAMENTS, MANGLE, ANGER, HEMOKINESIS
+- 本局遗物：MEAL_TICKET
+- 战斗记录：F5 Monster战 掉血7｜自损4（可行动段4/非行动段7，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血33｜自损3（可行动段3/非行动段24，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血8｜自损3（可行动段3/非行动段11，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血12｜自损4（可行动段4/非行动段14，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血11｜自损5（可行动段5/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血81｜自损4（可行动段4/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=180/dpt=4.05/ttk=44.4444/tsurv=4.9375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=44.4444/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.6050892984303355局)，OFFERING(25分/18.057117202370403局)，FEED(25分/35.284884792007595局)，PACTS_END(25分/62.37270259189274局)，HELLRAISER(24分/3.3354844694263437局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.197897701884693局)，BASH(14分/2.70591344005628局)，JACKPOT(16分/6.129873937446749局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1635 胜，当前目标进阶 0
