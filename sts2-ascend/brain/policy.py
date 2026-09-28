@@ -7921,6 +7921,35 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             chosen_score, card, target, why = chosen
+            # 竞速未锁前格挡观测（RACE_PRELOCK_DEFENSE_OBS）：本局 F7 的
+            # T1/T2 已出现「击杀需13回合>可存活4回合」的竞速判死，但实测
+            # 样本尚未满两回合、迟滞锁尚未武装，实际仍选中耸肩/防御。现有
+            # 竞速注记能看见投影，却不能把“判死预警窗口内实际消耗的格挡
+            # 能量”单独切出来，无法判断延迟入锁是否造成输出损失。这里只在
+            # kill_race 已成立、尚未入锁且样本回合<2 时记录最终选中的格挡
+            # 牌；不参与排序、放行、目标、投影或动作，键=0 严格无尾缀。
+            try:
+                _prelock_defense_obs = bool(int(float(pol.get(
+                    "race_prelock_defense_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _prelock_defense_obs = False
+            if (_prelock_defense_obs and kill_race
+                    and not bool(getattr(self, "_krace_latch", False))
+                    and int(getattr(self, "_krace_turns", 0) or 0) < 2
+                    and not block_locked):
+                try:
+                    _prelock_damage, _prelock_block, _prelock_hits = card_numbers(card)
+                    _prelock_block = float(_prelock_block or 0.0)
+                except (TypeError, ValueError, OverflowError):
+                    _prelock_block = 0.0
+                if _prelock_block > 0.0:
+                    why += (
+                        f"｜竞速未锁前选格挡：{card.get('name') or card.get('card_id') or '?'}"
+                        f"挡{_prelock_block:g}/sample_turns="
+                        f"{int(getattr(self, '_krace_turns', 0) or 0)}"
+                        f"/round={round_no}/hp={my_hp}/incoming={incoming}"
+                        f"/race_allin={'yes' if race_allin else 'no'}"
+                        "（RACE_PRELOCK_DEFENSE_OBS）")
             if self._hp_gate_stall_rearm_pending:
                 why += self._consume_hp_gate_stall_rearm_note()
             # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，

@@ -792,6 +792,9 @@ DEFAULT_POLICY = {
                                                # 只有胜利样本的 actual_rounds 是击杀耗时并
                                                # 输出数值比值；阵亡样本标 actual_rounds_kind=terminal
                                                # 且 ratio_valid=no，避免把存活回合当作 TTK 校准
+    "race_prelock_defense_obs": True,  # 竞速判死但实测样本尚未达到入锁门槛时，
+                                        # 记录实际选中的格挡牌/样本回合；只读观测，
+                                        # 不改变评分、目标、判决或动作，False 严格回滚
     "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "low_pool_burst_card_audit_obs": True,  # 低池爆发观测补充可负担格挡容量与最终动作；只读、可回滚

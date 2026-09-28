@@ -17627,6 +17627,77 @@ def main() -> int:
             and "RINGING_SINGLE_PLAY_SURVIVAL_VETO" not in rsp5_why), \
         f"键=0 未恢复昏眩旧行为: {d_rsp5.action}（{d_rsp5.params}；{d_rsp5.reason}）"
 
+    # 3rpre) 竞速未锁前格挡观测（RACE_PRELOCK_DEFENSE_OBS，第1627局 F7）：
+    #      T1/T2 已出现「击杀需13回合>可存活4回合」的判死预警，但实测样本
+    #      尚未满两回合，迟滞锁仍未武装，实际仍可能选中格挡。观测只把最终
+    #      选中的格挡牌与 sample_turns 切出，供未来按终局核对延迟入锁是否
+    #      消耗输出；① 正例带 marker；② 键=0 严格移除 marker；两者 action/
+    #      params 必须逐位相同。
+    def rpre_state():
+        return {
+            "screen": "COMBAT",
+            "available_actions": ["play_card", "end_turn"],
+            "turn": 2,
+            "combat": {
+                "player": {"current_hp": 65, "max_hp": 80, "block": 0,
+                            "energy": 3},
+                "hand": [
+                    {"index": 0, "card_id": "RPRE_HIT", "name": "速攻",
+                     "playable": True, "energy_cost": 9,
+                     "requires_target": True, "valid_target_indices": [0],
+                     "dynamic_values": [{"name": "Damage", "current_value": 6}]},
+                    {"index": 1, "card_id": "RPRE_BLOCK", "name": "预警格挡",
+                     "playable": True, "energy_cost": 1,
+                     "requires_target": False,
+                     "dynamic_values": [{"name": "Block", "current_value": 20}]},
+                ],
+                "enemies": [{
+                    "index": 0, "enemy_id": "RPRE_RACE_COMP", "name": "长战精英",
+                    "current_hp": 200, "max_hp": 252, "block": 0,
+                    "is_alive": True, "is_hittable": True,
+                    "intents": [{"total_damage": 17}],
+                }],
+            },
+            "run": {"current_hp": 65, "max_hp": 80, "gold": 0,
+                    "floor": 7, "deck": [
+                        {"card_id": f"RPRE_D_{i}", "card_type": "Attack",
+                         "energy_cost": 1,
+                         "dynamic_values": [{"name": "Damage", "current_value": 6}]}
+                        for i in range(4)
+                    ]},
+        }
+
+    def rpre_decide(enabled):
+        rpre_ctx = type("RPRECTX", (), {
+            "combat": {"comp_id": "RPRE_RACE_COMP", "node_type": "Elite"},
+            "current_combat_is_hard": False,
+            "credit_tags": [],
+        })()
+        rpre_pol = policy.Policy(knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rpre-"))),
+            random.Random(13))
+        # Bind the combat identity without pretending the first decision was
+        # accepted; then inject exactly one measured output turn.
+        rpre_pol.decide(rpre_state(), rpre_ctx)
+        rpre_pol._krace_turns = 1
+        rpre_pol._krace_dmg = rpre_pol._krace_dmg_sustained = 6.0
+        rpre_pol._krace_latch = False
+        rpre_pol.know.policy["race_prelock_defense_obs"] = enabled
+        return rpre_pol.decide(rpre_state(), rpre_ctx)
+
+    d_rpre_on = rpre_decide(True)
+    d_rpre_off = rpre_decide(False)
+    assert (d_rpre_on.action == "play_card"
+            and d_rpre_on.params.get("card_index") == 1
+            and "RACE_PRELOCK_DEFENSE_OBS" in d_rpre_on.reason
+            and "sample_turns=1" in d_rpre_on.reason), \
+        f"竞速未锁前格挡观测正例缺失: {d_rpre_on.action}（{d_rpre_on.reason}）"
+    assert (d_rpre_off.action == d_rpre_on.action
+            and d_rpre_off.params == d_rpre_on.params
+            and "RACE_PRELOCK_DEFENSE_OBS" not in d_rpre_off.reason), \
+        f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
+        f"on={d_rpre_on} off={d_rpre_off}"
+
     pol_stale1 = pcap_policy()
     pol_stale1._krace_latch = True
     pol_stale1._krace_latch_round = 1

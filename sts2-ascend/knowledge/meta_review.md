@@ -12677,3 +12677,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `race_audit_projection_ratio_obs` 设为 `False`；预期只移除 `RACE_PROJ_TTK_RATIO_OBS`，保留 `RACE_PROJ_CALIB_AUDIT`、终端审计、评分、action 与 params。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1627 局复盘（RACE_PRELOCK_DEFENSE_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判死已经成立、但迟滞锁尚未达到两回合样本门槛时，实际选中的格挡牌可能消耗本可用于输出的能量，使后续有效伤害低于投影；若未来分层后前锁格挡样本与有效 DPT/终局无稳定关系，则该假设被证伪。
+- **EVIDENCE**：精确 run `RGTYBZZR1S3B`（第 1627 局，`sts2-ascend/knowledge/runs/20260928-100053_RGTYBZZR1S3B.json`）已逐条复核。F6 只有一个精英候选，入口 HP=65/80、好牌 7/7，记录 `ELITE_FORCED_ENTRY_OBS`；F7 D84 已记录“击杀还需 13 回合 > 可存活 4 回合”，但 D84~D90 的 T1/T2 仍处于未入锁窗口并实际选过攻击/格挡。随后 T6 D106 记录 `hp=3/block=0/incoming=18`、3 张牌锁定和 `LETHAL_UNAVAILABLE_END_TURN_OBS`，终端投影为 `pool=50/dpt=14.3333/ttk=3.48837/tsurv=0.166667`，最终阵亡。旧链没有把“前锁选中的格挡牌、样本回合、后续输出”切成可核对字段，因此单局不能证明因果。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `kill_race` 战斗中，只有“未入锁且 sample_turns<2 且最终选中有格挡值牌”的决策追加 `RACE_PRELOCK_DEFENSE_OBS`，并按 `run_id/floor/turn/card/sample_turns/race_allin` 与后续有效 DPT、实际回合和 `GAME_OVER` 分层。若至少 3 个独立样本显示该标记与输出损失/阵亡一致，再评估行为修正；若标记稀少或与终局无关，假设证伪并保持只读观测。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `race_prelock_defense_obs`。
+- `sts2-ascend/brain/policy.py`：在既有 `kill_race`、未入锁、样本回合小于 2 且未锁格挡的分支，仅给最终选中的格挡牌追加牌名、格挡值、`sample_turns`、回合、HP、来袭伤害和 `race_allin`；不参与评分、排序、目标、投影、放行或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入第 1627 局同型夹具；开关开启时断言 marker，关闭时断言 marker 消失且 action/params 逐位不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立前锁样本，按 marker、样本回合、选牌、后续有效 DPT 与终局核对；只有重复出现稳定输出损失时才提出改变前锁行为。
+- **撤回**：将 `race_prelock_defense_obs` 设为 `False`；预期只移除 `RACE_PRELOCK_DEFENSE_OBS` 尾缀，评分、action、params 和既有竞速投影保持不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff 通过 `git diff --check`；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
