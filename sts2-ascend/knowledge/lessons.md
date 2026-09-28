@@ -13856,3 +13856,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9295245566706702局)，BASH(14分/2.4788284710290296局)，STOKE(16分/2.8212434594314817局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1660 胜，当前目标进阶 0
+
+## 第 1661 局复盘（2026-09-29 03:56）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 MYTE
+- 本局拿牌：CINDER, INFLAME, UPPERCUT, TWIN_STRIKE, SHRUG_IT_OFF, OFFERING, SWORD_BOOMERANG, CINDER, SHRUG_IT_OFF, MOLTEN_FIST, FIGHT_ME, SALVO, FEED, BLUDGEON, EVIL_EYE
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F14 Monster战 掉血12; F15 Monster战 掉血0; F17 Boss战 掉血28｜竞速投影审计：pool=167/dpt=36/ttk=4.63889/tsurv=2.80769（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=4.63889/actual_over_projected=1.29（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜; F19 Monster战 掉血28; F20 Monster战 掉血17; F22 Unknown战 掉血35（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3781130371485535局)，HELLRAISER(26分/4.929248960369263局)，PROWESS(25分/6.543873333257404局)，FEED(25分/34.136347602548256局)，PACTS_END(25分/57.897091922863055局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9192712207223233局)，BASH(14分/2.470152571380428局)，STOKE(16分/2.8113691073234715局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.39（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.98 → 1.97（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1661 胜，当前目标进阶 0
