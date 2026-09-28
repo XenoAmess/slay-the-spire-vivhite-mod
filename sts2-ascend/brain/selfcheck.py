@@ -17211,6 +17211,56 @@ def main() -> int:
         in d_race_terminal.reason, \
         f"竞速致死输出容量观测缺失: {d_race_terminal.reason}"
 
+    # 3z-5a) 终端输出容量的可用性原因：1666-F17/T7 的实际形态——
+    # RingingPower 把手牌全部标为 blocked_by_hook；容量为零时必须把
+    # Hook 锁牌与能量锁牌分开留痕，并在 GAME_OVER/重载恢复中保持一致。
+    def _race_terminal_hook_state():
+        state = _lethal_unavailable_state(False)
+        state["combat"]["player"]["energy"] = 2
+        state["combat"]["hand"] = [{
+            "index": 0, "card_id": "ANGER", "name": "愤怒+",
+            "playable": False, "unplayable_reason": "blocked_by_hook",
+            "unplayable_preventer_id": "RINGING_POWER",
+            "unplayable_preventer_type": "MegaCrit.Sts2.Core.Models.Powers.RingingPower",
+            "energy_cost": 0, "requires_target": True,
+            "valid_target_indices": [0],
+        }, {
+            "index": 1, "card_id": "TORIC_TOUGHNESS", "name": "坚韧之环",
+            "playable": False, "unplayable_reason": "blocked_by_hook",
+            "unplayable_preventer_id": "RINGING_POWER",
+            "unplayable_preventer_type": "MegaCrit.Sts2.Core.Models.Powers.RingingPower",
+            "energy_cost": 2, "requires_target": False,
+        }]
+        return state
+
+    race_terminal_hook_know = knowledge.Knowledge(tmp)
+    race_terminal_hook_pol = policy.Policy(race_terminal_hook_know)
+    race_terminal_hook_ctx = _SettleCtx()
+    race_terminal_hook_ctx.combat = {}
+    assert race_terminal_hook_pol.decide(
+        _lethal_unavailable_state(True), race_terminal_hook_ctx).action == "play_card", \
+        "Hook 锁牌终端容量夹具热身帧未进入出牌状态"
+    race_terminal_hook_pol._krace_latch = True
+    race_terminal_hook_pol._krace_latch_round = 5
+    race_terminal_hook_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    d_race_terminal_hook = None
+    for _ in range(6):
+        d_candidate = race_terminal_hook_pol.decide(
+            _race_terminal_hook_state(), race_terminal_hook_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_terminal_hook = d_candidate
+            break
+    assert (d_race_terminal_hook is not None
+            and d_race_terminal_hook.action == d_race_terminal.action
+            and d_race_terminal_hook.params == d_race_terminal.params
+            and "/cards=none/hand_cards=2/hook_locked=2"
+            "/hook_ids=RINGING_POWER/energy_locked=0"
+            in d_race_terminal_hook.reason), \
+        f"Hook/能量锁牌原因未进入终端容量观测: {d_race_terminal_hook}"
+
     assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal.reason, \
         f"RACE_ESC_LATCH_HOLD 终局尾部缺失: {d_race_terminal.reason}"
@@ -17316,6 +17366,30 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局未继承输出容量: {d_race_terminal_outcome}"
+
+    d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
+        race_terminal_outcome_state, race_terminal_hook_ctx)
+    assert (d_race_terminal_hook_outcome.action == "continue_game_over"
+            and d_race_terminal_hook_outcome.params == {}
+            and "/raw_damage_cap=0 (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
+            "/hand_cards=2/hook_locked=2/hook_ids=RINGING_POWER/energy_locked=0"
+            in d_race_terminal_hook_outcome.reason), \
+        f"Hook/能量锁牌原因未继承到终端结局: {d_race_terminal_hook_outcome}"
+
+    race_terminal_hook_replay_pol = policy.Policy(race_terminal_hook_know)
+    race_terminal_hook_replay_ctx = _SettleCtx()
+    race_terminal_hook_replay_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal_hook.reason,
+    }]
+    d_race_terminal_hook_replay = race_terminal_hook_replay_pol.decide(
+        race_terminal_outcome_state, race_terminal_hook_replay_ctx)
+    assert (d_race_terminal_hook_replay.action == "continue_game_over"
+            and d_race_terminal_hook_replay.params == {}
+            and "/raw_damage_cap=0 (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
+            "/hand_cards=2/hook_locked=2/hook_ids=RINGING_POWER/energy_locked=0"
+            in d_race_terminal_hook_replay.reason), \
+        f"重载后未恢复 Hook/能量锁牌原因: {d_race_terminal_hook_replay}"
 
     # 3z-5c) 进程重载后的结局恢复：终端审计已随上一条决策持久化，但
     #        Policy 的瞬时 pending 可能在 GAME_OVER 前丢失；新实例只能从

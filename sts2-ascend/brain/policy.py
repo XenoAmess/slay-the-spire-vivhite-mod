@@ -4216,6 +4216,27 @@ class Policy:
             "cards": tuple(_attack_rows),
         }
 
+    @staticmethod
+    def _race_output_capacity_availability_tail(snapshot) -> str:
+        """Format terminal-only availability causes when they are present."""
+        if (not isinstance(snapshot, dict)
+                or "hook_locked" not in snapshot):
+            return ""
+        try:
+            _hand_cards = max(0, int(snapshot["hand_cards"]))
+            _hook_locked = max(0, int(snapshot["hook_locked"]))
+            _energy_locked = max(0, int(snapshot["energy_locked"]))
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return ""
+        _hook_ids = re.sub(
+            r"[^A-Za-z0-9_.:-]+", "_",
+            str(snapshot.get("hook_ids") or "none")).strip("_") or "none"
+        return (
+            f"/hand_cards={_hand_cards}"
+            f"/hook_locked={_hook_locked}"
+            f"/hook_ids={_hook_ids}"
+            f"/energy_locked={_energy_locked}")
+
     def _race_allin_lethal_output_capacity_note(
             self, hand, enemies, energy, my_hp, my_block, incoming, pol, *,
             enabled_key="race_allin_lethal_output_capacity_obs",
@@ -4253,6 +4274,7 @@ class Policy:
             f"/attack_candidates={_attack_candidates}"
             f"/raw_damage_cap={_max_damage:g}"
             f"/cards={'|'.join(_attack_rows) or 'none'}"
+            f"{self._race_output_capacity_availability_tail(snapshot)}"
             f" ({marker})")
 
     def _kill_race_terminal_audit_note(
@@ -4757,6 +4779,9 @@ class Policy:
                     " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)")
             except (KeyError, TypeError, ValueError, OverflowError):
                 _capacity_tail = ""
+            if _capacity_tail:
+                _capacity_tail += self._race_output_capacity_availability_tail(
+                    _capacity)
 
         return (
             f"；竞速终端结局：outcome={_result}"
@@ -5161,7 +5186,7 @@ class Policy:
                         return match.group(1) if match else None
 
                     try:
-                        _pending["output_capacity"] = {
+                        _capacity = {
                             "target_hp": float(
                                 _capacity_token("target_hp")),
                             "target_block": float(
@@ -5171,6 +5196,18 @@ class Policy:
                             "raw_damage_cap": float(
                                 _capacity_token("raw_damage_cap")),
                         }
+                        for _key in (
+                                "hand_cards", "hook_locked", "energy_locked"):
+                            _value = _capacity_token(_key)
+                            if _value is not None:
+                                try:
+                                    _capacity[_key] = int(float(_value))
+                                except (TypeError, ValueError, OverflowError):
+                                    pass
+                        _hook_ids = _capacity_token("hook_ids")
+                        if _hook_ids is not None:
+                            _capacity["hook_ids"] = _hook_ids
+                        _pending["output_capacity"] = _capacity
                     except (TypeError, ValueError, OverflowError):
                         _pending.pop("output_capacity", None)
         except (TypeError, ValueError, OverflowError):
@@ -6086,6 +6123,14 @@ class Policy:
                             hand, combat.get("enemies", []), energy, pol,
                             enabled_key=(
                                 "kill_race_lethal_output_capacity_obs")))
+                    if isinstance(_terminal_output_capacity, dict):
+                        _hook_locked, _hook_ids = _count_hook_locked_cards()
+                        _terminal_output_capacity.update({
+                            "hand_cards": len(hand),
+                            "hook_locked": _hook_locked,
+                            "hook_ids": _hook_ids,
+                            "energy_locked": _count_energy_locked_cards(),
+                        })
                     _lethal_unavailable_note += (
                         self._race_allin_lethal_output_capacity_note(
                             hand, combat.get("enemies", []), energy,
@@ -6123,7 +6168,9 @@ class Policy:
                                 _key: _terminal_output_capacity[_key]
                                 for _key in (
                                     "target_hp", "target_block",
-                                    "attack_candidates", "raw_damage_cap")
+                                    "attack_candidates", "raw_damage_cap",
+                                    "hand_cards", "hook_locked", "hook_ids",
+                                    "energy_locked")
                                 if _key in _terminal_output_capacity
                             }
                         self._race_terminal_outcome_reported = False

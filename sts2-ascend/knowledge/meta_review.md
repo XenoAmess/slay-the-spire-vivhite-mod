@@ -13163,3 +13163,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：固定 256 槽的宿主 selfcheck 启动钩子在第二次直连运行时报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（临时目录耗尽），随后使用同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 的进程级临时目录适配器完成完整回归并输出 `SELFCHECK OK`；目标文件 `git diff --check` 通过。未写入 `.runtime/`、在线运行态、统计/策略学习文件或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1665~1666局复盘（KILL_RACE_TERMINAL_AVAILABILITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS` 能证明竞速终端没有原始攻击容量，但不能区分能量耗尽与原生 Hook 锁牌。若把同一终端快照的手牌数、Hook 锁牌数/标识和能量锁牌数贯穿 end-turn、`GAME_OVER` 与进程重载，后续终端样本就能验证失败原因是否为 `RingingPower` 等原生阻断，而不改变 action。
+- **EVIDENCE**：精确批次为 1665、1666；完整链 `sts2-ascend/knowledge/runs/20260929-051042_FCSWQ5RLUUY7.json` 的第1666局 F17/T7 decisions index 200 记录 `hp=11/block=0/incoming=16/energy=2`，四张手牌均为 `blocked_by_hook`，`unplayable_preventer_id=RINGING_POWER`；同一终端旧容量为 `target_hp=48/target_block=0/attack_candidates=0/raw_damage_cap=0`，index 201 紧接 F17 `GAME_OVER`。原生知识 `RINGING_POWER` 的描述是“本回合你只能打出1张牌”，与该阻断形态一致。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立竞速终端按 `run_id/floor/turn` 对账 `/hand_cards=/hook_locked=/hook_ids=/energy_locked=`；Hook 锁牌应与 end-turn 手牌逐项一致，并在 `GAME_OVER`/重载恢复中保持一致，纯能量耗尽应显示 `hook_locked=0`。字段错配、跨战斗继承、开关关闭后仍出现新尾部，或 action/params 漂移，即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：沿用既有 `kill_race_lethal_output_capacity_obs`，仅在竞速终端容量快照中追加 `hand_cards`、`hook_locked`、`hook_ids`、`energy_locked`；写入既有 pending，并由现有 end-turn 持久化解析恢复。字段只用于审计，不参与评分、排序、目标、门控或 action。
+- `sts2-ascend/brain/selfcheck.py`：增加 `RingingPower` 全锁牌夹具，验证 end-turn、`GAME_OVER` 和进程重载字段一致，且 `continue_game_over` 与空 params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立竞速终端，按 `hook_locked/energy_locked/outcome` 分层；重复证据前保持只读观测，不调整抢斩杀或防守策略。
+- **回滚**：将既有 `kill_race_lethal_output_capacity_obs` 设为 `False`；容量及原因尾部消失，既有终端审计、action 与 params 保持不变。
+- **验证**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现既有固定 256 槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 clone 内进程级继承 ACL 临时目录适配器运行同一 selfcheck，输出 **SELFCHECK OK**；定向 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+
+- `retry_resolution: 20260929-053756-1790631476900090800-181d8167 integrated`
