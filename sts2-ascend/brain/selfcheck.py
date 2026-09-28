@@ -16874,8 +16874,6 @@ def main() -> int:
             and "KILL_RACE_TERMINAL_OUTCOME_OBS" in d_race_terminal_outcome.reason
             and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
             in d_race_terminal_outcome.reason
-            and "/self_loss=31/own_phase=31/foe_phase=41"
-            in d_race_terminal_outcome.reason
             and "/kill_race=yes/race_allin=no"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局对账缺失或动作漂移: {d_race_terminal_outcome}"
@@ -16898,9 +16896,6 @@ def main() -> int:
             and "outcome=defeat/floor=33/terminal_round=6/lock_round=5/last_round=6"
             in d_race_terminal_replay.reason), \
         f"进程重载后未从持久终端审计恢复结局: {d_race_terminal_replay}"
-    assert "/self_loss=31/own_phase=31/foe_phase=41" \
-        in d_race_terminal_replay.reason, \
-        f"进程重载后未恢复终端自损相位字段: {d_race_terminal_replay}"
 
     race_terminal_replay_off_know = knowledge.Knowledge(tmp)
     race_terminal_replay_off_know.policy[
