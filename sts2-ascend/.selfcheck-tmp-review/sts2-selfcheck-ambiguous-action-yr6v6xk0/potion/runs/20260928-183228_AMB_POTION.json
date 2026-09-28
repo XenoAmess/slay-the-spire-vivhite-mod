@@ -1,0 +1,76 @@
+{
+ "run_id": "AMB_POTION",
+ "run_number": 0,
+ "profile_id": "ironclad",
+ "character_id": "IRONCLAD",
+ "profile_run_number": 0,
+ "ascension": 0,
+ "started_at": "2026-09-28 18:32:28",
+ "victory": false,
+ "in_progress": true,
+ "floor": 17,
+ "decisions": [
+  {
+   "t": "18:32:28",
+   "screen": "COMBAT",
+   "floor": 17,
+   "hp": 40,
+   "gold": 0,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "potion",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F17",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F17",
+      "生命 40/80",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 10"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "neutral",
+      "value": "规则直达，无评分池"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [],
+ "human_assisted": false,
+ "excluded_from_learning": false,
+ "deck_snapshot": []
+}

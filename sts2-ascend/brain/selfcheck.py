@@ -3844,7 +3844,8 @@ def main() -> int:
         and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" in d_sand.reason \
         and "clock=1/hp=9/block=24/incoming=20/covered=yes" in d_sand.reason \
         and "/forced_kill=no/rescue=absent/energy=1" in d_sand.reason \
-        and "/rescue_effect=none/incoming_gap=0/incoming_lethal=no" in d_sand.reason, \
+        and "/rescue_effect=none/incoming_gap=0/incoming_lethal=no/rescue_viable=no" \
+        in d_sand.reason, \
         f"沙坑末格空过观测缺失或动作漂移: {d_sand}"
 
     def _sandpit_rescue_lethal_state():
@@ -3868,9 +3869,21 @@ def main() -> int:
         and d_sand_rescue.params == {} \
         and "VIVHITE_SANDPIT_EAT_END_TURN_OBS" in d_sand_rescue.reason \
         and "/forced_kill=yes/rescue=available/energy=1" in d_sand_rescue.reason \
-        and "/rescue_effect=clock+1/incoming_gap=30/incoming_lethal=yes" \
+        and "/rescue_effect=clock+1/incoming_gap=30/incoming_lethal=yes/" \
+            "rescue_viable=no" \
         in d_sand_rescue.reason, \
         f"沙坑续命牌与敌方致死伤害未分账或动作漂移: {d_sand_rescue}"
+
+    sandpit_rescue_viable_state = _sandpit_rescue_lethal_state()
+    sandpit_rescue_viable_state["combat"]["player"]["block"] = 24
+    sandpit_rescue_viable_note = vpol_sand._sandpit_end_turn_observation_note(
+        vctx_sand_rescue, sandpit_rescue_viable_state["combat"],
+        sandpit_rescue_viable_state["combat"]["hand"], 1, 30, 24, 30,
+        vpol_sand.know.policy)
+    assert "/rescue=available/energy=1/rescue_effect=clock+1/" \
+        "incoming_gap=6/incoming_lethal=no/rescue_viable=yes" \
+        in sandpit_rescue_viable_note, \
+        f"沙坑续命可行性观测未按缺口区分: {sandpit_rescue_viable_note}"
 
     vknow_sand0 = _vivhite_know("sts2-selfcheck-vsandpit-end-turn-off-")
     vknow_sand0.policy["vivhite_sandpit_eat_end_turn_obs"] = 0

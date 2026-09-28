@@ -1,0 +1,95 @@
+{
+ "run_id": "TX_RUN",
+ "run_number": 0,
+ "profile_id": "ironclad",
+ "character_id": "IRONCLAD",
+ "profile_run_number": 0,
+ "ascension": 0,
+ "started_at": "2026-09-28 18:32:27",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "18:32:27",
+   "screen": "EVENT",
+   "floor": 3,
+   "hp": 80,
+   "gold": 12,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "txn test",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F3",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F3",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "neutral",
+      "value": "规则直达，无评分池"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "choose_event_option",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "18:32:28",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 73,
+   "gold": 0,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【首帧新牌】→测试怪（可击杀测试怪｜受控试用：零成功出牌但当前可用且有正即时边际（本场限一次））；敌意图总伤0，我方73血/0甲；重生名册读侧：CM_ENEMY=id:未知(n=0,rs=0)（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 1
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "card_pick",
+   "TX_PICK"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ]
+ ],
+ "human_assisted": false,
+ "excluded_from_learning": false,
+ "deck_snapshot": []
+}

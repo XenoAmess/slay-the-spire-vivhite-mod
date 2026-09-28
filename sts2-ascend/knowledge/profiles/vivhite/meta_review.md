@@ -4594,6 +4594,37 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 retry_resolution: none (no failed_review_replay packages requested)
 
+# 1624~1626 批：沙坑续命牌“可打”与“能挽救当前回合”的边界观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `VIVHITE_SANDPIT_EAT_END_TURN_OBS` 的 `rescue=available` 只表示手牌存在可支付的 `FRANTIC_ESCAPE`，不能证明它能覆盖当前来袭缺口；1625-F33-T13 的续命牌只能把沙坑时钟加 1，不能挽救本回合的 14 点未覆盖伤害。若追加 `rescue_viable`，即可把“有牌”与“当前可活”分开核验，且不改变任何动作或参数。
+- **EVIDENCE**：1624~1626 是精确批次；最新失败局完整链为 `runs/20260928-174323_22THTALJPD00.json`，520 条 decisions，packet 保留 101 条、裁剪 419 条，`complete_persisted_chain=false`。已逐条核对选取切片并回读完整链尾：F33-T13 的 `[518] end_turn` 同时记录 `rescue=available`、两张可玩的 `FRANTIC_ESCAPE`、`incoming_gap=14`、`hp=2`、`incoming_lethal=yes`，随后 `[519] GAME_OVER` 为 defeat；这支持补充边界观测，不单独证明续命牌是唯一可行策略。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss 沙坑末格 `end_turn` 中，`rescue_viable=yes` 仅当存在可用 `FRANTIC_ESCAPE` 且 `incoming_lethal=no`；可用牌但当前缺口致死时必须为 `no`。字段应与 `incoming_gap`、原生手牌、真实 `applied end_turn {}` 及下一 tick/GAME_OVER 对账；非 Boss、非末格、无续命牌和 action/params 漂移均可证伪假设。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有沙坑末格观测中追加 `rescue_viable=yes|no`，由已计算的 `rescue_available` 与 `incoming_lethal` 得出；不改评分、候选资格、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增/扩展夹具，覆盖无续命牌=`no`、有续命牌但当前缺口致死=`no`、有续命牌且当前可活=`yes`，并保留 `end_turn {}` 动作与空参数不变断言。
+- 未修改 `knowledge.py`、runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 宿主 managed selfcheck pool 直接运行先触发 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（256 个临时槽耗尽）；同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 命令在进程级临时 ACL bootstrap 下退出码 0，输出 `SELFCHECK OK`。
+- 已完整回读 2 个生产/自检目标文件的 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立 Vivhite Boss 沙坑末格 combat，按 run/floor/turn 对账 `rescue_viable`、`rescue`、`incoming_gap`、原生手牌、真实 `applied end_turn {}`、下一 tick HP/格挡和 GAME_OVER/胜负；该观测出现本身不等于应放宽 HP 致死门或改变续命评分。
+- 若 `rescue_viable` 与 `incoming_lethal` 不一致、在非 Boss/非末格显形，或 action/params 漂移，将 `vivhite_sandpit_eat_end_turn_obs=0` 关闭本批观测；必要时回滚本地提交并保留证据，重复核验前不调整 `FRANTIC_ESCAPE` 的出牌价值。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
+
 # 1485~1488 批：敌血推进后重新武装 VIVHITE_HP_GATE_STALL_ANY 生命门
 
 日期：2026-09-27

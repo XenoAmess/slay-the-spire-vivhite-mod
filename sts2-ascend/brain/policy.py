@@ -3957,6 +3957,7 @@ class Policy:
             incoming_gap = 0.0
             incoming_lethal = False
         rescue_effect = "clock+1" if rescue_available else "none"
+        rescue_viable = rescue_available and not incoming_lethal
         observation_marker = (
             "VIVHITE_SANDPIT_EAT_END_TURN_OBS"
             if vivhite_profile else "SANDPIT_EAT_END_TURN_OBS")
@@ -3970,6 +3971,7 @@ class Policy:
             f"/rescue_effect={rescue_effect}"
             f"/incoming_gap={incoming_gap:g}"
             f"/incoming_lethal={'yes' if incoming_lethal else 'no'}"
+            f"/rescue_viable={'yes' if rescue_viable else 'no'}"
             f"（{observation_marker}）")
 
     def _low_pool_burst_race_observation_note(
