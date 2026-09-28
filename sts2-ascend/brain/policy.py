@@ -4389,6 +4389,9 @@ class Policy:
             f"/block={_num(_pending.get('block'))}"
             f"/incoming={_num(_pending.get('incoming'))}"
             f"/energy={_num(_pending.get('energy'))}"
+            f"/self_loss={_num(_pending.get('self_loss'))}"
+            f"/own_phase={_num(_pending.get('own_phase'))}"
+            f"/foe_phase={_num(_pending.get('foe_phase'))}"
             f"/kill_race={_flag(_pending.get('kill_race'))}"
             f"/race_allin={_flag(_pending.get('race_allin'))}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
@@ -4686,6 +4689,18 @@ class Policy:
                 raise ValueError(name)
             return float(value)
 
+        def _optional_number(name: str):
+            value = _token(name)
+            if value is None:
+                # Older persisted terminal audits predate the phase split;
+                # preserve their outcome join with an explicit zero rather
+                # than making the whole GAME_OVER observation unrecoverable.
+                return 0.0
+            try:
+                return float(value)
+            except (TypeError, ValueError, OverflowError):
+                return 0.0
+
         try:
             _lock_round = int(_number("lock_round"))
             _last_round = int(_number("last_round"))
@@ -4704,6 +4719,9 @@ class Policy:
                 "block": _number("block"),
                 "incoming": _number("incoming"),
                 "energy": _number("energy"),
+                "self_loss": _optional_number("self_loss"),
+                "own_phase": _optional_number("own_phase"),
+                "foe_phase": _optional_number("foe_phase"),
                 "kill_race": _token("kill_race") or "unknown",
                 "race_allin": _token("race_allin") or "unknown",
             }
@@ -5397,6 +5415,18 @@ class Policy:
                             "block": my_block,
                             "incoming": incoming,
                             "energy": energy,
+                            # Keep the phase-split loss totals with the
+                            # terminal join so GAME_OVER can be audited
+                            # without changing the end-turn decision.
+                            "self_loss": max(0.0, float(
+                                getattr(self, "_race_same_round_loss", 0.0)
+                                or 0.0)),
+                            "own_phase": max(0.0, float(
+                                getattr(self, "_race_same_round_loss_own", 0.0)
+                                or 0.0)),
+                            "foe_phase": max(0.0, float(
+                                getattr(self, "_race_same_round_loss_enemy", 0.0)
+                                or 0.0)),
                             "kill_race": _kill_race_state,
                             "race_allin": _race_allin_state,
                         }

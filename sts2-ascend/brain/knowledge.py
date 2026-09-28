@@ -223,7 +223,7 @@ DEFAULT_POLICY = {
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; includes raw/affordable hand block capacity and counterfactual post-block survival; False removes only the marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; includes native hook_locked/hook_ids plus raw hand block capacity and counterfactual post-block survival; False removes only the marker.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
-    "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result, preserving those regime flags.
+    "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result; preserves regime and self-loss phase fields.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
     "lethal_playable_reject_outcome_obs": True,  # Audit-only link from that rejection to the next GAME_OVER result; False removes only the outcome marker.
     "vivhite_hp_pressure_playable_reject_obs": True,  # Audit-only Vivhite low-HP LifeCost-card rejection marker; False removes only the marker.

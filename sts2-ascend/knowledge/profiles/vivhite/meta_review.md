@@ -5800,3 +5800,35 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1637~1640 批：竞速终局自损相位与 GAME_OVER 对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `KILL_RACE_TERMINAL_AUDIT_OBS` 已记录终端 `end_turn` 的 `self_loss/own_phase/foe_phase`，但 `KILL_RACE_TERMINAL_OUTCOME_OBS` 的权威 `GAME_OVER` join 没有这组分账，无法判断败局是生命支付主导还是敌方行动主导。若把已锁存字段带入结局观测，未来 3~10 个独立竞速终端可按 run/floor/turn/outcome 对账；字段错位、进程重载丢失或 action/params 漂移即证伪。
+- **EVIDENCE**：本批 packet 精确范围为 1637~1640。逐条回读终端链：1637-F33-T5 的末次审计为 `self_loss=13/own_phase=13/foe_phase=32`，1638-F17-T7 为 `24/24/23`，1640-F46-T11 为 `32/32/90`，相邻 `GAME_OVER` 原标记均缺少这组三字段；1639 的终局链未形成可安全配对的审计行，未据此扩张结论。1640 完整链为 `runs/20260928-205733_ZX2P814DTS4Q.json`。
+- **EXPECTED_SIGNAL**：后续匹配的 `GAME_OVER` 应追加 `/self_loss=.../own_phase=.../foe_phase=...`，与同楼层同终端审计逐字段相等；进程重载与首响应丢失重试最多各保留一条已提交观测，动作和参数保持不变。旧审计缺字段时只允许兼容为 0，不得伪造新的分账。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：明确既有 `kill_race_terminal_outcome_obs` 开关同时控制竞速制度字段与自损相位字段；不新增行为开关。
+- `sts2-ascend/brain/policy.py`：终局 marker 追加 `self_loss/own_phase/foe_phase`；终端 pending join 锁存现有相位损失累计值，持久化恢复对旧 marker 采用显式 0 兼容。不重评分、不改候选、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：扩展终局结局夹具，覆盖默认输出与进程重载后的三字段恢复，并保留既有动作/参数与关闭开关断言。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 完整 selfcheck 主体以进程级 ACL 临时目录 bootstrap 执行：输出 `SELFCHECK OK`，退出码 0。
+- 已完整回读三处生产/自检 diff；限定目标 `git diff --check` 退出码 0，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立竞速终端，按 run/floor/turn 对账终端审计、`GAME_OVER` 三字段、真实 `applied end_turn {}` 与胜负；观测出现本身不等于应改变竞速策略。
+- 若字段与原始相位账不符、跨楼层/跨局串账、重载或重试重复写入，或 action/params 漂移，将 `kill_race_terminal_outcome_obs=0`，必要时回滚本地 commit 并保留本批证据；重复核验前不调整竞速门。
+
+## REPLAY
+
+retry_resolution: none integrated (no failed_review_replay packages requested; local production observation)
