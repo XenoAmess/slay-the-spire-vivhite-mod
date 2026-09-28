@@ -4743,9 +4743,18 @@ class Policy:
                     and float(incoming) > 0
                     and not _lethal_by_gap
                     and not bool(combat.get("end_turn_will_kill_player"))):
+                # Batch 1599 exposed a useful distinction inside this
+                # non-lethal bucket: the enemy gap may be survivable while a
+                # status card in hand adds end-of-turn self damage. Keep both
+                # inputs on the same audit marker so the next snapshot can
+                # falsify the attribution without changing the action.
+                _nonlethal_gap = max(
+                    0.0, float(incoming) - float(my_block))
+                _nonlethal_tax, _ = hand_end_turn_tax(hand)
                 _nonlethal_unavailable_note = (
                     f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
+                    f"/gap={_nonlethal_gap:g}/hand_tax={_nonlethal_tax:g}"
                     f"/energy={float(energy):g}/cards={len(hand)}"
                     f"/energy_locked={_count_energy_locked_cards()}"
                     "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")

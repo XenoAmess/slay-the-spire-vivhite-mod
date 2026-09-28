@@ -16381,7 +16381,8 @@ def main() -> int:
         and d_nonlethal_empty.params == {} \
         and "NONLETHAL_UNAVAILABLE_END_TURN_OBS" in d_nonlethal_empty.reason \
         and "（LETHAL_UNAVAILABLE_END_TURN_OBS）" not in d_nonlethal_empty.reason \
-        and "hp=55/block=22/incoming=50/energy=0" in d_nonlethal_empty.reason \
+        and "hp=55/block=22/incoming=50/gap=28/hand_tax=0/energy=0" \
+            in d_nonlethal_empty.reason \
         and "/energy_locked=2" in d_nonlethal_empty.reason, \
         f"非致死资源耗尽先兆观测缺失: {d_nonlethal_empty and d_nonlethal_empty.reason}"
 

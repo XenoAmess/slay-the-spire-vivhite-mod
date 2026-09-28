@@ -5581,3 +5581,34 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1598~1599 批：非致死空过的残余缺口与手牌滞留税观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1599-F17 Boss 的 T7 结束回合被现有逻辑归为“非致死资源耗尽”：`hp=14/block=12/incoming=24/energy=0`。但同一手牌含 `BECKON`，回合结束还会产生 6 点滞留税；仅有 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 的原始字段，无法区分“敌方残余缺口可活”与“状态牌在同一收口把它推入终端”。若在同一 marker 补记 `gap=max(incoming-block,0)` 和 `hand_tax`，未来可与下一 tick/GAME_OVER 对账而不改变任何 action/params。
+- **EVIDENCE**：批次 packet 的 `decision_chain_evidence` 指向 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-123414_YZELLZYDRGRC.json`；最新失败局为 1599、208 条 decisions，其中保留 110 条、裁剪 98 条，`complete_persisted_chain=false`。选取切片逐条核对到 F17：T2/T3/T5 有非致死资源耗尽，T7 明确为 `hp=14/block=12/incoming=24/energy=0`，并带 `HAND_END_TAX=6（BECKON×1）`，随后以 `GAME_OVER`、HP=0 收口。该证据支持补齐同条观测，不单独证明因果。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 非致死资源耗尽回合中，marker 的 `gap` 应等于原生快照的 `max(incoming-block,0)`，`hand_tax` 应等于同一手牌计算出的 `HAND_END_TAX`；再与下一 tick 掉血、实际 `applied end_turn {}` 和 GAME_OVER/胜负对账。字段不一致、跨样本串账或 action/params 改变即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 仅追加 `/gap` 与 `/hand_tax`；复用现有 `hand_end_turn_tax`，不改候选、评分、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：更新非致死空过夹具，断言默认 marker 同时包含 `gap=28/hand_tax=0`，并保留关闭观测键后 action/params 不变的回滚断言。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
+- 已回读生产/自检 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 既有 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立非致死资源耗尽 combat，按 run/floor/turn 对账 `gap`、`hand_tax`、原生 HP/格挡/意图、下一 tick 掉血、真实回执和终局；观测字段出现本身不等于应改变出牌策略。
+- 若 `gap` 或 `hand_tax` 与原生状态不符、marker 在错误样本显形，或 action/params 漂移，先将 `nonlethal_unavailable_end_turn_obs=0`；必要时回滚本地 commit 并保留本批证据，重复对账前不改资源门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
