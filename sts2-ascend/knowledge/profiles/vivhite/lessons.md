@@ -17794,3 +17794,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.472394393392675局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.3281890348436303局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/25.45352120888521局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 25.00 → 20.00（双旋钮全尽，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，致命Monster战实测自损19/掉血35（54%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.37 → 0.37（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.95 → 1.94（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F21——灰区悲观系数部分胜利回收）；行至 F21 但致命战自损19/掉血35≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：3/1614 胜，当前目标进阶 3
+
+## 第 1615 局复盘（2026-09-28 15:48）
+- 结果：💀 失败｜进阶 3｜到达层数 3｜当局评分 3
+- 死因：敌人组合 NIBBIT
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血46｜自损60（可行动段60/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Unknown战 掉血27｜自损20（可行动段20/非行动段5，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=16/dpt=4/ttk=4/tsurv=0.222222（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=4/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T10判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.2802797748212944局)，THINKING_AHEAD(37分/5.533323221624179局)，MAYHEM(37分/4.5192299703598335局)，ROLLING_BOULDER(36分/5.568135957014486局)，FISTICUFFS(35分/6.121405600445431局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.4637410130158006局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/3.316540373221678局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/25.36443388465411局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（10回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1615 胜，当前目标进阶 3
