@@ -14603,6 +14603,23 @@ def main() -> int:
     assert ra_agent.ctx.combat_agg is None and ra_agent.ctx.combat is None, \
         "审计夹具结算后聚合账未清空"
 
+    # 阵亡样本的 rounds 是存活到终局的回合数，不是击杀耗时；比值观测必须
+    # 明确标成 terminal/invalid，不能把它与胜利样本的 TTK 比值混合校准。
+    ra_agent.know.policy["race_audit_projection_obs"] = True
+    ra_agent.know.policy["race_audit_projection_ratio_obs"] = True
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 2, "esc": False,
+        "projection_pool": 261.0, "projection_dpt": 5.4,
+        "projection_ttk": 48.3333, "projection_tsurv": 4.05405,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _ra_terminal_note = ra_agent.ctx.combat_notes[-1]
+    assert ("actual_rounds=8/projected_ttk=48.3333"
+            "/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）"
+            "/actual_rounds_kind=terminal/ratio_valid=no") in _ra_terminal_note, \
+        f"阵亡样本不应伪造TTK比值: {_ra_terminal_note}"
+
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
     class LostReceiptClient(client.Sts2Client):

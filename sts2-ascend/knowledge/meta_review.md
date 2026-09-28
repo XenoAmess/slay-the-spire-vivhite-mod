@@ -12656,3 +12656,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **回滚**：将 `race_allin_lethal_cover_behavior_min_margin` 设为 `0`，或关闭 `race_allin_lethal_cover_behavior`；预期只取消低池宽限/行为切换，保留既有 `RACE_ALLIN_LETHAL_COVER_OBS` 与容量审计。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标代码 `git diff --check` → **exit 0**；未写入 `.runtime/`、`runs/`、`archive/`、`stats`、`progression`、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1626 局复盘（RACE_PROJ_TTK_OUTCOME_KIND）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`RACE_PROJ_TTK_RATIO_OBS` 只有在胜利时才有可比的“实际击杀回合”；阵亡时的 `rounds` 只是存活到终局的回合数。若把两者都计算为 `actual_rounds/projected_ttk`，会把尚未击杀的死亡样本误当成投影校准样本。该假设可证伪。
+- **EVIDENCE**：精确 run `AJ1EW6BXQQR8`（第 1626 局，`sts2-ascend/knowledge/runs/20260928-092259_AJ1EW6BXQQR8.json`）完整 214 条决策已逐条核读。F17 Boss 战在第 7 回合阵亡；同一战斗记录同时写入 `pool=261/dpt=5.4/ttk=48.3333` 与 `actual_rounds=7/actual_over_projected=0.14`。该 0.14 是“存活 7 回合/预计击杀 48.3333”，不是实际击杀耗时；终端审计另显示 `ttk=13.2841/tsurv=1`，证明该场没有完成击杀。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立已入锁战斗中，胜利样本继续记录数值 `actual_over_projected`，并带 `actual_rounds_kind=kill/ratio_valid=yes`；阵亡样本记录 `actual_over_projected=NA`，并带 `actual_rounds_kind=terminal/ratio_valid=no`。按 `run_id/floor/outcome/rounds_kind` 分层后，不再有死亡样本进入数值 TTK 校准；动作、评分和 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/agent.py`：在既有 `RACE_PROJ_TTK_RATIO_OBS` 位置按 `agg.died` 分流；胜利保留原数值比值并追加 `kill/yes` 分类，阵亡以 `NA` 加 `terminal/no` 分类。既有 marker 前缀保持不变，旧消费者仍可检索。
+- `sts2-ascend/brain/knowledge.py`：补充 `race_audit_projection_ratio_obs` 的静态契约，说明阵亡样本不是 TTK 校准样本。
+- `sts2-ascend/brain/selfcheck.py`：新增与 1626 同型的阵亡夹具，验证终端分类、无数值伪比值以及原有胜利子串/关闭开关回归。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：继续采集 3~10 个独立已入锁战斗，按胜利/阵亡、`rounds_kind`、投影 `ttk/tsurv` 和后续终局分层。只有胜利样本的数值比值达到至少 3 个独立样本后，才评估校准或行为调整；若阵亡仍出现数值比值，先修复消费/部署路径。
+- **撤回**：将 `race_audit_projection_ratio_obs` 设为 `False`；预期只移除 `RACE_PROJ_TTK_RATIO_OBS`，保留 `RACE_PROJ_CALIB_AUDIT`、终端审计、评分、action 与 params。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

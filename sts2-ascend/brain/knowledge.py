@@ -788,7 +788,10 @@ DEFAULT_POLICY = {
                                          # 的血池/有效DPT/TTK/可存活回合与实际结局
                                          # 放在同一条战斗记录中，纯用于校准，不改变判定；
                                          # False 严格回滚为仅记录「判死→实战」摘要
-    "race_audit_projection_ratio_obs": True,  # 追加实际回合/投影TTK比值，仅观测、可回滚
+    "race_audit_projection_ratio_obs": True,  # 追加实际回合/投影TTK比值，仅观测、可回滚；
+                                               # 只有胜利样本的 actual_rounds 是击杀耗时并
+                                               # 输出数值比值；阵亡样本标 actual_rounds_kind=terminal
+                                               # 且 ratio_valid=no，避免把存活回合当作 TTK 校准
     "intangible_hp_cost_obs": True,
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "low_pool_burst_card_audit_obs": True,  # 低池爆发观测补充可负担格挡容量与最终动作；只读、可回滚

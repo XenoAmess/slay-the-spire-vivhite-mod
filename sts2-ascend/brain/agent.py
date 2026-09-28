@@ -3722,12 +3722,24 @@ class Agent:
                             and math.isfinite(_projected_ttk)
                             and _actual_rounds > 0.0
                             and _projected_ttk > 0.0):
-                        _ttk_ratio = _actual_rounds / _projected_ttk
-                        note += (
-                            f"｜竞速TTK校准比：actual_rounds={_actual_rounds:g}"
-                            f"/projected_ttk={_projected_ttk:g}"
-                            f"/actual_over_projected={_ttk_ratio:.2f}"
-                            "（RACE_PROJ_TTK_RATIO_OBS）")
+                        # 只有胜利时的实际回合才是「击杀耗时」。阵亡样本里的
+                        # rounds 是存活到终局的回合数，不能与 projected_ttk
+                        # 相除，否则会把「尚未击杀」伪装成投影校准比。
+                        if bool(agg.get("died")):
+                            note += (
+                                f"｜竞速TTK校准比：actual_rounds={_actual_rounds:g}"
+                                f"/projected_ttk={_projected_ttk:g}"
+                                "/actual_over_projected=NA"
+                                "（RACE_PROJ_TTK_RATIO_OBS）"
+                                "/actual_rounds_kind=terminal/ratio_valid=no")
+                        else:
+                            _ttk_ratio = _actual_rounds / _projected_ttk
+                            note += (
+                                f"｜竞速TTK校准比：actual_rounds={_actual_rounds:g}"
+                                f"/projected_ttk={_projected_ttk:g}"
+                                f"/actual_over_projected={_ttk_ratio:.2f}"
+                                "（RACE_PROJ_TTK_RATIO_OBS）"
+                                "/actual_rounds_kind=kill/ratio_valid=yes")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
