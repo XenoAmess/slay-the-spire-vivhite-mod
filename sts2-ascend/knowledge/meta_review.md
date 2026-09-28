@@ -13141,3 +13141,25 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **回滚**：将 `low_pool_burst_terminal_outcome_obs` 设为 `False`；预期只移除终局 marker，既有牌面审计、action 和 params 保持不变。
 - **验证**：完整 selfcheck 输出 `SELFCHECK OK`；目标 Python diff `git diff --check` 通过。自检过程未写入 `.runtime/`、runs、archive、stats、progression、policy.json、lessons.md 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1664局复盘（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `LETHAL_UNAVAILABLE_END_TURN_OBS` 已经记录“无可用牌且本回合必死”的资源边界，但没有把它与随后同楼层的权威 `GAME_OVER` 结果连接起来。若只增加一个持久化的观察 join，应能在终局记录 `source_round`、`outcome` 与 `final_hp`，而不改变选牌、评分、action 或 params。
+- **EVIDENCE**：`sts2-ascend/knowledge/runs/20260929-043943_S2E7ZFAXD75R.json`（run `S2E7ZFAXD75R`，第1664局）在 F6/T5 的 decisions 数组 index 114 记录 `end_turn`：`hp=18/block=0/incoming=18/energy=0/cards=3/energy_locked=3/hand_block_candidates=0/hand_max_block=0/hand_post_gap=18/hand_raw_survival=no/forced=yes/gap=yes`，随后 index 115 是同楼层 F6 `GAME_OVER`、终局血量 0。原始链有来源 marker 与终局记录，但没有二者的可检索对账字段。
+- **EXPECTED_SIGNAL**：后续 3 至 10 个独立窗口中，只有“同楼层致死无牌空过后紧接权威终局”的样本产生且仅产生一次 `LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS`，字段能对上来源回合、胜负和 `final_hp`；跨楼层、无来源、字段不完整的样本不应 join。任何 action/params 漂移、重复 marker、错误楼层或错误终局血量都将证伪本假设并触发回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启且可独立关闭的 `lethal_unavailable_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py` 只在 `GAME_OVER`/旧终局返回路径恢复最近一条已持久化的同楼层 `end_turn` 观察，追加终局胜负、来源回合与 `final_hp`；支持进程重载、动作丢失重试和已提交后的单次去重，不进入评分、候选、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py` 新增 3z-4c，覆盖默认行为、重载恢复、丢动作重试、提交后不重复以及开关关闭时 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：先只收集 3 至 10 个独立致死无牌窗口，按 `run_id/floor/source_round/source_action/outcome/final_hp` 逐项核对；在证据稳定前不调整出牌策略。
+- **回滚**：将 `lethal_unavailable_terminal_outcome_obs` 设为 `False`；预期只移除终局 marker，既有资源边界记录以及 action/params 保持不变。
+- **验证**：固定 256 槽的宿主 selfcheck 启动钩子在第二次直连运行时报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（临时目录耗尽），随后使用同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 的进程级临时目录适配器完成完整回归并输出 `SELFCHECK OK`；目标文件 `git diff --check` 通过。未写入 `.runtime/`、在线运行态、统计/策略学习文件或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

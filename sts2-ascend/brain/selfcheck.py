@@ -17061,6 +17061,107 @@ def main() -> int:
         and "NONLETHAL_UNAVAILABLE_END_TURN_OBS" not in d_nonlethal_empty_off.reason, \
         f"非致死资源耗尽观测关闭后动作或标记漂移: {d_nonlethal_empty_off and d_nonlethal_empty_off.reason}"
 
+    # 3z-4c) 致死资源耗尽终局对账（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）：
+    #         1664-F6-T5 的形态——致死无牌空过后下一条权威 GAME_OVER；把
+    #         source_round/resource boundary/outcome/final_hp 接起来，但不改
+    #         continue_game_over 的 action/params。覆盖重载、丢动作重试与回滚。
+    lethal_unavailable_outcome_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "run": {"current_hp": 0},
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+    }
+    lethal_empty_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_lethal_empty.reason,
+    }]
+    d_lethal_empty_outcome = lethal_empty_pol.decide(
+        lethal_unavailable_outcome_state, lethal_empty_ctx)
+    assert (d_lethal_empty_outcome.action == "continue_game_over"
+            and d_lethal_empty_outcome.params == {}
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_lethal_empty_outcome.reason
+            and "outcome=defeat/floor=33/source_round=6"
+            in d_lethal_empty_outcome.reason
+            and "/source_action=end_turn/final_hp=0"
+            in d_lethal_empty_outcome.reason
+            and "/hp=9/block=6/incoming=20/energy=0"
+            in d_lethal_empty_outcome.reason
+            and "/cards=2/energy_locked=2"
+            in d_lethal_empty_outcome.reason
+            and "/hand_max_block=5/hand_post_gap=9"
+            in d_lethal_empty_outcome.reason
+            and "/hand_raw_survival=no/forced=no/gap=yes"
+            in d_lethal_empty_outcome.reason), \
+        f"致死无牌终局对账缺失或动作漂移: {d_lethal_empty_outcome}"
+    assert knowledge.DEFAULT_POLICY[
+        "lethal_unavailable_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 lethal_unavailable_terminal_outcome_obs"
+
+    lethal_unavailable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_unavailable_replay_ctx = _SettleCtx()
+    lethal_unavailable_replay_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_lethal_empty.reason,
+    }]
+    d_lethal_unavailable_replay = lethal_unavailable_replay_pol.decide(
+        lethal_unavailable_outcome_state, lethal_unavailable_replay_ctx)
+    assert (d_lethal_unavailable_replay.action
+            == d_lethal_empty_outcome.action
+            and d_lethal_unavailable_replay.params
+            == d_lethal_empty_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_lethal_unavailable_replay.reason), \
+        f"致死无牌终局对账未从持久链恢复: {d_lethal_unavailable_replay}"
+
+    lethal_unavailable_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_unavailable_retry_ctx = _SettleCtx()
+    lethal_unavailable_retry_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_lethal_empty.reason,
+    }]
+    d_lethal_unavailable_retry_first = lethal_unavailable_retry_pol.decide(
+        lethal_unavailable_outcome_state, lethal_unavailable_retry_ctx)
+    d_lethal_unavailable_retry = lethal_unavailable_retry_pol.decide(
+        lethal_unavailable_outcome_state, lethal_unavailable_retry_ctx)
+    assert ("LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_lethal_unavailable_retry_first.reason
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_lethal_unavailable_retry.reason), \
+        "致死无牌终局对账丢动作后未重试"
+    lethal_unavailable_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 33,
+        "reason": d_lethal_unavailable_retry.reason,
+    })
+    d_lethal_unavailable_retry_committed = lethal_unavailable_retry_pol.decide(
+        lethal_unavailable_outcome_state, lethal_unavailable_retry_ctx)
+    assert "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS" \
+        not in d_lethal_unavailable_retry_committed.reason, \
+        "致死无牌终局对账已提交后重复写入 marker"
+
+    lethal_unavailable_outcome_off_know = knowledge.Knowledge(tmp)
+    lethal_unavailable_outcome_off_know.policy[
+        "lethal_unavailable_terminal_outcome_obs"] = False
+    lethal_unavailable_outcome_off_pol = policy.Policy(
+        lethal_unavailable_outcome_off_know)
+    lethal_unavailable_outcome_off_ctx = _SettleCtx()
+    lethal_unavailable_outcome_off_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_lethal_empty.reason,
+    }]
+    d_lethal_unavailable_outcome_off = (
+        lethal_unavailable_outcome_off_pol.decide(
+            lethal_unavailable_outcome_state,
+            lethal_unavailable_outcome_off_ctx))
+    assert (d_lethal_unavailable_outcome_off.action
+            == d_lethal_empty_outcome.action
+            and d_lethal_unavailable_outcome_off.params
+            == d_lethal_empty_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            not in d_lethal_unavailable_outcome_off.reason), \
+        f"致死无牌终局对账关闭后动作或 marker 漂移: {d_lethal_unavailable_outcome_off}"
+
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能
