@@ -13977,3 +13977,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.818691048217139局)，BASH(14分/2.3850462715683487局)，STOKE(16分/2.714506579517516局)
 - 策略进化：block_safety: 1.93 → 1.98（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1671 胜，当前目标进阶 0
+
+## 第 1672 局复盘（2026-09-29 07:00）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：MOLTEN_FIST, BLUDGEON, HEMOKINESIS, FLAME_BARRIER, INFLAME, IRON_WAVE, HAND_OF_GREED, FIEND_FIRE, BLUDGEON
+- 本局遗物：STRIKE_DUMMY
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血4｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血13; F8 Monster战 掉血14; F15 Monster战 掉血0; F17 Boss战 掉血55｜自损2（可行动段2/非行动段38，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=228/dpt=13.5/ttk=16.8889/tsurv=3.07692（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=16.8889/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.288141232404304局)，HELLRAISER(26分/4.742759328434062局)，PROWESS(25分/7.27891924524552局)，FEED(25分/32.84485777292229局)，PACTS_END(25分/57.675350717526506局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8088256295483793局)，BASH(14分/2.3766986096178595局)，STOKE(16分/2.7050058064892046局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.43（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1672 胜，当前目标进阶 0
