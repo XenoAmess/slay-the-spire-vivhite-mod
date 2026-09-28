@@ -13933,3 +13933,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.858500444460794局)，BASH(14分/2.4187311453129796局)，STOKE(16分/2.752844540713502局)
 - 策略进化：elite_grey_safety_mult: 2.35 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.41 → 0.41（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.95 → 1.94（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F25——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1667 胜，当前目标进阶 0
+
+## 第 1668 局复盘（2026-09-29 05:53）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：DISMANTLE, PANIC_BUTTON, TAUNT, UPPERCUT, SHRUG_IT_OFF, TWIN_STRIKE, DISMANTLE, FLAME_BARRIER, MANGLE, PACTS_END, SWORD_BOOMERANG, SHRUG_IT_OFF, MOLTEN_FIST, MOLTEN_FIST, HEADBUTT, DISMANTLE
+- 本局遗物：PETRIFIED_TOAD, VEXING_PUZZLEBOX
+- 战斗记录：F14 Unknown战 掉血0; F17 Boss战 掉血58｜竞速投影审计：pool=151/dpt=8.775/ttk=17.208/tsurv=5.41667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=17.208/actual_over_projected=0.64（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战11回合获胜; F19 Monster战 掉血19; F21 Monster战 掉血18; F23 Monster战 掉血16; F24 Elite战 掉血27（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.3204574811254415局)，HELLRAISER(26分/4.809743039016087局)，PROWESS(25分/7.381722062405219局)，FEED(25分/33.308737614764404局)，PACTS_END(25分/58.48992061927507局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8484956929051815局)，BASH(14分/2.4102655863043845局)，STOKE(16分/2.7432095848210047局)
+- 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.41 → 0.44（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.94 → 1.93（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1668 胜，当前目标进阶 0
