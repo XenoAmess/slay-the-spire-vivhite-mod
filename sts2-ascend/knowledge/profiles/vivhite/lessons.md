@@ -17398,3 +17398,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.6453779000548936局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.0657715908073433局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/36.02689275584364局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：3/1578 胜，当前目标进阶 3
+
+## 第 1579 局复盘（2026-09-28 09:19）
+- 结果：💀 失败｜进阶 3｜到达层数 3｜当局评分 3
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血52｜自损20（可行动段20/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=25/dpt=2.8/ttk=8.92857/tsurv=1.30769（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=8.92857/actual_over_projected=1.01（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T9判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.7215852940232397局)，MAYHEM(37分/5.127215040344081局)，THINKING_AHEAD(36分/5.201329883243458局)，FISTICUFFS(35分/6.944935988763429局)，ROLLING_BOULDER(34分/5.240826076546163局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.6361190774047016局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.0585413902395175局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/35.90079863119819局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：3/1579 胜，当前目标进阶 3
