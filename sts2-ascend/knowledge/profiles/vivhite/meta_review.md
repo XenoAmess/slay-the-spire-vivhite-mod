@@ -4594,6 +4594,37 @@ production_code_commit: pending local commit（最终 SHA 在交接回执中）
 
 retry_resolution: none (no failed_review_replay packages requested)
 
+# 1636 批：Boss 零意图攻击门与竞速可行性对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1636-F17-T7 的 Boss 意图为 0，三张生命支付攻击牌被 `VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE` 拦下；同一决策链的竞速投影显示击杀约需 3 回合、可存活约 4 回合，随后 T8 只能付 4 血打出一次攻击并在 `hp=18/incoming=18` 终局。若零意图门在竞速已可行时错过了输出窗口，门拦观测必须把 `ttk-tsurv` 机器可读化，才能把“可行但被拦”与“确实不可行”分开；本批不改变出牌。
+- **EVIDENCE**：packet 的精确批次为 1629~1636；最新完整链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-201354_7QRHGZGUJZZS.json`，250 条 decisions。已逐条检查原始链；F17-T7 有 `incoming=0/hp=22/enemy_hp=63`、三张弦光投影被零意图门拦，F17-T8 终局为 `hp=18/block=0/incoming=18`，四张手牌均 `blocked_by_hook`；终局竞速账为 `pool=63/dpt=23.1429/ttk=2.72222/tsurv=1.22222`。该证据支持补齐竞速可行性观测，不单独证明门拦是唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss combat 中，出现 `VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS` 时应附带 `race_ttk/race_tsurv/race_ttk_minus_tsurv/race_viable/projection_round`；同一回合的 `action/params` 必须保持不变。若 `race_viable=yes` 的零意图门拦随后稳定接上正伤害回合、终局或明显延迟，假设成立并再评估行为门；若均为 `no` 或样本获胜且无丢失窗口，则保留只读观测，不升级为放行策略。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：扩展既有 `VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS`，从同战斗竞速快照追加 `race_ttk`、`race_tsurv`、差值、可行性和投影回合；只读，不参与评分、候选、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：增加 `ttk=3/tsurv=4` 的夹具，断言 `race_viable=yes`、差值为 -1 且 action/params 与原观测一致。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 直接运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 先受到宿主受管临时 pool 的 256 槽/ACL 限制；随后使用不改源码的 stdin 临时目录分配器执行同一 `selfcheck.py`，输出 `SELFCHECK OK`，退出码 0。
+- 已完整回读目标 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只统计后续 3~10 个独立 Vivhite Boss combat：按 run/floor/round 对账零意图门拦、`race_ttk/race_tsurv`、真实 `applied end_turn {}`、下一次敌方意图、后续 `GAME_OVER`/胜负与终局竞速账。
+- 若新字段与同战斗投影不符、投影回合错位、非 Boss/有来袭伤害显形，或 action/params 漂移，将 `vivhite_boss_free_turn_attack_veto_obs=0` 关闭本批观测；必要时回滚本地提交。在重复对账前不放宽零意图生命支付门。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
+
 # 1624~1626 批：沙坑续命牌“可打”与“能挽救当前回合”的边界观测
 
 日期：2026-09-28

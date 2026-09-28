@@ -4130,8 +4130,9 @@ def main() -> int:
     vknow_bfav = _vivhite_know("sts2-selfcheck-vboss-freeturn-atkveto-")
     vknow_bfav.policy["vivhite_hp_cost_play_margin"] = 1.0
     vpol_bfav = policy.Policy(vknow_bfav, random.Random(11))
+    vctx_bfav = _krh_ctx()
     d_bfav = vpol_bfav.decide(
-        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0), _krh_ctx())
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0), vctx_bfav)
     assert d_bfav.action == "end_turn" \
         and d_bfav.params == {} \
         and "VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS" in d_bfav.reason \
@@ -4139,6 +4140,19 @@ def main() -> int:
         and "pay=2" in d_bfav.reason \
         and "enemy_hp=200" in d_bfav.reason, \
         f"Boss 零意图攻击门拦观测字段缺失或动作漂移: {d_bfav}"
+    vpol_bfav._race_terminal_projection = {
+        "round": 9, "enemy_hp": 200.0, "dpt": 50.0,
+        "ttk": 3.0, "tsurv": 4.0,
+    }
+    d_bfav_race = vpol_bfav.decide(
+        _krh_state(9, 19, _krh_hand_vivhite(), incoming=0), vctx_bfav)
+    assert d_bfav_race.action == d_bfav.action \
+        and d_bfav_race.params == d_bfav.params \
+        and "/race_ttk=3/race_tsurv=4" in d_bfav_race.reason \
+        and "/race_ttk_minus_tsurv=-1/race_viable=yes" \
+            in d_bfav_race.reason \
+        and "/projection_round=9" in d_bfav_race.reason, \
+        f"Boss 零意图门拦未携带竞速可行性观测或动作漂移: {d_bfav_race}"
     vknow_bfav0 = _vivhite_know("sts2-selfcheck-vboss-freeturn-atkveto-off-")
     vknow_bfav0.policy["vivhite_hp_cost_play_margin"] = 1.0
     vknow_bfav0.policy["vivhite_boss_free_turn_attack_veto_obs"] = 0

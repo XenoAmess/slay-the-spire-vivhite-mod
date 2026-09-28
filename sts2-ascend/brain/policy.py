@@ -5103,13 +5103,32 @@ class Policy:
                 f"/pay={_pay:g}/score={_score:.2f}")
         if not _rows:
             return ""
+        _projection_note = ""
+        _projection = getattr(self, "_race_terminal_projection", None)
+        if isinstance(_projection, dict):
+            try:
+                _projection_ttk = float(_projection["ttk"])
+                _projection_tsurv = float(_projection["tsurv"])
+                _projection_round = int(_projection.get("round"))
+            except (KeyError, TypeError, ValueError, OverflowError):
+                _projection_ttk = None
+                _projection_tsurv = None
+                _projection_round = None
+            if (_projection_ttk is not None
+                    and _projection_tsurv is not None):
+                _projection_note = (
+                    f"/race_ttk={_projection_ttk:g}"
+                    f"/race_tsurv={_projection_tsurv:g}"
+                    f"/race_ttk_minus_tsurv={_projection_ttk - _projection_tsurv:+g}"
+                    f"/race_viable={'yes' if _projection_ttk <= _projection_tsurv else 'no'}"
+                    f"/projection_round={_projection_round if _projection_round is not None else '?'}")
         return (
             f"；Boss零意图攻击门拦观测：round={int(round_no)}"
             f"/hp={float(my_hp):g}/{float(my_max_hp):g}"
             f"/block={float(my_block):g}/energy={float(energy):g}"
             f"/incoming={float(incoming):g}/enemy_hp={_enemy_hp:g}"
             f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
-            f"/cards={'|'.join(_rows)}"
+            f"/cards={'|'.join(_rows)}{_projection_note}"
             "（VIVHITE_BOSS_FREE_TURN_ATTACK_VETO_OBS）")
 
     def _combat_readiness_wait(
