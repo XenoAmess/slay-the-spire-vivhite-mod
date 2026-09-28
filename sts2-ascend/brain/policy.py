@@ -9373,6 +9373,10 @@ class Policy:
                 instead caps every hit at one damage without any layer loss.
                 """
                 slippery = self._enemy_slippery_stack(enemy)
+                hardened_shell = 0.0
+                if bool(pol.get("enemy_hardened_shell_dmg_cap", True)):
+                    hardened_shell = self._enemy_power_stack(
+                        enemy, "hardened_shell", "硬化外壳")
                 # 敌无实体逐hit封顶（ENEMY_INTANGIBLE_DMG_CAP，第1436~1440局批复盘）：
                 # 原生 IntangiblePower.ModifyDamageCap 对持有者把每段伤害上限压到 1
                 # （zhs「将本回合受到的所有伤害和生命减少效果降低为1」），旧口径按牌面
@@ -9387,7 +9391,7 @@ class Policy:
                 intangible = 0.0
                 if slippery <= 0 and bool(pol.get("enemy_intangible_dmg_cap", True)):
                     intangible = self._enemy_intangible_stack(enemy)
-                if slippery <= 0 and intangible <= 0:
+                if slippery <= 0 and intangible <= 0 and hardened_shell <= 0:
                     return float(total), float(total) >= _effective_pool(enemy), 0
                 try:
                     raw_hp = enemy.get("current_hp", 9999)
@@ -9395,7 +9399,7 @@ class Policy:
                     enemy_block = max(0.0, float(enemy.get("block", 0) or 0))
                     layers = max(1, int(math.ceil(slippery))) if slippery > 0 else 0
                     segment_damage = max(0.0, float(dmg))
-                    if slippery <= 0:
+                    if slippery <= 0 and intangible > 0:
                         # 无实体：每 hit 伤害上限 1（不掉层）
                         segment_damage = min(segment_damage, 1.0)
                     segment_count = max(1, int(hits))
@@ -9404,6 +9408,7 @@ class Policy:
 
                 removed = 0.0
                 broken = 0
+                hardened_shell_remaining = max(0.0, hardened_shell)
                 for _ in range(segment_count):
                     if hp <= 0:
                         break
@@ -9420,6 +9425,9 @@ class Policy:
                         broken += 1
                     else:
                         hp_lost = min(hp, unblocked)
+                    if hardened_shell_remaining > 0:
+                        hp_lost = min(hp_lost, hardened_shell_remaining)
+                        hardened_shell_remaining -= hp_lost
                     hp -= hp_lost
                     removed += hp_lost
                 return min(float(total), removed), hp <= 0, broken

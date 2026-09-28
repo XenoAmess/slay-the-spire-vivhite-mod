@@ -18229,6 +18229,51 @@ def main() -> int:
                 and d_mandatory_low_energy.params.get("card_index") == 1), \
         f"能量不足时错误强打原生强制牌: {d_mandatory_low_energy.action}/{d_mandatory_low_energy.params}"
 
+    # 3hshell) Native HARDENED_SHELL_POWER caps HP loss at 20 per turn.  The
+    #          F11/1629 SKULKING_COLONY trace had 32 damage marked lethal while
+    #          the target survived and dealt 18 on the next enemy turn.  Check
+    #          the cap, ordinary-target compatibility, and strict rollback.
+    shell_pol = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    shell_card = {
+        "index": 0, "card_id": "BLUDGEON", "name": "重锤", "playable": True,
+        "energy_cost": 3, "requires_target": True,
+        "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 32}],
+    }
+    shell_enemy = {
+        "index": 0, "enemy_id": "SKULKING_COLONY", "name": "鬼祟珊瑚群",
+        "current_hp": 25, "max_hp": 75, "block": 0, "is_alive": True,
+        "is_hittable": True,
+        "powers": [{"id": "HARDENED_SHELL_POWER", "amount": 20}],
+        "intents": [{"total_damage": 18}],
+    }
+    shell_args = dict(
+        incoming=18, my_block=0, round_no=4, pol=shell_pol.know.policy,
+        my_hp=8, my_max_hp=80, stance={}, forced_kill=False,
+        reserve_for_block=False, min_blk_cost=99, cur_energy=3,
+        player_powers=[], observed_hand_count=1)
+    shell_score, shell_target, shell_why = shell_pol._score_play(
+        shell_card, [shell_enemy], **shell_args)
+    assert (shell_target == 0 and "可击杀" not in shell_why), \
+        f"硬化外壳仍被误判为可击杀: {shell_score}/{shell_target}/{shell_why}"
+    plain_enemy = dict(shell_enemy)
+    plain_enemy["powers"] = []
+    plain_score, plain_target, plain_why = shell_pol._score_play(
+        shell_card, [plain_enemy], **shell_args)
+    assert (plain_target == 0 and "可击杀" in plain_why), \
+        f"普通目标击杀口径被硬化外壳修复误伤: {plain_score}/{plain_target}/{plain_why}"
+    shell_off = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    shell_off.know.policy["enemy_hardened_shell_dmg_cap"] = False
+    off_args = dict(shell_args, pol=shell_off.know.policy)
+    off_score, off_target, off_why = shell_off._score_play(
+        shell_card, [shell_enemy], **off_args)
+    assert (off_target == 0 and "可击杀" in off_why), \
+        f"硬化外壳开关未严格回滚旧口径: {off_score}/{off_target}/{off_why}"
+
     print("SELFCHECK OK")
     return 0
 

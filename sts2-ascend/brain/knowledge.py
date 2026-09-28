@@ -78,6 +78,7 @@ def relic_stats_key(value: object) -> str | None:
 
 
 DEFAULT_POLICY = {
+    "enemy_hardened_shell_dmg_cap": True,  # Native HardenedShellPower caps HP loss per turn; disable for strict rollback.
     "decimillipede_reattach_window_obs": True,  # pure observation: track missing_since/elapsed/due and returned_after inside native 2-turn reattach windows
     "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic
     "boss_race_slippery_tax_per_layer": 0.25,  # 前夜竞速预演的开局滑溜破层税（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：

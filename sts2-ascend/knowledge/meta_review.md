@@ -12719,3 +12719,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `race_prelock_defense_obs` 设为 `False`；预期只移除 `RACE_PRELOCK_DEFENSE_OBS` 尾缀，评分、action、params 和既有竞速投影保持不变。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标 diff 通过 `git diff --check`；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第1629局复盘（HARDENED_SHELL_KILL_PROJECTION）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当前 `_attack_outcome` 把牌面有效伤害直接当作本回合可移除的生命值；当敌人携带原生 `HARDENED_SHELL_POWER` 时，这会把超过每回合20点生命损失上限的攻击误报为“可击杀”，并错误发放击杀奖励/终局预测。若按当前能力层数在逐段命中中扣减封顶，F11 的误判应消失，普通敌人不受影响。
+- **EVIDENCE**：精确 run `VRLF5DPNB9NZ`（第1629局，`sts2-ascend/knowledge/runs/20260928-111450_VRLF5DPNB9NZ.json`）F11 D114 快照含 `SKULKING_COLONY[HARDENED_SHELL_POWER×20]`；D124 以约32伤的【重锤】写入“可击杀”，D125 目标仍在场且18伤意图下无可负担牌，D126 `GAME_OVER`。原生 v0.111.0 mechanics 明确 `HardenedShellPower` 将本回合生命损失封顶20并在回合开始重置。
+- **EXPECTED_SIGNAL**：未来3~10个独立携带硬化外壳的战斗窗口中，原始预测伤害超过当前封顶时不再出现错误“可击杀”，且不再产生对应的击杀奖励/击杀提交；生命值不超过封顶的真实击杀仍可判定。无该能力的敌人以及开关关闭时，action/target/params 保持旧口径。若发生真实漏杀或 payload 层数不是剩余封顶而是固定基值，则该假设被证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚键 `enemy_hardened_shell_dmg_cap`。
+- `sts2-ascend/brain/policy.py`：在既有 `_attack_outcome` 中读取 `HARDENED_SHELL_POWER`，对单卡多段命中的 HP 损失累计应用当前封顶；未携带能力或键为 `False` 时保留原快速路径。
+- `sts2-ascend/brain/selfcheck.py`：新增硬化外壳误杀、普通敌人兼容、开关严格回滚三项夹具；复用既有 `tmp`，不增加自检临时池申请。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：按 `run_id/floor/turn/enemy_id/power amount/raw damage/predicted lethal/actual outcome` 汇总未来3~10个独立窗口；若同回合多次攻击后载荷仍固定为20并再次误杀，改为按回合追踪已观测 HP 损失，不能继续把固定基值当剩余封顶。
+- **撤回**：将 `enemy_hardened_shell_dmg_cap` 设为 `False`，恢复旧 `_attack_outcome` 伤害/击杀口径；不影响既有其他敌方能力封顶逻辑。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
