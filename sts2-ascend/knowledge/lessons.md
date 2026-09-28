@@ -13845,3 +13845,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9398139053393577局)，BASH(14分/2.4875348429794575局)，STOKE(16分/2.831152493157533局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1659 胜，当前目标进阶 0
+
+## 第 1660 局复盘（2026-09-29 03:43）
+- 结果：💀 失败｜进阶 0｜到达层数 6｜当局评分 6
+- 死因：敌人组合 SLITHERING_STRANGLER+SNAPPING_JAXFRUIT
+- 本局拿牌：MOLTEN_FIST, TAUNT, CINDER, STONE_ARMOR
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Unknown战 掉血77; F4 Monster战 掉血0｜竞速投影审计：pool=28/dpt=8.4/ttk=3.33333/tsurv=1.5（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=3.33333/actual_over_projected=2.10（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战7回合获胜; F5 Monster战 掉血0; F6 Monster战 掉血21（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.386465666982994局)，HELLRAISER(26分/4.946561927114162局)，PROWESS(25分/6.566857333926145局)，FEED(25分/33.2527321651262局)，PACTS_END(25分/58.10044347502564局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.9295245566706702局)，BASH(14分/2.4788284710290296局)，STOKE(16分/2.8212434594314817局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1660 胜，当前目标进阶 0
