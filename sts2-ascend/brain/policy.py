@@ -11265,6 +11265,29 @@ class Policy:
             # 合法目标优先；列表为空/过期（击杀后刷新延迟）时退化为全体敌人，
             # 保证评分反映真实期望而非被压成 -1 弃权（第 44 局 F6 实证）
             _pool = [e for e in enemies if not _valid or e.get("index") in _valid] or list(enemies)
+            _kin_leader_focus_enabled = bool(
+                pol.get("kin_leader_focus_gate", True))
+            _kin_leader_pool = [
+                e for e in _pool
+                if str(e.get("enemy_id") or "").upper() == "KIN_PRIEST"
+                and e.get("is_alive") is not False
+                and e.get("is_hittable") is not False
+            ]
+            _kin_minion_pool = [
+                e for e in _pool
+                if str(e.get("enemy_id") or "").upper() == "KIN_FOLLOWER"
+                and e.get("is_alive") is not False
+                and e.get("is_hittable") is not False
+                and self._enemy_power_stack(e, "minion", "爪牙") > 0
+            ]
+            _kin_leader_focus_active = bool(
+                _kin_leader_focus_enabled
+                and _kin_leader_pool
+                and _kin_minion_pool)
+            _kin_leader_indices = {
+                e.get("index") for e in _kin_leader_pool}
+            _kin_minion_indices = {
+                e.get("index") for e in _kin_minion_pool}
             # 集火连续性（第 695~697 批复盘）：多体精英（残杀千足虫等分段体）的
             # 力量轮转让逐张重算的火线在节间横跳（697 局 F28 阵亡记录 0→1→2），
             # 三条血同时剩半截无一减员——给延续上一目标的小幅粘性分，减员前置。
@@ -11552,6 +11575,14 @@ class Policy:
                         and self._enemy_strength_stack(e) > 0):
                     s = floor_score - 1.0
                     _multi_scaler_lock_blocked = True
+                _kin_follower_gate_blocked = (
+                    _kin_leader_focus_active
+                    and e.get("index") in _kin_minion_indices)
+                if _kin_follower_gate_blocked:
+                    # The native Kin follower gives up when its leader dies.
+                    # Keep the gate after kill/removal scoring so a cheap or
+                    # lethal follower cannot outrank the still-live priest.
+                    s = min(s, floor_score - 1.0)
                 # 去分对照分：减员分剔除；粘性曾被该候选的减员分休眠时复活
                 # （_doctrine_present 全局休眠口径与减员分无关，两边一致）。
                 if _payback_blocked:
@@ -11576,6 +11607,12 @@ class Policy:
                                 f"延续集火：{e['name']}（重复轮换火力=拖延减员）"
                                 if (_sticky_t is not None and e.get("index") == _sticky_t)
                                 else f"单体伤害≈{eff}")))
+                    if (_kin_leader_focus_active
+                            and e.get("index") in _kin_leader_indices):
+                        why += (
+                            f"｜原生领袖优先：KIN_PRIEST#{e.get('index')}"
+                            f"/随从数={len(_kin_minion_pool)}"
+                            "（KIN_LEADER_FOCUS_GATE）")
                     if (is_support and _support_intent_obs
                             and bool(pol.get("support_target_intent_obs", True))):
                         why += (f"｜零伤害目标意图审计：{_support_intent_obs}"

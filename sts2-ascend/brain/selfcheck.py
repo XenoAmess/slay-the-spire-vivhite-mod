@@ -1685,6 +1685,58 @@ def main() -> int:
         and "MINION_FOCUS_OBS" not in d_mf_all.reason, \
         f"全场皆爪牙（领导者已死）不得挂注记: {d_mf_all.params}（{d_mf_all.reason}）"
 
+    # 3mkl) 原生同族领袖优先（KIN_LEADER_FOCUS_GATE）：第1672局 F17
+    #      KIN_FOLLOWER+KIN_PRIEST 先连续转火 58 池随从、再面对 190 池神官，
+    #      而 MinionPower 已确认领袖死亡后随从放弃战斗。仅对精确同族组合、
+    #      随从带 MinionPower 且领袖可命中时压制随从评分；关闭键须恢复旧的
+    #      辅助体/减员成本目标。
+    def kin_leader_focus_state():
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": 1,
+            "combat": {
+                "player": {"current_hp": 80, "max_hp": 80, "block": 0,
+                            "energy": 3},
+                "hand": [{"index": 0, "card_id": "KLF_STRIKE", "name": "打击",
+                          "playable": True, "energy_cost": 1,
+                          "requires_target": True,
+                          "valid_target_indices": [0, 1],
+                          "dynamic_values": [{"name": "Damage",
+                                              "current_value": 8}]}],
+                "enemies": [
+                    {"index": 0, "enemy_id": "KIN_FOLLOWER", "name": "同族信徒",
+                     "current_hp": 58, "max_hp": 59, "block": 0,
+                     "is_alive": True, "is_hittable": True,
+                     "powers": [{"id": "MINION_POWER", "amount": 1}],
+                     "intents": [{"total_damage": 0,
+                                  "intent_type": "Buff"}]},
+                    {"index": 1, "enemy_id": "KIN_PRIEST", "name": "同族神官",
+                     "current_hp": 190, "max_hp": 190, "block": 0,
+                     "is_alive": True, "is_hittable": True,
+                     "powers": [], "intents": [{"total_damage": 12}]}]},
+            "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                    "floor": 17, "deck": []}}
+
+    kl_on_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-leader-on-")))
+    assert kl_on_know.policy.get("kin_leader_focus_gate") is True, \
+        "DEFAULT_POLICY 缺少 kin_leader_focus_gate 静态键"
+    kl_on = policy.Policy(kl_on_know, random.Random(11))
+    d_kl_on = kl_on.decide(kin_leader_focus_state(), ctx)
+    assert d_kl_on.action == "play_card" \
+        and d_kl_on.params.get("target_index") == 1 \
+        and "KIN_LEADER_FOCUS_GATE" in d_kl_on.reason, \
+        f"同族领袖闸未把目标转向神官: {d_kl_on.params}（{d_kl_on.reason}）"
+    kl_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-leader-off-")))
+    kl_off_know.policy["kin_leader_focus_gate"] = False
+    kl_off = policy.Policy(kl_off_know, random.Random(11))
+    d_kl_off = kl_off.decide(kin_leader_focus_state(), ctx)
+    assert d_kl_off.action == "play_card" \
+        and d_kl_off.params.get("target_index") == 0 \
+        and "KIN_LEADER_FOCUS_GATE" not in d_kl_off.reason, \
+        f"kin_leader_focus_gate=False 未严格恢复旧目标: {d_kl_off.params}（{d_kl_off.reason}）"
+
     # 3x') 孤注一掷回合（第 59 局 Boss 战 T6 实证）：16 血/5 甲对 18 意图、
     #      手牌全是攻击无格挡牌——旧逻辑把全部攻击压到禁玩线，3 能量原样结束
     #      回合白吃 13 刀后下回合必死；修复后必须倾泻输出抢斩杀

@@ -13184,3 +13184,26 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现既有固定 256 槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 clone 内进程级继承 ACL 临时目录适配器运行同一 selfcheck，输出 **SELFCHECK OK**；定向 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: 20260929-053756-1790631476900090800-181d8167 integrated`
+
+## 2026-09-29 第1671~1672局复盘（KIN_LEADER_FOCUS_GATE）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：精确的 `KIN_FOLLOWER+KIN_PRIEST` 同族战中，随从带原生 `MINION_POWER` 时，当前辅助体/减员成本分会让策略先打 58 池随从；但原生语义是领袖死亡后随从放弃战斗，因此在领袖仍可合法命中时应优先攻击 `KIN_PRIEST`。
+- **EVIDENCE**：第1672局完整链位于 `sts2-ascend/knowledge/runs/20260929-065353_7JJD7PJWKH13.json`。F17 的 decisions index 165 先以 `KIN_FOLLOWER` 为目标，随后 167/168/169/171 连续处理该随从，至 174/175 才转向 `KIN_PRIEST`；原生 knowledge 核对 `KIN_FOLLOWER` 约 58/59 HP、`KIN_PRIEST` 190 HP，`MINION_POWER` 描述为“爪牙会在他们的领导者死亡时放弃战斗”。终局仍为神官 145 HP、玩家 7 HP、`attack_candidates=0`，四张手牌均能量锁定。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立且两者同时存活/可命中的精确窗口中，默认闸应选 `KIN_PRIEST` 并写入 `KIN_LEADER_FOCUS_GATE`；`False` 或非 KIN 组合的 action/params 与旧目标保持一致。仍选随从、非 KIN 目标漂移、marker 与开关不一致，或连续窗口无法减少随从优先转火，均证伪该假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py` 新增默认开启、可独立关闭的 `kin_leader_focus_gate`。
+- `sts2-ascend/brain/policy.py` 只在精确 `KIN_PRIEST`/`KIN_FOLLOWER` 组合、随从带 `MINION_POWER` 且双方仍在合法目标池时，将随从评分压到领袖之后，并给中标领袖追加 `KIN_LEADER_FOCUS_GATE` 观测标记；不改变 action 类型或其他组合。
+- `sts2-ascend/brain/selfcheck.py` 增加同族夹具：默认目标为神官、关闭键恢复随从目标，且分别核对 marker。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3~10 个精确同族窗口，按 `run_id/floor/decision_id/target_index` 统计领袖优先、随从优先、神官剩余 HP 与终局 DPT；证据稳定前不扩大闸门。
+- **调整**：若领袖优先后仍因能量/有效 DPT 失败，下一步只区分竞速容量与能量锁定原因，不把本闸扩展到其他 `MINION_POWER` 组合。
+- **回滚**：将 `kin_leader_focus_gate` 设为 `False`；预期恢复旧目标与评分、移除新 marker，非 KIN 行为不变。
+- **验证**：直连 selfcheck 的宿主固定 256 槽在本 clone 报告临时目录耗尽；随后使用同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 的进程级临时目录适配器完成完整回归并输出 `SELFCHECK OK`（退出码 0），定向 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`

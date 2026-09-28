@@ -634,6 +634,13 @@ DEFAULT_POLICY = {
                                         # MINION_ILLUSION_FOCUS_OBS，单列原生复生/状态切换
                                         # 路径，避免与领袖狂暴样本混计；False=严格回滚
                                         # （无留痕旧版，零差异）。
+    "kin_leader_focus_gate": True,  # 原生同族领袖优先目标闸（KIN_LEADER_FOCUS_GATE）：
+                                        # 仅匹配 KIN_FOLLOWER+KIN_PRIEST 且随从带
+                                        # MINION_POWER、领袖仍可合法命中的窗口；压低随从
+                                        # 的辅助体/减员成本分，优先攻击 KIN_PRIEST。
+                                        # 原生 MinionPower 规定领袖死亡后随从放弃战斗，
+                                        # 因此这是一个有界行为修正，不扩展到其他携带
+                                        # MINION_POWER 的组合；False 严格恢复旧目标与评分。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的
