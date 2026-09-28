@@ -12740,3 +12740,23 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `enemy_hardened_shell_dmg_cap` 设为 `False`，恢复旧 `_attack_outcome` 伤害/击杀口径；不影响既有其他敌方能力封顶逻辑。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1630 局复盘（KILL_RACE_FREE_ENERGY_COUNTERFACTUAL_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速中 0 费回能牌被 `HP_COST_UTILITY_PRICING` 拒绝时，现有 `KILL_RACE_FREE_ENERGY_FUNCTION_OBS` 只记录 `gain/pay/unlock`，无法证伪“支付后仍可承受当前意图、且解锁的手牌伤害足以改变后续竞速”。新增反事实字段可以把“生命代价可承受但估值拒绝”和“确实无救场价值”分开。
+- **EVIDENCE**：精确 run `PTYPMZ7J0GW2`（第 1630 局，`sts2-ascend/knowledge/runs/20260928-115115_PTYPMZ7J0GW2.json`）完整持久链 201 条已核读。F17 D191/T5 在 HP=46、来袭18、能量0 时，`OFFERING` 可出但评分 `-7.115`，原因是 `HP_COST_UTILITY_PRICING`；既有 marker 只给出 `gain=2,pay=6,unlock=2`，随后 D200/T8 终局阵亡。v0.111.0 原生 knowledge 确认 `OFFERING` 为 0 费、失去6生命、获得2能量并抽3张牌；当前观测仍缺支付后余量和当前手牌攻击规模。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `kill_race` 窗口按 `run_id/floor/turn/card` 汇总 `unlock_dmg`、`raw_pay_gap`、后续有效 DPT 与 `GAME_OVER`。若正 `raw_pay_gap` 且较高 `unlock_dmg` 的拒绝样本重复出现在终局前，支持后续复核 HP 代价估值；若字段多为负余量、低伤害或与终局无关，则否定该假设。观测关闭时 action、目标、params 必须逐位不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：扩展现有 0 费回能旁观，在不改变评分或动作的前提下记录当前手牌可被新增能量解锁的攻击伤害估计 `unlock_dmg`，以及扣除原始生命支付和当前来袭后的 `raw_pay_gap`。
+- `sts2-ascend/brain/selfcheck.py`：为非致死与致死夹具断言 `unlock_dmg` 和 `raw_pay_gap`，保留既有开关、终局边界及 action/params 回滚检查。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立 marker，按 `raw_pay_gap`、`unlock_dmg`、是否真正出牌、后续 DPT 和终局分层；至少 3 个正余量且高解锁伤害样本重复后，才评估是否调整 `HP_COST_UTILITY_PRICING`。
+- **撤回**：将既有 `kill_race_free_energy_function_obs` 与 `kill_race_lethal_free_energy_function_obs` 设为 `False`；预期移除该旁观尾缀及新增字段，保留评分、action、目标和 params。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

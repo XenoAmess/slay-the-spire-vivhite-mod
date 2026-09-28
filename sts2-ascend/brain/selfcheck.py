@@ -18123,6 +18123,7 @@ def main() -> int:
         is_unavailable=lambda _card: False)
     assert "KILL_RACE_FREE_ENERGY_FUNCTION_OBS" in kfe_note \
         and "BLOODLETTING:gain=2,pay=3,unlock=1" in kfe_note \
+        and "unlock_dmg=10,raw_pay_gap=53" in kfe_note \
         and "hp=74/energy=0/incoming=18" in kfe_note, \
         f"竞速0费回能盲区观测未命中: {kfe_note}"
     assert policy.kill_race_free_energy_function_note(
@@ -18142,6 +18143,7 @@ def main() -> int:
         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
     assert "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS" in kfe_lethal_note \
         and "BLOODLETTING:gain=2,pay=3,unlock=1" in kfe_lethal_note \
+        and "unlock_dmg=10,raw_pay_gap=-10" in kfe_lethal_note \
         and "hp=7/energy=0/incoming=14" in kfe_lethal_note, \
         f"lethal free-energy observation missed: {kfe_lethal_note}"
     assert policy.kill_race_free_energy_function_note(

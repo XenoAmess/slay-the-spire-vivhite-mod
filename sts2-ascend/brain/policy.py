@@ -217,6 +217,7 @@ def kill_race_free_energy_function_note(
             r"(?:点\s*)?(?:生命|hp|health)", _text(card), re.I)
         hp_paid = int(pay_match.group(1)) if pay_match else 0
         unlocked_attacks = 0
+        unlocked_damage = 0
         for other in hand or []:
             if (other is card or not isinstance(other, dict)
                     or not _playable_or_energy_locked(other)
@@ -232,11 +233,14 @@ def kill_race_free_energy_function_note(
             other_damage, _other_block, _other_hits = card_numbers(other)
             if other_damage > 0:
                 unlocked_attacks += 1
+                unlocked_damage += other_damage * max(1, _other_hits)
         if unlocked_attacks <= 0:
             continue
         label = str(card.get("card_id") or card.get("name") or "unknown")
+        raw_pay_gap = hp_value - float(hp_paid) - incoming_value
         rows.append(
-            f"{label}:gain={gain},pay={hp_paid},unlock={unlocked_attacks}")
+            f"{label}:gain={gain},pay={hp_paid},unlock={unlocked_attacks}"
+            f",unlock_dmg={unlocked_damage},raw_pay_gap={raw_pay_gap:g}")
     if not rows:
         return ""
     return (
