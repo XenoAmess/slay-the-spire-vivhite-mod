@@ -12802,3 +12802,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_terminal_audit_obs` 或 `kill_race_terminal_outcome_obs` 设为 `False`，预期移除对应 marker/字段而不触碰评分与动作。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 通过，未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第 1634 局复盘（NONLETHAL_HOOK_LOCK_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`NONLETHAL_UNAVAILABLE_END_TURN_OBS` 目前只暴露 `energy_locked`，会把“仍有能量但被原生出牌 Hook 锁住”和真正的能量耗尽混在同一类资源耗尽前兆中；增加 `hook_locked/hook_ids` 后，F17 T9 的输出缺口能被机械归因，而不改变决策。该假设可被后续独立窗口证伪。
+- **EVIDENCE**：精确 run `QVGMZ1HJ6BMB`（第 1634 局，`sts2-ascend/knowledge/runs/20260928-151859_QVGMZ1HJ6BMB.json`）已核对完整持久链。F17 D225/T9 为 `hp=21/block=0/incoming=18/energy=2`，剩余 4 张牌均为 `blocked_by_hook`，阻止者为 `RINGING_POWER`，但现有非致死资源标记只有 `energy_locked=0`；D226~D229 随后进入无覆盖容量审计并在 T10 阵亡。该样本同时提供了 Hook 锁和真实能量边界的对照需求。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立非致死空过窗口中，若所有剩余牌原生 `blocked_by_hook`，应记录 `hook_locked>0` 及稳定 `hook_ids`；纯 `not_enough_energy` 窗口应保持 `hook_locked=0/hook_ids=none`。按 `run_id/floor/turn/energy/energy_locked/hook_locked/hook_ids` 与下一回合有效输出、终局分层；若 Hook 标记缺失、误报或与后续输出无关联，则假设被证伪，维持观测而不升级行为。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：补充现有 `nonlethal_unavailable_end_turn_obs` 的静态契约，说明其新增原生 Hook 归因字段。
+- `sts2-ascend/brain/policy.py`：在既有非致死空过 marker 内统计原生 `blocked_by_hook` 数量及去重的 `unplayable_preventer_id/type`；不参与评分、排序、目标、判决或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入 `RINGING_POWER` 两牌锁定夹具、能量耗尽对照和关闭开关回滚断言，确认 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立窗口，核对 Hook 锁样本与后续 DPT、下一回合恢复/继续锁定及 `GAME_OVER`；仅当重复样本显示 Hook 锁稳定造成投影缺口时，另开行为批次。
+- **撤回**：将 `nonlethal_unavailable_end_turn_obs` 设为 `False`，预期移除包含 `hook_locked/hook_ids` 的整条非致死前兆 marker，保留评分、action、params 与致死审计。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

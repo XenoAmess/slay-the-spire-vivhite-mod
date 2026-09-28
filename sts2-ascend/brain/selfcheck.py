@@ -16484,8 +16484,77 @@ def main() -> int:
         and "（LETHAL_UNAVAILABLE_END_TURN_OBS）" not in d_nonlethal_empty.reason \
         and "hp=55/block=22/incoming=50/gap=28/hand_tax=0/energy=0" \
             in d_nonlethal_empty.reason \
-        and "/energy_locked=2" in d_nonlethal_empty.reason, \
+        and "/energy_locked=2/hook_locked=0/hook_ids=none" \
+            in d_nonlethal_empty.reason, \
         f"非致死资源耗尽先兆观测缺失: {d_nonlethal_empty and d_nonlethal_empty.reason}"
+
+    # A native card hook is a different boundary from energy exhaustion:
+    # 1634-F17 T9 had energy=2 but every remaining card was blocked by
+    # RINGING_POWER after the single-card action.  Keep that attribution in
+    # the precursor audit without changing the end_turn decision.
+    def _nonlethal_hook_state(hand_ready):
+        state = _nonlethal_unavailable_state(hand_ready)
+        if not hand_ready:
+            state["combat"]["player"]["energy"] = 2
+            state["combat"]["hand"] = [{
+                "index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+                "playable": False, "unplayable_reason": "blocked_by_hook",
+                "unplayable_reason_raw": "BlockedByHook",
+                "unplayable_preventer_id": "RINGING_POWER",
+                "energy_cost": 1, "requires_target": True,
+                "valid_target_indices": [0],
+                "dynamic_values": [{"name": "Damage", "current_value": 6}],
+            }, {
+                "index": 1, "card_id": "DEFEND_IRONCLAD", "name": "防御",
+                "playable": False, "unplayable_reason": "blocked_by_hook",
+                "unplayable_reason_raw": "BlockedByHook",
+                "unplayable_preventer_id": "RINGING_POWER",
+                "energy_cost": 1, "requires_target": False,
+                "dynamic_values": [{"name": "Block", "current_value": 5}],
+            }]
+        return state
+
+    hook_nonlethal_know = knowledge.Knowledge(tmp)
+    hook_nonlethal_pol = policy.Policy(hook_nonlethal_know)
+    hook_nonlethal_ctx = _SettleCtx()
+    assert hook_nonlethal_pol.decide(
+        _nonlethal_hook_state(True), hook_nonlethal_ctx).action == "play_card", \
+        "原生 hook 锁定夹具热身帧未进入出牌状态"
+    d_hook_nonlethal = None
+    for _ in range(6):
+        d_candidate = hook_nonlethal_pol.decide(
+            _nonlethal_hook_state(False), hook_nonlethal_ctx)
+        if d_candidate.action == "end_turn":
+            d_hook_nonlethal = d_candidate
+            break
+    assert (d_hook_nonlethal is not None
+            and d_hook_nonlethal.action == d_nonlethal_empty.action
+            and d_hook_nonlethal.params == d_nonlethal_empty.params
+            and "/energy=2/cards=2/energy_locked=0"
+                "/hook_locked=2/hook_ids=RINGING_POWER"
+                in d_hook_nonlethal.reason), \
+        f"原生 hook 锁定未与能量耗尽区分: {d_hook_nonlethal and d_hook_nonlethal.reason}"
+
+    hook_nonlethal_off_know = knowledge.Knowledge(tmp)
+    hook_nonlethal_off_know.policy["nonlethal_unavailable_end_turn_obs"] = False
+    hook_nonlethal_off_pol = policy.Policy(hook_nonlethal_off_know)
+    hook_nonlethal_off_ctx = _SettleCtx()
+    assert hook_nonlethal_off_pol.decide(
+        _nonlethal_hook_state(True), hook_nonlethal_off_ctx).action == "play_card", \
+        "原生 hook 锁定观测关闭夹具热身帧未进入出牌状态"
+    d_hook_nonlethal_off = None
+    for _ in range(6):
+        d_candidate = hook_nonlethal_off_pol.decide(
+            _nonlethal_hook_state(False), hook_nonlethal_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_hook_nonlethal_off = d_candidate
+            break
+    assert (d_hook_nonlethal_off is not None
+            and d_hook_nonlethal_off.action == d_hook_nonlethal.action
+            and d_hook_nonlethal_off.params == d_hook_nonlethal.params
+            and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
+                not in d_hook_nonlethal_off.reason), \
+        f"原生 hook 锁定观测关闭后动作或 marker 漂移: {d_hook_nonlethal_off and d_hook_nonlethal_off.reason}"
 
     nonlethal_empty_off_know = knowledge.Knowledge(tmp)
     nonlethal_empty_off_know.policy["nonlethal_unavailable_end_turn_obs"] = False

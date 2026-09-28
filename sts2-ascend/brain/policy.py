@@ -5004,6 +5004,31 @@ class Policy:
                         _count += 1
                 return _count
 
+            def _count_hook_locked_cards():
+                """Return native hook-lock count and stable preventer ids."""
+                _count = 0
+                _ids = []
+                for _card in hand:
+                    if (not isinstance(_card, dict)
+                            or self._card_unavailable(_card)):
+                        continue
+                    _native_reason = re.sub(
+                        r"[^a-z0-9]+", "_",
+                        str(self._native_card_unplayable_reason(_card) or "")
+                        .lower()).strip("_")
+                    if _native_reason not in {
+                            "blocked_by_hook", "blockedbyhook"}:
+                        continue
+                    _count += 1
+                    _hook_id = str(
+                        _card.get("unplayable_preventer_id")
+                        or _card.get("unplayable_preventer_type") or "")
+                    _hook_id = re.sub(r"[^A-Za-z0-9_.:-]+", "_",
+                                      _hook_id).strip("_")
+                    if _hook_id and _hook_id not in _ids:
+                        _ids.append(_hook_id)
+                return _count, ",".join(_ids) or "none"
+
             if (_nonlethal_unavailable_obs
                     and not affordable_playable
                     and float(incoming) > 0
@@ -5017,12 +5042,14 @@ class Policy:
                 _nonlethal_gap = max(
                     0.0, float(incoming) - float(my_block))
                 _nonlethal_tax, _ = hand_end_turn_tax(hand)
+                _hook_locked, _hook_ids = _count_hook_locked_cards()
                 _nonlethal_unavailable_note = (
                     f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
                     f"/gap={_nonlethal_gap:g}/hand_tax={_nonlethal_tax:g}"
                     f"/energy={float(energy):g}/cards={len(hand)}"
                     f"/energy_locked={_count_energy_locked_cards()}"
+                    f"/hook_locked={_hook_locked}/hook_ids={_hook_ids}"
                     "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")
             if (_lethal_unavailable_obs
                     and not affordable_playable
