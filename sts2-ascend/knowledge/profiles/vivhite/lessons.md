@@ -18179,3 +18179,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.1868719612462098局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/2.943835862707623局)，IMPATIENCE(22分/2.118280720234617局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（87%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损42/掉血73（58%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1649 胜，当前目标进阶 4
+
+## 第 1650 局复盘（2026-09-29 00:30）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：STRIKE_DUMMY, WHETSTONE
+- 战斗记录：F7 Monster战 掉血0｜自损19（可行动段19/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血23｜自损21（可行动段21/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=73/dpt=14.7685/ttk=4.94295/tsurv=3.375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=12/projected_ttk=4.94295/actual_over_projected=2.43（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战12回合获胜; F11 Monster战 掉血0｜自损6（可行动段6/非行动段16，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血23｜自损19（可行动段19/非行动段18，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损6（可行动段6/非行动段5，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血89｜自损23（可行动段23/非行动段65，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=172/dpt=19.3127/ttk=8.90607/tsurv=3.15385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=15/projected_ttk=8.90607/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T3判死→实战15回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/13.076363511860963局)，REND(38分/2.901459364157516局)，PANIC_BUTTON(38分/15.940009187334676局)，THINKING_AHEAD(37分/4.894311942391056局)，MAYHEM(37分/3.9973304158167973局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(15分/2.179217909381848局)，VIVHITE_CARD_PREFETCH_FUTURE(20分/2.9335324371881466局)，IMPATIENCE(22分/2.110866737713796局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1650 胜，当前目标进阶 4
