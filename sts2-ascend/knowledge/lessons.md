@@ -13746,3 +13746,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.034059633494532局)，BASH(14分/2.567281228341528局)，STOKE(16分/2.92191471036841局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.50 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1650 胜，当前目标进阶 0
+
+## 第 1651 局复盘（2026-09-29 00:44）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：STOMP, SHRUG_IT_OFF, SWORD_BOOMERANG, PYRE, SPITE, BLUDGEON, FLAME_BARRIER, TRUE_GRIT, INFLAME, IMPERVIOUS, IRON_WAVE, SHRUG_IT_OFF, INFLAME, UNRELENTING, CINDER, HOWL_FROM_BEYOND, DISMANTLE, HEADBUTT, DISMANTLE, JUGGLING, FASTEN, MASTER_OF_STRATEGY, SWORD_BOOMERANG
+- 本局遗物：LANTERN, ORICHALCUM, VAJRA, REGAL_PILLOW
+- 战斗记录：F20 Monster战 掉血7; F23 Unknown战 掉血16; F28 Monster战 掉血4; F29 Monster战 掉血2; F30 Monster战 掉血3; F33 Boss战 掉血81｜竞速投影审计：pool=211/dpt=29.025/ttk=7.2696/tsurv=4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=7.2696/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.462971936340262局)，HELLRAISER(26分/5.105140784721042局)，FEED(25分/34.31876153193728局)，PACTS_END(25分/59.96305069363129局)，OFFERING(24分/18.02080088556903局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.0234404247773012局)，BASH(14分/2.5582957440423324局)，STOKE(16分/2.9116880088821206局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.47 → 0.44（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.44 → 0.45（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.01 → 2.00（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1651 胜，当前目标进阶 0
