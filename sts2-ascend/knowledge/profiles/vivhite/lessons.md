@@ -17321,3 +17321,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.7111066345650143局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.1170990599178654局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/36.92203974755485局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：3/1571 胜，当前目标进阶 3
+
+## 第 1572 局复盘（2026-09-28 08:13）
+- 结果：💀 失败｜进阶 3｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：SALVO, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_PERFECT_SYNTHESIS, VIVHITE_CARD_OPEN_SET_SHELTER
+- 本局遗物：CENTENNIAL_PUZZLE, CAPTAINS_WHEEL
+- 战斗记录：F7 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血14｜自损18（可行动段18/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血3｜自损10（可行动段10/非行动段7，SELF_LOSS_PHASE_OBS）; F13 Unknown战 掉血0｜自损6（可行动段6/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0; F17 Boss战 掉血87｜自损20（可行动段20/非行动段53，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=171/dpt=19.1445/ttk=8.93207/tsurv=3.07692（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=14/projected_ttk=8.93207/actual_over_projected=1.57（RACE_PROJ_TTK_RATIO_OBS）｜竞速审计：T3判死→实战14回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.8140541589602863局)，MAYHEM(37分/5.254609072083772局)，THINKING_AHEAD(36分/5.330565419303607局)，FISTICUFFS(35分/7.117494266272946局)，ROLLING_BOULDER(34分/5.371042960036371局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.701617761344037局)，VIVHITE_CARD_COLOR_CONSERVATION(21分/2.109689213208153局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/36.79281260843841局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：3/1572 胜，当前目标进阶 3
