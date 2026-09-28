@@ -17541,3 +17541,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.5275087079558958局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.701257838400156局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/34.42165490197013局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.37 → 0.40（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F29——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F29——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F29——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：3/1591 胜，当前目标进阶 3
+
+## 第 1592 局复盘（2026-09-28 11:14）
+- 结果：💀 失败｜进阶 3｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损48（可行动段48/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=24/dpt=1.06667/ttk=22.5/tsurv=0.692308（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=22.5/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T11判死→实战11回合阵亡（阵亡）
+- 当前高价值卡牌：REND(38分/3.555763899686752局)，MAYHEM(37分/4.898763485460127局)，THINKING_AHEAD(36分/4.969576018827506局)，FISTICUFFS(35分/6.6354928675527285局)，ROLLING_BOULDER(34分/5.007312393846598局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(21分/2.5186624274780502局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.62530343596576局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/34.30117910981323局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（11回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，致命Monster战实测自损48/掉血62（77%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：3/1592 胜，当前目标进阶 3
