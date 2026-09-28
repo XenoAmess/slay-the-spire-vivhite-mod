@@ -825,6 +825,7 @@ DEFAULT_POLICY = {
                                     # False 一键回滚旧口径（零差异）
     "sandpit_eat_end_turn_obs": True,  # Generic audit-only end-turn snapshot for native SANDPIT_POWER.
     "sandpit_terminal_outcome_obs": True,  # Generic audit-only join from that snapshot to GAME_OVER/Victory.
+    "sandpit_terminal_cause_obs": True,  # Audit-only normalized cause on the sandpit terminal join (clock expiry vs incoming damage); False removes only this field.
     "vivhite_sandpit_eat_end_turn_obs": 1,  # 白绮沙坑末格空过观测（VIVHITE_SANDPIT_EAT_END_TURN_OBS，
                                     # 1459-F33 末次 end_turn 后紧接 GAME_OVER：已有投影理由带时钟封底，
                                     # 但收口空过没有把 clock、HP/格挡/意图、服务端致死投影与可用续命牌
@@ -833,6 +834,8 @@ DEFAULT_POLICY = {
     "vivhite_sandpit_terminal_outcome_obs": 1,  # 白绮沙坑末格终局对账（VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS）：
                                     # 把同楼层末格空过观测与权威 GAME_OVER 的 outcome/final_hp 连接，
                                     # 用于区分沙坑吞噬与已被格挡覆盖的来袭伤害；只读持久化决策，0=关闭。
+    "vivhite_sandpit_terminal_cause_obs": 1,  # 白绮沙坑终局归因字段（VIVHITE_SANDPIT_TERMINAL_CAUSE_OBS）：
+                                    # 在既有终局对账上区分时钟耗尽、来袭伤害、两者并存与未决；只读，0=关闭。
     "sandpit_frantic_play_value": 12.0,  # 沙坑续命牌出牌计价（FRANTIC_ESCAPE_CLOCK_VALUE，第739~743局批复盘，
                                     # 静态键）：狂乱逃离打出即目标沙坑计数+1=一个完整行动回合，通用能力牌桶在
                                     # KILL_RACE_LONGFIGHT_OFF 撤账后只给3.7~5.7分——743局F33时钟=2、14血手握

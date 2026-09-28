@@ -12991,3 +12991,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `kill_race_lethal_output_capacity_obs` 设为 `False`；新 marker 应消失，`LETHAL_UNAVAILABLE_END_TURN_OBS`、终端竞速审计、action 与 params 保持不变。
 - **验证**：完整 selfcheck 在进程级继承 ACL 临时根下两次输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。直接使用宿主固定 256 槽池先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，未把该工具环境故障混入代码结论。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-29 第1650~1651局复盘（SANDPIT_TERMINAL_CAUSE_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `SANDPIT_TERMINAL_OUTCOME_OBS` 在沙坑时钟耗尽与普通伤害均可能结算时，只保留 `forced_kill`、`incoming_lethal`、`final_hp`；1651-F33/T6 需要一个明确、可回滚的 `terminal_cause` 才能证伪“原生沙坑吞噬”与“来袭伤害”混淆。
+- **EVIDENCE**：精确 run `PCK0WL67A2FK`（1651）F33/T6 的 `end_turn` 为 `hp=57/block=8/incoming=20/energy=0`、`clock=1`、`rescue=absent`、`incoming_lethal=no`，下一条即 `GAME_OVER`，终端观测为 `final_hp=0`。本地原生 `SandpitPower` 证据显示敌方回合开始递减时钟，并在目标死亡路径调用 `CreatureCmd.Kill(force:true)`；本批 1650/1651 无可用 replay target。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立沙坑终局按 `run_id/floor/terminal_round` 对账 `terminal_cause=clock_expired|incoming_damage|ambiguous|native_forced_kill|unresolved|victory`。本样本应为 `clock_expired`；来袭致死应为 `incoming_damage`；信息不足或两者同时成立应为 `ambiguous`/`unresolved`。若标签与原生终局/下一状态不符、marker 越界或 action/params 漂移，即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的通用 `sandpit_terminal_cause_obs` 与白绮 `vivhite_sandpit_terminal_cause_obs` 开关。
+- `sts2-ascend/brain/policy.py`：只在既有 `SANDPIT_TERMINAL_OUTCOME_OBS` 终局 join 上规范化归因；按 victory、原生强制击杀、时钟耗尽、来袭致死和缺失数据确定字段，不进入评分、排序、目标、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖白绮与通用终局的 `clock_expired`，以及关闭开关后保留既有终端 marker、action/params 不变且仅移除 `terminal_cause`。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集 3~10 个独立沙坑终局，按 `clock/incoming_lethal/forced_kill/rescue` 与原生下一状态核验归因；在证据重复前保持只读观测，不改变动作策略。
+- **撤回**：将 `sandpit_terminal_cause_obs` 或 `vivhite_sandpit_terminal_cause_obs` 设为 `False`；既有终端 marker、action 与 params 保持不变，仅不再输出 `terminal_cause`。
+- **验证**：定制本地继承 ACL 引导完整 selfcheck 输出 **SELFCHECK OK**；目标源码 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

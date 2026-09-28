@@ -3955,6 +3955,9 @@ def main() -> int:
     assert float(knowledge.DEFAULT_POLICY[
         "vivhite_sandpit_terminal_outcome_obs"]) == 1.0, \
         "DEFAULT_POLICY 缺少 vivhite_sandpit_terminal_outcome_obs 静态键或默认值被改"
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_sandpit_terminal_cause_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_sandpit_terminal_cause_obs 静态键或默认值被改"
     spto_rows = [{
         "screen": "COMBAT", "floor": 33, "turn": 6, "hp": 26,
         "action": "end_turn",
@@ -3979,7 +3982,8 @@ def main() -> int:
             and "outcome=defeat/floor=33/terminal_round=6" in spto_note
             and "/clock=1/hp=26/block=20/incoming=20/covered=yes" in spto_note
             and "/forced_kill=no/rescue=unavailable/energy=0" in spto_note
-            and "/incoming_gap=0/incoming_lethal=no/final_hp=0" in spto_note), \
+            and "/incoming_gap=0/incoming_lethal=no/final_hp=0" in spto_note
+            and "/terminal_cause=clock_expired" in spto_note), \
         f"沙坑末格终局对账缺字段: {spto_note}"
     spto_go = {
         "screen": "GAME_OVER",
@@ -4019,6 +4023,24 @@ def main() -> int:
             and "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
             not in spto_off_decision.reason), \
         f"沙坑终局对账关闭后 GAME_OVER 动作或 marker 漂移: {spto_off_decision}"
+    spto_cause_off_ctx = type("SPTOCauseOffCtx", (), {
+        "decisions": list(spto_rows),
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": ["F33 Boss战 掉血80（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    spto_cause_off_pol = policy.Policy(
+        _vivhite_know("sts2-selfcheck-sandpit-terminal-cause-off-"),
+        random.Random(11))
+    spto_cause_off_pol.know.policy["vivhite_sandpit_terminal_cause_obs"] = 0
+    spto_cause_off_note = (
+        spto_cause_off_pol._consume_sandpit_terminal_outcome_note(
+            spto_cause_off_pol.know.policy, spto_cause_off_ctx,
+            False, 33, 0))
+    assert ("VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS" in spto_cause_off_note
+            and "/terminal_cause=" not in spto_cause_off_note), \
+        f"沙坑终局归因字段关闭后既有 marker 或新字段漂移: {spto_cause_off_note}"
     generic_spto_rows = [dict(spto_rows[0])]
     generic_spto_rows[0]["reason"] = generic_spto_rows[0]["reason"].replace(
         "VIVHITE_SANDPIT_EAT_END_TURN_OBS", "SANDPIT_EAT_END_TURN_OBS")
@@ -4040,7 +4062,8 @@ def main() -> int:
             and "/clock=1/hp=26/block=20/incoming=20/covered=yes"
             in generic_spto_note
             and "/incoming_gap=0/incoming_lethal=no/final_hp=0"
-            in generic_spto_note), \
+            in generic_spto_note
+            and "/terminal_cause=clock_expired" in generic_spto_note), \
         f"generic sandpit terminal audit missing fields: {generic_spto_note}"
     generic_spto_decision = generic_spto_pol.decide(spto_go, generic_spto_ctx)
     assert (generic_spto_decision.action == "continue_game_over"
@@ -4063,7 +4086,7 @@ def main() -> int:
     assert generic_spto_off_pol._consume_sandpit_terminal_outcome_note(
         generic_spto_off_pol.know.policy, generic_spto_off_ctx,
         False, 33, 0) == "", "generic sandpit terminal audit did not roll back"
-    del spto_pol, spto_off_pol, spto_ctx, spto_off_ctx
+    del spto_pol, spto_off_pol, spto_cause_off_pol, spto_ctx, spto_off_ctx, spto_cause_off_ctx
 
     # 3bfloor) Boss 零意图生命支付安全下沿：只拦支付后跌破最大生命比例的非击杀牌，
     #           并验证高 HP 仍保留旧出牌、ratio=0 可一键回滚。

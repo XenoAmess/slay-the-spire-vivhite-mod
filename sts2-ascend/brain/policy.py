@@ -4551,6 +4551,18 @@ class Policy:
         except (TypeError, ValueError, OverflowError):
             return False
 
+    @staticmethod
+    def _sandpit_terminal_cause_enabled(
+            pol, vivhite_profile: bool = False) -> bool:
+        try:
+            observation_key = (
+                "vivhite_sandpit_terminal_cause_obs"
+                if vivhite_profile else "sandpit_terminal_cause_obs")
+            return bool(int(float(pol.get(
+                observation_key, 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
     def _consume_sandpit_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join the final sandpit end-turn audit to GAME_OVER.
@@ -4637,6 +4649,39 @@ class Policy:
             value = row.get(name)
             return "?" if value is None else _num(value)
 
+        cause_tail = ""
+        if self._sandpit_terminal_cause_enabled(pol, vivhite_profile):
+            clock_text = _token("clock")
+            forced_text = _token("forced_kill")
+            rescue_text = _token("rescue")
+            incoming_lethal_text = _token("incoming_lethal")
+            try:
+                clock_value = float(clock_text)
+            except (TypeError, ValueError, OverflowError):
+                clock_value = None
+            try:
+                final_hp_value = float(final_hp)
+            except (TypeError, ValueError, OverflowError):
+                final_hp_value = None
+            if victory:
+                terminal_cause = "victory"
+            elif final_hp_value is None or final_hp_value > 0.0:
+                terminal_cause = "unresolved"
+            elif forced_text == "yes":
+                terminal_cause = "native_forced_kill"
+            elif (clock_value is not None and clock_value <= 1.0
+                  and incoming_lethal_text == "no"):
+                terminal_cause = (
+                    "clock_expired"
+                    if rescue_text != "available" else "ambiguous")
+            elif incoming_lethal_text == "yes":
+                terminal_cause = "incoming_damage"
+            elif clock_value is not None and clock_value <= 1.0:
+                terminal_cause = "ambiguous"
+            else:
+                terminal_cause = "unresolved"
+            cause_tail = f"/terminal_cause={terminal_cause}"
+
         return (
             f"；沙坑末格终局对账：outcome={'victory' if victory else 'defeat'}"
             f"/floor={terminal_floor}"
@@ -4652,6 +4697,7 @@ class Policy:
             f"/incoming_gap={_token('incoming_gap')}"
             f"/incoming_lethal={_token('incoming_lethal')}"
             f"/final_hp={_num(final_hp)}"
+            f"{cause_tail}"
             f"（{marker}）")
 
     @staticmethod
