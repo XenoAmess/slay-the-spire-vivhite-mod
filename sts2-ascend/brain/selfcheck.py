@@ -16669,6 +16669,9 @@ def main() -> int:
         and "hp=55/block=22/incoming=50/gap=28/hand_tax=0/energy=0" \
             in d_nonlethal_empty.reason \
         and "/energy_locked=2/hook_locked=0/hook_ids=none" \
+            "/hand_block_candidates=1/hand_affordable_block_candidates=0" \
+            "/hand_max_block=5/hand_post_gap=23/hand_raw_survival=yes" \
+            "/block_locked=no" \
             in d_nonlethal_empty.reason, \
         f"非致死资源耗尽先兆观测缺失: {d_nonlethal_empty and d_nonlethal_empty.reason}"
 
@@ -16716,6 +16719,9 @@ def main() -> int:
             and d_hook_nonlethal.params == d_nonlethal_empty.params
             and "/energy=2/cards=2/energy_locked=0"
                 "/hook_locked=2/hook_ids=RINGING_POWER"
+                "/hand_block_candidates=1/hand_affordable_block_candidates=0"
+                "/hand_max_block=5/hand_post_gap=23/hand_raw_survival=yes"
+                "/block_locked=no"
                 in d_hook_nonlethal.reason), \
         f"原生 hook 锁定未与能量耗尽区分: {d_hook_nonlethal and d_hook_nonlethal.reason}"
 

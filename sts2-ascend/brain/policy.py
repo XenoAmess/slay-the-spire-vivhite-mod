@@ -5243,6 +5243,39 @@ class Policy:
                         _ids.append(_hook_id)
                 return _count, ",".join(_ids) or "none"
 
+            def _hand_block_capacity():
+                """Return raw and currently affordable hand block capacity."""
+                _raw_candidates = 0
+                _affordable_candidates = 0
+                _max_block = 0.0
+                for _card in hand:
+                    if (not isinstance(_card, dict)
+                            or self._card_unavailable(_card)
+                            or _card.get("costs_x")):
+                        continue
+                    try:
+                        _card_block = float(card_numbers(_card)[1] or 0)
+                        _card_cost = float(_card.get("energy_cost") or 0)
+                    except (TypeError, ValueError, OverflowError):
+                        continue
+                    if _card_block <= 0:
+                        continue
+                    _raw_candidates += 1
+                    _max_block = max(_max_block, _card_block)
+                    if (not block_locked
+                            and bool(_card.get("playable"))
+                            and _card_cost <= float(energy)):
+                        _affordable_candidates += 1
+                _post_gap = max(
+                    0.0,
+                    float(incoming) - float(my_block) - _max_block)
+                return (
+                    _raw_candidates,
+                    _affordable_candidates,
+                    _max_block,
+                    _post_gap,
+                    _post_gap < float(my_hp))
+
             if (_nonlethal_unavailable_obs
                     and not affordable_playable
                     and float(incoming) > 0
@@ -5257,6 +5290,11 @@ class Policy:
                     0.0, float(incoming) - float(my_block))
                 _nonlethal_tax, _ = hand_end_turn_tax(hand)
                 _hook_locked, _hook_ids = _count_hook_locked_cards()
+                (_hand_block_candidates,
+                 _hand_affordable_block_candidates,
+                 _hand_max_block,
+                 _hand_post_gap,
+                 _hand_raw_survival) = _hand_block_capacity()
                 _nonlethal_unavailable_note = (
                     f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
@@ -5264,6 +5302,14 @@ class Policy:
                     f"/energy={float(energy):g}/cards={len(hand)}"
                     f"/energy_locked={_count_energy_locked_cards()}"
                     f"/hook_locked={_hook_locked}/hook_ids={_hook_ids}"
+                    f"/hand_block_candidates={_hand_block_candidates}"
+                    f"/hand_affordable_block_candidates="
+                    f"{_hand_affordable_block_candidates}"
+                    f"/hand_max_block={_hand_max_block:g}"
+                    f"/hand_post_gap={_hand_post_gap:g}"
+                    f"/hand_raw_survival="
+                    f"{'yes' if _hand_raw_survival else 'no'}"
+                    f"/block_locked={'yes' if block_locked else 'no'}"
                     "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")
             if (_lethal_unavailable_obs
                     and not affordable_playable

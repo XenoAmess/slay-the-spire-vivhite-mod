@@ -12865,3 +12865,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `waterfall_about_to_blow_end_turn_obs` 设为 `False`；预期移除整条 Waterfall marker（含新增字段），保留禁攻、评分、action 与 params。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` → **exit 0**；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28 · 第 1638 局复盘（NONLETHAL_HAND_BLOCK_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F22 T5 的 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 更可能是“手牌有原始格挡容量，但当前能量无法支付”，而不是“没有防御牌”；现有 marker 只有 `energy_locked`，无法证伪这两个归因。
+- **EVIDENCE**：精确 run `AU7PAZF4YLNP`（第 1638 局，`sts2-ascend/knowledge/runs/20260928-184633_AU7PAZF4YLNP.json`）完整 317 条决策已核读。F22 D312/T5 为 `hp=63/block=0/incoming=38/energy=0`，6 张手牌均为 `not_enough_energy`；下一次 D315/T6 为 `hp=25/incoming=31/energy=0`，随后 D316 `GAME_OVER`。这支持“能量不可支付”证据，但尚不能证明原始格挡容量或可救性。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立非致死空过窗口按 `run_id/floor/turn/hp/block/incoming/energy` 分层，比较 `hand_block_candidates`、`hand_affordable_block_candidates`、`hand_max_block`、`hand_post_gap`、`hand_raw_survival` 与下一回合状态/终局。若反复出现 `raw>0/affordable=0` 并随后受击，支持该归因；若 `raw=0` 占主导则转向“无防御资源”；若 `affordable>0` 仍被标记则立即回滚或修正字段边界。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有非致死空过 marker 中追加原始手牌格挡候选数、当前可支付候选数、最大格挡、格挡后的原始缺口/生存分层及 `block_locked`；不参与评分、排序、目标、判决或动作。
+- `sts2-ascend/brain/knowledge.py`：补充既有 `nonlethal_unavailable_end_turn_obs` 静态契约，说明这些字段仅用于诊断。
+- `sts2-ascend/brain/selfcheck.py`：扩展能量耗尽夹具及 Hook 锁夹具断言，确认字段值、开关关闭后的 marker 消失，以及 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：采集 3~10 个独立窗口，核对 raw/affordable 分层、下一回合掉血与 `GAME_OVER`；在证据重复前不升级防守行为。
+- **撤回**：将 `nonlethal_unavailable_end_turn_obs` 设为 `False`，预期移除整条 marker（含新增字段），保留评分、action、params 与致死审计。
+- **验证**：完整 selfcheck 输出 **SELFCHECK OK**；目标 diff `git diff --check` 通过；未写入在线状态、runs、学习账本或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
