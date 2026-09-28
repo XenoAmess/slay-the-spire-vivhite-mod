@@ -13955,3 +13955,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8385259579800133局)，BASH(14分/2.4018296567523194局)，STOKE(16分/2.7336083512741314局)
 - 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1669 胜，当前目标进阶 0
+
+## 第 1670 局复盘（2026-09-29 06:18）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 PHANTASMAL_GARDENER
+- 本局拿牌：DISMANTLE, PANIC_BUTTON, DISMANTLE, EXPECT_A_FIGHT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血4; F5 Monster战 掉血2｜自损2（可行动段2/非行动段6，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血3; F7 Elite战 掉血75｜竞速投影审计：pool=104/dpt=13.2/ttk=7.87879/tsurv=3.47368（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=7.87879/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T3判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.304242704361707局)，HELLRAISER(26分/4.776133757095203局)，PROWESS(25分/7.330140434063647局)，FEED(25分/33.07598448349684局)，PACTS_END(25分/58.081207676467734局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.8285911171270834局)，BASH(14分/2.3934232529536863局)，STOKE(16分/2.724040722044672局)
+- 策略进化：精英战阵亡但满血线进场（94%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：0/1670 胜，当前目标进阶 0
