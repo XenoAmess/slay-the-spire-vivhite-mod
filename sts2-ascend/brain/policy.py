@@ -499,7 +499,10 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                             allow_taxstop: bool = True,
                             character_strategy: CharacterStrategy | None = None,
                             player_powers=None,
-                            slippery_layers: float = 0.0):
+                            slippery_layers: float = 0.0,
+                            current_hp=None,
+                            hp_lethal_guard: bool = False,
+                            audit=None):
     """残能救场候选（第698~770批复盘闭环实验）。
 
     「评估后无值得出的牌」分支在剩有能量且意图缺口>0 时空过结束回合，
@@ -514,7 +517,8 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
          CardType.Power 即时 OnPlay 施加 PlatingPower——为死牌守卫误杀
          类建立文本旁路）；
       ③ 无格挡/覆甲候选时选预估伤害最高的可负担攻击（排除「失去生命」
-         自残型成本，避免救场变送命）；
+         自残型成本，避免救场变送命）；白绮生命支付攻击另过一层「支付后
+         缺口致死」闸，避免把已经保留下来的生命换成同样无法填补的缺口；
       ④ 手牌滞留税止损（HAND_END_TAX_STOPLOSS，第808~812局批复盘）：
          可打出的回合结束手牌伤害牌（毒素型）——打出即离手、税负清零，
          是不依赖格挡的确定性止血；确定性税收严格大于最佳格挡净效益时
@@ -537,6 +541,17 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
         gap = int(incoming) - int(my_block)
         if en <= 0 or gap <= 0:
             return None, ""
+        try:
+            rescue_hp = (None if current_hp is None else float(current_hp))
+            if rescue_hp is not None and not math.isfinite(rescue_hp):
+                rescue_hp = None
+        except (TypeError, ValueError, OverflowError):
+            rescue_hp = None
+        vivhite_life_guard = bool(
+            hp_lethal_guard
+            and rescue_hp is not None
+            and character_strategy is not None
+            and character_strategy.profile_id == VIVHITE_PROFILE_ID)
         unavailable = is_unavailable or (lambda _card: False)
         blk_best = None   # (useful, -cost, card)
         plat_best = None  # (grants, -cost, card)
@@ -584,6 +599,25 @@ def idle_energy_rescue_pick(hand: list | None, energy, incoming, my_block,
                 if plat_best is None or cand[:2] > plat_best[:2]:
                     plat_best = cand
             elif dmg > 0:
+                if vivhite_life_guard:
+                    _unused_net, _unused_independent, _actual_cough, _unused_margin = (
+                        _rescue_block_tradeoff(
+                            c,
+                            0,
+                            character_strategy=character_strategy,
+                            player_powers=player_powers,
+                        ))
+                    _post_pay_hp = rescue_hp - _actual_cough
+                    if (_actual_cough > 0.0
+                            and float(gap) >= _post_pay_hp):
+                        if hasattr(audit, "append"):
+                            _audit_id = str(
+                                c.get("card_id") or c.get("name") or "?")
+                            audit.append(
+                                f"card={_audit_id}/pay={_actual_cough:g}"
+                                f"/hp={rescue_hp:g}->{_post_pay_hp:g}"
+                                f"/gap={float(gap):g}")
+                        continue
                 hits_n = max(1, int(hits or 1))
                 try:
                     _slip = float(slippery_layers or 0.0)
@@ -10062,6 +10096,8 @@ class Policy:
             _resc_invuln_note = ""
             _resc_invuln_attack_count = 0
             _resc_invuln_non_attack_count = 0
+            _resc_life_guard_audit = []
+            _resc_life_guard_note = ""
             if _resc_enabled:
                 try:
                     _taxstop_on = bool(int(pol.get("hand_tax_stoploss", 1)))
@@ -10161,6 +10197,11 @@ class Policy:
                         if isinstance(_e, dict) and _e.get("is_alive", True):
                             _resc_slip = max(
                                 _resc_slip, self._enemy_slippery_stack(_e))
+                try:
+                    _resc_hp_lethal_guard = bool(int(float(pol.get(
+                        "vivhite_idle_rescue_hp_lethal_guard", 1) or 0)))
+                except (TypeError, ValueError, OverflowError):
+                    _resc_hp_lethal_guard = True
                 _resc_card, _resc_kind = idle_energy_rescue_pick(
                     _resc_hand, energy, incoming, my_block,
                     is_unavailable=self._card_unavailable,
@@ -10168,7 +10209,15 @@ class Policy:
                     allow_taxstop=_taxstop_on,
                     character_strategy=self.character_strategy,
                     player_powers=player.get("powers") or [],
-                    slippery_layers=_resc_slip)
+                    slippery_layers=_resc_slip,
+                    current_hp=my_hp,
+                    hp_lethal_guard=_resc_hp_lethal_guard,
+                    audit=_resc_life_guard_audit)
+                if _resc_life_guard_audit:
+                    _resc_life_guard_note = (
+                        "；残能救场生命支付致死闸："
+                        + "|".join(_resc_life_guard_audit)
+                        + "（VIVHITE_IDLE_RESCUE_HP_LETHAL_GUARD）")
             if _resc_card is not None:
                 _rcid = (_resc_card.get("card_id") or "").upper().rstrip("+")
                 _rest_dmg, _, _rhits = card_numbers(_resc_card)
@@ -10229,7 +10278,8 @@ class Policy:
                                 f"拒绝带能量空过（意图{incoming}/甲{my_block}/缺口{max(0, incoming - my_block)}）"
                                 f"{_resc_slip_note}"
                                 f"原裁决：评估后无值得出的牌({hand_desc}){risk}{audit_note}"
-                                f"{danger_note}{_gate_rescue_note}{_rearm_note}",
+                                f"{danger_note}{_gate_rescue_note}"
+                                f"{_resc_life_guard_note}{_rearm_note}",
                                 tags=[("play_card", _rcid),
                                       ("play_card_index", _resc_card.get("index"),
                                        self._card_key(_resc_card)[1]),
@@ -10590,7 +10640,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_life_guard_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 
