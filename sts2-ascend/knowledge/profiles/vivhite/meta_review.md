@@ -5643,3 +5643,35 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1601~1604 批：沙坑末格与权威终局归因观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交接回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1604-F33-T6 的败局主要由 `SANDPIT_POWER` 归零吞噬，而不是来袭伤害；现有 `VIVHITE_SANDPIT_EAT_END_TURN_OBS` 只留在末次 `end_turn`，无法与权威 `GAME_OVER` 的终局结果绑定。若补一条同楼层终局对账，字段应能区分“来袭伤害未覆盖”与“格挡覆盖但沙坑计数归零”，且 action/params 不变。
+- **EVIDENCE**：1601~1604 是精确批次；最新完整运行文件为 `runs/20260928-132505_H7G3FS74HB4Y.json`，508 条 decisions，任务书内保留 107 条、裁剪 401 条。逐条核对保留切片及完整链尾：1604-F33-T6 决策为 `hp=26/block=20/incoming=20/gap=0`、`clock=1`、`forced_kill=no`、`rescue=unavailable`、`energy=0`，下一条即 `GAME_OVER` 且持久化 `hp=0`。v0.111.0 原生 `SANDPIT_POWER` 知识的 smart description 明确为无厌沙虫下回合开始时直接吞噬死亡；该证据支持增加终局观测，不单独证明策略因果。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss 沙坑终端战斗中，`VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS` 应在同一楼层给出 `outcome/final_hp/clock/hp/block/incoming/covered/forced_kill/rescue/energy/incoming_gap/incoming_lethal`，并与原始末格行、真实 `applied end_turn {}` 和 GAME_OVER/胜负一一对应；重复消费为 0，action/params 漂移为 0。若字段错位、非终端/非 Boss 显形或终局结果不一致，假设被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_sandpit_terminal_outcome_obs`，设为 0 只关闭终局观测。
+- `sts2-ascend/brain/policy.py`：GAME_OVER 只读同楼层持久化的末格 `end_turn` marker，追加 `VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS` 与 `outcome/final_hp`；支持丢动作重试幂等，完全不改评分、候选、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 1604-F33-T6 形态、GAME_OVER 接线、`final_hp=0`、重复消费、关闭键以及关闭后的 action/params 不变。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：退出码 0，输出 `SELFCHECK OK`。
+- 目标生产/自检 diff 已完整回读；`git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py`：`DIFF CHECK OK`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立 Vivhite Boss 沙坑终端 combat：对账末格字段、同楼层终局 `outcome/final_hp`、真实 `applied end_turn {}`、下一 tick HP/格挡变化与 GAME_OVER/胜负；观测出现本身不等于应改变竞速或续命策略。
+- 若 marker 与原始决策不符、终局 join 串楼层/重复、在非 Boss 或非末格样本显形，或 action/params 漂移，将 `vivhite_sandpit_terminal_outcome_obs=0`；必要时回滚本地提交并保留本批证据，重复核验前不调整沙坑出牌价值。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

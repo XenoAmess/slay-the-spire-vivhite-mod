@@ -3892,6 +3892,80 @@ def main() -> int:
     assert "VIVHITE_SANDPIT_EAT_END_TURN_OBS" not in d_sand_nonboss.reason, \
         f"非 Boss 回合不得误挂沙坑末格注记: {d_sand_nonboss.reason}"
 
+    # 3bsand) 把 1604-F33-T6 的沙坑末格空过与权威 GAME_OVER 对账：原生
+    #           SANDPIT_POWER 的下一回合吞噬可在 incoming 已被格挡覆盖时
+    #           直接结束战斗；终局 marker 必须保留原始末格字段和 final_hp，
+    #           但不得改变 continue_game_over/action/params，且丢动作重试
+    #           后再次消费必须幂等。
+    assert float(knowledge.DEFAULT_POLICY[
+        "vivhite_sandpit_terminal_outcome_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 vivhite_sandpit_terminal_outcome_obs 静态键或默认值被改"
+    spto_rows = [{
+        "screen": "COMBAT", "floor": 33, "turn": 6, "hp": 26,
+        "action": "end_turn",
+        "reason": "战斗：确认无牌可出；沙坑末格空过观测："
+                   "clock=1/hp=26/block=20/incoming=20/covered=yes/"
+                   "forced_kill=no/rescue=unavailable/energy=0/"
+                   "rescue_effect=none/incoming_gap=0/incoming_lethal=no"
+                   "（VIVHITE_SANDPIT_EAT_END_TURN_OBS）",
+    }]
+    spto_ctx = type("SPTOCtx", (), {
+        "decisions": list(spto_rows),
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": ["F33 Boss战 掉血80（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    spto_pol = policy.Policy(
+        _vivhite_know("sts2-selfcheck-sandpit-terminal-"), random.Random(11))
+    spto_note = spto_pol._consume_sandpit_terminal_outcome_note(
+        spto_pol.know.policy, spto_ctx, False, 33, 0)
+    assert ("VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS" in spto_note
+            and "outcome=defeat/floor=33/terminal_round=6" in spto_note
+            and "/clock=1/hp=26/block=20/incoming=20/covered=yes" in spto_note
+            and "/forced_kill=no/rescue=unavailable/energy=0" in spto_note
+            and "/incoming_gap=0/incoming_lethal=no/final_hp=0" in spto_note), \
+        f"沙坑末格终局对账缺字段: {spto_note}"
+    spto_go = {
+        "screen": "GAME_OVER",
+        "run": {"current_hp": 0},
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 33,
+                       "can_continue": True},
+    }
+    spto_go_decision = spto_pol.decide(spto_go, spto_ctx)
+    assert (spto_go_decision.action == "continue_game_over"
+            and spto_go_decision.params == {}
+            and "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
+            in spto_go_decision.reason
+            and "/final_hp=0" in spto_go_decision.reason), \
+        f"GAME_OVER 未携带沙坑终局观测或动作漂移: {spto_go_decision}"
+    spto_ctx.decisions.append({"screen": "GAME_OVER", "floor": 33,
+                               "reason": spto_note})
+    assert spto_pol._consume_sandpit_terminal_outcome_note(
+        spto_pol.know.policy, spto_ctx, False, 33, 0) == "", \
+        "沙坑终局 marker 在重试时重复消费"
+    spto_off_ctx = type("SPTOOffCtx", (), {
+        "decisions": list(spto_rows),
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": ["F33 Boss战 掉血80（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    spto_off_pol = policy.Policy(
+        _vivhite_know("sts2-selfcheck-sandpit-terminal-off-"), random.Random(11))
+    spto_off_pol.know.policy["vivhite_sandpit_terminal_outcome_obs"] = 0
+    assert spto_off_pol._consume_sandpit_terminal_outcome_note(
+        spto_off_pol.know.policy, spto_off_ctx, False, 33, 0) == "", \
+        "沙坑终局对账键=0 未严格回滚"
+    spto_off_decision = spto_off_pol.decide(spto_go, spto_off_ctx)
+    assert (spto_off_decision.action == spto_go_decision.action
+            and spto_off_decision.params == spto_go_decision.params
+            and "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
+            not in spto_off_decision.reason), \
+        f"沙坑终局对账关闭后 GAME_OVER 动作或 marker 漂移: {spto_off_decision}"
+    del spto_pol, spto_off_pol, spto_ctx, spto_off_ctx
+
     # 3bfloor) Boss 零意图生命支付安全下沿：只拦支付后跌破最大生命比例的非击杀牌，
     #           并验证高 HP 仍保留旧出牌、ratio=0 可一键回滚。
     assert float(knowledge.DEFAULT_POLICY[

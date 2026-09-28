@@ -4171,6 +4171,111 @@ class Policy:
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
+    def _sandpit_terminal_outcome_enabled(pol) -> bool:
+        try:
+            return bool(int(float(pol.get(
+                "vivhite_sandpit_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    def _consume_sandpit_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join the final sandpit end-turn audit to GAME_OVER.
+
+        The end-turn marker is emitted before the native sandpit counter
+        reaches zero.  Rebuild the link from durable decisions so a lost
+        GAME_OVER action can retry without changing combat policy.
+        """
+        if (not self._sandpit_terminal_outcome_enabled(pol)
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID):
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+
+        def _floor(value):
+            try:
+                return int(float(value))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        terminal_floor = _floor(floor)
+        if terminal_floor is None:
+            for row in reversed(decisions):
+                if not isinstance(row, dict) or row.get("screen") != "COMBAT":
+                    continue
+                terminal_floor = _floor(row.get("floor"))
+                if terminal_floor is not None:
+                    break
+        if terminal_floor is None:
+            return ""
+
+        combat_rows = [
+            row for row in decisions
+            if (isinstance(row, dict)
+                and row.get("screen") == "COMBAT"
+                and _floor(row.get("floor")) == terminal_floor)
+        ]
+        sandpit_rows = [
+            row for row in combat_rows
+            if (row.get("action") == "end_turn"
+                and "VIVHITE_SANDPIT_EAT_END_TURN_OBS"
+                in str(row.get("reason") or ""))
+        ]
+        if not sandpit_rows:
+            return ""
+        # A stale clock marker from an earlier combat turn must not be
+        # attached to a later same-floor outcome.  The final combat decision
+        # is the only marker eligible for this terminal join.
+        if sandpit_rows[-1] is not combat_rows[-1]:
+            return ""
+
+        row = sandpit_rows[-1]
+        reason = str(row.get("reason") or "")
+        prefix = "沙坑末格空过观测："
+        prefix_at = reason.rfind(prefix)
+        if prefix_at < 0:
+            return ""
+        audit = reason[prefix_at + len(prefix):]
+
+        def _token(name):
+            match = re.search(
+                rf"(?:^|/){re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else "?"
+
+        def _num(value):
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _row_num(name):
+            value = row.get(name)
+            return "?" if value is None else _num(value)
+
+        return (
+            f"；沙坑末格终局对账：outcome={'victory' if victory else 'defeat'}"
+            f"/floor={terminal_floor}"
+            f"/terminal_round={_row_num('turn')}"
+            f"/clock={_token('clock')}"
+            f"/hp={_token('hp')}"
+            f"/block={_token('block')}"
+            f"/incoming={_token('incoming')}"
+            f"/covered={_token('covered')}"
+            f"/forced_kill={_token('forced_kill')}"
+            f"/rescue={_token('rescue')}"
+            f"/energy={_token('energy')}"
+            f"/incoming_gap={_token('incoming_gap')}"
+            f"/incoming_lethal={_token('incoming_lethal')}"
+            f"/final_hp={_num(final_hp)}"
+            "（VIVHITE_SANDPIT_TERMINAL_OUTCOME_OBS）")
+
+    @staticmethod
     def _ritual_window_outcome_enabled(pol) -> bool:
         try:
             return bool(int(float(pol.get(
@@ -14837,6 +14942,10 @@ class Policy:
         actions = state.get("available_actions", [])
         victory = bool(go.get("is_victory"))
         phase = str(go.get("phase") or "")
+        terminal_hp = (state.get("run") or {}).get("current_hp")
+        if terminal_hp is None:
+            terminal_hp = ((state.get("combat") or {}).get("player") or {}).get(
+                "current_hp")
         self._restore_elite_forced_entry_outcome_from_decisions(
             ctx, go.get("floor"))
         _elite_forced_entry_outcome_note = (
@@ -14849,6 +14958,9 @@ class Policy:
         _ritual_window_outcome_note = (
             self._consume_ritual_window_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor")))
+        _sandpit_terminal_outcome_note = (
+            self._consume_sandpit_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -14860,7 +14972,8 @@ class Policy:
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_terminal_outcome_note}"
-                            f"{_ritual_window_outcome_note}", wait=1.0)
+                            f"{_ritual_window_outcome_note}"
+                            f"{_sandpit_terminal_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -14883,7 +14996,8 @@ class Policy:
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_terminal_outcome_note}"
-                        f"{_ritual_window_outcome_note}",
+                        f"{_ritual_window_outcome_note}"
+                        f"{_sandpit_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -14892,7 +15006,8 @@ class Policy:
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_terminal_outcome_note}"
-                                f"{_ritual_window_outcome_note}",
+                                f"{_ritual_window_outcome_note}"
+                                f"{_sandpit_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
                             tags=[("timeline_check", True)], wait=1.5)
