@@ -1283,6 +1283,11 @@ DEFAULT_POLICY = {
                                         # 打出一张后终端锁锁链余牌，原始组合是幻影——生命支付
                                         # 格挡牌按出牌顺序扣 Margin/实付血，hp-实付<1 不可执行；
                                         # 买活对账的买活后生命同步扣除实付。非白绮逐项等价旧口径
+      "race_allin_lethal_capacity_obs": True,
+                                        # 败局竞速致死牌面容量旁观（RACE_ALLIN_LETHAL_CAPACITY_OBS）：
+                                        # 在 race_allin 致死窗口披露 need/max_block/covers/
+                                        # defense/block_locked，补齐无覆盖样本的资源证据；只读，
+                                        # 不改变评分、判决、目标或动作；置 False 严格移除该尾缀。
       "race_allin_buyback_margin_obs": True,
                                         # 败局竞速买活余量旁观（RACE_ALLIN_BUYBACK_MARGIN_OBS）：
                                         # 现有买活对账为保留一个完整回合的宽松容差；同时披露

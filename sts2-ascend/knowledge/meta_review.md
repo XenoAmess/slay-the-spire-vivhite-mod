@@ -12614,3 +12614,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **撤回**：将 `support_target_debuff_gate` 设为 `False`；预期只恢复已知 `role=debuff` 的辅助体加分/目标选择并移除 `SUPPORT_TARGET_DEBUFF_GATE`，保留既有 `SUPPORT_TARGET_INTENT_OBS` 与其他评分路径。
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标三文件 `git diff --check` 无空白错误（仓库既有超长资产路径警告不属于本批）；未修改 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`
+
+## 2026-09-28｜第 1623 局复盘（RACE_ALLIN_LETHAL_CAPACITY_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：败局竞速的致死回合目前只有在可负担格挡组合足以覆盖生还缺口时才写入 `RACE_ALLIN_LETHAL_COVER_OBS`；无覆盖、资源不足与“存在生还线但全攻选择”因此无法在生产链中区分。该假设可证伪：若后续容量审计反复显示 `covers=yes` 而仍选择攻击或 `end_turn`，应转入行为复核；若显示 `covers=no` 且 `max_block<need`，则支持资源不足解释。
+- **EVIDENCE**：精确 run `1Y2TCZTJDK13`（第1623局，`sts2-ascend/knowledge/runs/20260928-072001_1Y2TCZTJDK13.json`）完整链 188 条已逐条核读。F17 Boss 竞速中 D157/D160/D163/D167/D173/D176/D183 的实际/投影伤害比值在 `0.37`、`2.22`、`1.48`、`2.36`、`0.79`、`1.00`、`0.40` 间摆动；D185 为 HP=5、来袭=23，仅得到 3 格挡，生还缺口需 18，D186 能量为 0 且余牌不足以覆盖，D187 失败。旧覆盖 marker 在该无覆盖样本中不落盘，无法机械区分“确实无救场资源”和“可救但全攻”。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 `race_allin` 致死窗口追加 `RACE_ALLIN_LETHAL_CAPACITY_OBS`，记录 `need/max_block/covers/defense/block_locked` 及 `post_gap/survives/selected`；按 `run_id`、floor/turn、终局与动作分层。若 `covers=yes` 后仍攻击或空过，支持另开行为批次；若 `covers=no` 且最大格挡不足，维持资源不足归因。新开关关闭时不应改变旧 marker、action 或 params。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可回滚的 `race_allin_lethal_capacity_obs`。
+- `sts2-ascend/brain/policy.py`：在既有 `race_allin + kill_race + lethal` 闸门内复用当前手牌/能量快照，只读计算最大可负担格挡、生命缺口与覆盖结果；不参与评分、排序、目标、判决或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖有覆盖、无防御牌和关闭开关三种夹具，验证 marker 差异及 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续/调整**：收集未来 3~10 个独立致死竞速窗口，按 `run_id`、`need`、`max_block`、`covers`、选定动作和 `GAME_OVER` 分层；至少 3 个独立窗口出现 `covers=yes` 仍未防守时，才评估行为闸门；若容量始终不足，维持只读审计。
+- **撤回**：将 `race_allin_lethal_capacity_obs` 设为 `False`；预期只移除 `RACE_ALLIN_LETHAL_CAPACITY_OBS`，旧覆盖观测、评分、action 与 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**；目标源码 `git diff --check` 无空白错误；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+- `retry_resolution: none (no replay target; failed_review_replay.requested_packages=[])`

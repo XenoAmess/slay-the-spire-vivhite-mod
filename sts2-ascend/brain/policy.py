@@ -3805,7 +3805,10 @@ class Policy:
     def _low_pool_burst_card_audit_note(
             self, hand, energy, incoming, my_hp, my_block, pol, *,
             block_locked=False, selected=None,
-            selected_action="end_turn") -> str:
+            selected_action="end_turn",
+            enabled_key="low_pool_burst_card_audit_obs",
+            marker="LOW_POOL_BURST_CARD_AUDIT",
+            label="低池爆发牌面审计") -> str:
         """Expose affordable block capacity at a low-pool burst boundary.
 
         This is deliberately observation-only.  The dynamic-programming
@@ -3814,7 +3817,7 @@ class Policy:
         """
         try:
             enabled = bool(int(float(pol.get(
-                "low_pool_burst_card_audit_obs", 1) or 0)))
+                enabled_key, 1) or 0)))
         except (TypeError, ValueError, OverflowError, AttributeError):
             enabled = False
         if not enabled:
@@ -3854,6 +3857,8 @@ class Policy:
                     _block_by_energy[_spent - _cost_i] + _card_block)
         _max_block = max(_block_by_energy, default=0.0)
         _post_gap = max(0.0, _incoming - _block - _max_block)
+        _need = max(0.0, _incoming - _block - _hp)
+        _covers = _max_block > _need
         _survives = _post_gap < _hp
 
         _selected_text = str(selected_action)
@@ -3870,14 +3875,16 @@ class Policy:
             except (TypeError, ValueError, OverflowError, IndexError):
                 _selected_text = f"{selected_action}:{_selected_name}:?@?"
         return (
-            f"；低池爆发牌面审计：hp={_hp:g}/block={_block:g}"
+            f"；{label}：hp={_hp:g}/block={_block:g}"
             f"/incoming={_incoming:g}/energy={_energy:g}"
             f"/block_locked={'yes' if block_locked else 'no'}"
             f"/defense={'|'.join(_defense_rows) or 'none'}"
-            f"/max_block={_max_block:g}/post_gap={_post_gap:g}"
+            f"/need={_need:g}/max_block={_max_block:g}"
+            f"/covers={'yes' if _covers else 'no'}"
+            f"/post_gap={_post_gap:g}"
             f"/survives={'yes' if _survives else 'no'}"
             f"/selected={_selected_text}"
-            "（LOW_POOL_BURST_CARD_AUDIT）")
+            f"（{marker}）")
 
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy) -> str:
@@ -6588,6 +6595,25 @@ class Policy:
                 _worthwhile_blk_cards.append((cost, block, c))
         reserve_for_block = gap_now > 0 and bool(worthwhile_blk_costs)
         min_blk_cost = min(worthwhile_blk_costs) if worthwhile_blk_costs else 99
+        # 败局竞速致死牌面容量旁观（RACE_ALLIN_LETHAL_CAPACITY_OBS）：旧的
+        # RACE_ALLIN_LETHAL_COVER_OBS 只在格挡组合足以覆盖生还缺口时留痕，
+        # 因而“无覆盖”与“分支未执行”在生产链上不可区分。这里复用同一
+        # 手牌/能量快照，只读披露最大可负担格挡、覆盖判定和牌面清单；不参与
+        # 评分、排序、目标、判决或动作。父级 race_allin/kill_race 闸门保持
+        # 现有范围，开关 False 严格移除新增尾缀。
+        try:
+            _race_allin_capacity_obs = bool(int(float(pol.get(
+                "race_allin_lethal_capacity_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _race_allin_capacity_obs = False
+        if (_race_allin_capacity_obs and race_allin and bool(kill_race)
+                and reserve_lethal and gap_now > 0):
+            danger_note += self._low_pool_burst_card_audit_note(
+                hand, energy, incoming, my_hp, my_block, pol,
+                block_locked=block_locked, selected_action="candidate",
+                enabled_key="race_allin_lethal_capacity_obs",
+                marker="RACE_ALLIN_LETHAL_CAPACITY_OBS",
+                label="败局竞速致死牌面容量")
         # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
         # 斩杀竞速局的非致死回合，末点能量保留给最便宜的合格挡牌——
         # 891 局 F28-T2 实证：斩杀竞速「全攻提速」留痕下 6 费全部流向攻击、

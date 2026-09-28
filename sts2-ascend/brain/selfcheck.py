@@ -17687,6 +17687,8 @@ def main() -> int:
         and d_rallc1.params.get("card_index") == 0 \
         and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason \
+        and "RACE_ALLIN_LETHAL_CAPACITY_OBS" in d_rallc1.reason \
+        and "/need=2/max_block=5/covers=yes" in d_rallc1.reason \
         and "买活对账：击杀约需13回合（实测20伤/回合）" in d_rallc1.reason \
         and "买活后约可存活0.2回合（净损15/回合）→买活仍必败" in d_rallc1.reason \
         and "RACE_ALLIN_BUYBACK_MARGIN_OBS" in d_rallc1.reason \
@@ -17710,8 +17712,23 @@ def main() -> int:
         f"买活余量观测关闭改变动作/参数或未同灭: on={d_rallc_margin} off={d_rallc_margin_off}"
     d_rallc2 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_hit2])
     assert d_rallc2.action == "play_card" \
-        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason, \
-        f"无覆盖组合的败局竞速致死回合误落旁观: {d_rallc2.action}（{d_rallc2.reason}）"
+        and "RACE_ALLIN_LETHAL_COVER_OBS" not in d_rallc2.reason \
+        and "RACE_ALLIN_LETHAL_CAPACITY_OBS" in d_rallc2.reason \
+        and "/need=2/max_block=0/covers=no" in d_rallc2.reason, \
+        f"无覆盖组合的败局竞速致死容量观测缺失或误落旧旁观: " \
+        f"{d_rallc2.action}（{d_rallc2.reason}）"
+    pol_rallc_capacity_off = rallc_policy()
+    pol_rallc_capacity_off.know.policy["race_allin_lethal_capacity_obs"] = False
+    d_rallc_capacity_off = rallc_decide(
+        pol_rallc_capacity_off, 25, 27, 1, [lsl_hit, lsl_shld])
+    assert d_rallc_capacity_off.action == d_rallc1.action \
+        and d_rallc_capacity_off.params == d_rallc1.params \
+        and "RACE_ALLIN_LETHAL_CAPACITY_OBS" not in d_rallc_capacity_off.reason \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc_capacity_off.reason, \
+        f"致死容量观测关闭改变动作/参数或未同灭: " \
+        f"on={d_rallc1.action}/{d_rallc1.params} " \
+        f"off={d_rallc_capacity_off.action}/{d_rallc_capacity_off.params}/" \
+        f"{d_rallc_capacity_off.reason}"
     pol_rallc3 = rallc_policy()
     pol_rallc3.know.policy["race_allin_lethal_cover_obs"] = False
     d_rallc3 = rallc_decide(pol_rallc3, 25, 27, 1, [lsl_hit, lsl_shld])
