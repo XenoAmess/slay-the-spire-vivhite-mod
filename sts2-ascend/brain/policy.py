@@ -5084,9 +5084,6 @@ class Policy:
         ``candidate_audit`` is produced by the same scoring pass that chose to
         end the turn.  Keeping the final score and threshold beside the card
         shape makes the observation falsifiable without rescoring in telemetry.
-        Native HP payment and energy gain are included so a rejected card can
-        be separated into pure self-loss versus a possible follow-up resource
-        bridge, without changing the scoring pass or the selected action.
         """
         try:
             _enabled = bool(int(float(pol.get(
@@ -5121,34 +5118,9 @@ class Policy:
                 _block_total = 0.0
             _card_id = str(_card.get("card_id") or "?").upper()
             _name = _card.get("name") or _card_id
-            try:
-                _hp_loss = card_dynamic_value(_card, "HpLoss", None)
-                if _hp_loss is None:
-                    _hp_match = re.search(
-                        r"失去\s*(\d+(?:\.\d+)?)\s*点?\s*生命"
-                        r"|lose[s]?\s+(\d+(?:\.\d+)?)\s*"
-                        r"(?:hp|health|life)",
-                        _text(_card), re.I)
-                    if _hp_match:
-                        _hp_loss = next(
-                            (float(_group) for _group in _hp_match.groups()
-                             if _group is not None), 0.0)
-                _hp_loss = max(0.0, float(_hp_loss or 0.0))
-            except (TypeError, ValueError, OverflowError):
-                _hp_loss = 0.0
-            try:
-                _energy_gain = max(
-                    0.0, float(_card_energy_gain(_card) or 0.0))
-            except (TypeError, ValueError, OverflowError):
-                _energy_gain = 0.0
-            _pay_hp_after = float(my_hp) - _hp_loss
-            _pay_energy_after = float(energy) - _cost + _energy_gain
             _rows.append(
                 f"{_name}[{_card_id}]@{_cost:g}"
-                f"/dmg={_damage_total:g}/block={_block_total:g}"
-                f"/hp_loss={_hp_loss:g}/energy_gain={_energy_gain:g}"
-                f"/pay_hp_after={_pay_hp_after:g}"
-                f"/pay_energy_after={_pay_energy_after:g}")
+                f"/dmg={_damage_total:g}/block={_block_total:g}")
             _audit = _audit_by_index.get(_card.get("index"))
             if _audit is not None:
                 _score, _threshold, _status = _audit
