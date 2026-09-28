@@ -5358,7 +5358,13 @@ def main() -> int:
     assert (d_lc_obs.action == "select_deck_card"
             and d_lc_obs.params.get("option_index") == 0
             and "謦欬血税密度扣分" in d_lc_obs.reason
-            and "VIVHITE_LIFE_COST_DECK_TAX" in d_lc_obs.reason), \
+            and "VIVHITE_LIFE_COST_DECK_TAX" in d_lc_obs.reason
+            and "VIVHITE_LIFE_COST_FORCED_CAP_OBS:source=CARD_SELECTION"
+                in d_lc_obs.reason
+            and "before=72,after=80,cap=60,over_before=12,over_after=20"
+                in d_lc_obs.reason
+            and "selected_life=8,offer_min_life=8,offer_max_life=8"
+                in d_lc_obs.reason), \
         f"超顶卡组真实拿牌路径缺血税密度扣分留痕: {d_lc_obs.action}（{d_lc_obs.reason}）"
     # 超软顶后的可选 offer 若全为生命支付牌，应该在评分已足够时直接跳过，
     # 但同一张牌在强制入组屏仍必须保持原选择；旋钮关闭则恢复旧行为。

@@ -1182,6 +1182,7 @@ class Policy:
                 rows.append((score, card, _life_cost(card)))
 
         life_count = sum(1 for _score, _card, life in rows if life > 0.0)
+        life_values = [life for _score, _card, life in rows if life > 0.0]
         nonlife = [row for row in rows if row[2] <= 0.0]
         nonlife.sort(key=lambda row: (
             row[0] is None,
@@ -1202,12 +1203,29 @@ class Policy:
             except (TypeError, ValueError):
                 gap_note = ""
         offer_note = f"{life_count}/{len(rows)}" if rows else "UNKNOWN"
+        forced_cap_note = ""
+        if forced:
+            deck_after = deck_tax + selected_life
+            over_before = max(0.0, deck_tax - cap)
+            over_after = max(0.0, deck_after - cap)
+            if over_after > 1e-9:
+                offer_min_life = min(life_values) if life_values else selected_life
+                offer_max_life = max(life_values) if life_values else selected_life
+                forced_cap_note = (
+                    f";VIVHITE_LIFE_COST_FORCED_CAP_OBS:source={source},"
+                    f"before={deck_tax:g},after={deck_after:g},cap={cap:g},"
+                    f"over_before={over_before:g},over_after={over_after:g},"
+                    f"selected_life={selected_life:g},"
+                    f"offer_min_life={offer_min_life:g},"
+                    f"offer_max_life={offer_max_life:g},"
+                    f"selected_minus_min={selected_life - offer_min_life:g}")
         return (
             f";VIVHITE_LIFE_COST_PICK_AUDIT:source={source},"
             f"card={pick.get('card_id') or pick.get('name') or '?'},"
             f"life={selected_life:g},deck_tax={deck_tax:.0f}/{cap:.0f},"
             f"over={max(0.0, deck_tax - cap):.0f},forced={int(bool(forced))},"
-            f"offer_life={offer_note},best_nonlife={best_nonlife}{gap_note}")
+            f"offer_life={offer_note},best_nonlife={best_nonlife}{gap_note}"
+            f"{forced_cap_note}")
 
     def _vivhite_life_cost_overcap_skip_note(
             self, deck: list, offer: list, *, source: str) -> str:

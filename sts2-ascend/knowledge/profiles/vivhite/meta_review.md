@@ -5707,3 +5707,34 @@ production_code_commit: `083275c8bc2acf9408f52ec7ae2a27920c981ec4`
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1620~1623 批：强制生命支付选牌跨软顶的选前后对账观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮血税软顶的“可选 offer 全生命支付则跳过”只覆盖有 `skip_reward_cards` 的自愿奖励；强制 `CARD_SELECTION` 仍必须入组。现有 `VIVHITE_LIFE_COST_PICK_AUDIT` 只记录选牌前 `deck_tax`，无法直接证明一次强制选择把卡组血税推过多少，也无法把强制供给与自愿供给区分到选前后边界。假设是：补充强制跨顶的选前/选后观测即可证伪该缺口，同时不改变排序、动作或参数。
+- **EVIDENCE**：四局完整运行文件均在 `sts2-ascend/knowledge/profiles/vivhite/runs/`。1623 的完整链为 `20260928-170846_C0WXSY3FUHTN.json`（316 条 decisions；packet 保留 119 条、裁剪 197 条），F3 强制选 `TRICHROMATIC_WALTZ` 为 `life=6,deck_tax=22/22,forced=1,offer_life=5/5,best_nonlife=NONE`；F5 强制选 `ASTRAL_PURSUIT` 为 `life=4,deck_tax=34/22`；F17 强制选 `MOBIUS_LOOP` 为 `life=4,deck_tax=34/22`。1622-F17 也有 `CLOSED_PROJECTION life=4,deck_tax=32/22,forced=1`。相对地，四局后续自愿全生命支付 offer 均出现 `VIVHITE_LIFE_COST_OVERCAP_SKIP`。1623 最终 F17-T11 为 `hp=4/block=14/incoming=20/energy=0/cards=0`，实际 `end_turn` 后在 floor 17 defeat；这些证据支持补齐边界，不单独证明血税是唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite run 中，仅当 `forced=1` 且 `deck_tax + selected_life > cap` 时出现 `VIVHITE_LIFE_COST_FORCED_CAP_OBS`，并满足 `after=before+selected_life`、`over_after=max(after-cap,0)`，同时记录 offer 的 `min/max life` 与 `selected_minus_min`。自愿跳过、未跨顶、非白绮或非生命支付选牌不得显形；真实 `applied select_deck_card` 的 action/params 必须与关闭观测键前后一致。任一字段不守恒、错语义显形或动作漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：扩展既有 `_vivhite_life_cost_pick_note`。强制选牌且选后超过软顶时追加 `VIVHITE_LIFE_COST_FORCED_CAP_OBS`，记录 `before/after/cap/over_before/over_after/selected_life/offer_min_life/offer_max_life/selected_minus_min`；不参与评分、排序、候选资格、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：在已有强制超顶夹具上断言 `72→80/60` 的守恒字段与 offer 范围，并继续验证观测关闭时选择与参数不变。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已完整回读目标生产/自检 diff；`git diff --check -- sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只统计后续 3~10 个独立 Vivhite run，按 run/floor/selection 对账强制跨顶 marker、原始 offer、deck_changes、真实 `applied select_deck_card` 与后续自损/终局；观测出现本身不等于应改变选牌策略。
+- 若 marker 在自愿/未跨顶/非白绮样本显形，或 `before/after/over` 与生命成本不守恒、offer 范围串账、action/params 漂移，将 `vivhite_life_cost_pick_obs=0` 关闭本批观测；必要时回滚本地 commit。在重复对账前不把该观测升级为强制拒牌或改写血税软顶。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)
