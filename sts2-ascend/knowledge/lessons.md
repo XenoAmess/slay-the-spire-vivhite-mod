@@ -13713,3 +13713,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.066141570745454局)，BASH(14分/2.5944274829384613局)，JACKPOT(16分/5.8773178679098局)
 - 策略进化：elite_grey_safety_mult: 2.40 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.48 → 0.51（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1647 胜，当前目标进阶 0
+
+## 第 1648 局复盘（2026-09-28 23:48）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：SPITE, THRASH, BLUDGEON, SHRUG_IT_OFF, HOWL_FROM_BEYOND, CRUELTY, CONFLAGRATION, JUGGLING, SWORD_BOOMERANG, ARMAMENTS, JUGGLING, TWIN_STRIKE, OMNISLICE
+- 本局遗物：KUSARIGAMA
+- 战斗记录：F5 Monster战 掉血23; F6 Monster战 掉血13; F8 Monster战 掉血24; F9 Monster战 掉血6; F15 Monster战 掉血5; F17 Boss战 掉血54｜竞速投影审计：pool=215/dpt=10.8/ttk=19.9074/tsurv=2.84211（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=19.9074/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T4判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.489015231679662局)，HELLRAISER(26分/5.159122191185325局)，FEED(25分/34.6816457487939局)，PACTS_END(25分/59.593583561910336局)，OFFERING(24分/18.21135159091436局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.055410075247845局)，BASH(14分/2.585346986748177局)，JACKPOT(16分/5.856747255372116局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.50（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1648 胜，当前目标进阶 0
