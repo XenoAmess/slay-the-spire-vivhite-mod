@@ -214,6 +214,12 @@ DEFAULT_POLICY = {
                                                     # 追加当前救场手牌的原始可支付格挡候选数、最大格挡、
                                                     # 格挡后缺口与 raw_survival 分层；仍为纯观测，不改变
                                                     # 资源/动作；False=关闭。
+    "waterfall_about_to_blow_terminal_outcome_obs": True,  # 将同楼层已持久化的
+                                                             # 瀑布自爆相 end_turn
+                                                             # 与原生 GAME_OVER
+                                                             # outcome/final_hp 对账；
+                                                             # 纯观测，不改变动作；
+                                                             # False=关闭终局尾缀。
     "block_safety": 1.0,          # scales how much we value blocking
     "power_round_bonus": 6.0,     # flat bonus for powers in early rounds
     "power_longfight_bonus_max": 7.0,  # 能力牌长战加成上限（第 223 批复盘）：按存活敌血池线性折算——

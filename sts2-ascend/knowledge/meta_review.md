@@ -13207,3 +13207,26 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：直连 selfcheck 的宿主固定 256 槽在本 clone 报告临时目录耗尽；随后使用同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 的进程级临时目录适配器完成完整回归并输出 `SELFCHECK OK`（退出码 0），定向 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-09-29 第1673局复盘（WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS` 已证明原生 `AboutToBlow` 自爆相把目标变成不可击杀血池，但尚未把致死空过与权威 `GAME_OVER` 结果连接。若新增只读终局 join，F17/T8 的同楼层链应只产生一次 `WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS`，并保留原 `end_turn` 与终局 `continue_game_over` 动作/参数。
+- **EVIDENCE**：精确 run `C5BKYBC83WM8`（第1673局）完整链位于 `sts2-ascend/knowledge/runs/20260929-071640_C5BKYBC83WM8.json`。F17 decision index 200（T8）为 `end_turn`：`enemy=WATERFALL_GIANT` 已进入 `HP=999999999` 自爆相，玩家 `hp=22/block=7/incoming=30/energy=2`，`vetoed_attacks=3/non_attack_candidates=0/raw_block_candidates=0/raw_max_block=0/raw_post_gap=23/raw_survival=no`；index 201 紧接同楼层 `GAME_OVER`，失败且终局 HP 为 0。v0.111.0 原生知识确认 `TriggerAboutToBlowState` 设置无限血池、移除 `SteamEruptionPower`，随后 `ExplodeMove` 结算自爆，故该 marker 与普通无敌目标可区分。
+- **EXPECTED_SIGNAL**：未来 3–10 个独立瀑布自爆相窗口中，仅同楼层持久化来源后到达权威终局的样本出现终局 marker，字段能对上 `source_round/outcome/final_hp`；跨楼层、无来源或普通无敌目标不应 join，胜利样本必须显示 `outcome=victory`。任何重复 marker、字段错配或 action/params 漂移均证伪假设并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可独立关闭的 `waterfall_about_to_blow_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：在 `GAME_OVER` 恢复最近一条同楼层瀑布自爆相 `end_turn` 审计，追加 `outcome/final_hp` 及来源字段；覆盖 Continue、终局提交和旧终局返回分支，支持 Policy 重载及写回后去重，不进入评分、候选、门控或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：新增默认、跨 Policy 恢复、终局写回去重和关闭键回滚夹具；均保持 `continue_game_over` 与空参数。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3–10 个独立窗口，按 `run_id/floor/source_round/outcome/final_hp/raw_survival` 对账；证据成熟前不调整防守、竞速或自爆相行为。
+- **调整**：若出现可用格挡资源但仍终局，只新增独立容量分层假设，不把本观测升级为行为闸门。
+- **回滚**：将 `waterfall_about_to_blow_terminal_outcome_obs` 设为 `False`；预期只移除终局尾缀，既有自爆相观测、action 与 params 不变。
+- **验证**：完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff 复核及 `git diff --check` 通过。宿主固定 256 槽直连入口因临时目录池耗尽，使用同一 selfcheck 的进程级临时目录适配完成完整回归；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

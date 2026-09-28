@@ -6974,6 +6974,64 @@ def main() -> int:
         and d_waterfall_off.params == d_waterfall.params \
         and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" not in d_waterfall_off.reason, \
         f"瀑布巨兽自爆相观测关闭未严格回滚: {d_waterfall_off.action} {d_waterfall_off.params}（{d_waterfall_off.reason}）"
+    # ④g-terminal) 将已持久化的瀑布自爆相 end_turn 与原生 GAME_OVER
+    # 对账；只追加 outcome/final_hp 观测，动作/参数保持 continue_game_over。
+    waterfall_source = {
+        "screen": "COMBAT", "floor": 17, "turn": 4,
+        "action": d_waterfall.action, "params": d_waterfall.params,
+        "reason": d_waterfall.reason,
+    }
+    waterfall_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    waterfall_terminal_ctx = DummyCtx()
+    waterfall_terminal_ctx.decisions = [waterfall_source]
+    d_waterfall_terminal = itv_waterfall.decide(
+        waterfall_terminal_state, waterfall_terminal_ctx)
+    assert d_waterfall_terminal.action == "continue_game_over" \
+        and d_waterfall_terminal.params == {} \
+        and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" in d_waterfall_terminal.reason \
+        and "outcome=defeat" in d_waterfall_terminal.reason \
+        and "floor=17" in d_waterfall_terminal.reason \
+        and "source_round=4" in d_waterfall_terminal.reason \
+        and "final_hp=0" in d_waterfall_terminal.reason, \
+        f"瀑布巨兽自爆相未与终局对账或改写动作: {d_waterfall_terminal.action} {d_waterfall_terminal.params}（{d_waterfall_terminal.reason}）"
+    # 新 Policy 只读最后一条 end_turn，也必须能从持久化理由恢复同一观测。
+    itv_waterfall_reload = policy.Policy(itv_waterfall.know, random.Random(7))
+    waterfall_reload_ctx = DummyCtx()
+    waterfall_reload_ctx.decisions = [waterfall_source]
+    d_waterfall_reload = itv_waterfall_reload.decide(
+        waterfall_terminal_state, waterfall_reload_ctx)
+    assert "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" in d_waterfall_reload.reason \
+        and "source_round=4" in d_waterfall_reload.reason, \
+        f"瀑布自爆终局对账跨 Policy 恢复失败: {d_waterfall_reload.reason}"
+    # 服务端写回终局决策后不可重复追加；关闭新键只回滚尾缀，动作/参数不变。
+    waterfall_terminal_ctx.decisions.append({
+        "screen": "GAME_OVER", "floor": 17,
+        "action": d_waterfall_terminal.action,
+        "params": d_waterfall_terminal.params,
+        "reason": d_waterfall_terminal.reason,
+    })
+    d_waterfall_terminal_repeat = itv_waterfall.decide(
+        waterfall_terminal_state, waterfall_terminal_ctx)
+    assert "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" not in d_waterfall_terminal_repeat.reason, \
+        f"瀑布自爆终局对账重复追加: {d_waterfall_terminal_repeat.reason}"
+    itv_waterfall_terminal_off = policy.Policy(
+        itv_waterfall.know, random.Random(7))
+    itv_waterfall_terminal_off.know.policy[
+        "waterfall_about_to_blow_terminal_outcome_obs"] = False
+    waterfall_off_ctx = DummyCtx()
+    waterfall_off_ctx.decisions = [waterfall_source]
+    d_waterfall_terminal_off = itv_waterfall_terminal_off.decide(
+        waterfall_terminal_state, waterfall_off_ctx)
+    assert d_waterfall_terminal_off.action == d_waterfall_terminal.action \
+        and d_waterfall_terminal_off.params == d_waterfall_terminal.params \
+        and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" not in d_waterfall_terminal_off.reason, \
+        f"瀑布自爆终局对账关闭未严格回滚: {d_waterfall_terminal_off.action} {d_waterfall_terminal_off.params}（{d_waterfall_terminal_off.reason}）"
     itv_live_obs_off = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-end-turn-off-"))),
         random.Random(7))

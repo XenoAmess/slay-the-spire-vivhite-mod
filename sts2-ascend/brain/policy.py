@@ -5554,6 +5554,144 @@ class Policy:
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 
+    def _consume_waterfall_about_to_blow_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a persisted Waterfall self-destruct turn to GAME_OVER.
+
+        The preceding end_turn decision is intentionally untouched.  This is
+        an observation-only join that makes the native terminal outcome
+        falsifiable after the self-destruct phase has been entered.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "waterfall_about_to_blow_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_waterfall_about_to_blow_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_waterfall_about_to_blow_terminal_outcome_reported",
+                    False))):
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _flag(value) -> str:
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            text = str(value or "unknown").casefold()
+            return text if text in {"yes", "no", "unknown"} else "unknown"
+
+        self._waterfall_about_to_blow_terminal_outcome_reported = True
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；瀑布巨兽自爆相终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('terminal_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/final_hp={_num(final_hp)}"
+            f"/enemy={_pending.get('enemy') or '?'}"
+            f"/enemy_hp={_num(_pending.get('enemy_hp'))}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/vetoed_attacks={_pending.get('vetoed_attacks', '?')}"
+            f"/non_attack_candidates={_pending.get('non_attack_candidates', '?')}"
+            f"/raw_block_candidates={_pending.get('raw_block_candidates', '?')}"
+            f"/raw_max_block={_num(_pending.get('raw_max_block'))}"
+            f"/raw_post_gap={_num(_pending.get('raw_post_gap'))}"
+            f"/raw_survival={_flag(_pending.get('raw_survival'))}"
+            f"/block_locked={_flag(_pending.get('block_locked'))}"
+            "（WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_waterfall_about_to_blow_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the Waterfall terminal join after a policy reload."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_waterfall_about_to_blow_terminal_outcome_reported",
+            False))
+        marker = "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS"
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._waterfall_about_to_blow_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_waterfall_about_to_blow_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker_at = reason.rfind("WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS")
+        if marker_at < 0:
+            return
+        prefix = "瀑布巨兽自爆相终端观测："
+        audit_at = reason.rfind(prefix, 0, marker_at)
+        if audit_at < 0:
+            return
+        audit = reason[audit_at + len(prefix):marker_at]
+
+        def _token(name: str):
+            match = re.search(
+                rf"(?:^|/|,|：){re.escape(name)}=([^/,；（）()\s]+)",
+                audit)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        try:
+            _pending = {
+                "terminal_round": row.get("turn", row.get("round")),
+                "source_action": row.get("action") or "end_turn",
+                "enemy": _token("enemy") or "?",
+                "enemy_hp": _number("enemy_hp"),
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _number("energy"),
+                "vetoed_attacks": _token("vetoed_attacks") or "?",
+                "non_attack_candidates": (
+                    _token("non_attack_candidates") or "?"),
+                "raw_block_candidates": (
+                    _token("raw_block_candidates") or "?"),
+                "raw_max_block": _number("raw_max_block"),
+                "raw_post_gap": _number("raw_post_gap"),
+                "raw_survival": _token("raw_survival") or "unknown",
+                "block_locked": _token("block_locked") or "unknown",
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._waterfall_about_to_blow_terminal_outcome_pending = _pending
+        self._waterfall_about_to_blow_terminal_outcome_reported = False
+
     def _consume_vivhite_hp_terminal_lock_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join a persisted Vivhite terminal life-lock audit to GAME_OVER."""
@@ -16515,6 +16653,11 @@ class Policy:
         _lethal_unavailable_terminal_outcome_note = (
             self._consume_lethal_unavailable_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_waterfall_about_to_blow_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _waterfall_about_to_blow_terminal_outcome_note = (
+            self._consume_waterfall_about_to_blow_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         _terminal_lock_outcome_note = (
             self._consume_vivhite_hp_terminal_lock_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -16541,6 +16684,7 @@ class Policy:
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
+                            f"{_waterfall_about_to_blow_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}"
@@ -16570,6 +16714,7 @@ class Policy:
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
+                        f"{_waterfall_about_to_blow_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}"
@@ -16584,6 +16729,7 @@ class Policy:
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
+                                f"{_waterfall_about_to_blow_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
                                 f"{_sandpit_terminal_outcome_note}"
