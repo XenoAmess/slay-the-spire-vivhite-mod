@@ -13614,3 +13614,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.1644371616455844局)，BASH(14分/2.6776006752385726局)，JACKPOT(16分/6.065735271152415局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.08 → 2.07（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.30 → 2.25（行至 F22——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1638 胜，当前目标进阶 0
+
+## 第 1639 局复盘（2026-09-28 19:44）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：BLUDGEON, HOWL_FROM_BEYOND, EVIL_EYE, RAMPAGE, JUGGERNAUT, UPPERCUT, FEEL_NO_PAIN, SPITE, PYRE, UPPERCUT, FIEND_FIRE, ANGER, MANGLE, FEED, STONE_ARMOR, FLAME_BARRIER, COLOSSUS, STOMP
+- 本局遗物：GAME_PIECE, CENTENNIAL_PUZZLE
+- 战斗记录：F19 Monster战 掉血29; F20 Monster战 掉血3; F23 Monster战 掉血11; F25 Monster战 掉血16; F27 Monster战 掉血37; F28 Unknown战 掉血21（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.5688090759338578局)，FEED(25分/35.793483797888896局)，PACTS_END(25分/61.504058461688075局)，OFFERING(24分/18.795178372690692局)，MANGLE(24分/53.14432793255797局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.153361631579825局)，BASH(14分/2.6682290728752376局)，JACKPOT(16分/6.044505197703383局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.40 → 0.43（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.25 → 2.20（行至 F28——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F28——药水交药线部分胜利回收）
+- 生涯战绩：0/1639 胜，当前目标进阶 0
