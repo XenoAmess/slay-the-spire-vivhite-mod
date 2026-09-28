@@ -5549,3 +5549,35 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+# 1588~1592 批：普通战零压回合攻击门拦来源观测
+
+日期：2026-09-28
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1592-F2 SHRINKER_BEETLE 的 T1 零来袭伤害回合，弦光投影、闭域映射和分治法阵都没有形成有效输出；现有理由把普通余量门与零压闸混在同一条收口账里。假设是：把被拦的攻击牌单独记录并标出 `cause=margin|zero_pressure`，能证伪“攻击豁免未生效”与“普通余量门仍在拦攻击”这两个不同原因，且不改变动作或参数。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260928-111204_L3A0PHRR24E2.json` 已逐条检查 56 条 decisions。1592-F2 T1（决策 6）为 `hp=62/incoming=0`，结束回合时手牌含两张弦光投影攻击牌；随后 T2~T11 仅以低速抽牌/格挡与生命支付推进，T11 进入 `hp=1` 终端锁，T11 阵亡。现有 `VIVHITE_HP_ZERO_PRESSURE_GATE` 与 `VIVHITE_HP_PLAY_MARGIN_GATE` 逐牌出现，但没有攻击牌类型、面板伤害和拦截原因的同条收口证据。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Monster combat 中，非致死、`incoming=0` 的 end-turn 若确有被拦攻击牌，应出现 `VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS`，逐项带 `pay/score/cause/dmg`；默认攻击豁免下若仍被普通门拦，`cause` 应为 `margin`。非目标房间、致死/竞速回合和无攻击牌不得显形；关闭键后 marker 消失且 action/params 完全不变。字段缺失、错因或动作漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_zero_pressure_attack_reject_obs`，关闭只移除观测。
+- `sts2-ascend/brain/policy.py`：在 end-turn 的既有 `_hp_gate_blocked` 收口中，仅对白绮普通 Monster、非致死、零来袭伤害、非竞速样本筛出攻击牌，记录 `hp/max_hp/block/incoming/energy` 及牌的 `pay/score/cause/dmg`；不改变评分、候选资格、放行、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增默认 marker 与 `cause=margin`/伤害字段夹具，并验证关闭键前后 action/params 逐项一致。
+- 未修改 runs、stats、progression、policy.json、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- `py -3 -B sts2-ascend/brain/selfcheck.py`：`SELFCHECK OK`，退出码 0。
+- 已完整回读本批 3 个生产/自检目标文件的 diff；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 后续只统计 3~10 个独立 Monster combat，按 run/floor/combat 对账 marker、原始手牌类型与伤害、真实 `applied end_turn {}`、下一回合敌伤及 GAME_OVER/胜负；观测出现本身不等于行为修复。
+- 若 marker 在非 Monster、来袭伤害大于 0、致死/竞速窗口显形，或 `cause/dmg/pay` 与候选 trace 不符，将 `vivhite_hp_zero_pressure_attack_reject_obs=0`；必要时回滚本地提交并保留本批证据，在重复对账前不调整余量门或攻击豁免。
+
+## REPLAY
+
+retry_resolution: none (no failed_review_replay packages requested)

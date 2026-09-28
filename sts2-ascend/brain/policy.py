@@ -4491,6 +4491,74 @@ class Policy:
             f"/race_allin={'yes' if race_allin else 'no'}"
             f"/cards={'|'.join(_rows)}")
 
+    def _vivhite_hp_zero_pressure_attack_reject_observation_note(
+            self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
+            incoming, energy, lethal_now, kill_race, race_allin, pol) -> str:
+        """Audit attack cards blocked on a non-lethal Monster zero-pressure turn.
+
+        The zero-pressure attack exemption is evaluated after the ordinary
+        margin gate.  This marker keeps those two rejection sources distinct at
+        the end-turn boundary without changing candidate eligibility, score,
+        action, or parameters.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "vivhite_hp_zero_pressure_attack_reject_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _ctx_combat = getattr(ctx, "combat", None) or {}
+        if (not _enabled
+                or getattr(self.character_strategy, "profile_id", None)
+                != VIVHITE_PROFILE_ID
+                or _ctx_combat.get("node_type") != "Monster"
+                or float(incoming) > 0.0
+                or lethal_now
+                or bool(combat.get("end_turn_will_kill_player"))
+                or kill_race
+                or race_allin
+                or not gate_rows):
+            return ""
+
+        _rows = []
+        for _gate_row in gate_rows:
+            if (not isinstance(_gate_row, (tuple, list))
+                    or len(_gate_row) < 5):
+                continue
+            _card = next((candidate for candidate in hand or []
+                          if candidate.get("index") == _gate_row[0]), None)
+            if _card is None:
+                continue
+            _card_id = str(_card.get("card_id") or "?").upper().rstrip("+")
+            _entry = self.character_strategy.card(_card_id)
+            _observed_type = str(_card.get("card_type") or "").casefold()
+            if not (_observed_type == "attack"
+                    or (_entry is not None and _entry.card_type == "attack")):
+                continue
+            try:
+                _cost = (float(energy) if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+                _pay = float(_gate_row[2] or 0.0)
+                _score = float(_gate_row[4] or 0.0)
+                _damage, _block, _hits = card_numbers(_card)
+                _damage_total = float(_damage) * max(1, int(_hits))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            _cause = (
+                "zero_pressure" if "ZERO_PRESSURE" in _gate_row[6:]
+                else "margin")
+            _rows.append(
+                f"{_card_id}@{_cost:g}/pay={_pay:g}"
+                f"/score={_score:.2f}/cause={_cause}"
+                f"/dmg={_damage_total:g}")
+        if not _rows:
+            return ""
+        return (
+            f"；零压回合攻击门拦观测：hp={float(my_hp):g}"
+            f"/max_hp={float(my_max_hp):g}/block={float(my_block):g}"
+            f"/incoming={float(incoming):g}/energy={float(energy):g}"
+            f"/cards={'|'.join(_rows)}"
+            "（VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS）")
+
     def _boss_free_turn_attack_veto_observation_note(
             self, ctx, combat, hand, gate_rows, my_hp, my_max_hp, my_block,
             incoming, energy, round_no, pol) -> str:
@@ -8887,6 +8955,13 @@ class Policy:
                         my_block, incoming, energy, round_no, pol))
                 if _boss_attack_veto_note:
                     _gate_note += _boss_attack_veto_note
+                _zero_pressure_attack_note = (
+                    self._vivhite_hp_zero_pressure_attack_reject_observation_note(
+                        ctx, combat, hand, _hp_gate_blocked, my_hp, my_max_hp,
+                        my_block, incoming, energy, lethal_now, kill_race,
+                        race_allin, pol))
+                if _zero_pressure_attack_note:
+                    _gate_note += _zero_pressure_attack_note
                 if _hp_relief_hard_suppressed and incoming <= 0:
                     # 普通战意图0回合被压回门带的直接证据（第 512~529 局批）：
                     # 供复盘核对硬仗限定接线与普通战自损回落（纯注记）

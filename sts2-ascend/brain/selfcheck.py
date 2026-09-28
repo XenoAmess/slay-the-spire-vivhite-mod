@@ -4845,6 +4845,28 @@ def main() -> int:
     assert "VIVHITE_HP_ZERO_PRESSURE_GATE" not in d_z5.reason, \
         f"意图>0 回合不得出现零压闸留痕: {d_z5.reason}"
 
+    # ①d 零压收口攻击拒绝观测：把普通余量门拦下的攻击牌与非攻击零压闸
+    #     分开留痕；只读且可关闭，动作/参数必须逐项保持不变。
+    vknow_zobs = _vivhite_know("sts2-selfcheck-vhzeropay-attack-obs-")
+    vknow_zobs.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vpol_zobs = policy.Policy(vknow_zobs, random.Random(11))
+    d_zobs = vpol_zobs.decide(_vgate_state(85, 0), _vzp_monster_ctx())
+    assert d_zobs.action == "end_turn" \
+        and "VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS" in d_zobs.reason \
+        and "/cause=margin" in d_zobs.reason \
+        and "/dmg=10" in d_zobs.reason, \
+        f"零压回合攻击门拦观测缺失或归因错误: {d_zobs}"
+    vknow_zobs_off = _vivhite_know("sts2-selfcheck-vhzeropay-attack-off-")
+    vknow_zobs_off.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_zobs_off.policy["vivhite_hp_zero_pressure_attack_reject_obs"] = False
+    vpol_zobs_off = policy.Policy(vknow_zobs_off, random.Random(11))
+    d_zobs_off = vpol_zobs_off.decide(
+        _vgate_state(85, 0), _vzp_monster_ctx())
+    assert d_zobs_off.action == d_zobs.action \
+        and d_zobs_off.params == d_zobs.params \
+        and "VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS" not in d_zobs_off.reason, \
+        f"零压攻击观测关闭后动作或参数漂移: {d_zobs_off} vs {d_zobs}"
+
     # 3prn) 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，第 355~360
     #      局批复盘）：余量门把被拦謦欬牌全部逐出残能救场，但救场格挡通道自带
     #      净保命>0 计价（min(block,gap)−实际謦欬−余裕机会成本）——355 局 F5
