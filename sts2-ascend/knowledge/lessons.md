@@ -13493,3 +13493,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.2888657233099616局)，BASH(14分/2.7828863812622773局)，BODY_SLAM(15分/2.006379156072865局)
 - 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1627 胜，当前目标进阶 0
+
+## 第 1628 局复盘（2026-09-28 10:52）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：MOLTEN_FIST, STONE_ARMOR, FEED, STOMP, TAUNT, BURNING_PACT, RAMPAGE, FEEL_NO_PAIN, UPPERCUT
+- 本局遗物：BAG_OF_PREPARATION, TINY_MAILBOX
+- 战斗记录：F6 Monster战 掉血41; F7 Monster战 掉血9; F9 Monster战 掉血0; F12 Unknown战 掉血3; F14 Elite战 掉血22; F17 Boss战 掉血60｜竞速投影审计：pool=195/dpt=7.2/ttk=27.0833/tsurv=2.1（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=27.0833/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T3判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.6698169968314343局)，OFFERING(25分/17.49873884893165局)，FEED(25分/35.15102145295522局)，PACTS_END(25分/63.92245425847171局)，DRAMATIC_ENTRANCE(24分/16.40258635205713局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/3.277354693278377局)，BASH(14分/2.7731462789278596局)，BULLY(15分/3.042702057939068局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（66%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1628 胜，当前目标进阶 0
