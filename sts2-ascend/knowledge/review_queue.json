@@ -1,21 +1,33 @@
 {
- "pending": [
-  {
-   "run": 1654,
-   "time": "2026-09-29 01:40",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "BYMF87CCGLWR"
-  }
- ],
- "reviewing": null
+ "pending": [],
+ "reviewing": {
+  "runs": [
+   1654
+  ],
+  "items": [
+   {
+    "run": 1654,
+    "time": "2026-09-29 01:40",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "BYMF87CCGLWR",
+    "queue_id": "32352-1790618745011408800-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "",
+  "started": "2026-09-29 02:05:45"
+ }
 }
