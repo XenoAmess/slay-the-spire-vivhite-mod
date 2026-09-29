@@ -17803,6 +17803,58 @@ def main() -> int:
             and "/bridge_decisions=2/bridge_rounds=1"
                 in d_nonlethal_chain.reason), \
         f"非致死资源耗尽链终局对账缺失或动作漂移: {d_nonlethal_chain}"
+    assert "/terminal_overlap=none" in d_nonlethal_chain.reason \
+        and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS" in d_nonlethal_chain.reason, \
+        f"非致死资源耗尽链缺少无重叠终局指纹: {d_nonlethal_chain}"
+
+    # 3z-4f) 非致死资源耗尽链与瀑布自爆相重叠：第1721局 F17 的形态——
+    #         较早的非致死空过经过同战斗桥接后，终局前又观察到
+    #         WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS；专用 overlap 字段只说明
+    #         两条观测链重叠，不把上游非致死 marker 冒充终局原因。
+    nonlethal_waterfall_overlap_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_waterfall_overlap_ctx = _SettleCtx()
+    nonlethal_waterfall_overlap_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 6, "reason": d_nonlethal_empty.reason,
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7,
+        "reason": "战斗：瀑布自爆相终端观测："
+                   "enemy=WATERFALL_GIANT（WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS）",
+    }]
+    d_nonlethal_waterfall_overlap = nonlethal_waterfall_overlap_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_waterfall_overlap_ctx)
+    assert (d_nonlethal_waterfall_overlap.action
+            == d_nonlethal_chain.action
+            and d_nonlethal_waterfall_overlap.params
+            == d_nonlethal_chain.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_waterfall_overlap.reason
+            and "/terminal_overlap=waterfall_about_to_blow"
+                in d_nonlethal_waterfall_overlap.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
+                in d_nonlethal_waterfall_overlap.reason), \
+        f"非致死链与瀑布自爆相重叠观测缺失或动作漂移: {d_nonlethal_waterfall_overlap}"
+    nonlethal_overlap_off_know = knowledge.Knowledge(tmp)
+    nonlethal_overlap_off_know.policy[
+        "nonlethal_unavailable_terminal_overlap_obs"] = False
+    nonlethal_overlap_off_pol = policy.Policy(nonlethal_overlap_off_know)
+    nonlethal_overlap_off_ctx = _SettleCtx()
+    nonlethal_overlap_off_ctx.decisions = list(
+        nonlethal_waterfall_overlap_ctx.decisions)
+    d_nonlethal_waterfall_overlap_off = nonlethal_overlap_off_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_overlap_off_ctx)
+    assert (d_nonlethal_waterfall_overlap_off.action
+            == d_nonlethal_waterfall_overlap.action
+            and d_nonlethal_waterfall_overlap_off.params
+            == d_nonlethal_waterfall_overlap.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_waterfall_overlap_off.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
+                not in d_nonlethal_waterfall_overlap_off.reason), \
+        f"非致死链重叠观测关闭后动作或既有 marker 漂移: {d_nonlethal_waterfall_overlap_off}"
 
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担

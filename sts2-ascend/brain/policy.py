@@ -6024,6 +6024,19 @@ class Policy:
                 f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
                 f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                 "（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）")
+        try:
+            _overlap_enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_terminal_overlap_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _overlap_enabled = False
+        _overlap_tail = ""
+        if _overlap_enabled:
+            _overlap = str(_pending.get("terminal_overlap") or "unknown")
+            if _overlap not in {"none", "waterfall_about_to_blow", "unknown"}:
+                _overlap = "unknown"
+            _overlap_tail = (
+                f"/terminal_overlap={_overlap}"
+                "（NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6049,6 +6062,7 @@ class Policy:
             + (f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                if _chain else "")
+            + _overlap_tail
             + f"（{_marker}）")
         return _base + _ringing_hook_note
 
@@ -6107,6 +6121,14 @@ class Policy:
         if _source_row is None:
             return
         row = _source_row
+        _source_pos = len(_lookback) - 1 - _source_offset
+        _waterfall_overlap = any(
+            isinstance(_candidate, dict)
+            and (_candidate.get("screen") in (None, "COMBAT"))
+            and (_candidate.get("action") == "end_turn")
+            and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS"
+            in str(_candidate.get("reason") or "")
+            for _candidate in _lookback[_source_pos:])
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -6142,6 +6164,9 @@ class Policy:
                 "chain": bool(_source_offset),
                 "bridge_decisions": _source_offset,
                 "bridge_rounds": _bridge_rounds,
+                "terminal_overlap": (
+                    "waterfall_about_to_blow"
+                    if _waterfall_overlap else "none"),
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),

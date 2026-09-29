@@ -13034,6 +13034,33 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-09-29 第1721局复盘（NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1721`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1721局 F17 的非致死无牌链并不必然等于终局原因；若同一战斗的桥接尾部又进入 WATERFALL_GIANT 自爆相，当前通用链应明确记录“与瀑布自爆观测重叠”，但不改变终局动作。若未来出现重叠字段而有界链中没有瀑布 end_turn marker，或字段跨战斗串线，则假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-222157_V3M2376F560Q.json`（第1721局）尾部 D229 为回合11 `end_turn`，reason 含 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS`；随后 D230 `GAME_OVER` 同时含 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`（source_round=8、bridge_decisions=7、bridge_rounds=3）与瀑布自爆终局观测。既有通用链记录桥接长度，却没有两条观测链是否重叠的字段。
+- **EXPECTED_SIGNAL**：未来3—10个独立窗口按 `run_id/floor/source_round/source_action/bridge_decisions/bridge_rounds/terminal_overlap/outcome` 对账；只有同一有界回看窗口、同楼层且 source 之后确有 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS` 时出现 `terminal_overlap=waterfall_about_to_blow`。普通非致死链保持 `none`；action、params、评分、候选和目标不得变化。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `nonlethal_unavailable_terminal_overlap_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有非致死终局链恢复的有界同战斗回看中，检查 source 之后的瀑布自爆 `end_turn` marker，并在终局 reason 追加 `terminal_overlap` 与 `NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS`；不参与决策、评分、门控或终局 action/params。
+- `sts2-ascend/brain/selfcheck.py`：加入普通链 `none`、1721 F17 形态的 `waterfall_about_to_blow`、以及关闭开关后仅移除新字段的夹具，断言 action/params 与既有 chain marker 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个同类非致死资源耗尽终局，按瀑布 marker 是否存在、桥接长度、终局 outcome 和真实敌人状态分层；证据成熟前不改变 end_turn、防守或瀑布处理。
+- **调整**：若真实 payload 的瀑布 marker 时序、楼层绑定或 source/terminal 边界与夹具不符，先收紧观测契约并保留失败样本，不把相关性升级为行为闸门。
+- **回滚**：将 `nonlethal_unavailable_terminal_overlap_obs` 设为 `False`；预期仅移除 `terminal_overlap` 与专用 marker，通用非致死链、动作、参数和评分保持不变。
+- **验证**：固定256槽自检入口先复现宿主既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 临时池耗尽；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 父槽中以进程级 `tempfile.mkdtemp` 适配执行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 ## 2026-09-29 第1653局复盘（KILL_RACE_TERMINAL_LATCH_HOLD_OBS）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
