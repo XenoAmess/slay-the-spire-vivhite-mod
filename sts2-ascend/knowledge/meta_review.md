@@ -13376,3 +13376,29 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：固定受管池直接运行先因既有256槽上限报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用 clone 内进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；目标 diff `git diff --check` 通过。未写入`.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md`或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1688局复盘（NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非致死资源耗尽空过后，战斗可能继续执行少量出牌才进入 `GAME_OVER`；现有终局对账只读取紧邻终局的上一条 `end_turn`，会漏掉这条延迟死亡链。若在同楼层、同一 `COMBAT`、最近 12 条决策内回接最近的非致死 marker，未来可以区分“资源耗尽前兆导致的延迟终局”与普通终局，且不改变动作或参数。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-121317_36BNW5PPMX62.json`（第1688局，F8，129条决策）中，F8 在 T2 12:16:46、T4 12:17:01、T6 12:17:15 三次写入 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`；三次分别记录 `energy=0`，并出现 `gap=0`、`gap=2`、`gap=2`。T6 marker 后仍有 T7 的 `TWIN_STRIKE`、`STRIKE` 和一次 `end_turn`，随后才进入 `GAME_OVER`。因此旧的“只看最后一条 end_turn”路径无法接上已存在的前兆。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立战斗终局按 `run_id/floor/source_round/outcome/final_hp` 统计；链式样本应带 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`、`bridge_decisions`、`bridge_rounds`，紧邻样本继续使用旧 marker。跨楼层、跨 `COMBAT`、超过 12 条决策或无前置 marker 均不得产生链 marker；action/params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：终局恢复从尾部向前最多扫描 12 条同楼层 `COMBAT` 决策；只有前置 marker 与终局不紧邻时才追加链 marker及桥接字段。原有紧邻终局 marker、评分、候选、门控和动作均不变。
+- `sts2-ascend/brain/knowledge.py`：补充现有 `nonlethal_unavailable_terminal_outcome_obs` 开关覆盖有界同战斗链的说明；设为 `False` 可整体撤回终局对账观测。
+- `sts2-ascend/brain/selfcheck.py`：增加“marker → 出牌 → end_turn → GAME_OVER”夹具，断言链字段存在、旧 marker 不误报且 `continue_game_over` 的 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3—10 个独立样本，按 `bridge_decisions`、`bridge_rounds`、`raw_survival`、终局血量和真实 `applied end_turn` 对账；证据成熟前不改防守或竞速策略。
+- **调整**：若同一战斗的链 marker 缺失、桥接计数错误，或出现跨房间/跨楼层串线，先收紧恢复来源与边界；不把观测异常直接升级为行为闸门。
+- **回滚**：将 `nonlethal_unavailable_terminal_outcome_obs` 设为 `False`；预期只移除旧终局 marker 与新链 marker，非致死前置观测及 action/params 保持不变。
+- **验证**：固定 256 槽入口因自检夹具临时分配超限报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0、输出 `SELFCHECK OK`。目标 diff 无空白错误；未写入在线状态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

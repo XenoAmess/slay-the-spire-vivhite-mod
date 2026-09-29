@@ -17544,6 +17544,35 @@ def main() -> int:
             not in d_nonlethal_unavailable_outcome_off.reason), \
         f"非致死无牌终局对账关闭后动作或 marker 漂移: {d_nonlethal_unavailable_outcome_off}"
 
+    # 3z-4e) 非致死资源耗尽链终局对账：同一战斗的前置 marker 之后，
+    #         允许少量出牌再进入 GAME_OVER；链路必须新增可证伪的桥接
+    #         字段，但不改变终局 action/params，也不污染旧的紧邻 marker。
+    nonlethal_chain_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_chain_ctx = _SettleCtx()
+    nonlethal_chain_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 6, "reason": d_nonlethal_empty.reason,
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 7, "reason": "战斗：后续出牌",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7, "reason": "战斗：后续收口",
+    }]
+    d_nonlethal_chain = nonlethal_chain_pol.decide(
+        nonlethal_unavailable_outcome_state, nonlethal_chain_ctx)
+    assert (d_nonlethal_chain.action == "continue_game_over"
+            and d_nonlethal_chain.params == {}
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_chain.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in d_nonlethal_chain.reason
+            and "/source_round=6/"
+                in d_nonlethal_chain.reason
+            and "/bridge_decisions=2/bridge_rounds=1"
+                in d_nonlethal_chain.reason), \
+        f"非致死资源耗尽链终局对账缺失或动作漂移: {d_nonlethal_chain}"
+
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能

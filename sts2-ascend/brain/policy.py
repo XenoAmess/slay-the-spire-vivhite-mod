@@ -5758,8 +5758,13 @@ class Policy:
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
         _result = "victory" if victory else "defeat"
+        _chain = bool(_pending.get("chain"))
+        _marker = ("NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                   if _chain else "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS")
+        _prefix = ("；非致死无牌链终局对账："
+                   if _chain else "；非致死无牌终局对账：")
         return (
-            f"；非致死无牌终局对账：outcome={_result}"
+            f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
             f"/source_round={_round(_pending.get('terminal_round'))}"
             f"/source_action={_pending.get('source_action') or '?'}"
@@ -5780,7 +5785,10 @@ class Policy:
             f"/hand_post_gap={_num(_pending.get('hand_post_gap'))}"
             f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
             f"/block_locked={_flag(_pending.get('block_locked'))}"
-            "（NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
+            + (f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+               f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+               if _chain else "")
+            + f"（{_marker}）")
 
     def _restore_nonlethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -5804,12 +5812,39 @@ class Policy:
             return
         if not isinstance(decisions, list) or not decisions:
             return
-        row = decisions[-1]
-        if not isinstance(row, dict) or row.get("action") != "end_turn":
+        _tail = decisions[-1]
+        if not isinstance(_tail, dict) or _tail.get("action") != "end_turn":
             return
-        if (floor is not None and row.get("floor") is not None
-                and str(row.get("floor")) != str(floor)):
+        if (floor is not None and _tail.get("floor") is not None
+                and str(_tail.get("floor")) != str(floor)):
             return
+        # A non-lethal resource-exhaustion precursor can be followed by a few
+        # valid plays before the combat finally reaches GAME_OVER.  The old
+        # join only inspected the immediately preceding end_turn, so that
+        # bounded chain was silently lost (1688-F8 is the concrete shape).
+        # Keep the scan same-floor/same-combat and short enough that an old
+        # room cannot be mistaken for the terminal cause.
+        _source_row = None
+        _source_offset = 0
+        _lookback = decisions[-12:]
+        for _offset, _candidate in enumerate(reversed(_lookback)):
+            if not isinstance(_candidate, dict):
+                break
+            if (floor is not None and _candidate.get("floor") is not None
+                    and str(_candidate.get("floor")) != str(floor)):
+                break
+            if _candidate.get("screen") not in (None, "COMBAT"):
+                break
+            if _candidate.get("action") != "end_turn":
+                continue
+            _candidate_reason = str(_candidate.get("reason") or "")
+            if "NONLETHAL_UNAVAILABLE_END_TURN_OBS" in _candidate_reason:
+                _source_row = _candidate
+                _source_offset = _offset
+                break
+        if _source_row is None:
+            return
+        row = _source_row
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -5832,9 +5867,19 @@ class Policy:
             return float(value)
 
         try:
+            _source_round = row.get("turn", row.get("round"))
+            _tail_round = _tail.get("turn", _tail.get("round"))
+            _bridge_rounds = max(
+                0, int(float(_tail_round)) - int(float(_source_round)))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        try:
             _pending = {
                 "terminal_round": row.get("turn", row.get("round")),
                 "source_action": row.get("action") or "end_turn",
+                "chain": bool(_source_offset),
+                "bridge_decisions": _source_offset,
+                "bridge_rounds": _bridge_rounds,
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),
