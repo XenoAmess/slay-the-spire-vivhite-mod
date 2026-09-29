@@ -13853,3 +13853,30 @@ production_code_commit: `767e0df6b9038d220357af2402eaea7aac765444`
 - **验证**：完整 selfcheck 使用 clone 内 `.review-cache/selfcheck-pool` 的进程级 `tempfile.mkdtemp` 适配，退出码0并输出 `SELFCHECK OK`；目标三文件最终 diff 与 staged diff `--check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1727—1728局复盘（WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1727, 1728`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1728局 F17-T12 的 `STEAM_ERUPTION_KILL_VETO_OBS` 是进入 Waterfall 自爆相的可追踪过渡源；若为真，同一有界、同楼层 `COMBAT` 尾部应按“Steam 拦截牌 → `RACE_INVULNERABLE_POOL_OBS` → 终端空过/GAME_OVER”的先后顺序追加来源桥接。若是普通无敌相、缺少 Waterfall/Steam 身份、拦截发生在无敌相之后或跨战斗，则不得追加该桥。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-011111_32T4YGQKHNUV.json` 的229条 decisions。D224—225 保留 `WATERFALL_GIANT`/`STEAM_ERUPTION_POWER` 身份；D225 `01:19:02` 打出余烬、我方12血/2能量、蒸汽×45并记录 `STEAM_ERUPTION_KILL_VETO_OBS`；D227 首次记录无敌血池相；D228 12血/15甲承受45点来袭且四张攻击均能量锁；D229 以 HP0 失败，既有 `terminal_overlap=none`。该链暴露了拦截牌与终端桥之间缺少来源字段，而不是选牌动作本身缺少证据。
+- **EXPECTED_SIGNAL**：未来3—10个独立终局窗口中，仅当同一最多12条、同楼层同 `COMBAT` 尾部同时满足上述顺序和身份条件时，追加 `WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS`，并能读出 source turn/time/card/HP/energy、Steam stack 与 phase turn；泛化无敌相或逆序样本不命中。评分、候选、目标、action、params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `waterfall_steam_veto_terminal_outcome_obs` 回滚开关，关闭只移除该桥接尾缀。
+- `sts2-ascend/brain/policy.py`：复用既有非致死终局恢复的12条同战斗尾部；只在 Waterfall/Steam 身份、Steam veto play_card 位于首个无敌池阶段之前且同尾满足时保存来源字段，并在终局 reason 追加桥接观测；不进入评分、选牌、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入1728形态正例、通用无敌相负例和开关关闭后的 action/params 与既有 overlap 等价断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个同类 Waterfall/Steam 终局窗口，按 Steam veto 时序、phase turn、终端原因和胜负分层；证据成熟前不改变余烬、end_turn 或竞速攻防策略。
+- **调整**：若真实 payload 缺少牌名/时间/层数、身份与 phase 顺序漂移或跨战斗误接，收紧同楼层/同 `COMBAT`/有序来源谓词并保留失败样本，不升级为行为门。
+- **回滚**：将 `waterfall_steam_veto_terminal_outcome_obs` 设为 `False`；预期仅移除 `WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS`，既有终局 overlap、action 和 params 不变。
+- **验证**：进程级复用 clone 内 `.review-cache/selfcheck-pool` 运行完整 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；真实 F1728 持久链回放命中桥接且 action 仍为 `continue_game_over`、params 仍为空；源码 `git diff --check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

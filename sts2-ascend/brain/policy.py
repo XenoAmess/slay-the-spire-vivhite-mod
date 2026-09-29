@@ -5985,6 +5985,14 @@ class Policy:
             text = str(value or "unknown").casefold()
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
+        def _text(value) -> str:
+            text = str(value or "?")
+            return (text.replace("/", "_")
+                        .replace("；", "_")
+                        .replace("（", "_")
+                        .replace("）", "_")
+                        .replace(" ", "_"))
+
         _result = "victory" if victory else "defeat"
         _chain = bool(_pending.get("chain"))
         _marker = ("NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
@@ -6091,6 +6099,28 @@ class Policy:
                 f"/last_round={_round(_pending.get('energy_pressure_last_round'))}"
                 "/energy=0/hook_locked=0"
                 "（NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS）")
+        _steam_veto_tail = ""
+        try:
+            _steam_veto_enabled = bool(int(float(pol.get(
+                "waterfall_steam_veto_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _steam_veto_enabled = False
+        _steam_veto_bridge = _pending.get("steam_veto_bridge")
+        if (_steam_veto_enabled and isinstance(_steam_veto_bridge, dict)):
+            _steam_veto_tail = (
+                "；蒸汽喷发拦截自爆相终局桥："
+                f"source_turn={_round(_steam_veto_bridge.get('source_turn'))}"
+                f"/source_time={_text(_steam_veto_bridge.get('source_time'))}"
+                "/source_action=play_card"
+                f"/source_card={_text(_steam_veto_bridge.get('source_card'))}"
+                f"/source_hp={_num(_steam_veto_bridge.get('source_hp'))}"
+                f"/source_energy={_num(_steam_veto_bridge.get('source_energy'))}"
+                f"/steam_stack={_text(_steam_veto_bridge.get('steam_stack'))}"
+                "/phase=invulnerable_pool"
+                f"/phase_turn={_round(_steam_veto_bridge.get('phase_turn'))}"
+                f"/phase_time={_text(_steam_veto_bridge.get('phase_time'))}"
+                f"/terminal_overlap={_text(_pending.get('terminal_overlap'))}"
+                "（WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6119,6 +6149,7 @@ class Policy:
             + _pressure_tail
             + _energy_pressure_tail
             + _overlap_tail
+            + _steam_veto_tail
             + f"（{_marker}）")
         return _base + _ringing_hook_note
 
@@ -6204,6 +6235,53 @@ class Policy:
             and "RACE_INVULNERABLE_POOL_OBS"
             in str(_candidate.get("reason") or "")
             for _candidate in _overlap_tail_rows)
+        _steam_veto_source = None
+        _steam_veto_source_pos = None
+        for _position, _candidate in enumerate(_overlap_tail_rows):
+            if (isinstance(_candidate, dict)
+                    and (_candidate.get("screen") in (None, "COMBAT"))
+                    and _candidate.get("action") == "play_card"
+                    and "STEAM_ERUPTION_KILL_VETO_OBS"
+                    in str(_candidate.get("reason") or "")):
+                _steam_veto_source = _candidate
+                _steam_veto_source_pos = _position
+                break
+        _invulnerable_phase_row = None
+        _invulnerable_phase_pos = None
+        for _position, _candidate in enumerate(_overlap_tail_rows):
+            if (isinstance(_candidate, dict)
+                    and (_candidate.get("screen") in (None, "COMBAT"))
+                    and "RACE_INVULNERABLE_POOL_OBS"
+                    in str(_candidate.get("reason") or "")):
+                _invulnerable_phase_row = _candidate
+                _invulnerable_phase_pos = _position
+                break
+        _steam_veto_bridge = None
+        if (_waterfall_identity_seen and _waterfall_phase_seen
+                and isinstance(_steam_veto_source, dict)
+                and isinstance(_invulnerable_phase_row, dict)
+                and _steam_veto_source_pos is not None
+                and _invulnerable_phase_pos is not None
+                and _steam_veto_source_pos < _invulnerable_phase_pos):
+            _steam_veto_reason = str(_steam_veto_source.get("reason") or "")
+            _steam_card_match = re.search(
+                r"打出【([^】]+)】", _steam_veto_reason)
+            _steam_stack_match = re.search(
+                r"蒸汽喷发[×x](\d+)", _steam_veto_reason)
+            _steam_veto_bridge = {
+                "source_turn": _steam_veto_source.get(
+                    "turn", _steam_veto_source.get("round")),
+                "source_time": _steam_veto_source.get("t"),
+                "source_card": (_steam_card_match.group(1)
+                                 if _steam_card_match else "?"),
+                "source_hp": _steam_veto_source.get("hp"),
+                "source_energy": _steam_veto_source.get("energy"),
+                "steam_stack": (_steam_stack_match.group(1)
+                                 if _steam_stack_match else "?"),
+                "phase_turn": _invulnerable_phase_row.get(
+                    "turn", _invulnerable_phase_row.get("round")),
+                "phase_time": _invulnerable_phase_row.get("t"),
+            }
         _waterfall_overlap = (
             _waterfall_marker_overlap
             or (_waterfall_identity_seen and _waterfall_phase_seen))
@@ -6396,6 +6474,7 @@ class Policy:
                 "hand_post_gap": _number("hand_post_gap"),
                 "hand_raw_survival": _token("hand_raw_survival") or "unknown",
                 "block_locked": _token("block_locked") or "unknown",
+                "steam_veto_bridge": _steam_veto_bridge,
             }
         except (TypeError, ValueError, OverflowError):
             return

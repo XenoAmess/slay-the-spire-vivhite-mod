@@ -17877,6 +17877,42 @@ def main() -> int:
             and "/terminal_overlap=waterfall_about_to_blow"
                 in d_nonlethal_waterfall_phase.reason), \
         f"Waterfall play_card phase did not join overlap or drifted action: {d_nonlethal_waterfall_phase}"
+
+    # A Steam-vetoed lethal card is the transition source in the latest
+    # Waterfall tail (1728-F17-T12 -> T13).  Keep that source distinct from
+    # the generic overlap field so the next batch can falsify the causal join
+    # without changing the selected card or the terminal action.
+    nonlethal_waterfall_veto_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_waterfall_veto_ctx = _SettleCtx()
+    nonlethal_waterfall_veto_ctx.decisions = [
+        dict(row) for row in nonlethal_waterfall_phase_ctx.decisions]
+    nonlethal_waterfall_veto_ctx.decisions[1].update({
+        "t": "01:19:02", "hp": 12, "energy": 2,
+        "reason": "Boss state WATERFALL_GIANT powers="
+                   "STEAM_ERUPTION_POWERx45；蒸汽喷发×45在账；"
+                   "打出【余烬】→瀑布巨兽；STEAM_ERUPTION_KILL_VETO_OBS",
+    })
+    d_nonlethal_waterfall_veto = nonlethal_waterfall_veto_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_waterfall_veto_ctx)
+    assert (d_nonlethal_waterfall_veto.action
+            == d_nonlethal_waterfall_phase.action
+            and d_nonlethal_waterfall_veto.params
+            == d_nonlethal_waterfall_phase.params
+            and "/terminal_overlap=waterfall_about_to_blow"
+                in d_nonlethal_waterfall_veto.reason
+            and "source_turn=7/source_time=01:19:02/source_action=play_card"
+                in d_nonlethal_waterfall_veto.reason
+            and "/source_card=余烬/source_hp=12/source_energy=2/steam_stack=45"
+                in d_nonlethal_waterfall_veto.reason
+            and "/phase=invulnerable_pool/phase_turn=7/phase_time=?"
+                in d_nonlethal_waterfall_veto.reason
+            and "WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS"
+                in d_nonlethal_waterfall_veto.reason), \
+        f"Steam-veto 到瀑布自爆相桥接缺失或改写终局动作: {d_nonlethal_waterfall_veto}"
+    assert knowledge.DEFAULT_POLICY[
+        "waterfall_steam_veto_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 waterfall_steam_veto_terminal_outcome_obs"
     nonlethal_generic_invuln_pol = policy.Policy(knowledge.Knowledge(tmp))
     nonlethal_generic_invuln_ctx = _SettleCtx()
     nonlethal_generic_invuln_ctx.decisions = [
@@ -17890,8 +17926,31 @@ def main() -> int:
             and d_nonlethal_generic_invuln.action
             == d_nonlethal_waterfall_phase.action
             and d_nonlethal_generic_invuln.params
-            == d_nonlethal_waterfall_phase.params), \
+            == d_nonlethal_waterfall_phase.params
+            and "WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS"
+                not in d_nonlethal_generic_invuln.reason), \
         f"Generic invulnerable phase was misclassified as Waterfall: {d_nonlethal_generic_invuln}"
+    nonlethal_waterfall_veto_off_know = knowledge.Knowledge(tmp)
+    nonlethal_waterfall_veto_off_know.policy[
+        "waterfall_steam_veto_terminal_outcome_obs"] = False
+    nonlethal_waterfall_veto_off_pol = policy.Policy(
+        nonlethal_waterfall_veto_off_know)
+    nonlethal_waterfall_veto_off_ctx = _SettleCtx()
+    nonlethal_waterfall_veto_off_ctx.decisions = [
+        dict(row) for row in nonlethal_waterfall_veto_ctx.decisions]
+    d_nonlethal_waterfall_veto_off = (
+        nonlethal_waterfall_veto_off_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_waterfall_veto_off_ctx))
+    assert (d_nonlethal_waterfall_veto_off.action
+            == d_nonlethal_waterfall_veto.action
+            and d_nonlethal_waterfall_veto_off.params
+            == d_nonlethal_waterfall_veto.params
+            and "/terminal_overlap=waterfall_about_to_blow"
+                in d_nonlethal_waterfall_veto_off.reason
+            and "WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS"
+                not in d_nonlethal_waterfall_veto_off.reason), \
+        f"Steam-veto 终局桥关闭后动作或既有 overlap 漂移: {d_nonlethal_waterfall_veto_off}"
     nonlethal_waterfall_phase_off_know = knowledge.Knowledge(tmp)
     nonlethal_waterfall_phase_off_know.policy[
         "nonlethal_unavailable_terminal_overlap_obs"] = False
