@@ -5832,3 +5832,34 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (no failed_review_replay packages requested)
+
+## 2026-09-29 第1698局（RACE_PROJ_EFFECTIVE_DPT_AUDIT）
+
+production_code_commit: e1c9815f2
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1698-F33 的 Boss 竞速首次锁定快照为 `projection_dpt=45.2`、`projection_tsurv=0.757576`，但实战终局仍在第 10 回合且 Boss 未被击杀。现有 `BOSS_RACE_EFFECTIVE_DPT_*` 只在战斗中逐窗口输出，`RACE_PROJ_CALIB_AUDIT` 收官没有聚合这些窗口，因此无法证伪问题来自火力投影高估，还是后续生存/回血阶段改变了净掉血口径。若只在收官追加有效 DPT 对账，即可区分两者，且不改变动作。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260929-152743_5G5YZW764AMK.json`；F33 记录 `projected pool=205/dpt=45.2/ttk=4.5354/tsurv=0.757576`，实际战斗为 10 回合终局，随后已有 Boss 有效 DPT 区间 marker，但没有同战斗样本数、实际均值、投影均值和比值的收官汇总。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立、已锁定且至少产生一个有效 DPT 区间的 Vivhite Boss combat，收官备注应出现 `RACE_PROJ_EFFECTIVE_DPT_AUDIT`，包含样本数、actual/projected 均值、均值比和最小比；非 Boss、未锁定、无有效区间或开关关闭时不应出现。action、params、竞速判定和学习统计应保持不变；若汇总与逐窗口 marker 不一致，假设即被证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_effective_dpt_obs`，关闭它只回滚本次收官汇总。
+- `sts2-ascend/brain/policy.py`：按战斗清空并只保存已有 Boss 有效 DPT 窗口的有限值样本；`pop_race_audit()` 只在已锁定收官时计算样本数、实际/投影均值、均值比和最小比，不参与评分、候选或动作。
+- `sts2-ascend/brain/agent.py`：在既有竞速收官备注中追加 `RACE_PROJ_EFFECTIVE_DPT_AUDIT`；`sts2-ascend/brain/selfcheck.py` 覆盖汇总、清空和关闭键路径。
+- 未修改 `policy.json`、stats、progression、lessons、runs、`.runtime`、资产或在线进程。
+
+## VALIDATION
+
+- 宿主固定 256 槽 bootstrap 直接运行先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后以同一 selfcheck 的进程级继承 ACL 临时目录适配运行，退出码 0，输出 `SELFCHECK OK`。
+- 已回读完整目标 diff；目标源码 `git diff --check` 通过。生产源码 commit 为 `e1c9815f2`。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite Boss 竞速终局，按 run/floor/encounter、窗口数量、actual/projected DPT、回血/意图变化和胜负对账；观测出现本身不升级为行为门。
+- 若收官汇总缺失、跨战斗串样本、与逐窗口 marker 不一致，或 action/params 有漂移，将 `race_audit_effective_dpt_obs=0`；必要时回滚 `e1c9815f2`，保留已有逐窗口观测。
+
+## REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

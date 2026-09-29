@@ -3766,6 +3766,34 @@ class Agent:
             # （esc 升级局单独计数）累计进 stats，供后续批次从 stats digest
             # 直接消费预注册规则（判死→获胜 ≥3 例或 >30% → 行为化收紧）。
             # 纯计数累计：不参与任何评分/阈值分支，race_audit 键缺失即零起账。
+            if (bool(self.know.policy.get(
+                    "race_audit_effective_dpt_obs", True))
+                    and bool(self.know.policy.get(
+                        "race_audit_projection_obs", True))):
+                try:
+                    _dpt_samples = int(
+                        _ra.get("boss_effective_dpt_samples") or 0)
+                    _dpt_actual = float(
+                        _ra.get("boss_effective_dpt_actual_mean") or 0.0)
+                    _dpt_projected = float(
+                        _ra.get("boss_effective_dpt_projected_mean") or 0.0)
+                    _dpt_ratio = float(
+                        _ra.get("boss_effective_dpt_ratio_mean") or 0.0)
+                    _dpt_min_ratio = float(
+                        _ra.get("boss_effective_dpt_ratio_min") or 0.0)
+                    if (_dpt_samples > 0
+                            and all(math.isfinite(value) for value in (
+                                _dpt_actual, _dpt_projected,
+                                _dpt_ratio, _dpt_min_ratio))):
+                        note += (
+                            f"｜竞速Boss有效火力收官对账：samples={_dpt_samples}"
+                            f"/actual_dpt={_dpt_actual:g}"
+                            f"/projected_dpt={_dpt_projected:g}"
+                            f"/ratio={_dpt_ratio:.2f}"
+                            f"/min_ratio={_dpt_min_ratio:.2f}"
+                            "（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    pass
             _ra_won = not agg.get("died")
             _ra_stats = self.know.stats.get("race_audit")
             if not isinstance(_ra_stats, dict):

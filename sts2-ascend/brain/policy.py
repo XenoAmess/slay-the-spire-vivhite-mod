@@ -925,6 +925,7 @@ class Policy:
         self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_start_incoming = None
         self._boss_effective_dpt_projected = 0.0
+        self._boss_effective_dpt_samples = []
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
         # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
         self._longfight_effective_dpt_combat = None
@@ -7792,6 +7793,7 @@ class Policy:
                             self._boss_effective_dpt_start_block = 0.0
                             self._boss_effective_dpt_start_incoming = None
                             self._boss_effective_dpt_projected = 0.0
+                            self._boss_effective_dpt_samples = []
                         if (self._boss_effective_dpt_round != round_no):
                             _boss_prev_round = self._boss_effective_dpt_round
                             _boss_prev_start_hp = (
@@ -7868,6 +7870,28 @@ class Policy:
                         # 压力/回血阶段，不能只凭净降比把它归因成通用投影高估。
                         # 这是纯观测上下文，不改变评分、判决或动作；缺少
                         # comp_id 时退回当前敌人键，避免静默丢失分层身份。
+                        if bool(pol.get("race_audit_effective_dpt_obs", True)):
+                            try:
+                                _boss_actual = float(_boss_net_dpt)
+                                _boss_projected_value = float(_boss_projected)
+                                _boss_ratio_value = float(_boss_ratio)
+                                if (math.isfinite(_boss_actual)
+                                        and math.isfinite(_boss_projected_value)
+                                        and math.isfinite(_boss_ratio_value)
+                                        and _boss_projected_value > 0.0):
+                                    _boss_samples = getattr(
+                                        self, "_boss_effective_dpt_samples", None)
+                                    if not isinstance(_boss_samples, list):
+                                        _boss_samples = []
+                                        self._boss_effective_dpt_samples = (
+                                            _boss_samples)
+                                    _boss_samples.append({
+                                        "actual": _boss_actual,
+                                        "projected": _boss_projected_value,
+                                        "ratio": _boss_ratio_value,
+                                    })
+                            except (TypeError, ValueError, OverflowError):
+                                pass
                         _boss_encounter = str(
                             cctx.get("comp_id") or "").strip()
                         if not _boss_encounter:
@@ -8509,6 +8533,7 @@ class Policy:
             self._boss_effective_dpt_start_roster_count = 0
             self._boss_effective_dpt_start_incoming = None
             self._boss_effective_dpt_projected = 0.0
+            self._boss_effective_dpt_samples = []
             self._longfight_effective_dpt_combat = ctx.combat
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
@@ -13947,9 +13972,45 @@ class Policy:
         调用后无论有无账本一律清空，防止跨场残留污染下一条战斗记录。
         """
         _a = getattr(self, "_race_audit", None)
+        _samples = getattr(self, "_boss_effective_dpt_samples", [])
         self._race_audit = None
+        self._boss_effective_dpt_samples = []
         if isinstance(_a, dict) and _a.get("latched"):
-            return dict(_a)
+            _result = dict(_a)
+            if bool(self.know.policy.get(
+                    "race_audit_effective_dpt_obs", True)):
+                _valid_samples = []
+                if isinstance(_samples, list):
+                    for _sample in _samples:
+                        if not isinstance(_sample, dict):
+                            continue
+                        try:
+                            _actual = float(_sample.get("actual"))
+                            _projected = float(_sample.get("projected"))
+                            _ratio = float(_sample.get("ratio"))
+                        except (TypeError, ValueError, OverflowError):
+                            continue
+                        if all(math.isfinite(value) for value in (
+                                _actual, _projected, _ratio)):
+                            _valid_samples.append(
+                                (_actual, _projected, _ratio))
+                if _valid_samples:
+                    _sample_count = len(_valid_samples)
+                    _result.update({
+                        "boss_effective_dpt_samples": _sample_count,
+                        "boss_effective_dpt_actual_mean": (
+                            sum(sample[0] for sample in _valid_samples)
+                            / _sample_count),
+                        "boss_effective_dpt_projected_mean": (
+                            sum(sample[1] for sample in _valid_samples)
+                            / _sample_count),
+                        "boss_effective_dpt_ratio_mean": (
+                            sum(sample[2] for sample in _valid_samples)
+                            / _sample_count),
+                        "boss_effective_dpt_ratio_min": min(
+                            sample[2] for sample in _valid_samples),
+                    })
+            return _result
         return {}
 
     def _boss_eve_race_audit_heal(self, current_hp: float,

@@ -282,6 +282,26 @@ def main() -> int:
     pol._race_audit = {"latched": True, "latch_round": 3, "esc": True}
     _ra_snap = pol.pop_race_audit()
     assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
+    pol._boss_effective_dpt_samples = [
+        {"actual": 12.0, "projected": 24.0, "ratio": 0.5},
+        {"actual": 18.0, "projected": 24.0, "ratio": 0.75},
+    ]
+    pol._race_audit = {"latched": True, "latch_round": 4, "esc": False}
+    _ra_dpt = pol.pop_race_audit()
+    assert _ra_dpt["boss_effective_dpt_samples"] == 2, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_actual_mean"] - 15.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_projected_mean"] - 24.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_ratio_mean"] - 0.625) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_ratio_min"] - 0.5) < 1e-9
+    assert pol._boss_effective_dpt_samples == []
+    know.policy["race_audit_effective_dpt_obs"] = False
+    pol._boss_effective_dpt_samples = [
+        {"actual": 12.0, "projected": 24.0, "ratio": 0.5},
+    ]
+    pol._race_audit = {"latched": True, "latch_round": 5, "esc": False}
+    _ra_dpt_off = pol.pop_race_audit()
+    assert "boss_effective_dpt_samples" not in _ra_dpt_off, _ra_dpt_off
+    know.policy["race_audit_effective_dpt_obs"] = True
     assert pol.pop_race_audit() == {}, "审计账弹出后应清空"
 
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
