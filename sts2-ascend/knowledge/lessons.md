@@ -14208,3 +14208,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.618610108249131局)，BASH(14分/2.2157470146723415局)，STOKE(16分/2.5218210319748935局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.38（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.40 → 2.35（行至 F21——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1692 胜，当前目标进阶 0
+
+## 第 1693 局复盘（2026-09-29 13:50）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：SETUP_STRIKE, MOLTEN_FIST, HEMOKINESIS, SHRUG_IT_OFF, HEMOKINESIS, UNRELENTING, DEMON_FORM, BLUDGEON, AGGRESSION, TAUNT, STOMP, CONFLAGRATION, SHRUG_IT_OFF, MANGLE, VICIOUS, DEMON_FORM, RAGE, EXPECT_A_FIGHT
+- 本局遗物：REPTILE_TRINKET, ODDLY_SMOOTH_STONE
+- 战斗记录：F17 Boss战 掉血27｜自损4（可行动段4/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=183/dpt=27.9/ttk=6.55914/tsurv=3.47368（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=6.55914/actual_over_projected=0.91（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战6回合获胜; F19 Monster战 掉血6; F21 Monster战 掉血21｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F25 Monster战 掉血38｜自损4（可行动段4/非行动段29，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血27｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血60｜自损30（可行动段30/非行动段28，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1257206475556805局)，HELLRAISER(26分/4.406101025611075局)，PROWESS(25分/6.762235089505526局)，FEED(24分/31.468853681620626局)，OFFERING(24分/16.447106556900415局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.609444972870259局)，BASH(14分/2.2079919001209882局)，STOKE(16分/2.5129946583629814局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.41（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.35 → 2.30（行至 F30——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1693 胜，当前目标进阶 0
