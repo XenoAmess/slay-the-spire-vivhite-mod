@@ -19755,12 +19755,45 @@ def main() -> int:
         f"无生还覆盖的致死回合孤注全攻被误伤: {d_lsl3.action}（{d_lsl3.reason}）"
     # ④ 组合覆盖：14 血对 20 意图、能量 3、手牌[余烬2费,坚毅7,防御5]
     #    → 非斩杀大攻击让位，最大挡坚毅中标+注记
-    d_lsl4 = lsl_policy().decide(
+    pol_lsl4 = lsl_policy()
+    d_lsl4 = pol_lsl4.decide(
         lsl_state(14, 20, 3, [lsl_big, lsl_grit, lsl_shld2]), lsl_ctx)
     assert d_lsl4.action == "play_card" \
         and d_lsl4.params.get("card_index") == 1 \
         and "LETHAL_SURVIVABLE_LINE" in d_lsl4.reason, \
         f"组合生还覆盖致死回合未让位最大挡: {d_lsl4.action}（{d_lsl4.reason}）"
+
+    # 3lsl-partial) 多敌覆盖回合中「可击杀」只代表一个目标；只追加旁观，
+    #                  评分与目标必须在开关关闭时逐位一致。
+    assert knowledge.DEFAULT_POLICY.get("lethal_partial_kill_cover_obs") is True, \
+        "DEFAULT_POLICY 缺少 lethal_partial_kill_cover_obs"
+    lsl_partial_enemies = [
+        {"index": 0, "enemy_id": "LSL_MINION", "name": "卵",
+         "current_hp": 10, "max_hp": 10, "block": 0,
+         "is_alive": True, "is_hittable": True,
+         "intents": [{"total_damage": 20}]},
+        {"index": 1, "enemy_id": "LSL_LEADER", "name": "主敌",
+         "current_hp": 100, "max_hp": 100, "block": 0,
+         "is_alive": True, "is_hittable": True,
+         "intents": [{"total_damage": 0}]},
+    ]
+    s_lsl_partial, t_lsl_partial, why_lsl_partial = pol_lsl4._score_play(
+        lsl_big, lsl_partial_enemies, 20, 0, 1,
+        pol_lsl4.know.policy, my_hp=14, my_max_hp=80, cur_energy=3,
+        kill_race=True, run_deck=[], race_lethal_cover=True)
+    assert t_lsl_partial == 0 \
+        and "LETHAL_PARTIAL_KILL_COVER_OBS" in why_lsl_partial, \
+        f"多敌致死覆盖部分击杀旁观缺失: score={s_lsl_partial} target={t_lsl_partial} why={why_lsl_partial}"
+    pol_lsl4.know.policy["lethal_partial_kill_cover_obs"] = False
+    s_lsl_partial_off, t_lsl_partial_off, why_lsl_partial_off = pol_lsl4._score_play(
+        lsl_big, lsl_partial_enemies, 20, 0, 1,
+        pol_lsl4.know.policy, my_hp=14, my_max_hp=80, cur_energy=3,
+        kill_race=True, run_deck=[], race_lethal_cover=True)
+    assert abs(s_lsl_partial_off - s_lsl_partial) < 1e-9 \
+        and t_lsl_partial_off == t_lsl_partial \
+        and "LETHAL_PARTIAL_KILL_COVER_OBS" not in why_lsl_partial_off, \
+        f"部分击杀旁观关闭未严格回滚评分/目标: on=({s_lsl_partial},{t_lsl_partial}) " \
+        f"off=({s_lsl_partial_off},{t_lsl_partial_off})"
 
     # 3rallc) 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
     #      第1500~1504局批复盘）：LETHAL_SURVIVABLE_LINE 以 not race_allin

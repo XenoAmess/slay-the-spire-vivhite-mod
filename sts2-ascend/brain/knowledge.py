@@ -1350,6 +1350,11 @@ DEFAULT_POLICY = {
                                        # 打余烬+防御 5 挡，差 1 血阵亡）同型。无覆盖组合、
                                        # race_allin、非致死 kill_race 回合全部零差异；置 False
                                        # 严格回滚旧版（致死回合一律全攻，零行为差异）
+      "lethal_partial_kill_cover_obs": True,
+                                        # 致死生还线的多敌部分击杀旁观：best_kill 只代表
+                                        # 被选中的单体目标可击杀，不等于本回合已消除全部敌意图。
+                                        # 仅记录仍有多个存活敌人的单体击杀候选，不改变评分、
+                                        # 目标、动作或参数；置 False 严格回滚观测尾缀。
       "race_allin_lethal_cover_obs": True,
                                         # 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
                                         # 第1500~1504局批复盘新增，静态键）：LETHAL_SURVIVABLE_LINE

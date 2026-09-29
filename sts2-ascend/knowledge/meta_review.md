@@ -13610,3 +13610,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 selfcheck 先复现宿主固定256-slot临时池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位中，用进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1712—1713局复盘（LETHAL_PARTIAL_KILL_COVER_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1712, 1713`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：致死生还线中的 `best_kill` 只证明被选中的单体目标可以被击杀，不能证明多敌战斗已经清除全部敌意图。若这种“部分击杀”发生在仍有多个存活敌人的回合，后续应能在同一回合留下可检索的部分清场观测；若观测与真实存活敌数、目标或后续终局不符，则假设即证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-195512_N1Z349GHUDPE.json`（第1712局）F23 D296 处于 `LETHAL_SURVIVABLE_LINE`，以【重锤】击杀 `BOWLBUG_EGG`，但 D297 仍为 `hp=14/block=0/incoming=15/energy=0`，手牌尚有两张格挡候选、最大格挡8，并写入 `LETHAL_UNAVAILABLE_END_TURN_OBS`；D298 随即 `GAME_OVER`。第1713局 F22 的 Ovicopter/卵战斗链作为背景对照，未将其终局单独归因到本假设。
+- **EXPECTED_SIGNAL**：未来3—10个独立致死生还窗口按 `run_id/floor/turn/target/live_enemies/hp/block/incoming/gap/energy/outcome` 对账；满足“单体可击杀且同回合仍有多名存活敌人”时出现 `LETHAL_PARTIAL_KILL_COVER_OBS`，目标与存活数必须与该帧一致。单敌、AOE、非致死、无单体击杀或跨战斗串线不得出现；action/params 与评分、目标选择不得变化。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `lethal_partial_kill_cover_obs` 静态回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有 `LETHAL_SURVIVABLE_LINE` 的单体候选尾部，仅当 `best_kill` 且仍有多名存活敌人时追加目标、存活敌数、HP/格挡/来袭/缺口/能量观测；不进入评分、排序、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入双敌单体击杀夹具，断言 marker 出现；关闭开关后断言评分、目标和理由尾缀严格回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个同类窗口，按剩余敌意图、后续 `LETHAL_UNAVAILABLE`、实际生还/终局及 Ovicopter/卵等敌人组合分层；证据成熟前不改致死生还线的出牌或防守行为。
+- **调整**：若真实运行中的存活敌数、`best_kill` 语义或 AOE/单体边界与夹具不一致，先修正观测契约；不得因相关性直接升级为行为门。
+- **回滚**：将 `lethal_partial_kill_cover_obs` 设为 `False`；预期只移除 `LETHAL_PARTIAL_KILL_COVER_OBS`，评分、目标、action、params 与既有 `LETHAL_SURVIVABLE_LINE` 留痕保持不变。
+- **验证**：直接受管入口复现宿主固定256槽池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的继承 ACL 槽位中用进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标代码 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

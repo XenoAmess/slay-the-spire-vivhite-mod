@@ -12574,6 +12574,31 @@ class Policy:
                 why += (f"｜多强化体火线锁：保持{_locked_name}，"
                         f"已发生{self._focus_drift_flips}次非击杀换线"
                         "（FOCUS_DRIFT_MULTI_SCALER_LOCK）")
+            # 致死生还线部分击杀旁观（LETHAL_PARTIAL_KILL_COVER_OBS）：
+            # ``best_kill`` 只说明当前单体目标会被击杀。1712-F23 的
+            # LETHAL_SURVIVABLE_LINE 仍先打掉一个卵，耗尽能量后留下其他敌人与
+            # 格挡牌并进入 LETHAL_UNAVAILABLE；把「部分击杀」和真正清场分开记账，
+            # 供后续 3~10 局判断是否需要把生还线扩展到行为门。纯观测，关闭键时
+            # reason、评分、目标、动作和参数严格回滚。
+            if (best_kill and best_t is not None and lethal and race_lethal_cover
+                    and bool(pol.get("lethal_partial_kill_cover_obs", True))):
+                _live_enemies = [
+                    _enemy for _enemy in enemies
+                    if _enemy.get("is_alive") is not False]
+                if len(_live_enemies) > 1:
+                    _partial_target = next(
+                        (_enemy for _enemy in _live_enemies
+                         if _enemy.get("index") == best_t), None)
+                    _partial_name = ((_partial_target or {}).get("name")
+                                     or (_partial_target or {}).get("enemy_id")
+                                     or "敌人")
+                    why += (
+                        f"；致死生还线部分击杀旁观：target={_partial_name}"
+                        f"#{best_t}/live_enemies={len(_live_enemies)}"
+                        f"/hp={my_hp:g}/block={my_block:g}"
+                        f"/incoming={incoming:g}/gap={gap:g}"
+                        f"/energy={cur_energy:g}"
+                        "（LETHAL_PARTIAL_KILL_COVER_OBS）")
             # 减员成本翻案对账收口（REMOVAL_COST_FLIP_AUDIT）：Winner 定论后
             # 对账一次——去分口径的胜者与本口径胜者不同则记翻案（杠杆独立
             # 改写了火线），相同则记随附（加分只放大既有选择）。
