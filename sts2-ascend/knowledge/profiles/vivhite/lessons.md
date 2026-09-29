@@ -18608,3 +18608,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.567606167018739局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/23.377527043673695局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.32247526941475局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿16张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损42/掉血84（50%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.97 → 1.96（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F33——灰区悲观系数部分胜利回收）；行至 F33 但致命战自损42/掉血84≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：4/1688 胜，当前目标进阶 4
+
+## 第 1689 局复盘（2026-09-29 12:52）
+- 结果：💀 失败｜进阶 4｜到达层数 11｜当局评分 11
+- 死因：敌人组合 SKULKING_COLONY
+- 本局拿牌：VIVHITE_CARD_CONVERGENCE_VERDICT
+- 本局遗物：STRIKE_DUMMY, MEAL_TICKET
+- 战斗记录：F2 Monster战 掉血0｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血8｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Unknown战 掉血23｜自损16（可行动段16/非行动段16，SELF_LOSS_PHASE_OBS）; F11 Elite战 掉血53｜自损18（可行动段18/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/11.40517106288395局)，REND(38分/2.5306454925489885局)，THINKING_AHEAD(37分/4.268806452761403局)，MAYHEM(37分/3.4864614421208797局)，ROLLING_BOULDER(36分/4.295663519215009局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.5586195454341736局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/24.29570569902084局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.2443466059718局)
+- 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：4/1689 胜，当前目标进阶 4
