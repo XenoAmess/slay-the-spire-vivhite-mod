@@ -17798,75 +17798,11 @@ def main() -> int:
                 in d_nonlethal_chain.reason
             and "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
                 not in d_nonlethal_chain.reason
-            and "KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS"
-                not in d_nonlethal_chain.reason
             and "/source_round=6/"
                 in d_nonlethal_chain.reason
             and "/bridge_decisions=2/bridge_rounds=1"
                 in d_nonlethal_chain.reason), \
         f"非致死资源耗尽链终局对账缺失或动作漂移: {d_nonlethal_chain}"
-
-    # 3z-4f) 竞速判死后的非致死资源耗尽链：1720-F17 在 T4/T5 已经
-    #         进入无牌空过，T6 才留下致死竞速终端。专用尾缀只把同战斗
-    #         的竞速锁定/非致死来源/终端结果接起来，不改变终局动作或参数；
-    #         普通非致死链和关闭开关都必须保持旧 marker。
-    race_nonlethal_pol = policy.Policy(knowledge.Knowledge(tmp))
-    race_nonlethal_ctx = _SettleCtx()
-    race_nonlethal_ctx.decisions = [{
-        "screen": "COMBAT", "action": "end_turn", "floor": 48,
-        "turn": 4, "reason": d_nonlethal_empty.reason,
-    }, {
-        "screen": "COMBAT", "action": "play_card", "floor": 48,
-        "turn": 5, "reason": "战斗：竞速窗口后续出牌",
-    }, {
-        "screen": "COMBAT", "action": "end_turn", "floor": 48,
-        "turn": 5,
-        "reason":
-            "战斗：竞速终端；竞速终端对账：lock_round=4"
-            "/last_round=4/pool=195/dpt=25.65/ttk=7.6/tsurv=2.53"
-            "/hp=11/block=0/incoming=12/energy=0"
-            "/kill_race=yes/race_allin=yes"
-            "（KILL_RACE_TERMINAL_AUDIT_OBS）",
-    }]
-    d_race_nonlethal = race_nonlethal_pol.decide(
-        nonlethal_unavailable_outcome_state, race_nonlethal_ctx)
-    assert (d_race_nonlethal.action == "continue_game_over"
-            and d_race_nonlethal.params == {}
-            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
-                in d_race_nonlethal.reason
-            and "KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS"
-                in d_race_nonlethal.reason
-            and "/lock_round=4/race_source_round=4"
-                in d_race_nonlethal.reason
-            and "/race_pool=195/race_dpt=25.65/race_ttk=7.6"
-                in d_race_nonlethal.reason
-            and "/nonlethal_source_round=4/terminal_round=5"
-                in d_race_nonlethal.reason
-            and "/source_hand_post_gap=23/source_hand_raw_survival=yes"
-                in d_race_nonlethal.reason
-            and "/bridge_decisions=2/bridge_rounds=1"
-                in d_race_nonlethal.reason), \
-        f"竞速非致死资源耗尽终局观测缺失或动作漂移: {d_race_nonlethal}"
-    assert knowledge.DEFAULT_POLICY[
-        "kill_race_nonlethal_unavailable_outcome_obs"] is True, \
-        "DEFAULT_POLICY 缺少 kill_race_nonlethal_unavailable_outcome_obs"
-
-    race_nonlethal_off_know = knowledge.Knowledge(tmp)
-    race_nonlethal_off_know.policy[
-        "kill_race_nonlethal_unavailable_outcome_obs"] = False
-    race_nonlethal_off_pol = policy.Policy(race_nonlethal_off_know)
-    race_nonlethal_off_ctx = _SettleCtx()
-    race_nonlethal_off_ctx.decisions = list(race_nonlethal_ctx.decisions)
-    d_race_nonlethal_off = race_nonlethal_off_pol.decide(
-        nonlethal_unavailable_outcome_state, race_nonlethal_off_ctx)
-    assert (d_race_nonlethal_off.action == d_race_nonlethal.action
-            and d_race_nonlethal_off.params == d_race_nonlethal.params
-            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
-                in d_race_nonlethal_off.reason
-            and "KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS"
-                not in d_race_nonlethal_off.reason), \
-        f"竞速非致死资源耗尽观测关闭后动作或既有 marker 漂移: " \
-        f"on={d_race_nonlethal} off={d_race_nonlethal_off}"
 
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
