@@ -19061,6 +19061,106 @@ def main() -> int:
             not in d_lethal_playable_outcome_off.reason), \
         f"致死可牌拒绝终局对账关闭后动作或 marker 漂移: {d_lethal_playable_outcome_off}"
 
+    # 3z-6c) 致死竞速 0 费回能牌终局对账：F23-T7 的 OFFERING 形态已经
+    #        留下 gain/pay/unlock/unlock_dmg/raw_pay_gap，但旧终局 join 只
+    #        能按泛化可牌拒绝计数；新增桥只绑定同一 end_turn 的精确字段，
+    #        不改变结算 action/params，并覆盖重载、丢动作重试和关闭键。
+    kfe_terminal_card = {
+        "card_id": "OFFERING", "name": "祭品", "playable": True,
+        "energy_cost": 0, "resolved_rules_text": "失去6点生命。获得2点能量。抽3张牌。",
+        "dynamic_values": [{"name": "Energy", "current_value": 2}],
+    }
+    kfe_terminal_attack = {
+        "card_id": "STRIKE_IRONCLAD", "name": "打击", "playable": False,
+        "unplayable_reason": "not_enough_energy", "energy_cost": 1,
+        "dynamic_values": [{"name": "Damage", "current_value": 11}],
+    }
+    kfe_terminal_note = policy.kill_race_free_energy_function_note(
+        [kfe_terminal_card, kfe_terminal_attack], 0, 34, 31, True,
+        lethal_now=True, is_unavailable=lambda _card: False,
+        allow_lethal=True).replace(
+            "KILL_RACE_FREE_ENERGY_FUNCTION_OBS",
+            "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
+    assert ("KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS" in kfe_terminal_note
+            and "OFFERING:gain=2,pay=6,unlock=1" in kfe_terminal_note
+            and "unlock_dmg=11,raw_pay_gap=-9" in kfe_terminal_note), \
+        f"致死0费回能前置观测夹具未命中: {kfe_terminal_note}"
+    kfe_terminal_reason = d_lethal_playable.reason + kfe_terminal_note
+    kfe_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+    }
+    kfe_terminal_know = knowledge.Knowledge(tmp)
+    kfe_terminal_pol = policy.Policy(kfe_terminal_know)
+    kfe_terminal_ctx = _SettleCtx()
+    kfe_terminal_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": kfe_terminal_reason,
+    }]
+    d_kfe_terminal = kfe_terminal_pol.decide(
+        kfe_terminal_state, kfe_terminal_ctx)
+    assert (d_kfe_terminal.action == "continue_game_over"
+            and d_kfe_terminal.params == {}
+            and "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+            in d_kfe_terminal.reason
+            and "outcome=defeat/floor=33/terminal_round=7"
+            in d_kfe_terminal.reason
+            and "/cards=OFFERING:gain=2,pay=6,unlock=1,unlock_dmg=11,raw_pay_gap=-9"
+            in d_kfe_terminal.reason), \
+        f"致死0费回能终局对账缺失或动作漂移: {d_kfe_terminal}"
+
+    kfe_terminal_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    kfe_terminal_replay_ctx = _SettleCtx()
+    kfe_terminal_replay_ctx.decisions = list(kfe_terminal_ctx.decisions)
+    d_kfe_terminal_replay = kfe_terminal_replay_pol.decide(
+        kfe_terminal_state, kfe_terminal_replay_ctx)
+    assert (d_kfe_terminal_replay.action == d_kfe_terminal.action
+            and d_kfe_terminal_replay.params == d_kfe_terminal.params
+            and "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+            in d_kfe_terminal_replay.reason), \
+        f"进程重载后未恢复致死0费回能终局对账: {d_kfe_terminal_replay}"
+
+    kfe_terminal_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    kfe_terminal_retry_ctx = _SettleCtx()
+    kfe_terminal_retry_ctx.decisions = list(kfe_terminal_ctx.decisions)
+    d_kfe_terminal_retry_first = kfe_terminal_retry_pol.decide(
+        kfe_terminal_state, kfe_terminal_retry_ctx)
+    d_kfe_terminal_retry = kfe_terminal_retry_pol.decide(
+        kfe_terminal_state, kfe_terminal_retry_ctx)
+    assert ("KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+            in d_kfe_terminal_retry_first.reason
+            and "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+            in d_kfe_terminal_retry.reason), \
+        "致死0费回能终局对账丢动作后未重试"
+    kfe_terminal_retry_ctx.decisions.append({
+        "action": d_kfe_terminal_retry.action,
+        "floor": 33,
+        "reason": d_kfe_terminal_retry.reason,
+    })
+    d_kfe_terminal_retry_committed = kfe_terminal_retry_pol.decide(
+        kfe_terminal_state, kfe_terminal_retry_ctx)
+    assert "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS" \
+        not in d_kfe_terminal_retry_committed.reason, \
+        "致死0费回能终局对账已提交后重复写入 marker"
+
+    kfe_terminal_off_know = knowledge.Knowledge(tmp)
+    kfe_terminal_off_know.policy[
+        "kill_race_lethal_free_energy_terminal_outcome_obs"] = False
+    kfe_terminal_off_pol = policy.Policy(kfe_terminal_off_know)
+    kfe_terminal_off_ctx = _SettleCtx()
+    kfe_terminal_off_ctx.decisions = list(kfe_terminal_ctx.decisions)
+    d_kfe_terminal_off = kfe_terminal_off_pol.decide(
+        kfe_terminal_state, kfe_terminal_off_ctx)
+    assert (d_kfe_terminal_off.action == d_kfe_terminal.action
+            and d_kfe_terminal_off.params == d_kfe_terminal.params
+            and "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+            not in d_kfe_terminal_off.reason
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_kfe_terminal_off.reason), \
+        f"致死0费回能终局对账关闭后动作或既有 marker 漂移: {d_kfe_terminal_off}"
+
     # 3z-7) 白绮低血量可支付生命牌的非致死拒绝观测：1531-F17-T9 的
     #       21 血/0 甲低血窗口作为边界，使用 10 点来袭伤害构造非致死对照；
     #       变身式仍可出且能量足够，却落入「评估后无值得出的牌」。只增加牌面、

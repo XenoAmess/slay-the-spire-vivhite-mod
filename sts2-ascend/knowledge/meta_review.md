@@ -14017,3 +14017,31 @@ failed_review_replay: `requested_packages=[]`，无回放包
 - **验证**：完整 selfcheck 目标运行退出码0并输出 `SELFCHECK OK`；限定目标 `git diff --check` 通过，生产代码 commit 为 `34642507f`。默认临时槽入口先触发宿主既有配额失败，随后使用同一 clone 的进程级可复用临时隔离适配完成通过；未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1740—1741局复盘（KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1740, 1741`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+failed_review_replay: `requested_packages=[]`，无回放包
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1741局 F23-T7 的 `OFFERING` 被判为致死窗口内的可用 0 费回能牌，但仍因低于阈值而未入选；前置 reason 已有 `gain/pay/unlock/unlock_dmg/raw_pay_gap`，D303 的 GAME_OVER 终局只接通了泛化的 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`，没有把这组反事实字段接到权威结局。若缺口真实存在，新的终局 reason 应仅在紧邻、同楼层的该 `end_turn` 后追加专用桥接 marker；它必须保留原 action/params，不进入评分或选牌。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-051715_XVKJNKJZ81DW.json` 的303条 decisions。D302（F23/T7）为 `hp=31/block=0/incoming=34/energy=0`，reason 含 `OFFERING:gain=2,pay=6,unlock=1,unlock_dmg=11,raw_pay_gap=-9` 与 `KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS`，实际 action 为 `end_turn`；D303 为 `GAME_OVER`、`outcome=defeat`、`hp=0`，仅有泛化可牌拒绝终局对账。原生知识中的 `OFFERING` 规则确认其 0 费、失去6 HP、获得2能量并抽3张，支持该字段作为可证伪的支付/回能反事实，而不是重新推导行为。
+- **EXPECTED_SIGNAL**：未来3—10个独立致死竞速终局中，仅当同一楼层的最近 `end_turn` reason 含完整 `KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS` 且终端为下一次 GAME_OVER 时，追加 `KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS`，保留 outcome、floor、terminal_round、hp、energy、incoming 及 `gain/pay/unlock/unlock_dmg/raw_pay_gap`；跨楼层、缺字段、非致死或无该前置 marker 不命中。评分、候选、门控、action 和 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_lethal_free_energy_terminal_outcome_obs` 回滚开关；关闭只移除新增终局 marker。
+- `sts2-ascend/brain/policy.py`：在既有 GAME_OVER 终局路径恢复最近同楼层 `end_turn` 的致死 0 费回能前置字段，追加一次性终局观测；兼容进程重载与动作回执丢失重试，不改变原决策。
+- `sts2-ascend/brain/selfcheck.py`：加入 OFFERING 形态的前置字段、终局对账、进程重载、重试幂等和关闭开关夹具，断言 `continue_game_over` 与空参数等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个同类致死竞速终局，按 `gain/pay/unlock/unlock_dmg/raw_pay_gap`、终端来袭、胜负和同楼层前置关系分层；证据成熟前不调整 0 费牌阈值、支付判断、end_turn 或竞速策略。
+- **调整**：若真实决策链出现同楼层旧战斗误接、前置 marker 被截断、回合字段漂移或终端并非紧邻 GAME_OVER，收紧解析边界并保留失败样本，不把观测升级为行为门。
+- **回滚**：将 `kill_race_lethal_free_energy_terminal_outcome_obs` 设为 `False`；预期仅移除 `KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS`，既有前置 marker、泛化终局对账、action 和 params 不变。
+- **验证**：直接入口复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配执行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。生产三文件完整 diff 已回读，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

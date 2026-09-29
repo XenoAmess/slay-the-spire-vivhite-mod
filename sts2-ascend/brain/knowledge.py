@@ -230,6 +230,7 @@ DEFAULT_POLICY = {
     "free_card_bonus": 1.5,       # small bonus for 0-cost plays
     "play_threshold": 0.4,        # min score to bother playing a card
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
+    "kill_race_lethal_free_energy_terminal_outcome_obs": True,  # Audit-only join from that lethal free-energy rejection to the next GAME_OVER result; False removes only the outcome marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; includes raw/affordable hand block capacity and counterfactual post-block survival; False removes only the marker.
     "lethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a lethal no-card end-turn to the next GAME_OVER/Victory result; False removes only the outcome marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; includes native hook_locked/hook_ids plus raw hand block capacity and counterfactual post-block survival; False removes only the marker.

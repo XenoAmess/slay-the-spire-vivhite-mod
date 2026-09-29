@@ -899,6 +899,8 @@ class Policy:
         self._race_mode_flip_count = 0  # 当前战斗内同回合翻转次数
         self._lethal_playable_reject_outcome_pending = None  # 最近一次致死可牌拒绝，等待 GAME_OVER 结局对账
         self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
+        self._kill_race_lethal_free_energy_terminal_outcome_pending = None  # 最近一次致死竞速0费回能拒绝，等待 GAME_OVER 结局对账
+        self._kill_race_lethal_free_energy_terminal_outcome_reported = False  # 致死竞速0费回能结局 marker 每场只写一次
         self._lethal_unavailable_terminal_outcome_pending = None  # 最近一次致死无牌空过，等待 GAME_OVER 结局对账
         self._lethal_unavailable_terminal_outcome_reported = False  # 致死无牌空过结局 marker 每场只写一次
         self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
@@ -5942,6 +5944,134 @@ class Policy:
         self._lethal_playable_reject_outcome_pending = _pending
         self._lethal_playable_reject_outcome_reported = False
 
+    def _consume_kill_race_lethal_free_energy_terminal_outcome_note(
+            self, pol, victory, floor=None) -> str:
+        """Join a lethal 0-cost energy-function rejection to GAME_OVER.
+
+        The preceding end-turn marker already contains the counterfactual
+        fields.  This terminal-only join makes the outcome of that exact
+        rejection countable without changing the card score or action.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_lethal_free_energy_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_kill_race_lethal_free_energy_terminal_outcome_pending",
+            None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_kill_race_lethal_free_energy_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._kill_race_lethal_free_energy_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _cards = str(_pending.get("cards") or "?")
+        _cards = (_cards.replace("/", "_")
+                         .replace("；", "_")
+                         .replace("（", "_")
+                         .replace("）", "_")
+                         .replace(" ", "_"))
+        _result = "victory" if victory else "defeat"
+        return (
+            "；竞速0费回能终局对账："
+            f"outcome={_result}/floor={_round(floor)}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/cards={_cards}"
+            "（KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_kill_race_lethal_free_energy_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the lethal free-energy terminal join after a reload."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self,
+            "_kill_race_lethal_free_energy_terminal_outcome_reported",
+            False))
+        marker = "KILL_RACE_LETHAL_FREE_ENERGY_TERMINAL_OUTCOME_OBS"
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._kill_race_lethal_free_energy_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_kill_race_lethal_free_energy_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker_at = reason.rfind(
+            "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
+        if marker_at < 0:
+            return
+        prefix = "竞速0费回能牌未入选："
+        source_at = reason.rfind(prefix, 0, marker_at)
+        if source_at < 0:
+            return
+        source = reason[source_at + len(prefix):marker_at]
+        summary_at = source.rfind("；hp=")
+        if summary_at <= 0:
+            return
+        cards = source[:summary_at].rstrip("；")
+        summary = source[summary_at + 1:]
+
+        def _token(name: str):
+            match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)",
+                summary)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        try:
+            _terminal_round = row.get("turn", row.get("round"))
+            if _terminal_round is not None:
+                _terminal_round = int(float(_terminal_round))
+            _pending = {
+                "terminal_round": _terminal_round,
+                "hp": _number("hp"),
+                "energy": _number("energy"),
+                "incoming": _number("incoming"),
+                "cards": cards,
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._kill_race_lethal_free_energy_terminal_outcome_pending = _pending
+        self._kill_race_lethal_free_energy_terminal_outcome_reported = False
+
     @staticmethod
     def _find_nonlethal_unavailable_lethal_transition(
             decisions, floor=None, before_index=None, terminal_round=None,
@@ -9497,6 +9627,8 @@ class Policy:
             self._race_mode_flip_count = 0
             self._lethal_playable_reject_outcome_pending = None
             self._lethal_playable_reject_outcome_reported = False
+            self._kill_race_lethal_free_energy_terminal_outcome_pending = None
+            self._kill_race_lethal_free_energy_terminal_outcome_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
@@ -18380,6 +18512,11 @@ class Policy:
         _lethal_playable_reject_outcome_note = (
             self._consume_lethal_playable_reject_outcome_note(
                 self.know.policy, victory, go.get("floor")))
+        self._restore_kill_race_lethal_free_energy_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _kill_race_lethal_free_energy_terminal_outcome_note = (
+            self._consume_kill_race_lethal_free_energy_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor")))
         self._restore_lethal_unavailable_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _lethal_unavailable_terminal_outcome_note = (
@@ -18420,6 +18557,7 @@ class Policy:
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
+                            f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
@@ -18451,6 +18589,7 @@ class Policy:
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
+                        f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
                         f"{_nonlethal_unavailable_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
@@ -18467,6 +18606,7 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
+                                f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
