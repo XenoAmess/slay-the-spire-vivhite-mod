@@ -6715,6 +6715,59 @@ class Policy:
                     _post_gap,
                     _post_gap < float(my_hp))
 
+            def _ringing_hook_lock_observation_note(
+                    _post_gap, _raw_survival, _hook_locked, _hook_ids):
+                """Record a full RINGING_POWER hand lock without changing play."""
+                try:
+                    _enabled = bool(int(float(pol.get(
+                        "ringing_hook_lock_end_turn_obs", 1) or 0)))
+                except (TypeError, ValueError, OverflowError):
+                    _enabled = False
+                if (not _enabled or not _hook_locked
+                        or "RINGING_POWER" not in str(_hook_ids)):
+                    return ""
+                _non_curse_hand = [
+                    _card for _card in hand
+                    if (isinstance(_card, dict)
+                        and not self._card_unavailable(_card)
+                        and str(_card.get("card_type")
+                                or _card.get("rarity") or "").casefold()
+                        != "curse")]
+                try:
+                    if len(_non_curse_hand) != int(_hook_locked):
+                        return ""
+                except (TypeError, ValueError, OverflowError):
+                    return ""
+                for _card in _non_curse_hand:
+                    _native_reason = re.sub(
+                        r"[^a-z0-9]+", "_",
+                        str(self._native_card_unplayable_reason(_card) or "")
+                        .lower()).strip("_")
+                    if _native_reason not in {
+                            "blocked_by_hook", "blockedbyhook"}:
+                        return ""
+                    _preventer = str(
+                        _card.get("unplayable_preventer_id")
+                        or _card.get("unplayable_preventer_type") or "")
+                    if "RINGING_POWER" not in _preventer:
+                        return ""
+                try:
+                    _remaining = character_power_amount(
+                        player.get("powers") or [], RINGING_POWER_ID)
+                    _remaining_text = f"{float(_remaining):g}"
+                except (TypeError, ValueError, OverflowError):
+                    _remaining_text = "?"
+                return (
+                    "; ringing hook-lock snapshot:"
+                    f"/hand_cards={len(hand)}"
+                    f"/hook_locked={_hook_locked}/hook_ids={_hook_ids}"
+                    f"/remaining={_remaining_text}"
+                    f"/hp={float(my_hp):g}/block={float(my_block):g}"
+                    f"/incoming={float(incoming):g}/energy={float(energy):g}"
+                    f"/post_gap={float(_post_gap):g}"
+                    f"/raw_survival={'yes' if _raw_survival else 'no'}"
+                    " (RINGING_HOOK_LOCK_END_TURN_OBS)")
+
             if (_nonlethal_unavailable_obs
                     and not affordable_playable
                     and float(incoming) > 0
@@ -6734,6 +6787,9 @@ class Policy:
                  _hand_max_block,
                  _hand_post_gap,
                  _hand_raw_survival) = _hand_block_capacity()
+                _ringing_hook_note = _ringing_hook_lock_observation_note(
+                    _hand_post_gap, _hand_raw_survival,
+                    _hook_locked, _hook_ids)
                 _nonlethal_unavailable_note = (
                     f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
@@ -6750,6 +6806,7 @@ class Policy:
                     f"{'yes' if _hand_raw_survival else 'no'}"
                     f"/block_locked={'yes' if block_locked else 'no'}"
                     "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")
+                _nonlethal_unavailable_note += _ringing_hook_note
             if (_lethal_unavailable_obs
                     and not affordable_playable
                     and (bool(combat.get("end_turn_will_kill_player"))
@@ -6760,6 +6817,11 @@ class Policy:
                  _lethal_hand_max_block,
                  _lethal_hand_post_gap,
                  _lethal_hand_raw_survival) = _hand_block_capacity()
+                _lethal_hook_locked, _lethal_hook_ids = (
+                    _count_hook_locked_cards())
+                _ringing_hook_note = _ringing_hook_lock_observation_note(
+                    _lethal_hand_post_gap, _lethal_hand_raw_survival,
+                    _lethal_hook_locked, _lethal_hook_ids)
                 _lethal_unavailable_note = (
                     f"；致死无牌空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
@@ -6776,6 +6838,7 @@ class Policy:
                     f"/forced={'yes' if bool(combat.get('end_turn_will_kill_player')) else 'no'}"
                     f"/gap={'yes' if _lethal_by_gap else 'no'}"
                     "（LETHAL_UNAVAILABLE_END_TURN_OBS）")
+                _lethal_unavailable_note += _ringing_hook_note
                 _potion_reserve_note = (
                     self._potion_reserve_end_turn_observation_note(
                         pol, state.get("run") or {}))

@@ -19214,6 +19214,23 @@ def main() -> int:
             },
         }
 
+    def ringing_hook_locked_state():
+        state = ringing_survival_state()
+        state["turn"] = 3
+        state["available_actions"] = ["end_turn"]
+        state["combat"]["player"]["current_hp"] = 19
+        state["combat"]["player"]["energy"] = 2
+        state["run"]["current_hp"] = 19
+        state["combat"]["enemies"][0]["intents"] = [{"total_damage": 18}]
+        for card in state["combat"]["hand"]:
+            card.update({
+                "playable": False,
+                "unplayable_reason": "blocked_by_hook",
+                "unplayable_reason_raw": "BlockedByHook",
+                "unplayable_preventer_id": "RINGING_POWER",
+            })
+        return state
+
     def ringing_policy():
         p = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ringing-"))),
@@ -19285,6 +19302,35 @@ def main() -> int:
     assert (d_rsp2.action == "play_card"
             and "RINGING_SINGLE_PLAY_OBS" not in d_rsp2.reason), \
         f"无昏眩时误出单卡抉择注记: {d_rsp2.action}（{d_rsp2.reason}）"
+    def ringing_hook_end_turn(policy_obj):
+        for _ in range(24):
+            candidate = policy_obj.decide(ringing_hook_locked_state(), pcap_ctx)
+            if candidate.action == "end_turn":
+                return candidate
+            assert candidate.action is None, (
+                "RINGING hook fixture changed action before end_turn: "
+                f"{candidate.action}")
+        raise AssertionError("RINGING hook fixture did not settle on end_turn")
+
+    pol_rhook = ringing_policy()
+    d_rhook = ringing_hook_end_turn(pol_rhook)
+    assert ("RINGING_HOOK_LOCK_END_TURN_OBS" in d_rhook.reason
+            and "hand_cards=2" in d_rhook.reason
+            and "hook_locked=2" in d_rhook.reason
+            and "hook_ids=RINGING_POWER" in d_rhook.reason
+            and d_rhook.params == {}), (
+        "RINGING full-hand lock observation missing or action drifted: "
+        f"{d_rhook.action} {d_rhook.params} {d_rhook.reason}")
+
+    pol_rhook_off = ringing_policy()
+    pol_rhook_off.know.policy["ringing_hook_lock_end_turn_obs"] = 0
+    d_rhook_off = ringing_hook_end_turn(pol_rhook_off)
+    assert (d_rhook_off.action == d_rhook.action
+            and d_rhook_off.params == d_rhook.params
+            and "RINGING_HOOK_LOCK_END_TURN_OBS" not in d_rhook_off.reason), (
+        "RINGING hook observation rollback changed action or kept marker: "
+        f"{d_rhook_off.action} {d_rhook_off.params} {d_rhook_off.reason}")
+
     pol_rsp3 = pcap_policy()
     pol_rsp3.know.policy["ringing_single_play_obs"] = 0
     d_rsp3 = pol_rsp3.decide(pcap_state(2, 1), pcap_ctx)

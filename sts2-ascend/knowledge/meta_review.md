@@ -13480,3 +13480,29 @@ production_code_commit: `28a2d949d08c953a9d5fb9f7c00b489f9c97cc94`
 - **验证**：直接运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 先命中宿主固定256槽临时池并报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED: selfcheck temp pool exhausted after 256 allocations`；使用同一 clone 的进程级 `tempfile.mkdtemp` 适配重跑同一 selfcheck，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过，实际1694/1695来源探针分别命中回合2和回合9；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-09-29 第1698—1703局复盘（RINGING_HOOK_LOCK_END_TURN_OBS）
+
+profile_id: `ironclad`
+production_code_commit: `e96bbafe6afc0ae83ab340c8eea3f6e95f1da73b`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F17 的 `RINGING_POWER` 全手牌锁定是独立的“没有合法出牌、仍被迫 end_turn”窗口；现有 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 虽记录 `hook_locked` 与 `hook_ids`，但不能证明所有非诅咒手牌都被同一个原生 hook 锁住。若全非诅咒手牌均为 `blocked_by_hook` 且 preventer 为 `RINGING_POWER`，则应能稳定产生专用观测，而不改变出牌、评分或结束回合动作。
+- **EVIDENCE**：精确复核 1698—1703 六局；1698、1701、1703 均出现 `hook_ids=RINGING_POWER` 的全手牌锁定形态。最新 1703 `Y2UQKZB1HZYL` 在 F17 T9 为 HP19、能量2、来袭18、格挡0、`hook_locked=4`，随后 T10 降至 HP1，终局前又出现能量耗尽与来袭20；这是“锁牌观测缺少归一化字段”的最小可证伪切口。
+- **EXPECTED_SIGNAL**：后续 3—10 个独立窗口按 `run_id/floor/turn/hand_cards/hook_locked/hook_ids/remaining/outcome` 对账。谓词成立时必须出现 `RINGING_HOOK_LOCK_END_TURN_OBS`；若有可玩的非诅咒牌、非 RINGING preventer 或计数不一致则不得出现。任一 false positive、字段错配或 action/params 漂移即停止并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ringing_hook_lock_end_turn_obs=1`；设为 `0` 只撤回新 marker。
+- `sts2-ascend/brain/policy.py`：在既有非致死/致死 `end_turn` 观测尾部，严格核对所有非诅咒手牌的原生 `blocked_by_hook`、`RINGING_POWER` preventer，并追加手牌数、锁定数、剩余层数、HP/格挡/来袭/能量/缺口与 raw survival；不进入评分、候选、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入仅剩 `end_turn` 的全锁手牌夹具；默认断言 marker，关闭键断言 marker 消失且 action/params 完全不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3—10 个同类窗口，按锁定牌数、诅咒数、RINGING 剩余层数、结束回合后下一条同 `run_id` 决策及最终胜负分层；证据成熟前保持只读。
+- **调整**：若真实 API 的 preventer/牌型字段与夹具契约不一致，先修证据契约并保留失败样本，不升级为行为闸门。
+- **回滚**：将 `ringing_hook_lock_end_turn_obs` 设为 `0`；预期只移除新 marker，既有观测、评分、action 与 params 保持不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽上限并报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 临时根中，以进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0、输出 `SELFCHECK OK`；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
