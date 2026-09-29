@@ -14450,3 +14450,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4242170801940075局)，BASH(14分/2.051260606318007局)，STOKE(16分/2.3346131597244986局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1714 胜，当前目标进阶 0
+
+## 第 1715 局复盘（2026-09-29 20:45）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 TWO_TAILED_RAT
+- 本局拿牌：CINDER, MOLTEN_FIST, EXPECT_A_FIGHT, RAMPAGE, VICIOUS, THUNDERCLAP, CINDER, MOLTEN_FIST
+- 本局遗物：PENDULUM
+- 战斗记录：F2 Monster战 掉血2; F3 Monster战 掉血12; F5 Monster战 掉血0; F6 Monster战 掉血4｜竞速投影审计：pool=51/dpt=8.64/ttk=5.90278/tsurv=3.875（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=5.90278/actual_over_projected=1.36（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T5判死→实战8回合获胜; F7 Monster战 掉血9; F12 Monster战 掉血53｜竞速投影审计：pool=62/dpt=12.96/ttk=4.78395/tsurv=1.40909（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=4.78395/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.39（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T6判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：HELLRAISER(26分/5.054769018063978局)，PROWESS(26分/7.205685520059974局)，FEED(24分/31.040370225462624局)，OFFERING(24分/15.22615241933357局)，MANGLE(24分/51.354264303900536局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4157323204133285局)，BASH(14分/2.0440811941958943局)，STOKE(16分/2.326442013665463局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1715 胜，当前目标进阶 0
