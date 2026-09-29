@@ -20316,6 +20316,77 @@ def main() -> int:
         f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
         f"on={d_rpre_on} off={d_rpre_off}"
 
+    # 3rpre-a) 将未锁前格挡来源接到同一 COMBAT 的 GAME_OVER：只读记录
+    #          来源牌面、终端回合和最终 HP；跨屏边界与关闭开关必须不命中，
+    #          continue_game_over/空参数保持不变。
+    rpre_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 7},
+        "run": {"current_hp": 0},
+    }
+    rpre_terminal_ctx = _SettleCtx()
+    rpre_terminal_ctx.decisions = [
+        {"screen": "COMBAT", "floor": 7, "turn": 2,
+         "hp": 65, "action": d_rpre_on.action, "params": d_rpre_on.params,
+         "reason": d_rpre_on.reason},
+        {"screen": "COMBAT", "floor": 7, "turn": 4,
+         "hp": 19, "action": "end_turn", "params": {},
+         "reason": "致死无牌空过观测"},
+    ]
+    rpre_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal = rpre_terminal_pol.decide(
+        rpre_terminal_state, rpre_terminal_ctx)
+    assert (d_rpre_terminal.action == "continue_game_over"
+            and d_rpre_terminal.params == {}
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_terminal.reason
+            and "/source_round=2/source_action=play_card"
+                in d_rpre_terminal.reason
+            and "/card=预警格挡/block=20/sample_turns=1"
+                in d_rpre_terminal.reason
+            and "/terminal_round=4/terminal_action=end_turn"
+                in d_rpre_terminal.reason
+            and "/final_hp=0/bridge_rounds=2"
+                in d_rpre_terminal.reason), \
+        f"竞速未锁前格挡终局对账缺失或动作漂移: {d_rpre_terminal}"
+
+    rpre_terminal_reload_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal_reload = rpre_terminal_reload_pol.decide(
+        rpre_terminal_state, rpre_terminal_ctx)
+    assert (d_rpre_terminal_reload.action == d_rpre_terminal.action
+            and d_rpre_terminal_reload.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_terminal_reload.reason), \
+        f"竞速未锁前格挡终局对账重载未恢复: {d_rpre_terminal_reload}"
+
+    rpre_terminal_off_know = knowledge.Knowledge(tmp)
+    rpre_terminal_off_know.policy[
+        "race_prelock_defense_terminal_outcome_obs"] = False
+    rpre_terminal_off_pol = policy.Policy(rpre_terminal_off_know)
+    d_rpre_terminal_off = rpre_terminal_off_pol.decide(
+        rpre_terminal_state, rpre_terminal_ctx)
+    assert (d_rpre_terminal_off.action == d_rpre_terminal.action
+            and d_rpre_terminal_off.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                not in d_rpre_terminal_off.reason), \
+        f"竞速未锁前格挡终局对账关闭后动作或 marker 漂移: {d_rpre_terminal_off}"
+
+    rpre_terminal_boundary_ctx = _SettleCtx()
+    rpre_terminal_boundary_ctx.decisions = [
+        dict(rpre_terminal_ctx.decisions[0]),
+        {"screen": "REWARD", "floor": 7, "turn": 3,
+         "action": "collect_rewards_and_proceed", "reason": "边界"},
+        dict(rpre_terminal_ctx.decisions[1]),
+    ]
+    rpre_terminal_boundary_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal_boundary = rpre_terminal_boundary_pol.decide(
+        rpre_terminal_state, rpre_terminal_boundary_ctx)
+    assert "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS" \
+        not in d_rpre_terminal_boundary.reason, \
+        f"竞速未锁前格挡终局对账越过屏幕边界: {d_rpre_terminal_boundary}"
+
     # 3rpre-b) 同回合竞速模式翻转观测（KILL_RACE_MODE_FLIP_OBS）：
     #        投影在逐张出牌后重新计算；只记录同一 round 的模式变化，
     #        新回合先建立基线，不把正常跨回合变化误报为振荡。

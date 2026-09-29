@@ -909,6 +909,8 @@ class Policy:
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         self._longfight_joint_flip_terminal_outcome_reported = False
+        self._race_prelock_defense_terminal_outcome_pending = None
+        self._race_prelock_defense_terminal_outcome_reported = False
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -2478,6 +2480,8 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
+            self._race_prelock_defense_terminal_outcome_pending = None
+            self._race_prelock_defense_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -4937,6 +4941,171 @@ class Policy:
             f"/cap={_num(source_match.group(2))}"
             f"/final_hp={_num(final_hp)}"
             "（LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_race_prelock_defense_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the pre-lock defense source before a GAME_OVER join.
+
+        The source decision is already durable before the native GAME_OVER
+        payload arrives. Keep this audit bounded to the same floor and the
+        trailing COMBAT segment so a prior combat cannot be attributed to the
+        current terminal result. It never participates in scoring or action
+        selection.
+        """
+        decisions = getattr(ctx, "decisions", None)
+        marker = "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+        if not isinstance(decisions, list) or not decisions:
+            return
+        _reported = bool(getattr(
+            self, "_race_prelock_defense_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            _last = decisions[-1]
+            if isinstance(_last, dict):
+                _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            # The GAME_OVER action may have been lost before persistence.
+            # Let the next authoritative poll rebuild the same source join.
+            self._race_prelock_defense_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_prelock_defense_terminal_outcome_pending", None),
+                dict):
+            return
+        terminal = decisions[-1]
+        if not isinstance(terminal, dict):
+            return
+        if terminal.get("screen") not in (None, "COMBAT"):
+            return
+        if (floor is not None and terminal.get("floor") is not None
+                and str(terminal.get("floor")) != str(floor)):
+            return
+
+        def _number(value):
+            try:
+                value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return value if math.isfinite(value) else None
+
+        _terminal_round = _number(
+            terminal.get("turn", terminal.get("round")))
+        _terminal_hp = _number(terminal.get("hp"))
+        _start = max(0, len(decisions) - 64)
+        for row in reversed(decisions[_start:-1]):
+            if not isinstance(row, dict):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                return
+            if row.get("screen") not in (None, "COMBAT"):
+                return
+            reason = str(row.get("reason") or "")
+            # Only a marker in this trailing combat can suppress a duplicate;
+            # an earlier combat in the same run must not block a new join.
+            if marker in reason:
+                return
+            marker_at = reason.rfind("RACE_PRELOCK_DEFENSE_OBS")
+            if marker_at < 0:
+                continue
+            prefix_at = reason.rfind("竞速未锁前选格挡：", 0, marker_at)
+            if prefix_at < 0:
+                continue
+            match = re.search(
+                r"竞速未锁前选格挡：(?P<card>.*?)挡"
+                r"(?P<block>-?[0-9]+(?:\.[0-9]+)?)"
+                r"/sample_turns=(?P<sample>-?[0-9]+)"
+                r"/round=(?P<round>-?[0-9]+)"
+                r"/hp=(?P<hp>-?[0-9]+(?:\.[0-9]+)?)"
+                r"/incoming=(?P<incoming>-?[0-9]+(?:\.[0-9]+)?)"
+                r"/race_allin=(?P<race>yes|no)",
+                reason[prefix_at:marker_at])
+            if match is None:
+                continue
+            _block = _number(match.group("block"))
+            _sample = _number(match.group("sample"))
+            _round = _number(match.group("round"))
+            _hp = _number(match.group("hp"))
+            _incoming = _number(match.group("incoming"))
+            if (_block is None or _sample is None or _round is None
+                    or _hp is None or _incoming is None
+                    or _block <= 0.0 or not 0.0 <= _sample < 2.0
+                    or _round < 0.0 or _hp < 0.0 or _incoming < 0.0):
+                continue
+            self._race_prelock_defense_terminal_outcome_pending = {
+                "source_round": _round,
+                "source_action": row.get("action") or "?",
+                "source_card": match.group("card").strip() or "?",
+                "source_block": _block,
+                "source_sample_turns": _sample,
+                "source_hp": _hp,
+                "source_incoming": _incoming,
+                "source_race_allin": match.group("race"),
+                "terminal_round": _terminal_round,
+                "terminal_action": terminal.get("action") or "?",
+                "terminal_hp": _terminal_hp,
+            }
+            self._race_prelock_defense_terminal_outcome_reported = False
+            return
+
+    def _consume_race_prelock_defense_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a pre-lock defense audit to the authoritative terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_prelock_defense_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_race_prelock_defense_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_race_prelock_defense_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._race_prelock_defense_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _card = str(_pending.get("source_card") or "?")
+        _card = re.sub(r"[/；（）()\s]+", "_", _card).strip("_") or "?"
+        _source_round = _pending.get("source_round")
+        _terminal_round = _pending.get("terminal_round")
+        _bridge_rounds = "?"
+        if _source_round is not None and _terminal_round is not None:
+            try:
+                _bridge_rounds = str(max(
+                    0, int(float(_terminal_round) - float(_source_round))))
+            except (TypeError, ValueError, OverflowError):
+                pass
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速未锁格挡终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source_round)}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/card={_card}"
+            f"/block={_num(_pending.get('source_block'))}"
+            f"/sample_turns={_round(_pending.get('source_sample_turns'))}"
+            f"/source_hp={_num(_pending.get('source_hp'))}"
+            f"/source_incoming={_num(_pending.get('source_incoming'))}"
+            f"/race_allin={_pending.get('source_race_allin') or 'unknown'}"
+            f"/terminal_round={_round(_terminal_round)}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_rounds={_bridge_rounds}"
+            "（RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS）")
 
     def _consume_low_pool_burst_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -9634,6 +9803,8 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
+            self._race_prelock_defense_terminal_outcome_pending = None
+            self._race_prelock_defense_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -18503,6 +18674,11 @@ class Policy:
         _longfight_joint_flip_terminal_outcome_note = (
             self._consume_longfight_joint_flip_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        self._restore_race_prelock_defense_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _race_prelock_defense_terminal_outcome_note = (
+            self._consume_race_prelock_defense_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
@@ -18555,6 +18731,7 @@ class Policy:
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
+                            f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
@@ -18587,6 +18764,7 @@ class Policy:
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
+                        f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
@@ -18605,6 +18783,7 @@ class Policy:
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
+                                f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"

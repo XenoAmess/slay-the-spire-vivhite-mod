@@ -14045,3 +14045,31 @@ failed_review_replay: `requested_packages=[]`，无回放包
 - **验证**：直接入口复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配执行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。生产三文件完整 diff 已回读，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1742局复盘（RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1742`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+failed_review_replay: `requested_packages=[]`，无回放包
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1742局 F23 回合2 已出现 `RACE_PRELOCK_DEFENSE_OBS`，实际选择「岿然不动」并记录 `sample_turns=1/hp=20/incoming=8/block=30`；同一场战斗随后在回合4以无牌空过进入致死。现有终局链记录了竞速终端、输出容量和非致死→致死过渡，但没有把未锁前格挡来源接到权威 `GAME_OVER`。若假设成立，后续同楼层、同一尾部 `COMBAT` 段的终局 reason 应出现一次首尾对账，而 action/params 不变。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-053824_BS8A9JZVJ7Y7.json` 的316条 decisions。D304/F23/T1 已有「重振精神」的同类前置 marker；D306/F23/T2 的「岿然不动」为 `block=30/sample_turns=1/round=2/hp=20/incoming=8/race_allin=no`；D315/F23/T4 为 `end_turn`、`hp=19/incoming=24/energy=0`，已有 `KILL_RACE_TERMINAL_AUDIT_OBS` 与输出容量审计；D316 为 `GAME_OVER`、`outcome=defeat/final_hp=0`，已有非致死→致死链，但没有新的未锁前格挡终局桥。`failed_review_replay.requested_packages=[]`。
+- **EXPECTED_SIGNAL**：未来3—10个同类终局窗口中，仅当同一 `floor` 的尾部 `COMBAT` 决策段能解析前置格挡 marker、随后到达权威 `GAME_OVER` 时，追加 `RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS`，记录 source/terminal round、card、block、sample turns、HP、incoming、outcome 与 bridge rounds；跨屏、跨战斗、缺字段或历史旧战斗不得命中。关闭开关后该 marker 消失，action/params 保持逐位相同。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_prelock_defense_terminal_outcome_obs` 回滚开关；关闭只移除新终局 marker。
+- `sts2-ascend/brain/policy.py`：新增有界、纯观测的 source→`GAME_OVER` 恢复/消费链；只扫描同楼层最近64条、未跨出当前 `COMBAT` 段的持久决策，并在三条既有 GAME_OVER 返回路径追加 reason。增加 run/combat reset 与当前尾部 marker 去重，避免同一 run 的旧战斗阻塞新桥接；不进入评分、候选、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入正例、进程重载、开关关闭、跨 `REWARD` 边界负例，并断言 `continue_game_over` 与空 params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个同类终局，按 source/terminal round、block、sample turns、HP/incoming、outcome、bridge rounds 与当前 `run_id/floor` 对账；证据成熟前不改竞速防守、空过或出牌策略。
+- **调整**：若真实 payload 出现 `GAME_OVER` 前尾部 screen 语义漂移、同一 run 旧战斗误连、字段缺失或 marker 词形变化，保留失败样本并收紧边界/解析，不升级为行为门。
+- **回滚**：将 `race_prelock_defense_terminal_outcome_obs` 设为 `False`；预期仅移除 `RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS`，既有终局 marker、action 与 params 不变。
+- **验证**：直接受管入口先复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配运行完整 selfcheck，退出码0并输出 `SELFCHECK OK`。最终目标源码 diff 复核无空白错误；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md`、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
