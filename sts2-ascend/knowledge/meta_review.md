@@ -13326,3 +13326,28 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：受控完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff `git diff --check` 通过。未写入 `.runtime/`、在线运行态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1682局复盘（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1682 局 F17 Boss 已逐回合记录有效 DPT，但终局汇总只保留初始竞速投影与存活比，未把最后一条有效 DPT 样本连接到权威 GAME_OVER；若补一条只读终局对账，未来同类窗口应能重放该样本→终局链，且 action/params 不变。
+- **EVIDENCE**：`sts2-ascend/knowledge/runs/20260929-104147_YBYBEG6FBDZY.json` 的 F17 记录了多次 `BOSS_RACE_EFFECTIVE_DPT_OBS`（实际/投影比约 2.22、1.48、1.79、0.70、0.98、0.23、0.42、0.93、0.89）；末段 decision 236 为 GAME_OVER defeat，但 combat note 只含 `pool=204/dpt=4.05/ttk=50.3704/tsurv=5.13333` 与实际 12 回合/存活比 2.34。
+- **EXPECTED_SIGNAL**：未来 3–10 个同楼层 Boss 终局中，若存在可解析来源，出现一次 `BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS`，并能对上 `source_round/source_action/outcome/final_hp/encounter/sample_round/net_dpt/projected_dpt/ratio/pool`；无来源、已提交重试或字段不完整时不生成 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `boss_race_effective_dpt_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：GAME_OVER 只读扫描同楼层决策链中的最后一条 Boss 有效 DPT，解析样本、血池、比值并追加终局 outcome/final_hp；不进入评分、候选、闸门或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖终局连接、提交前重试、提交后去重、开关回滚，并断言 `continue_game_over/{}` 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3–10 个独立 Boss 终局，核对来源回合、遭遇、血池与最终结局；证据成熟前保持只读。
+- **调整**：若出现跨战斗误连接、来源回合与终局间隔异常或字段解析缺口，先收紧来源门禁，不升级为行为改动。
+- **回滚**：将 `boss_race_effective_dpt_terminal_outcome_obs` 设为 `False`，预期只移除新 marker，既有 DPT 观测与 action/params 保持不变。
+- **验证**：SELFCHECK OK；目标三文件 `git diff --check` 无问题；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md`、review prompt 或 replay。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

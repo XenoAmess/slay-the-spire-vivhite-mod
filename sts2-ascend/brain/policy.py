@@ -4972,6 +4972,110 @@ class Policy:
             f"{_latch_projection_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_boss_race_effective_dpt_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join the latest durable Boss DPT sample to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "boss_race_effective_dpt_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list):
+            return ""
+        _marker = "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+        if any(_marker in str(_row.get("reason") or "")
+               for _row in _decisions if isinstance(_row, dict)):
+            return ""
+
+        def _integer(value):
+            try:
+                _value = float(value)
+                if not math.isfinite(_value):
+                    return None
+                _result = int(_value)
+                return _result if abs(_value - _result) <= 1e-9 else None
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        def _num(value) -> str:
+            try:
+                _value = float(value)
+                return f"{_value:g}" if math.isfinite(_value) else "?"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            _value = _integer(value)
+            return str(_value) if _value is not None else "?"
+
+        _terminal_floor = _integer(floor)
+        if _terminal_floor is None:
+            return ""
+        _source_rows = []
+        for _row in _decisions:
+            if not isinstance(_row, dict):
+                continue
+            _row_floor = _integer(_row.get("floor"))
+            if _row_floor != _terminal_floor:
+                continue
+            _screen = str(_row.get("screen") or "COMBAT").upper()
+            if _screen != "COMBAT":
+                continue
+            _reason = str(_row.get("reason") or "")
+            if "BOSS_RACE_EFFECTIVE_DPT_OBS" in _reason:
+                _source_rows.append(_row)
+        if not _source_rows:
+            return ""
+        _source = _source_rows[-1]
+        _source_reason = str(_source.get("reason") or "")
+        _audit_start = _source_reason.rfind("Boss竞速有效火力对账：")
+        _audit_end = _source_reason.find(
+            "BOSS_RACE_EFFECTIVE_DPT_OBS", _audit_start)
+        if _audit_start < 0 or _audit_end <= _audit_start:
+            return ""
+        _audit = _source_reason[_audit_start:_audit_end]
+        _number = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _sample = re.search(
+            rf"采样(?P<start>{_number})→(?P<end>{_number})回合", _audit)
+        _net = re.search(rf"敌血净降(?P<value>{_number})/回合", _audit)
+        _projected = re.search(rf"vs 投影(?P<value>{_number})/回合", _audit)
+        _tail = _source_reason[_audit_end:]
+        _encounter = re.search(
+            rf"Boss遭遇=(?P<name>[^，；]+)，血池"
+            rf"(?P<start>{_number})→(?P<end>{_number})", _tail)
+        _ratio = re.search(rf"实际/投影比(?P<value>{_number})", _tail)
+        if not (_sample and _net and _projected and _encounter and _ratio):
+            return ""
+        _numeric_values = [
+            float(_sample.group("start")), float(_sample.group("end")),
+            float(_net.group("value")), float(_projected.group("value")),
+            float(_encounter.group("start")), float(_encounter.group("end")),
+            float(_ratio.group("value")),
+        ]
+        if not all(math.isfinite(_value) for _value in _numeric_values):
+            return ""
+        _encounter_name = _encounter.group("name").strip().replace("/", "_")
+        _source_action = str(_source.get("action") or "?").replace("/", "_")
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；Boss竞速有效火力终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source.get('turn', _source.get('round')))}"
+            f"/source_action={_source_action}"
+            f"/final_hp={_num(final_hp)}"
+            f"/encounter={_encounter_name}"
+            f"/sample_round={_num(_sample.group('start'))}"
+            f"→{_num(_sample.group('end'))}"
+            f"/net_dpt={_num(_net.group('value'))}"
+            f"/projected_dpt={_num(_projected.group('value'))}"
+            f"/ratio={_num(_ratio.group('value'))}"
+            f"/pool={_num(_encounter.group('start'))}"
+            f"→{_num(_encounter.group('end'))}"
+            "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
     @staticmethod
     def _sandpit_terminal_outcome_enabled(
             pol, vivhite_profile: bool = False) -> bool:
@@ -16910,6 +17014,9 @@ class Policy:
             ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
+        _boss_race_effective_dpt_terminal_outcome_note = (
+            self._consume_boss_race_effective_dpt_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_lethal_playable_reject_outcome_from_decisions(
             ctx, go.get("floor"))
         _lethal_playable_reject_outcome_note = (
@@ -16954,6 +17061,7 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
+                            f"{_boss_race_effective_dpt_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
