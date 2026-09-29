@@ -14263,3 +14263,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5731040903273485局)，BASH(14分/2.1772419225846797局)，STOKE(16分/2.4779970076518123局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1697 胜，当前目标进阶 0
+
+## 第 1698 局复盘（2026-09-29 15:27）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HOWL_FROM_BEYOND, CRUELTY, CINDER, BREAKTHROUGH, MOLTEN_FIST, TRUE_GRIT, DISMANTLE, DARK_EMBRACE, STOMP, RAMPAGE, CRIMSON_MANTLE
+- 本局遗物：RED_MASK
+- 战斗记录：F4 Monster战 掉血5; F6 Monster战 掉血4; F13 Monster战 掉血2; F14 Monster战 掉血21; F15 Monster战 掉血27｜竞速投影审计：pool=39/dpt=12.8/ttk=3.04688/tsurv=1.125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=3.04688/actual_over_projected=2.30（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战7回合获胜; F17 Boss战 掉血31｜自损9（可行动段9/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=238/dpt=10.8/ttk=22.037/tsurv=1.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=22.037/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.80（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0887800271938928局)，HELLRAISER(26分/4.329532119226344局)，PROWESS(25分/6.644721454999589局)，FEED(24分/30.921990208092197局)，OFFERING(24分/16.16128992334278局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.564098226011203局)，BASH(14分/2.1696215758556336局)，STOKE(16分/2.469324018125031局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1698 胜，当前目标进阶 0
