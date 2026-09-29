@@ -14076,3 +14076,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7311352245441127局)，BASH(14分/2.310960574614249局)，STOKE(16分/2.630186994515167局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1680 胜，当前目标进阶 0
+
+## 第 1681 局复盘（2026-09-29 10:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：UPPERCUT, HEADBUTT, COLOSSUS, MOLTEN_FIST, DISMANTLE, STOMP, BATTLE_TRANCE, TAUNT, CINDER
+- 本局遗物：STRAWBERRY, ODDLY_SMOOTH_STONE
+- 战斗记录：F6 Monster战 掉血32; F11 Monster战 掉血14; F13 Elite战 掉血37; F14 Unknown战 掉血5; F15 Monster战 掉血6｜竞速投影审计：pool=47/dpt=22.2/ttk=2.11712/tsurv=0.227273（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=2.11712/actual_over_projected=2.83（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜; F17 Boss战 掉血34｜竞速投影审计：pool=255/dpt=41.85/ttk=6.09319/tsurv=0.754717（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=3/projected_ttk=6.09319/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.97（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.217065656239229局)，HELLRAISER(26分/4.5954369747668755局)，PROWESS(25分/7.0528172145280985局)，FEED(24分/32.82111166345579局)，PACTS_END(24分/58.821366089889416局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7215762512582087局)，BASH(14分/2.3028722126030994局)，STOKE(16分/2.620981340034364局)
+- 策略进化：block_safety: 2.02 → 2.07（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1681 胜，当前目标进阶 0
