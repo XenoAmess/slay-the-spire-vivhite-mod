@@ -6071,6 +6071,22 @@ class Policy:
                         f"/last_post_gap={_num(_pending.get('pressure_last_post_gap'))}"
                         f"/post_gap_delta={_num(_pending.get('pressure_post_gap_delta'))}"
                         "（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）")
+        _energy_pressure_tail = ""
+        try:
+            _energy_pressure_enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_energy_pressure_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _energy_pressure_enabled = False
+        if (_energy_pressure_enabled
+                and bool(_pending.get("energy_pressure_all"))
+                and int(_pending.get("energy_pressure_count", 0) or 0) >= 2):
+            _energy_pressure_tail = (
+                f"；非致死无牌能量锁定链：count="
+                f"{_pending.get('energy_pressure_count')}"
+                f"/first_round={_round(_pending.get('energy_pressure_first_round'))}"
+                f"/last_round={_round(_pending.get('energy_pressure_last_round'))}"
+                "/energy=0/hook_locked=0"
+                "（NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6097,6 +6113,7 @@ class Policy:
                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                if _chain else "")
             + _pressure_tail
+            + _energy_pressure_tail
             + _overlap_tail
             + f"（{_marker}）")
         return _base + _ringing_hook_note
@@ -6241,6 +6258,33 @@ class Policy:
             if (_pressure_first_post_gap is not None
                 and _pressure_last_post_gap is not None)
             else None)
+        # Separate a repeated energy boundary from a native hook boundary.
+        # The end-turn marker already persists these raw fields, but the
+        # terminal join needs a bounded all-rows predicate so a mixed chain
+        # cannot be mislabeled as pure energy starvation.
+        _energy_pressure_rows = []
+        for _candidate in _pressure_rows:
+            _energy = _pressure_metric(_candidate, "energy")
+            _cards = _pressure_metric(_candidate, "cards")
+            _energy_locked = _pressure_metric(_candidate, "energy_locked")
+            _hook_locked = _pressure_metric(_candidate, "hook_locked")
+            if (_energy is not None and abs(_energy) < 1e-9
+                    and _cards is not None
+                    and _energy_locked is not None
+                    and abs(_energy_locked - _cards) < 1e-9
+                    and _hook_locked is not None
+                    and abs(_hook_locked) < 1e-9):
+                _energy_pressure_rows.append(_candidate)
+        _energy_pressure_rounds = []
+        for _candidate in _energy_pressure_rows:
+            try:
+                _energy_pressure_rounds.append(int(float(
+                    _candidate.get("turn", _candidate.get("round")))))
+            except (TypeError, ValueError, OverflowError):
+                continue
+        _energy_pressure_all = bool(
+            _pressure_count >= 2
+            and len(_energy_pressure_rows) == _pressure_count)
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -6288,6 +6332,14 @@ class Policy:
                 "pressure_first_post_gap": _pressure_first_post_gap,
                 "pressure_last_post_gap": _pressure_last_post_gap,
                 "pressure_post_gap_delta": _pressure_post_gap_delta,
+                "energy_pressure_all": _energy_pressure_all,
+                "energy_pressure_count": len(_energy_pressure_rows),
+                "energy_pressure_first_round": (
+                    _energy_pressure_rounds[0]
+                    if _energy_pressure_rounds else None),
+                "energy_pressure_last_round": (
+                    _energy_pressure_rounds[-1]
+                    if _energy_pressure_rounds else None),
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),

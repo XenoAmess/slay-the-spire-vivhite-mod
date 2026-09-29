@@ -13772,3 +13772,30 @@ production_code_commit: `fd021e7990e133cc3690129a5cda4de2a58b0dbb`
 - **验证**：完整 selfcheck 输出 `SELFCHECK OK`；源码提交前目标三文件 `git diff --cached --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或 replay。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1723—1725局复盘（NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1723, 1724, 1725`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：重复 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` 主要是能量耗尽链，而不是 RINGING 等原生 hook 锁牌；若为真，同一战斗终局链中的每条非致死空过都应同时满足 `energy=0`、`energy_locked=cards`、`hook_locked=0`。若混入非零能量、非全额能量锁定或 hook 锁定，纯能量归因必须消失。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260929-231659_QT5CU68EWNXC.json`（第1723局，35/35 条非致死 marker 满足指纹）、`sts2-ascend/knowledge/runs/20260929-233002_15WEEXJ2DRK6.json`（第1724局，31/33 条满足）和 `sts2-ascend/knowledge/runs/20260929-235122_U8E5YX5U8W80.json`（第1725局，39/39 条满足）。第1725局 F28 的 T2—T7 连续空过后，T8 为 `hp=16/block=19/incoming=52/energy=0` 的致死空过；既有终局链已记录 `count=6/first_round=2/last_round=7`，但没有成因分类。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立非致死终局链中，仅当同一有界战斗尾部的全部非致死 marker（至少2条）满足上述三项原始字段时追加 `NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS` 及首末回合；混合 hook、非零能量、非全额锁定或恢复牌链不得追加。action、params、评分和候选排序不得变化。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `nonlethal_unavailable_energy_pressure_obs` 回滚开关；关闭只移除能量归因尾缀。
+- `sts2-ascend/brain/policy.py`：复用既有同楼层、同 `COMBAT`、最多64条的终局压力尾部，对全部非致死 marker 做严格能量/锁定字段谓词；满足全链条件时追加计数与首末回合。该字段只写终局 reason，不进入评分、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：扩展既有 T4/T5/T6/T8→T9 压力夹具，覆盖纯能量链、混合 hook 链和关闭开关后的 action/params 等价性。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集 3—10 个独立终局链，按纯能量、混合 hook、终局胜负和实际可用格挡/支付牌分层；证据成熟前不改变 end_turn、防守、出牌或目标选择。
+- **调整**：若真实 reason 的 `energy_locked`、`cards` 或 `hook_locked` 口径在跨进程恢复后漂移，先收紧字段解析和战斗边界，保留失败样本，不把相关性升级为行为门。
+- **回滚**：将 `nonlethal_unavailable_energy_pressure_obs` 设为 `False`；预期仅移除 `NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS`，既有 chain pressure、终局 marker、action 和 params 保持不变。
+- **验证**：直接受管 selfcheck 复现既有固定256槽临时池耗尽后，使用同一 clone 的 `.review-cache/selfcheck-pool` 进程内临时目录适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`；退出码0，输出 `SELFCHECK OK`，共274次临时分配。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

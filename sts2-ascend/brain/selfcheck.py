@@ -17892,9 +17892,35 @@ def main() -> int:
                 "/first_post_gap=14/last_post_gap=15/post_gap_delta=1"
                 in d_nonlethal_pressure.reason), \
         f"重复非致死资源耗尽压力摘要缺失或动作漂移: {d_nonlethal_pressure}"
+    assert ("NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS"
+            in d_nonlethal_pressure.reason
+            and "count=3/first_round=4/last_round=8/energy=0/hook_locked=0"
+                in d_nonlethal_pressure.reason), \
+        f"重复非致死能量锁定归因缺失: {d_nonlethal_pressure}"
+    energy_pressure_mixed_pol = policy.Policy(knowledge.Knowledge(tmp))
+    energy_pressure_mixed_ctx = _SettleCtx()
+    energy_pressure_mixed_ctx.decisions = list(
+        nonlethal_pressure_ctx.decisions)
+    energy_pressure_mixed_ctx.decisions[-2] = dict(
+        energy_pressure_mixed_ctx.decisions[-2],
+        reason=d_hook_nonlethal.reason)
+    d_nonlethal_pressure_mixed = energy_pressure_mixed_pol.decide(
+        nonlethal_unavailable_outcome_state, energy_pressure_mixed_ctx)
+    assert (d_nonlethal_pressure_mixed.action
+            == d_nonlethal_pressure.action
+            and d_nonlethal_pressure_mixed.params
+            == d_nonlethal_pressure.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
+                in d_nonlethal_pressure_mixed.reason
+            and "NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS"
+                not in d_nonlethal_pressure_mixed.reason), \
+        f"混合 hook/能量链错误归因为纯能量压力: {d_nonlethal_pressure_mixed}"
     assert knowledge.DEFAULT_POLICY[
         "nonlethal_unavailable_chain_pressure_obs"] is True, \
         "DEFAULT_POLICY 缺少 nonlethal_unavailable_chain_pressure_obs"
+    assert knowledge.DEFAULT_POLICY[
+        "nonlethal_unavailable_energy_pressure_obs"] is True, \
+        "DEFAULT_POLICY 缺少 nonlethal_unavailable_energy_pressure_obs"
 
     nonlethal_pressure_off_know = knowledge.Knowledge(tmp)
     nonlethal_pressure_off_know.policy[
@@ -17914,6 +17940,24 @@ def main() -> int:
             and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
                 not in d_nonlethal_pressure_off.reason), \
         f"重复非致死压力摘要关闭后动作或既有 marker 漂移: {d_nonlethal_pressure_off}"
+    energy_pressure_off_know = knowledge.Knowledge(tmp)
+    energy_pressure_off_know.policy[
+        "nonlethal_unavailable_energy_pressure_obs"] = False
+    energy_pressure_off_pol = policy.Policy(energy_pressure_off_know)
+    energy_pressure_off_ctx = _SettleCtx()
+    energy_pressure_off_ctx.decisions = list(
+        nonlethal_pressure_ctx.decisions)
+    d_nonlethal_pressure_off = energy_pressure_off_pol.decide(
+        nonlethal_unavailable_outcome_state, energy_pressure_off_ctx)
+    assert (d_nonlethal_pressure_off.action
+            == d_nonlethal_pressure.action
+            and d_nonlethal_pressure_off.params
+            == d_nonlethal_pressure.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
+                in d_nonlethal_pressure_off.reason
+            and "NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS"
+                not in d_nonlethal_pressure_off.reason), \
+        f"能量锁定归因关闭后动作或既有 marker 漂移: {d_nonlethal_pressure_off}"
 
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
