@@ -14362,3 +14362,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.493176831833537局)，BASH(14分/2.1096111653976086局)，STOKE(16分/2.401024020774985局)
 - 策略进化：本局无参数调整
 - 生涯战绩：0/1706 胜，当前目标进阶 0
+
+## 第 1707 局复盘（2026-09-29 18:24）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：MOLTEN_FIST, SECOND_WIND, PANIC_BUTTON, MOLTEN_FIST, HEADBUTT, BATTLE_TRANCE, SHRUG_IT_OFF, DEMON_FORM, BLUDGEON, SWORD_BOOMERANG, SHRUG_IT_OFF, HEADBUTT, MANGLE, SHRUG_IT_OFF, TWIN_STRIKE, ARMAMENTS, IRON_WAVE, TAUNT
+- 本局遗物：VAMBRACE, REPTILE_TRINKET, WHETSTONE, INTIMIDATING_HELMET, GAMBLING_CHIP
+- 战斗记录：F22 Monster战 掉血16; F28 Unknown战 掉血30; F29 Monster战 掉血8; F30 Monster战 掉血12｜竞速投影审计：pool=96/dpt=8.1/ttk=11.8519/tsurv=1.63265（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.8519/actual_over_projected=0.51（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战6回合获胜; F31 Monster战 掉血6; F33 Boss战 掉血38｜竞速投影审计：pool=242/dpt=9.45/ttk=25.6085/tsurv=2.375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=25.6085/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.11（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=30.3333/projected_dpt=18.6333/ratio=1.73/min_ratio=1.01（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=30.3333/projected_dpt=18.6333/ratio=1.73/min_ratio=1.01（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0238971249444937局)，PROWESS(26分/7.41065985503831局)，HELLRAISER(26分/4.195045669901769局)，FEED(24分/31.92335064789891局)，OFFERING(24分/15.65927851923665局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.48445071292212局)，BASH(14分/2.102227526318717局)，STOKE(16分/2.3926204367022725局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.99 → 1.98（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1707 胜，当前目标进阶 0
