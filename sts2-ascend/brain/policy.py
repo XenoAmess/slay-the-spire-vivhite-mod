@@ -924,6 +924,7 @@ class Policy:
         self._boss_effective_dpt_start_roster_count = 0
         self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_start_incoming = None
+        self._boss_effective_dpt_start_slippery = 0.0
         self._boss_effective_dpt_projected = 0.0
         self._boss_effective_dpt_samples = []
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
@@ -7792,6 +7793,7 @@ class Policy:
                             self._boss_effective_dpt_start_roster_count = 0
                             self._boss_effective_dpt_start_block = 0.0
                             self._boss_effective_dpt_start_incoming = None
+                            self._boss_effective_dpt_start_slippery = 0.0
                             self._boss_effective_dpt_projected = 0.0
                             self._boss_effective_dpt_samples = []
                         if (self._boss_effective_dpt_round != round_no):
@@ -7826,6 +7828,7 @@ class Policy:
                                     _boss_prev_start_roster,
                                     int(_boss_prev_start_roster_count),
                                     float(self._boss_effective_dpt_start_block),
+                                    float(self._boss_effective_dpt_start_slippery),
                                     float(_boss_prev_start_incoming))
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
@@ -7834,6 +7837,8 @@ class Policy:
                                 self._boss_effective_dpt_block(enemies))
                             self._boss_effective_dpt_start_incoming = (
                                 float(incoming))
+                            self._boss_effective_dpt_start_slippery = (
+                                float(_race_slippery_layers))
                             self._boss_effective_dpt_start_state = (
                                 self._boss_effective_dpt_state(enemies)
                                 if bool(pol.get(
@@ -7858,7 +7863,7 @@ class Policy:
                          _boss_end_hp, _boss_projected,
                          _boss_start_state, _boss_start_roster,
                          _boss_start_roster_count, _boss_start_block,
-                         _boss_start_incoming) = (
+                         _boss_start_slippery, _boss_start_incoming) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
@@ -7889,6 +7894,8 @@ class Policy:
                                         "actual": _boss_actual,
                                         "projected": _boss_projected_value,
                                         "ratio": _boss_ratio_value,
+                                        "slippery_layers": float(
+                                            _boss_start_slippery),
                                     })
                             except (TypeError, ValueError, OverflowError):
                                 pass
@@ -8532,6 +8539,7 @@ class Policy:
             self._boss_effective_dpt_start_roster = "none"
             self._boss_effective_dpt_start_roster_count = 0
             self._boss_effective_dpt_start_incoming = None
+            self._boss_effective_dpt_start_slippery = 0.0
             self._boss_effective_dpt_projected = 0.0
             self._boss_effective_dpt_samples = []
             self._longfight_effective_dpt_combat = ctx.combat
@@ -14010,6 +14018,50 @@ class Policy:
                         "boss_effective_dpt_ratio_min": min(
                             sample[2] for sample in _valid_samples),
                     })
+                    if bool(self.know.policy.get(
+                            "race_audit_effective_dpt_phase_obs", True)):
+                        _phase_samples = {"slippery": [], "clear": []}
+                        if isinstance(_samples, list):
+                            for _sample in _samples:
+                                if not isinstance(_sample, dict):
+                                    continue
+                                try:
+                                    _actual = float(_sample.get("actual"))
+                                    _projected = float(
+                                        _sample.get("projected"))
+                                    _ratio = float(_sample.get("ratio"))
+                                    _slippery = float(
+                                        _sample.get("slippery_layers") or 0.0)
+                                except (TypeError, ValueError, OverflowError):
+                                    continue
+                                if (_projected <= 0.0 or _slippery < 0.0
+                                        or not all(math.isfinite(value) for value in (
+                                            _actual, _projected, _ratio,
+                                            _slippery))):
+                                    continue
+                                _phase = ("slippery" if _slippery > 0.0
+                                          else "clear")
+                                _phase_samples[_phase].append(
+                                    (_actual, _projected, _ratio))
+                        for _phase, _values in _phase_samples.items():
+                            if not _values:
+                                continue
+                            _phase_count = len(_values)
+                            _result.update({
+                                f"boss_effective_dpt_{_phase}_samples": (
+                                    _phase_count),
+                                f"boss_effective_dpt_{_phase}_actual_mean": (
+                                    sum(value[0] for value in _values)
+                                    / _phase_count),
+                                f"boss_effective_dpt_{_phase}_projected_mean": (
+                                    sum(value[1] for value in _values)
+                                    / _phase_count),
+                                f"boss_effective_dpt_{_phase}_ratio_mean": (
+                                    sum(value[2] for value in _values)
+                                    / _phase_count),
+                                f"boss_effective_dpt_{_phase}_ratio_min": min(
+                                    value[2] for value in _values),
+                            })
             return _result
         return {}
 

@@ -819,6 +819,7 @@ DEFAULT_POLICY = {
     "kill_race_enabled": True,
     "boss_race_intent_ramp_obs": True,  # read-only raw intent delta between Boss DPT windows
     "race_audit_effective_dpt_obs": True,  # aggregate existing Boss effective-DPT windows at combat close; observation only
+    "race_audit_effective_dpt_phase_obs": True,  # split the close-time Boss DPT audit by live Slippery phase; observation only
     "race_audit_projection_obs": True,  # 竞速判死审计的投影快照观测位：把入锁时
                                          # 的血池/有效DPT/TTK/可存活回合与实际结局
                                          # 放在同一条战斗记录中，纯用于校准，不改变判定；

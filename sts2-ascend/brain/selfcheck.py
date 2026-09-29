@@ -283,8 +283,10 @@ def main() -> int:
     _ra_snap = pol.pop_race_audit()
     assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
     pol._boss_effective_dpt_samples = [
-        {"actual": 12.0, "projected": 24.0, "ratio": 0.5},
-        {"actual": 18.0, "projected": 24.0, "ratio": 0.75},
+        {"actual": 12.0, "projected": 24.0, "ratio": 0.5,
+         "slippery_layers": 2.0},
+        {"actual": 18.0, "projected": 24.0, "ratio": 0.75,
+         "slippery_layers": 0.0},
     ]
     pol._race_audit = {"latched": True, "latch_round": 4, "esc": False}
     _ra_dpt = pol.pop_race_audit()
@@ -293,6 +295,12 @@ def main() -> int:
     assert abs(_ra_dpt["boss_effective_dpt_projected_mean"] - 24.0) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_ratio_mean"] - 0.625) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_ratio_min"] - 0.5) < 1e-9
+    assert _ra_dpt["boss_effective_dpt_slippery_samples"] == 1, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_slippery_actual_mean"] - 12.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_slippery_ratio_mean"] - 0.5) < 1e-9
+    assert _ra_dpt["boss_effective_dpt_clear_samples"] == 1, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_clear_actual_mean"] - 18.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_clear_ratio_mean"] - 0.75) < 1e-9
     assert pol._boss_effective_dpt_samples == []
     know.policy["race_audit_effective_dpt_obs"] = False
     pol._boss_effective_dpt_samples = [
@@ -302,6 +310,16 @@ def main() -> int:
     _ra_dpt_off = pol.pop_race_audit()
     assert "boss_effective_dpt_samples" not in _ra_dpt_off, _ra_dpt_off
     know.policy["race_audit_effective_dpt_obs"] = True
+    know.policy["race_audit_effective_dpt_phase_obs"] = False
+    pol._boss_effective_dpt_samples = [
+        {"actual": 12.0, "projected": 24.0, "ratio": 0.5,
+         "slippery_layers": 2.0},
+    ]
+    pol._race_audit = {"latched": True, "latch_round": 6, "esc": False}
+    _ra_dpt_phase_off = pol.pop_race_audit()
+    assert "boss_effective_dpt_slippery_samples" not in _ra_dpt_phase_off, \
+        _ra_dpt_phase_off
+    know.policy["race_audit_effective_dpt_phase_obs"] = True
     assert pol.pop_race_audit() == {}, "审计账弹出后应清空"
 
     hemokinesis = {"index": 0, "card_id": "HEMOKINESIS", "name": "御血术", "playable": True,
@@ -15500,6 +15518,12 @@ def main() -> int:
         "projection_pool": 250.0, "projection_dpt": 40.0,
         "projection_ttk": 6.25, "projection_tsurv": 3.0,
     }
+    ra_agent.policy._boss_effective_dpt_samples = [
+        {"actual": 10.0, "projected": 20.0, "ratio": 0.5,
+         "slippery_layers": 8.0},
+        {"actual": 20.0, "projected": 20.0, "ratio": 1.0,
+         "slippery_layers": 0.0},
+    ]
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
     _ra_stats = ra_agent.know.stats["race_audit"]
@@ -15511,6 +15535,10 @@ def main() -> int:
     assert ("actual_rounds=8/projected_ttk=6.25/actual_over_projected=1.28"
             "（RACE_PROJ_TTK_RATIO_OBS）") in ra_agent.ctx.combat_notes[-1], \
         f"竞速投影实际/预计TTK比值未留痕: {ra_agent.ctx.combat_notes[-1]}"
+    assert ("slippery_samples=1/actual_dpt=10/projected_dpt=20/ratio=0.50/min_ratio=0.50"
+            "|clear_samples=1/actual_dpt=20/projected_dpt=20/ratio=1.00/min_ratio=1.00"
+            "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）") in ra_agent.ctx.combat_notes[-1], \
+        f"竞速有效火力分相观测未留痕: {ra_agent.ctx.combat_notes[-1]}"
 
     ra_agent.know.policy["race_audit_projection_ratio_obs"] = False
     ra_agent.policy._race_audit = {

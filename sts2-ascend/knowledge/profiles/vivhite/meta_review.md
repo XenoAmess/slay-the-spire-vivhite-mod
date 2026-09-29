@@ -5863,3 +5863,34 @@ production_code_commit: e1c9815f2
 ## REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-09-29 第1699~1700局批：Boss有效火力分相收官观测
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1700-F17 VANTOM 的收官有效 DPT 比为 `0.51`，现有全窗口均值无法区分损失主要发生在初始 Slippery 破相位，还是清场后的持续低火力。若在同一收官账本按窗口起始 Slippery 层数分桶，就能证伪这一归因缺口，且不改变动作、参数或竞速判定。
+- **EVIDENCE**：精确失败链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260929-161437_A1RPKQRFUEM5.json`，246 条 decisions，F17 VANTOM 初始 `Slippery=8`；终局前 #244 为 `end_turn hp=16/block=0/incoming=20/energy=0`，#245 为 `GAME_OVER defeat`。收官已有 `samples=7/actual_dpt=10.1429/projected_dpt=20.1053/ratio=0.51`，并有破相阶段攻击与生命支付记录；证据支持分相，不单独证明唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立、已锁定且有有效窗口的 Vivhite Boss combat，收官备注应出现 `RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS`，分别给出 `slippery_samples` 与 `clear_samples` 的 actual/projected/ratio/min；无有效样本、未锁定、非 Boss 或关闭键时不应显形。真实 `applied` action/params、竞速判定和学习统计必须不变；分桶缺失、错分或与窗口明细不一致即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_effective_dpt_phase_obs`，仅控制收官分相观测。
+- `sts2-ascend/brain/policy.py`：保存每个有效 Boss DPT 窗口起始 Slippery 层数；`pop_race_audit()` 在既有总账本内按 `slippery>0`/`clear=0` 聚合样本、实际/投影均值、均值比和最小比，旧样本缺字段按 clear 兼容；不参与评分、候选、等待、动作或参数。
+- `sts2-ascend/brain/agent.py`：在既有收官备注追加 `RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS`；`selfcheck.py` 覆盖两桶、关闭键、清空和最终备注。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 宿主固定 256 槽 bootstrap 的直接命令先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（临时池耗尽）；随后以同一 `sts2-ascend/brain/selfcheck.py` 的进程级继承 ACL 临时目录适配执行，退出码 0，输出 `SELFCHECK OK`。
+- 已完整回读四个目标源码/自检 diff；目标 `git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite Boss 竞速终局，按 run/floor/encounter、Slippery 起始层、分相窗口数、actual/projected DPT、回血/意图变化和胜负对账；观测出现本身不升级为行为门。
+- 若分相 marker 缺失、错分、与逐窗口明细不一致，或 action/params 漂移，将 `race_audit_effective_dpt_phase_obs=0`；必要时回滚本地 commit，保留既有总 DPT 收官观测。
+
+## REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

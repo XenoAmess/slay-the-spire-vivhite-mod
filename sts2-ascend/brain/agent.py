@@ -3792,6 +3792,44 @@ class Agent:
                             f"/ratio={_dpt_ratio:.2f}"
                             f"/min_ratio={_dpt_min_ratio:.2f}"
                             "（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
+                        if bool(self.know.policy.get(
+                                "race_audit_effective_dpt_phase_obs", True)):
+                            _phase_parts = []
+                            for _phase_name in ("slippery", "clear"):
+                                try:
+                                    _phase_count = int(_ra.get(
+                                        f"boss_effective_dpt_{_phase_name}_samples")
+                                        or 0)
+                                    _phase_actual = float(_ra.get(
+                                        f"boss_effective_dpt_{_phase_name}_actual_mean")
+                                        or 0.0)
+                                    _phase_projected = float(_ra.get(
+                                        f"boss_effective_dpt_{_phase_name}_projected_mean")
+                                        or 0.0)
+                                    _phase_ratio = float(_ra.get(
+                                        f"boss_effective_dpt_{_phase_name}_ratio_mean")
+                                        or 0.0)
+                                    _phase_min_ratio = float(_ra.get(
+                                        f"boss_effective_dpt_{_phase_name}_ratio_min")
+                                        or 0.0)
+                                except (TypeError, ValueError, OverflowError):
+                                    continue
+                                if (_phase_count <= 0
+                                        or not all(math.isfinite(value) for value in (
+                                            _phase_actual, _phase_projected,
+                                            _phase_ratio, _phase_min_ratio))):
+                                    continue
+                                _phase_parts.append(
+                                    f"{_phase_name}_samples={_phase_count}"
+                                    f"/actual_dpt={_phase_actual:g}"
+                                    f"/projected_dpt={_phase_projected:g}"
+                                    f"/ratio={_phase_ratio:.2f}"
+                                    f"/min_ratio={_phase_min_ratio:.2f}")
+                            if _phase_parts:
+                                note += (
+                                    "｜竞速Boss有效火力分相："
+                                    + "|".join(_phase_parts)
+                                    + "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
             _ra_won = not agg.get("died")
