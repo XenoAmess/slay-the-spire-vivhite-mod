@@ -14659,3 +14659,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.26798545221198局)，STOKE(16分/2.184156165739935局)，BULLY(16分/2.8098574100114933局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.48 → 0.45（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1733 胜，当前目标进阶 0
+
+## 第 1734 局复盘（2026-09-30 03:30）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：IRON_WAVE, ULTIMATE_STRIKE, MOLTEN_FIST, UNMOVABLE, TRUE_GRIT, BLUDGEON, STOMP, UNRELENTING, BREAKTHROUGH, TAUNT, PROWESS, SHRUG_IT_OFF, MANGLE, DISMANTLE, RAMPAGE, IRON_WAVE, EXPECT_A_FIGHT, RUPTURE, SHRUG_IT_OFF, MOLTEN_FIST, TRUE_GRIT, TWIN_STRIKE
+- 本局遗物：KUSARIGAMA, CHANDELIER, BOWLER_HAT, POTION_BELT
+- 战斗记录：F17 Boss战 掉血47｜竞速投影审计：pool=220/dpt=5.85/ttk=37.6068/tsurv=3.89474（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=13/projected_ttk=37.6068/actual_over_projected=0.35（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战13回合获胜｜竞速Boss有效火力收官对账：samples=8/actual_dpt=20.5625/projected_dpt=15.2685/ratio=1.72/min_ratio=0.43（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=8/actual_dpt=20.5625/projected_dpt=15.2685/ratio=1.72/min_ratio=0.43（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血12; F23 Monster战 掉血12; F24 Elite战 掉血24｜自损1（可行动段1/非行动段29，SELF_LOSS_PHASE_OBS）; F30 Unknown战 掉血18; F33 Boss战 掉血62｜竞速投影审计：pool=318/dpt=37.125/ttk=8.56566/tsurv=3.64706（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=8.56566/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.92（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=26.4/projected_dpt=36.5933/ratio=0.73/min_ratio=0.27（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=26.4/projected_dpt=36.5933/ratio=0.73/min_ratio=0.27（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/7.74130632369056局)，HELLRAISER(25分/5.671145459329864局)，MANGLE(25分/51.00309001184299局)，FEED(24分/29.039935688015664局)，PACTS_END(24分/56.844150836836405局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.260047503129238局)，STOKE(16分/2.1765116191598453局)，BULLY(16分/2.800022909076453局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.42 → 0.44（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.04 → 2.03（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1734 胜，当前目标进阶 0
