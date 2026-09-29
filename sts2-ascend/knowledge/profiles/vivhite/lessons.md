@@ -18575,3 +18575,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.594755857494828局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/21.547937651919018局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/23.6247194018651局)
 - 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Elite战实测自损28/掉血56（50%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1685 胜，当前目标进阶 4
+
+## 第 1686 局复盘（2026-09-29 11:52）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_INVARIANT
+- 本局遗物：KUSARIGAMA
+- 战斗记录：F5 Monster战 掉血24｜自损18（可行动段18/非行动段12，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损18（可行动段18/非行动段9，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损8（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血15｜自损8（可行动段8/非行动段21，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血4｜自损10（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血59｜自损12（可行动段12/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=185/dpt=16.1157/ttk=11.4795/tsurv=2.89474（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.4795/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.07（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/11.525768554883157局)，REND(38分/2.5574043634030774局)，THINKING_AHEAD(37分/4.313944517696563局)，MAYHEM(37分/3.523327044885929局)，ROLLING_BOULDER(36分/4.341085568918033局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.5856742119935965局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/21.4725198701373局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/23.542032883958573局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：4/1686 胜，当前目标进阶 4
