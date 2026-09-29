@@ -18916,3 +18916,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3275171791654836局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.101243029793228局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/23.056019359470532局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.39 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.002）；block_safety: 1.86 → 1.85（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1716 胜，当前目标进阶 4
+
+## 第 1717 局复盘（2026-09-29 21:46）
+- 结果：💀 失败｜进阶 4｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损54（可行动段54/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=10/dpt=2.1/ttk=4.7619/tsurv=0.461538（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=19/projected_ttk=4.7619/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=41.17（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T17判死→实战19回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.338708451929694局)，REND(38分/2.294012584151298局)，THINKING_AHEAD(37分/3.8696434371284663局)，MAYHEM(37分/3.160453112034914局)，ROLLING_BOULDER(36分/3.8939891815637706局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3193708690384045局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.023888679188953局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.975323291712385局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（19回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1717 胜，当前目标进阶 4
