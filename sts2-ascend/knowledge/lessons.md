@@ -14340,3 +14340,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5107211233633193局)，BASH(14分/2.1244563351535777局)，STOKE(16分/2.417919840137908局)
 - 策略进化：elite_grey_safety_mult: 2.35 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1704 胜，当前目标进阶 0
+
+## 第 1705 局复盘（2026-09-29 17:43）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HEADBUTT, CINDER, CINDER, TAUNT, CINDER, DISMANTLE, JUGGERNAUT, HEADBUTT, TAUNT, EQUILIBRIUM, TAUNT
+- 本局遗物：TINY_MAILBOX
+- 战斗记录：F5 Monster战 掉血6; F6 Monster战 掉血39; F12 Unknown战 掉血15; F13 Monster战 掉血9; F14 Monster战 掉血15; F17 Boss战 掉血39｜竞速投影审计：pool=268/dpt=16.2/ttk=16.5432/tsurv=2.63514（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=16.5432/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.28（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=18.4/projected_dpt=13.4996/ratio=1.39/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=18.4/projected_dpt=13.4996/ratio=1.39/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.038139131661763局)，PROWESS(26分/7.462808092285175局)，HELLRAISER(26分/4.224565880130651局)，FEED(24分/32.147992784478646局)，OFFERING(24分/15.769471644722056局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5019335994315477局)，BASH(14分/2.1170207379805404局)，STOKE(16分/2.4094571206974256局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1705 胜，当前目标进阶 0
