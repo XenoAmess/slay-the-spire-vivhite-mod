@@ -19015,3 +19015,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.2552184843993963局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.414721341332463局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.339839852349115局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：4/1725 胜，当前目标进阶 4
+
+## 第 1726 局复盘（2026-09-30 00:32）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_DEFINITE_CRIMSON_INTEGRAL, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：RED_MASK
+- 战斗记录：F6 Unknown战 掉血10｜自损14（可行动段14/非行动段13，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血3｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损20（可行动段20/非行动段1，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血9｜自损20（可行动段20/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血7｜自损22（可行动段22/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血90｜自损37（可行动段37/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=208/dpt=15.6375/ttk=13.3013/tsurv=4.44444（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=13.3013/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.25（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=25.7143/projected_dpt=24.5809/ratio=1.09/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=25.7143/projected_dpt=24.5809/ratio=1.09/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.017561466063137局)，REND(38分/2.2227546286372664局)，THINKING_AHEAD(37分/3.7494423180051033局)，MAYHEM(37分/3.0622812760051286局)，ROLLING_BOULDER(36分/3.773031820741512局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.2473252197039986局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.3397698166378局)，VIVHITE_CARD_PARALLEL_STARFALL(23分/27.780245420631818局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：4/1726 胜，当前目标进阶 4
