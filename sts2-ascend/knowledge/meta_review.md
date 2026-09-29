@@ -13880,3 +13880,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：进程级复用 clone 内 `.review-cache/selfcheck-pool` 运行完整 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；真实 F1728 持久链回放命中桥接且 action 仍为 `continue_game_over`、params 仍为空；源码 `git diff --check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1729—1731局复盘（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1729, 1730, 1731`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1731局 F22 在同一场战斗中先出现 T2/T3 非致死、无可用牌的空过，随后 T4 进入致死、无可用牌的空过；现有非致死链与致死终局 join 各自成立，但没有直接记录“压力升级”。若该升级是同战斗资源耗尽的真实过渡，致死终局 reason 应只在同楼层、同 `COMBAT` 的有界决策尾部找到此前非致死 marker 时，追加升级桥；跨屏幕或跨楼层不得命中。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-021125_SFBG8Z2Z9MV5.json`。F22 T2 为 `hp=31/block=16/incoming=17/energy=0` 的非致死空过，T3 为 `hp=28/block=0/incoming=21/energy=0` 的非致死空过；T4 终端空过为 `hp=7/block=0/incoming=21/energy=0`，`hand_post_gap=15`，4 张手牌均 `energy_locked`，可负担格挡为 0。持久链已有 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`、`LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS` 和终端容量审计，但没有把两类 marker 直接相连。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立终局尾部中，仅当同一 `floor`、同一 `COMBAT`、最多 64 条历史决策内存在致死终端之前的非致死无牌 `end_turn` 时，追加 `NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS`，记录非致死次数、首末回合、末次非致死 HP/格挡后缺口、终端 HP/缺口及 delta；缺少前置 marker、越过屏幕/楼层边界或字段不可解析时不追加。评分、候选、门控、action 和 params 必须不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `nonlethal_unavailable_lethal_transition_obs` 回滚开关；关闭只移除升级桥尾缀。
+- `sts2-ascend/brain/policy.py`：在既有致死终局持久化恢复中复用最多 64 条、同楼层同 `COMBAT` 的非致死 `end_turn` marker，解析既有 reason 字段并把升级字段追加到终局 reason；不重算战斗快照，不进入任何行为决策。
+- `sts2-ascend/brain/selfcheck.py`：加入 F22 形态的正例、关闭开关等价性和跨屏边界负例，断言终局 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集 3—10 个同类终局尾部，按非致死次数、末次 HP/缺口、终端 HP/缺口和真实 `run_id/floor` 对账；证据重复前不改变 end_turn、防守、出牌或目标选择。
+- **调整**：若真实持久链出现回合字段漂移、旧战斗误接、跨屏/跨楼层误接或终端字段缺失，先收紧边界与解析契约并保留失败样本，不升级为行为门。
+- **回滚**：将 `nonlethal_unavailable_lethal_transition_obs` 设为 `False`；预期仅移除 `NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS`，既有非致死/致死终局 marker、action 和 params 保持不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配执行同一 selfcheck，退出码 0 并输出 `SELFCHECK OK`。目标三文件完整 diff 已回读，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

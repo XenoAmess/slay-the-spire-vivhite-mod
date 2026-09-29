@@ -17600,6 +17600,86 @@ def main() -> int:
             not in d_lethal_unavailable_outcome_off.reason), \
         f"致死无牌终局对账关闭后动作或 marker 漂移: {d_lethal_unavailable_outcome_off}"
 
+    # 3z-4c-1) 非致死→致死资源边界桥（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS）：
+    #         第1731局 F22 的形态——同一 COMBAT 尾部先有两次非致死空过，
+    #         随后才出现致死无牌空过。只记录压力链到致死边界的变化，
+    #         不改变终局 action/params；屏幕边界必须阻断误接。
+    lethal_transition_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_transition_ctx = _SettleCtx()
+    lethal_transition_ctx.decisions = [
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 4, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 5, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 6, "reason": d_lethal_empty.reason,
+        },
+    ]
+    d_lethal_transition = lethal_transition_pol.decide(
+        lethal_unavailable_outcome_state, lethal_transition_ctx)
+    assert (d_lethal_transition.action == d_lethal_empty_outcome.action
+            and d_lethal_transition.params == d_lethal_empty_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in d_lethal_transition.reason
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                in d_lethal_transition.reason
+            and "count=2/first_round=4/last_nonlethal_round=5"
+                in d_lethal_transition.reason
+            and "/terminal_round=6"
+                in d_lethal_transition.reason), \
+        f"非致死到致死边界桥缺失或动作漂移: {d_lethal_transition}"
+    assert knowledge.DEFAULT_POLICY[
+        "nonlethal_unavailable_lethal_transition_obs"] is True, \
+        "DEFAULT_POLICY 缺少 nonlethal_unavailable_lethal_transition_obs"
+
+    lethal_transition_off_know = knowledge.Knowledge(tmp)
+    lethal_transition_off_know.policy[
+        "nonlethal_unavailable_lethal_transition_obs"] = False
+    lethal_transition_off_pol = policy.Policy(lethal_transition_off_know)
+    lethal_transition_off_ctx = _SettleCtx()
+    lethal_transition_off_ctx.decisions = list(
+        lethal_transition_ctx.decisions)
+    d_lethal_transition_off = lethal_transition_off_pol.decide(
+        lethal_unavailable_outcome_state, lethal_transition_off_ctx)
+    assert (d_lethal_transition_off.action == d_lethal_transition.action
+            and d_lethal_transition_off.params
+            == d_lethal_transition.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in d_lethal_transition_off.reason
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                not in d_lethal_transition_off.reason), \
+        f"非致死到致死边界桥关闭后动作或既有 marker 漂移: " \
+        f"on={d_lethal_transition} off={d_lethal_transition_off}"
+
+    lethal_transition_boundary_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_transition_boundary_ctx = _SettleCtx()
+    lethal_transition_boundary_ctx.decisions = [
+        {
+            "screen": "MAP", "action": "proceed", "floor": 33,
+            "turn": 4, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 6, "reason": d_lethal_empty.reason,
+        },
+    ]
+    d_lethal_transition_boundary = lethal_transition_boundary_pol.decide(
+        lethal_unavailable_outcome_state, lethal_transition_boundary_ctx)
+    assert (d_lethal_transition_boundary.action
+            == d_lethal_transition.action
+            and d_lethal_transition_boundary.params
+            == d_lethal_transition.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in d_lethal_transition_boundary.reason
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                not in d_lethal_transition_boundary.reason), \
+        f"非致死到致死边界桥越过屏幕边界: {d_lethal_transition_boundary}"
+
     # 3z-4d) 非致死资源耗尽终局对账（NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）：
     #         第1679局 F17-T9 的形态——前置算术 gap 仍标记 raw_survival=yes，
     #         但同楼层下一条权威 GAME_OVER 仍为失败；只把这次反例接回终局，

@@ -5807,6 +5807,110 @@ class Policy:
         self._lethal_playable_reject_outcome_pending = _pending
         self._lethal_playable_reject_outcome_reported = False
 
+    @staticmethod
+    def _find_nonlethal_unavailable_lethal_transition(
+            decisions, floor=None, before_index=None, terminal_round=None,
+            terminal_hp=None, terminal_post_gap=None) -> dict | None:
+        """Find a bounded same-combat non-lethal-to-lethal transition.
+
+        This is an audit join over already persisted end-turn markers.  It
+        deliberately stops at a floor or screen boundary and never recomputes
+        a combat snapshot, so the result cannot affect the current action.
+        """
+        if not isinstance(decisions, list) or not decisions:
+            return None
+        try:
+            _stop = (len(decisions) if before_index is None
+                     else int(before_index))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        _stop = max(0, min(len(decisions), _stop))
+        if _stop <= 0:
+            return None
+
+        def _same_floor(left, right):
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _metric(row, name):
+            _reason = str(row.get("reason") or "")
+            _marker_at = _reason.rfind(
+                "NONLETHAL_UNAVAILABLE_END_TURN_OBS")
+            if _marker_at < 0:
+                return None
+            _match = re.search(
+                rf"(?:^|/|：){re.escape(name)}="
+                rf"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _reason[:_marker_at])
+            if not _match:
+                return None
+            try:
+                return float(_match.group(1))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        _rows = []
+        for _index in range(_stop - 1, max(-1, _stop - 64), -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            if _row.get("screen") not in (None, "COMBAT"):
+                break
+            if (_row.get("action") == "end_turn"
+                    and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
+                    in str(_row.get("reason") or "")):
+                _rows.append(_row)
+        if not _rows:
+            return None
+        _rows.reverse()
+
+        _parsed = []
+        for _row in _rows:
+            try:
+                _round = int(float(
+                    _row.get("turn", _row.get("round"))))
+            except (TypeError, ValueError, OverflowError):
+                return None
+            _hp = _metric(_row, "hp")
+            _post_gap = _metric(_row, "hand_post_gap")
+            if (_hp is None or _post_gap is None
+                    or not math.isfinite(_hp)
+                    or not math.isfinite(_post_gap)):
+                return None
+            _parsed.append({
+                "round": _round,
+                "hp": _hp,
+                "post_gap": _post_gap,
+            })
+        try:
+            _terminal_round = int(float(terminal_round))
+            _terminal_hp = float(terminal_hp)
+            _terminal_post_gap = float(terminal_post_gap)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if (not math.isfinite(_terminal_hp)
+                or not math.isfinite(_terminal_post_gap)):
+            return None
+        _last = _parsed[-1]
+        return {
+            "count": len(_parsed),
+            "first_round": _parsed[0]["round"],
+            "last_round": _last["round"],
+            "last_hp": _last["hp"],
+            "last_post_gap": _last["post_gap"],
+            "terminal_round": _terminal_round,
+            "terminal_hp": _terminal_hp,
+            "terminal_post_gap": _terminal_post_gap,
+            "hp_delta": _terminal_hp - _last["hp"],
+            "post_gap_delta": _terminal_post_gap - _last["post_gap"],
+        }
+
     def _consume_lethal_unavailable_terminal_outcome_note(
             self, pol, victory, floor=None, final_hp=None) -> str:
         """Join a lethal no-card end-turn to the authoritative GAME_OVER.
@@ -5848,6 +5952,33 @@ class Policy:
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
         _result = "victory" if victory else "defeat"
+        _transition_tail = ""
+        try:
+            _transition_enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_lethal_transition_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _transition_enabled = False
+        _transition = _pending.get("nonlethal_transition")
+        if _transition_enabled and isinstance(_transition, dict):
+            try:
+                _transition_tail = (
+                    "；非致死无牌→致死无牌升级："
+                    f"count={int(_transition['count'])}"
+                    f"/first_round={_round(_transition['first_round'])}"
+                    f"/last_nonlethal_round="
+                    f"{_round(_transition['last_round'])}"
+                    f"/last_nonlethal_hp={_num(_transition['last_hp'])}"
+                    f"/last_nonlethal_post_gap="
+                    f"{_num(_transition['last_post_gap'])}"
+                    f"/terminal_round={_round(_transition['terminal_round'])}"
+                    f"/terminal_hp={_num(_transition['terminal_hp'])}"
+                    f"/terminal_post_gap="
+                    f"{_num(_transition['terminal_post_gap'])}"
+                    f"/hp_delta={_num(_transition['hp_delta'])}"
+                    f"/post_gap_delta={_num(_transition['post_gap_delta'])}"
+                    "（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                _transition_tail = ""
         return (
             f"；致死无牌终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5869,6 +6000,7 @@ class Policy:
             f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
             f"/forced={_flag(_pending.get('forced'))}"
             f"/gap={_flag(_pending.get('gap'))}"
+            f"{_transition_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
 
     def _restore_lethal_unavailable_terminal_outcome_from_decisions(
@@ -5941,6 +6073,15 @@ class Policy:
             }
         except (TypeError, ValueError, OverflowError):
             return
+        _transition = self._find_nonlethal_unavailable_lethal_transition(
+            decisions,
+            floor=floor,
+            before_index=len(decisions) - 1,
+            terminal_round=_pending.get("terminal_round"),
+            terminal_hp=_pending.get("hp"),
+            terminal_post_gap=_pending.get("hand_post_gap"))
+        if isinstance(_transition, dict):
+            _pending["nonlethal_transition"] = _transition
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 
