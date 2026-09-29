@@ -14692,3 +14692,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.244254856189247局)，STOKE(16分/2.1613027000930614局)，BULLY(16分/2.7804570489935547局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.44（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1736 胜，当前目标进阶 0
+
+## 第 1737 局复盘（2026-09-30 04:15）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：SPITE, CINDER, JUGGLING, FEEL_NO_PAIN, TRUE_GRIT, MOLTEN_FIST, JUGGLING, DISMANTLE, UNMOVABLE, HEADBUTT, INFLAME
+- 本局遗物：JUZU_BRACELET, ANCHOR
+- 战斗记录：F6 Monster战 掉血2; F7 Monster战 掉血15; F9 Unknown战 掉血18; F12 Monster战 掉血33; F13 Elite战 掉血21｜竞速投影审计：pool=74/dpt=16.8/ttk=4.40476/tsurv=1.94444（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=4.40476/actual_over_projected=2.50（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T5判死→实战11回合获胜; F15 Elite战 掉血15（阵亡）
+- 当前高价值卡牌：PROWESS(27分/7.660306768390697局)，HELLRAISER(25分/5.6118066034521705局)，MANGLE(25分/51.4624419935191局)，FEED(24分/28.736082335840795局)，PACTS_END(24分/56.24937383839992局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.2363999641925845局)，STOKE(16分/2.153738140642736局)，BULLY(16分/2.7707254493220774局)
+- 策略进化：elite_grey_safety_mult: 1.90 → 2.10（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1737 胜，当前目标进阶 0
