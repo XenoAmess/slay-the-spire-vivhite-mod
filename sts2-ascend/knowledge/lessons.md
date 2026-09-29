@@ -14747,3 +14747,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.2052543568842626局)，STOKE(16分/2.1237437373841797局)，BULLY(16分/2.7321384665884616局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.35 → 0.37（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1741 胜，当前目标进阶 0
+
+## 第 1742 局复盘（2026-09-30 05:49）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：BREAKTHROUGH, MOLTEN_FIST, TWIN_STRIKE, RUPTURE, IRON_WAVE, SHRUG_IT_OFF, SECOND_WIND, JUGGERNAUT, RUPTURE, EVIL_EYE, RUPTURE, MOLTEN_FIST, BLUDGEON, IMPERVIOUS, CINDER, UNRELENTING, IRON_WAVE, HOWL_FROM_BEYOND
+- 本局遗物：LANTERN
+- 战斗记录：F9 Monster战 掉血10; F17 Boss战 掉血37｜自损1（可行动段1/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=156/dpt=4.05/ttk=38.5185/tsurv=4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=38.5185/actual_over_projected=0.23（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战9回合获胜｜竞速Boss有效火力收官对账：samples=7/actual_dpt=20.2857/projected_dpt=11.5012/ratio=1.86/min_ratio=0.88（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=20.2857/projected_dpt=11.5012/ratio=1.86/min_ratio=0.88（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血18｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F20 Unknown战 掉血2｜自损1（可行动段1/非行动段6，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血40｜自损1（可行动段1/非行动段26，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=64/dpt=20.4/ttk=3.13725/tsurv=1.45833（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=3.13725/actual_over_projected=2.87（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T6判死→实战9回合获胜; F23 Monster战 掉血20｜竞速投影审计：pool=129/dpt=17.55/ttk=7.35043/tsurv=1.55039（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=7.35043/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.58（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(27分/7.527186508910064局)，HELLRAISER(25分/5.514285032346262局)，MANGLE(25分/50.568131381840615局)，FEED(24分/28.236708766000376局)，PACTS_END(24分/55.27187626977916局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1975359666351677局)，STOKE(16分/2.116310634303335局)，BULLY(16分/2.7225759819554023局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.01 → 2.00（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F23——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1742 胜，当前目标进阶 0
