@@ -14175,3 +14175,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.646299110881132局)，BASH(14分/2.239176170745573局)，STOKE(16分/2.5484865935916536局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.40（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.05 → 2.04（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1689 胜，当前目标进阶 0
+
+## 第 1690 局复盘（2026-09-29 13:01）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：STAMPEDE, CINDER, MOLTEN_FIST, FEEL_NO_PAIN, UPPERCUT, BREAKTHROUGH, FEEL_NO_PAIN, INFLAME, HOWL_FROM_BEYOND, FLAME_BARRIER, BRAND, IRON_WAVE, FIGHT_ME
+- 本局遗物：REGAL_PILLOW, WHETSTONE, KUNAI
+- 战斗记录：F9 Elite战 掉血45; F11 Monster战 掉血15; F13 Monster战 掉血10｜自损1（可行动段1/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血13; F15 Monster战 掉血11; F17 Boss战 掉血61｜自损1（可行动段1/非行动段55，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=169/dpt=15/ttk=11.2667/tsurv=1.88889（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=11.2667/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.71（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1481978710337577局)，HELLRAISER(26分/4.45269083388787局)，PROWESS(25分/6.833738496829009局)，FEED(24分/31.80160316947739局)，OFFERING(24分/16.6210171269804局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.637037063993048局)，BASH(14分/2.2313390541479636局)，STOKE(16分/2.539566890514083局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1690 胜，当前目标进阶 0
