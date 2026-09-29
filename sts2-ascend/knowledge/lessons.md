@@ -14120,3 +14120,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.6930996018596494局)，BASH(14分/2.278776586188934局)，STOKE(16分/2.5935572446536748局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.38（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1684 胜，当前目标进阶 0
+
+## 第 1685 局复盘（2026-09-29 11:33）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：BREAKTHROUGH, RUPTURE, DISMANTLE, INFLAME, BARRICADE, ARMAMENTS, CINDER, IMPERVIOUS, INFLAME, BATTLE_TRANCE, MANGLE
+- 本局遗物：STRIKE_DUMMY, SHURIKEN
+- 战斗记录：F5 Monster战 掉血1; F7 Monster战 掉血10｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血16｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血23; F12 Unknown战 掉血15; F14 Elite战 掉血53｜自损1（可行动段1/非行动段49，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1861893114835524局)，HELLRAISER(26分/4.531437834309947局)，PROWESS(25分/6.954594947090185局)，FEED(24分/32.36402282797925局)，PACTS_END(24分/58.99868025600117局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.683673753253141局)，BASH(14分/2.2708008681372727局)，STOKE(16分/2.584479794297387局)
+- 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1685 胜，当前目标进阶 0
