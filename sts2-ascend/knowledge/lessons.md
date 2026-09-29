@@ -14032,3 +14032,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.769708038126378局)，BASH(14分/2.3435991091838586局)，STOKE(16分/2.6673340796225578局)
 - 策略进化：block_safety: 1.98 → 2.03（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.38（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F28——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1676 胜，当前目标进阶 0
+
+## 第 1677 局复盘（2026-09-29 08:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：TAUNT, PILLAGE, CINDER, HOWL_FROM_BEYOND, SHRUG_IT_OFF, EVIL_EYE, INFERNAL_BLADE, MOLTEN_FIST, DISMANTLE, HEADBUTT
+- 本局遗物：PENDULUM, ETERNAL_FEATHER
+- 战斗记录：F8 Monster战 掉血0; F9 Monster战 掉血12; F11 Monster战 掉血3; F12 Unknown战 掉血15; F14 Unknown战 掉血34; F17 Boss战 掉血63｜竞速投影审计：pool=196/dpt=16.2/ttk=12.0988/tsurv=6.3（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=12.0988/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.2483780788132646局)，HELLRAISER(26分/4.660339998302198局)，PROWESS(25分/7.152426710682283局)，FEED(25分/32.274082199367236局)，PACTS_END(24分/59.65212158249533局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.760014059992936局)，BASH(14分/2.335396512301715局)，STOKE(16分/2.657998410343879局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
+- 生涯战绩：0/1677 胜，当前目标进阶 0
