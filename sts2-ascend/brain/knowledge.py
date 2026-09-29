@@ -205,6 +205,10 @@ DEFAULT_POLICY = {
                                          # 已覆盖生命缺口时，记录 HP/格挡/意图、被过滤攻击数、
                                          # 仍可负担的非攻击牌数与蒸汽喷发层数；纯观测，不改
                                          # 结束回合判决。False = 关闭该尾缀，旧动作与理由恢复。
+    "invuln_lethal_attack_detail_obs": True,  # 无敌帧致死攻击清单（只读）：在上述 marker
+                                              # 内追加同一回合实际可支付、可玩的攻击 card_id@cost
+                                              # 列表，供 count 与牌面逐项对账；False 只移除该
+                                              # 清单字段，不改变既有 marker、动作或参数。
     "waterfall_about_to_blow_end_turn_obs": True,  # 瀑布巨兽自爆相终端观测：原生
                                                     # TriggerAboutToBlowState 将
                                                     # WATERFALL_GIANT 的 HP 设为

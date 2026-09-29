@@ -10955,6 +10955,7 @@ class Policy:
             _resc_gate_blocked_idx: set = set()
             _resc_invuln_note = ""
             _resc_invuln_attack_count = 0
+            _resc_invuln_attack_cards = []
             _resc_invuln_non_attack_count = 0
             if _resc_enabled:
                 try:
@@ -11027,6 +11028,13 @@ class Policy:
                                         and not self._card_unavailable(c)
                                         and _rcost <= energy):
                                     _resc_invuln_attack_count += 1
+                                    _rcard_id = str(
+                                        c.get("card_id") or c.get("name") or "card")
+                                    _rcost_text = (
+                                        "X" if c.get("costs_x")
+                                        else f"{float(_rcost):g}")
+                                    _resc_invuln_attack_cards.append(
+                                        f"{_rcard_id}@{_rcost_text}")
                                 continue
                             _resc_kept.append(c)
                             try:
@@ -11149,12 +11157,21 @@ class Policy:
                     (self._enemy_steam_eruption_stack(e)
                      for e in enemies if isinstance(e, dict)),
                     default=0.0)
+                try:
+                    _invuln_attack_detail_obs = bool(int(float(pol.get(
+                        "invuln_lethal_attack_detail_obs", 1) or 0)))
+                except (TypeError, ValueError, OverflowError):
+                    _invuln_attack_detail_obs = False
+                _invuln_attack_detail = (
+                    f",attack_cards={'|'.join(_resc_invuln_attack_cards)}"
+                    if _invuln_attack_detail_obs else "")
                 _invuln_end_turn_note = (
                     f"；无敌帧致死空过观测：enemy={'|'.join(_invuln_names) or '敌人'}"
                     f",hp={float(my_hp):g}/block={float(my_block):g}"
                     f"/incoming={float(incoming):g}"
                     f",vetoed_attacks={_resc_invuln_attack_count}"
                     f",non_attack_candidates={_resc_invuln_non_attack_count}"
+                    f"{_invuln_attack_detail}"
                     f",steam={float(_invuln_steam):g}"
                     f",forced={'yes' if forced_kill else 'no'}"
                     "（INVULN_LETHAL_END_TURN_OBS）")

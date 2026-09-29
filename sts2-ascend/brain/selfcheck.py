@@ -7048,8 +7048,20 @@ def main() -> int:
         f"无敌帧自爆相不得把唯一攻击打进不可击杀目标: {d_itv.action} {d_itv.params}（{d_itv.reason}）"
     assert "INVULN_LETHAL_END_TURN_OBS" in d_itv.reason \
         and "vetoed_attacks=1" in d_itv.reason \
-        and "non_attack_candidates=0" in d_itv.reason, \
+        and "non_attack_candidates=0" in d_itv.reason \
+        and "attack_cards=INV_HIT@1" in d_itv.reason, \
         f"无敌帧致死空过缺少可证伪分层: {d_itv.reason}"
+    itv_detail_off = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-detail-off-"))),
+        random.Random(7))
+    itv_detail_off.know.policy["invuln_lethal_attack_detail_obs"] = False
+    d_itv_detail_off = itv_detail_off.decide(
+        itv_combat_state([dict(itv_strike)]), DummyCtx())
+    assert d_itv_detail_off.action == d_itv.action \
+        and d_itv_detail_off.params == d_itv.params \
+        and "INVULN_LETHAL_END_TURN_OBS" in d_itv_detail_off.reason \
+        and "attack_cards=" not in d_itv_detail_off.reason, \
+        f"无敌帧致死攻击清单关闭后动作或既有 marker 漂移: {d_itv_detail_off.action} {d_itv_detail_off.params}（{d_itv_detail_off.reason}）"
     # ④g) WaterfallGiant 的原生 AboutToBlow 相会在移除 SteamEruptionPower 后
     # 只留下 HP=999999999 哨兵；新增观测必须用实体 ID 把它与普通无敌目标分开，
     # 且不得改写既有 end_turn 动作/参数。

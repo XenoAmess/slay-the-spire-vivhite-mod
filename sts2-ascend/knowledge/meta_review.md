@@ -13583,3 +13583,29 @@ production_code_commit: `8a3a86b60`（报告追加后由最终交付 commit 收�
 - **验证**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的继承 ACL 临时根中用进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。代码目标 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1709局复盘（INVULN_LETHAL_ATTACK_DETAIL_OBS）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：无敌帧致死空过 marker 目前只记录 `vetoed_attacks=3`，不能在单条持久化观测内证明被拦的到底是哪几张可支付攻击牌；若同一 marker 同时记录稳定 `card_id@cost` 列表，则列表长度应等于计数，并可与当回合手牌逐项核对，而不改变 `end_turn` 动作或参数。列表缺牌、不可支付牌误入、计数不一致或开关导致 action/params 漂移即可证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-185814_W9N6MM7KUHJT.json` 的 F17 T11 `end_turn` 为 HP19、格挡8、来袭39、能量1；既有 `INVULN_LETHAL_END_TURN_OBS` 只有 `vetoed_attacks=3/non_attack_candidates=0`，终局侧的 `LETHAL_PLAYABLE_REJECT_OBS` 才列出两张 `STRIKE_IRONCLAD+` 与一张 `STRIKE_IRONCLAD`。这是把“数量”与“牌面/费用”接成同一生产证据的最小切口。
+- **EXPECTED_SIGNAL**：未来3—10个独立无敌帧致死 `end_turn` 窗口中，`attack_cards` 以 `card_id@cost` 逐项对应同回合 playable、可支付且非 unavailable 攻击牌，列表长度等于 `vetoed_attacks`；无敌帧条件不成立时不得出现该字段。若字段错配、跨回合串线或终端/重载回读不一致，立即停止扩展并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `invuln_lethal_attack_detail_obs`；设为 `False` 只移除 `attack_cards` 字段。
+- `sts2-ascend/brain/policy.py`：在既有无敌帧救场过滤处收集稳定 `card_id@cost`，仅追加到 `INVULN_LETHAL_END_TURN_OBS`；不进入评分、候选、门控、目标、等待、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：默认夹具断言 `attack_cards=INV_HIT@1`，关闭开关后断言既有 marker、action 与 params 保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个独立窗口，按 `run_id/floor/turn/vetoed_attacks/attack_cards/incoming/raw_block/outcome` 对账；证据成熟前保持只读，不放宽无敌帧禁攻。
+- **调整**：若真实 API 缺少稳定 `card_id`、费用与手牌不一致，先保留原始窗口并收紧字段契约；不得用名称猜测替代原生 ID。
+- **回滚**：将 `invuln_lethal_attack_detail_obs` 设为 `False`；预期只移除 `attack_cards` 字段，既有无敌 marker、评分、action 与 params 保持不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定256槽池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED: selfcheck temp pool exhausted after 256 allocations`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 进程级 `tempfile.mkdtemp` 适配下运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未修改 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
