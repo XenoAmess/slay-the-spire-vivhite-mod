@@ -18993,3 +18993,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.271088281538718局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.565415070491284局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.497043568545216局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：4/1723 胜，当前目标进阶 4
+
+## 第 1724 局复盘（2026-09-29 23:50）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：BLOOD_VIAL, MINIATURE_CANNON
+- 战斗记录：F6 Monster战 掉血16｜自损20（可行动段20/非行动段10，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损16（可行动段16/非行动段15，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损6（可行动段6/非行动段15，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损8（可行动段8/非行动段14，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血19｜自损22（可行动段22/非行动段11，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血61｜自损18（可行动段18/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=232/dpt=50.625/ttk=4.58272/tsurv=2.47619（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=4.58272/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.02（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=34.25/projected_dpt=28.8764/ratio=1.42/min_ratio=0.19（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=34.25/projected_dpt=28.8764/ratio=1.42/min_ratio=0.19（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.088054267269246局)，REND(38分/2.2383959801475424局)，THINKING_AHEAD(37分/3.7758268520908005局)，MAYHEM(37分/3.0838303112626537局)，ROLLING_BOULDER(36分/3.799582352323964局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.2631394725533327局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.489936117744566局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.418303916055308局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：4/1724 胜，当前目标进阶 4
