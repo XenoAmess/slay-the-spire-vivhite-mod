@@ -18795,3 +18795,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.4190372821281496局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.970284107468455局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/22.94847975236465局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 1.90 → 1.89（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1705 胜，当前目标进阶 4
+
+## 第 1706 局复盘（2026-09-29 18:10）
+- 结果：💀 失败｜进阶 4｜到达层数 5｜当局评分 5
+- 死因：敌人组合 HAUNTED_SHIP
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血4｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血9｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血59｜自损40（可行动段40/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.74523591840401局)，REND(38分/2.384215255812976局)，THINKING_AHEAD(37分/4.021801354141899局)，MAYHEM(37分/3.2847250172269615局)，ROLLING_BOULDER(36分/4.047104395501741局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.4105706516407013局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.889888113092315局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/22.868160073231376局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1706 胜，当前目标进阶 4
