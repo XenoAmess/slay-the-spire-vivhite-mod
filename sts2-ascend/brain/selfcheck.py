@@ -17717,66 +17717,6 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_outcome.reason, \
         f"GAME_OVER 未继承 RACE_ESC_LATCH_HOLD 尾部: {d_race_terminal_outcome}"
 
-    # 3z-5b-dpt) 普通 Boss 的最后一条有效 DPT 样本必须能从持久化决策链
-    #             连接到权威 GAME_OVER；这是纯观测，不改变 action/params。
-    boss_dpt_terminal_know = race_terminal_know
-    boss_dpt_terminal_pol = policy.Policy(boss_dpt_terminal_know)
-    boss_dpt_terminal_ctx = _SettleCtx()
-    boss_dpt_terminal_ctx.decisions = [{
-        "screen": "COMBAT", "action": "play_card", "floor": 33, "turn": 4,
-        "reason": d_combat_boss_effective.reason,
-    }]
-    d_boss_dpt_terminal = boss_dpt_terminal_pol.decide(
-        race_terminal_outcome_state, boss_dpt_terminal_ctx)
-    assert (d_boss_dpt_terminal.action == "continue_game_over"
-            and d_boss_dpt_terminal.params == {}
-            and "outcome=defeat/floor=33/source_round=4/source_action=play_card"
-            "/final_hp=?/encounter=CAP_BOSS" in d_boss_dpt_terminal.reason
-            and "/net_dpt=10/projected_dpt=" in d_boss_dpt_terminal.reason
-            and "/ratio=" in d_boss_dpt_terminal.reason
-            and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
-            in d_boss_dpt_terminal.reason), \
-        f"Boss 有效火力与终局对账缺失或动作漂移: {d_boss_dpt_terminal}"
-    assert knowledge.DEFAULT_POLICY[
-        "boss_race_effective_dpt_terminal_outcome_obs"] is True
-
-    boss_dpt_retry_pol = policy.Policy(boss_dpt_terminal_know)
-    boss_dpt_retry_ctx = _SettleCtx()
-    boss_dpt_retry_ctx.decisions = list(boss_dpt_terminal_ctx.decisions)
-    d_boss_dpt_retry_1 = boss_dpt_retry_pol.decide(
-        race_terminal_outcome_state, boss_dpt_retry_ctx)
-    d_boss_dpt_retry_2 = boss_dpt_retry_pol.decide(
-        race_terminal_outcome_state, boss_dpt_retry_ctx)
-    assert ("BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
-            in d_boss_dpt_retry_1.reason
-            and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
-            in d_boss_dpt_retry_2.reason), \
-        f"Boss DPT 终局对账在提交前重试时被吞: {d_boss_dpt_retry_1} / {d_boss_dpt_retry_2}"
-    boss_dpt_retry_ctx.decisions.append({
-        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 33,
-        "reason": d_boss_dpt_retry_1.reason,
-    })
-    d_boss_dpt_committed = boss_dpt_retry_pol.decide(
-        race_terminal_outcome_state, boss_dpt_retry_ctx)
-    assert "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS" not \
-        in d_boss_dpt_committed.reason, \
-        f"Boss DPT 终局对账在提交后重复写入: {d_boss_dpt_committed}"
-
-    boss_dpt_terminal_know.policy[
-        "boss_race_effective_dpt_terminal_outcome_obs"] = False
-    boss_dpt_off_pol = policy.Policy(boss_dpt_terminal_know)
-    boss_dpt_off_ctx = _SettleCtx()
-    boss_dpt_off_ctx.decisions = list(boss_dpt_terminal_ctx.decisions)
-    d_boss_dpt_off = boss_dpt_off_pol.decide(
-        race_terminal_outcome_state, boss_dpt_off_ctx)
-    assert (d_boss_dpt_off.action == d_boss_dpt_terminal.action
-            and d_boss_dpt_off.params == d_boss_dpt_terminal.params
-            and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
-            not in d_boss_dpt_off.reason), \
-        f"Boss DPT 终局对账关闭后动作或 marker 漂移: {d_boss_dpt_off}"
-    boss_dpt_terminal_know.policy[
-        "boss_race_effective_dpt_terminal_outcome_obs"] = True
-
     race_terminal_replay_pol = policy.Policy(race_terminal_know)
     race_terminal_replay_ctx = _SettleCtx()
     race_terminal_replay_ctx.decisions = [{

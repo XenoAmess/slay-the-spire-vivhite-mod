@@ -544,11 +544,6 @@ DEFAULT_POLICY = {
                                            # 投影与差值，并携带遭遇键及血池起止值，
                                            # 纯观测不改评分、判决或动作。
                                            # False=严格回滚无该留痕
-    "boss_race_effective_dpt_terminal_outcome_obs": True,  # 将同楼层最后一条
-                                                            # BOSS_RACE_EFFECTIVE_DPT_OBS
-                                                            # 与权威 GAME_OVER outcome 对账；
-                                                            # 只读样本/血池/终局，不改动作或评分。
-                                                            # False=严格回滚该终局连接
     "boss_race_focus_switch_obs": True,  # Boss 竞速有效火力对账的换线上下文（BOSS_RACE_FOCUS_SWITCH_OBS）：
                                          # 在已有跨回合净降/投影标记旁披露此前实际非击杀换线次数
                                          # 与当前火线，纯观测不改评分、判决或动作；False=严格回滚
