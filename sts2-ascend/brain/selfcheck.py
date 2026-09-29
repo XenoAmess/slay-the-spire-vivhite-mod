@@ -4075,6 +4075,31 @@ def main() -> int:
             and "/incoming_gap=0/incoming_lethal=no/final_hp=0" in spto_note
             and "/terminal_cause=clock_expired" in spto_note), \
         f"沙坑末格终局对账缺字段: {spto_note}"
+
+    # When the clock and the incoming hit are both independently terminal,
+    # native forced_kill must not hide the overlap (1707-F33/T5 shape).
+    spto_ambiguous_rows = [dict(spto_rows[0])]
+    spto_ambiguous_rows[0]["reason"] = (
+        spto_ambiguous_rows[0]["reason"].replace(
+            "hp=26/block=20/incoming=20/covered=yes/",
+            "hp=8/block=4/incoming=20/covered=no/")
+        .replace("forced_kill=no", "forced_kill=yes")
+        .replace("incoming_gap=0/incoming_lethal=no",
+                 "incoming_gap=16/incoming_lethal=yes"))
+    spto_ambiguous_ctx = type("SPTOAmbiguousCtx", (), {
+        "decisions": spto_ambiguous_rows,
+        "run_finalized": True,
+        "finalize_requested": False,
+        "combat_notes": ["F33 Boss战 掉血80（阵亡）"],
+        "died_in_combat": {"node_type": "Boss"},
+    })()
+    spto_ambiguous_note = spto_pol._consume_sandpit_terminal_outcome_note(
+        spto_pol.know.policy, spto_ambiguous_ctx, False, 33, 0)
+    assert "/clock=1/" in spto_ambiguous_note \
+        and "/incoming_lethal=yes/" in spto_ambiguous_note \
+        and "/forced_kill=yes/" in spto_ambiguous_note \
+        and "/terminal_cause=ambiguous" in spto_ambiguous_note, \
+        f"沙坑时钟与来袭并存时未保留 ambiguous: {spto_ambiguous_note}"
     spto_go = {
         "screen": "GAME_OVER",
         "run": {"current_hp": 0},

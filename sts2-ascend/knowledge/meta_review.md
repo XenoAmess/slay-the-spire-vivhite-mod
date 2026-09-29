@@ -13532,3 +13532,28 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 槽位中用进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，输出 `SELFCHECK OK`。完整链来源探针返回 `target_hp=215/attack_candidates=3/raw_damage_cap=28`；目标三文件 `git diff --check` 无错误。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1706—1707局复盘（SANDPIT_TERMINAL_CAUSE_AMBIGUITY）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当沙坑时钟处于末格且当前来袭已致死时，原生 `forced_kill=yes` 只能证明终局路径，不能排除两类独立终局信号同时成立；既有 `terminal_cause` 不应让 `native_forced_kill` 覆盖该重叠，应输出 `ambiguous`。该假设可被单独时钟、单独来袭、无终局字段或真实胜利样本误标证伪。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260929-181055_S273TVV0VSP1.json`（1707局，416 条决策）。F33 Boss 的 D414 `end_turn` 为 `clock=1/hp=8/block=4/incoming=20/covered=no/forced_kill=yes/rescue=unavailable/energy=0/incoming_gap=16/incoming_lethal=yes`；紧随其后的 D415 `GAME_OVER` 原观测为 `terminal_cause=native_forced_kill`。这与既有 1650—1651 终局归因契约中“两者同时成立应为 `ambiguous`/`unresolved`”冲突。
+- **EXPECTED_SIGNAL**：`clock<=1` 且 `incoming_lethal=yes` 时输出 `terminal_cause=ambiguous`，即使 `forced_kill=yes`；仅时钟耗尽仍为 `clock_expired`，仅来袭致死仍为 `incoming_damage`，其余原有归因保持不变。该字段仍只属于既有终局观测，不得改变 action/params。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `victory`/存活判断之后、`forced_kill` 分支之前加入时钟与来袭致死重叠判定；不进入评分、排序、门控、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：复用既有白绮 F33 沙坑终局夹具，增加 `clock=1`、`incoming_lethal=yes`、`forced_kill=yes` 的 `ambiguous` 断言，同时保留单独时钟 `clock_expired`、关闭开关和 action/params 不漂移覆盖。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3—10 个独立沙坑终局，按 `clock/incoming_lethal/forced_kill/rescue` 及原生下一状态分层；继续只读观测，不升级为策略行为。
+- **调整**：若单一成因样本被标为 `ambiguous`，或终局字段与下一状态不一致，先保留原始证据并收紧重叠判定。
+- **回滚**：删除本次 overlap 条件即可恢复旧优先级；临时关闭既有 `sandpit_terminal_cause_obs` 或 `vivhite_sandpit_terminal_cause_obs` 仅移除归因字段，终端 marker、action 与 params 不变。
+- **验证**：直接 selfcheck 仍受宿主固定 256 槽池限制；使用同一 clone 的 selfcheck 池做进程级临时目录适配后输出 `SELFCHECK OK`，目标源码 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

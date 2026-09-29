@@ -5192,6 +5192,15 @@ class Policy:
                 terminal_cause = "victory"
             elif final_hp_value is None or final_hp_value > 0.0:
                 terminal_cause = "unresolved"
+            # A terminal frame can expose both independent death signals:
+            # the sandpit clock is at its last tick and the incoming hit is
+            # already lethal.  The native forced-kill flag confirms the
+            # terminal path, but cannot disambiguate which signal caused it;
+            # keep the audit honest instead of letting that flag mask the
+            # overlap.
+            elif (clock_value is not None and clock_value <= 1.0
+                  and incoming_lethal_text == "yes"):
+                terminal_cause = "ambiguous"
             elif forced_text == "yes":
                 terminal_cause = "native_forced_kill"
             elif (clock_value is not None and clock_value <= 1.0
