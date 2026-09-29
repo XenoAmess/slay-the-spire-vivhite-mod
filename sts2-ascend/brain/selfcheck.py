@@ -10041,8 +10041,58 @@ def main() -> int:
             and "/combat_hp_lost=19" in d_etf_outcome.reason
             and "/combat_self_hp_loss=2" in d_etf_outcome.reason
             and "/combat_stall=no" in d_etf_outcome.reason
+            and "/projected_after_pct=?" in d_etf_outcome.reason
+            and "/actual_after_pct=65%" in d_etf_outcome.reason
             and "/combat_detail_source=died_in_combat" in d_etf_outcome.reason), \
         f"强制精英结局对账缺失: {d_etf_outcome.reason}"
+
+    # The map gate's numeric projection must survive the map -> GAME_OVER join
+    # instead of forcing reviewers to parse the surrounding prose. This case
+    # fails on the grey survival veto, not on deck size, so a post-Elite
+    # projection is available; terminal HP is authoritative for the actual
+    # side of the comparison.
+    etf_proj_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-forced-proj-"))
+    etf_proj_know = knowledge.Knowledge(etf_proj_dir)
+    etf_proj_pol = policy.Policy(etf_proj_know)
+    etf_proj_state = {
+        "screen": "MAP", "run_id": "ELITE-FORCED-PROJ-CHECK",
+        "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": [etf_head],
+                "nodes": [etf_head, etf_boss],
+                "boss_node": {"row": 2}},
+        "run": {"current_hp": 53, "max_hp": 80, "gold": 0, "floor": 7,
+                "deck": [{"card_id": f"ELITE_PROJ_CARD_{i}",
+                          "card_type": "Attack", "energy_cost": 1}
+                         for i in range(8)]}}
+    etf_proj_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [],
+        "run_id": "ELITE-FORCED-PROJ-CHECK",
+        "died_in_combat": {
+            "comp_id": "TEST_FORCED_PROJ", "node_type": "Elite",
+            "floor": 8, "rounds": 4, "hp_lost": 53.0,
+            "self_hp_loss": 1.0, "stall": False,
+        },
+    })()
+    d_etf_proj = etf_proj_pol.decide(etf_proj_state, etf_proj_ctx)
+    assert d_etf_proj.action == "choose_map_node" \
+        and d_etf_proj.params == {"option_index": 0} \
+        and "projected_after_pct=" in d_etf_proj.reason \
+        and "projected_after_pct=?" not in d_etf_proj.reason, \
+        f"强制精英投影未进入地图观测: {d_etf_proj.reason}"
+    etf_proj_game_over = {
+        "screen": "GAME_OVER", "run_id": "ELITE-FORCED-PROJ-CHECK",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 8,
+                       "can_continue": True},
+        "run": {"current_hp": 0},
+    }
+    d_etf_proj_outcome = etf_proj_pol.decide(
+        etf_proj_game_over, etf_proj_ctx)
+    assert (d_etf_proj_outcome.action == "continue_game_over"
+            and "/projected_after_pct=" in d_etf_proj_outcome.reason
+            and "projected_after_pct=?" not in d_etf_proj_outcome.reason
+            and "/actual_after_pct=0%" in d_etf_proj_outcome.reason), \
+        f"强制精英预测-实际血量对账缺失: {d_etf_proj_outcome.reason}"
     # The first GAME_OVER decision may be lost before persistence.  A retry
     # must re-emit the audit; once its marker is durable, a further poll must
     # remain idempotent.

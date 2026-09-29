@@ -3715,16 +3715,20 @@ class Policy:
                 best_notes.append(elite_gate_note + "但其余候选评分更差，取损失最小项")
             if bool(pol.get("elite_forced_entry_obs", True)):
                 mode = "only_candidate" if len(cand) <= 1 else "least_loss"
+                _projected_after_pct = self._elite_forced_entry_projected_after(
+                    elite_gate_note)
                 self._remember_elite_forced_entry_observation(
                     floor=floor, hp=hp, max_hp=max_hp,
                     good_cards=good_cards, elite_deck_req=elite_deck_req,
-                    elite_gate_f=elite_gate_f, candidates=len(cand), mode=mode)
+                    elite_gate_f=elite_gate_f, candidates=len(cand), mode=mode,
+                    projected_after_pct=_projected_after_pct)
                 best_notes.append(
                     "强制精英进场观测："
                     f"floor={int(floor)}/hp={int(hp)}/{int(max_hp)}"
                     f"/good_cards={good_cards}/{elite_deck_req}"
                     f"/gate={elite_gate_f:.2f}/candidates={len(cand)}"
-                    f"/mode={mode}（ELITE_FORCED_ENTRY_OBS）")
+                    f"/mode={mode}/projected_after_pct={_projected_after_pct}"
+                    "（ELITE_FORCED_ENTRY_OBS）")
             note_txt = f"；{'；'.join(best_notes)}"
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
@@ -4479,9 +4483,26 @@ class Policy:
             f"/ids={_occupied_ids}/ready_ids={_ready_ids}"
             "（POTION_RESERVE_END_TURN_OBS）")
 
+    @staticmethod
+    def _elite_forced_entry_projected_after(note) -> str:
+        """Extract the map gate's post-Elite HP projection for a durable join.
+
+        The gate note is already the authoritative projection used by map
+        scoring. Keep the observation conservative: if the gate failed only
+        on deck size, there is no post-combat projection to invent.
+        """
+        match = re.search(
+            r"预计战后仅剩([0-9]+(?:\.[0-9]+)?)%", str(note or ""))
+        if not match:
+            return "?"
+        try:
+            return f"{clamp(float(match.group(1)), 0.0, 100.0):g}%"
+        except (TypeError, ValueError, OverflowError):
+            return "?"
+
     def _remember_elite_forced_entry_observation(
             self, floor, hp, max_hp, good_cards, elite_deck_req,
-            elite_gate_f, candidates, mode) -> None:
+            elite_gate_f, candidates, mode, projected_after_pct="?") -> None:
         """Keep the map-side forced-Elite sample until its next room resolves."""
         try:
             self._elite_forced_entry_pending = {
@@ -4494,6 +4515,7 @@ class Policy:
                 "gate": float(elite_gate_f),
                 "candidates": int(candidates),
                 "mode": str(mode),
+                "projected_after_pct": str(projected_after_pct or "?"),
             }
             self._elite_forced_entry_reported = False
         except (TypeError, ValueError, OverflowError):
@@ -4511,7 +4533,7 @@ class Policy:
             return False
 
     def _consume_elite_forced_entry_outcome_note(
-            self, pol, ctx, victory, floor=None) -> str:
+            self, pol, ctx, victory, floor=None, terminal_hp=None) -> str:
         """Link a forced-Elite map sample to the authoritative GAME_OVER result."""
         if not self._elite_forced_entry_outcome_enabled(pol):
             return ""
@@ -4545,6 +4567,19 @@ class Policy:
         # This tail is deliberately optional: a process reload may retain the
         # durable map/terminal join without reconstructing the in-memory death
         # object, and must not manufacture values in that case.
+        _projected_after_pct = str(
+            _pending.get("projected_after_pct") or "?")
+        _actual_after_pct = "?"
+        try:
+            _terminal_hp = (None if terminal_hp is None
+                            else float(terminal_hp))
+            _max_hp = float(_pending.get("max_hp"))
+            if (_terminal_hp is not None and math.isfinite(_terminal_hp)
+                    and math.isfinite(_max_hp) and _max_hp > 0.0):
+                _actual_after_pct = f"{clamp(100.0 * _terminal_hp / _max_hp, 0.0, 100.0):g}%"
+        except (TypeError, ValueError, OverflowError):
+            pass
+
         _combat_tail = ""
         _died = getattr(ctx, "died_in_combat", None)
         if not victory and isinstance(_died, dict):
@@ -4568,6 +4603,20 @@ class Policy:
                     f"/combat_self_hp_loss={_num(_died.get('self_hp_loss'))}"
                     f"/combat_stall={_stall_text}"
                     "/combat_detail_source=died_in_combat")
+                if _actual_after_pct == "?":
+                    try:
+                        _entry_hp = float(_pending.get("hp"))
+                        _max_hp = float(_pending.get("max_hp"))
+                        _lost_hp = float(_died.get("hp_lost"))
+                        if (math.isfinite(_entry_hp)
+                                and math.isfinite(_max_hp)
+                                and math.isfinite(_lost_hp)
+                                and _max_hp > 0.0):
+                            _actual_after_pct = (
+                                f"{clamp(100.0 * (_entry_hp - _lost_hp) / _max_hp,
+                                         0.0, 100.0):g}%")
+                    except (TypeError, ValueError, OverflowError):
+                        pass
 
         _result = "victory" if victory else "defeat"
         _terminal_floor = "?" if floor is None else str(floor)
@@ -4580,6 +4629,8 @@ class Policy:
             f"/gate={_num(_pending.get('gate'))}"
             f"/candidates={_pending.get('candidates', '?')}"
             f"/mode={_pending.get('mode', '?')}"
+            f"/projected_after_pct={_projected_after_pct}"
+            f"/actual_after_pct={_actual_after_pct}"
             f"/outcome={_result}/terminal_floor={_terminal_floor}"
             f"{_combat_tail}"
             " (ELITE_FORCED_ENTRY_OUTCOME_OBS)")
@@ -4638,26 +4689,31 @@ class Policy:
                     or "COMBAT" not in later_screens):
                 return
             match = re.search(
-                r"floor=(\d+)/hp=([^/]+)/([^/]+)/good_cards=([^/]+)/([^/]+)"
-                r"/gate=([^/]+)/candidates=(\d+)/mode=([A-Za-z_]+)",
+                r"floor=(?P<entry_floor>\d+)/hp=(?P<hp>[^/]+)/(?P<max_hp>[^/]+)/"
+                r"good_cards=(?P<good_cards>[^/]+)/(?P<required>[^/]+)/"
+                r"gate=(?P<gate>[^/]+)/candidates=(?P<candidates>\d+)/"
+                r"mode=(?P<mode>[A-Za-z_]+)"
+                r"(?:/projected_after_pct=(?P<projected>[^（/]+))?",
                 reason[:marker_at])
             if not match:
                 return
             try:
-                _entry_floor = int(match.group(1))
+                _entry_floor = int(match.group("entry_floor"))
                 _expected_floor = _entry_floor + 1
                 if floor is not None and int(float(floor)) != _expected_floor:
                     return
                 self._elite_forced_entry_pending = {
                     "entry_floor": _entry_floor,
                     "expected_floor": _expected_floor,
-                    "hp": int(float(match.group(2))),
-                    "max_hp": int(float(match.group(3))),
-                    "good_cards": int(float(match.group(4))),
-                    "required": int(float(match.group(5))),
-                    "gate": float(match.group(6)),
-                    "candidates": int(match.group(7)),
-                    "mode": match.group(8),
+                    "hp": int(float(match.group("hp"))),
+                    "max_hp": int(float(match.group("max_hp"))),
+                    "good_cards": int(float(match.group("good_cards"))),
+                    "required": int(float(match.group("required"))),
+                    "gate": float(match.group("gate")),
+                    "candidates": int(match.group("candidates")),
+                    "mode": match.group("mode"),
+                    "projected_after_pct": (
+                        match.group("projected") or "?").strip(),
                 }
             except (TypeError, ValueError, OverflowError):
                 return
@@ -16902,7 +16958,7 @@ class Policy:
             ctx, go.get("floor"))
         _elite_forced_entry_outcome_note = (
             self._consume_elite_forced_entry_outcome_note(
-                self.know.policy, ctx, victory, go.get("floor")))
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         _longfight_joint_flip_terminal_outcome_note = (
             self._consume_longfight_joint_flip_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))

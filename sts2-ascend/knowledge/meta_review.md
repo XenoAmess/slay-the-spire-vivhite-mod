@@ -13326,3 +13326,28 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：受控完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff `git diff --check` 通过。未写入 `.runtime/`、在线运行态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1683—1685局复盘（ELITE_FORCED_ENTRY_PROJECTION_OUTCOME_OBS）
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：强制精英进场的地图生存投影可能系统性乐观；若把地图闸门的 `projected_after` 与终局权威血量 `actual_after` 结构化接到同一条终局 marker，未来可区分投影偏差、战斗波动和模式差异，而不改变选路动作。
+- **EVIDENCE**：第1683局精确 run `L0PCZJEQZQEQ` 在 F10 仅有一个候选精英，入场 `56/80`、`good_cards=9/4`、`gate=0.10`、`mode=only_candidate`，地图理由中的战后投影约为4%，随后 F11 精英战掉血56并阵亡。第1685局精确 run `0KMNCEWBQPPZ` 在 F13 入场 `53/80`、`good_cards=10/4`、`mode=only_candidate`，地图理由为战后仅剩2%，随后 F14 `BYGONE_EFFIGY` 掉血53并阵亡、终局 HP 为0。既有 `ELITE_FORCED_ENTRY_OUTCOME_OBS` 已能接上战斗结算，但只能从周边 prose 反查投影值。
+- **EXPECTED_SIGNAL**：未来3—10个独立强制精英样本中，地图 marker 应带 `projected_after_pct`，终局 marker 应带同值及权威 `actual_after_pct`，并能按 `only_candidate|least_loss`、胜负、楼层和 `run_id` 对账。字段缺失、解析错位、终局血量不一致、跨局串线或 action/params 漂移即证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：从既有精英闸门理由提取数值投影，随 pending 样本进入终局；终局优先使用 `GAME_OVER` 的 terminal HP，只有缺失时才用既有 `died_in_combat` 的入场 HP−掉血回退计算。只增加 `projected_after_pct` / `actual_after_pct` 观测，不进入评分、候选、门控或动作参数；旧 marker 重载时保守填 `?`。
+- `sts2-ascend/brain/knowledge.py`：补充既有 `elite_forced_entry_outcome_obs` 的字段契约说明。
+- `sts2-ascend/brain/selfcheck.py`：保留 deck-only 强制精英的 `?` 回退夹具，并增加数值投影→GAME_OVER 的夹具，断言动作仍为 `choose_map_node`/`continue_game_over` 且参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个独立样本，按 `run_id/floor/mode/outcome/projected_after_pct/actual_after_pct` 分层；证据成熟前只观察，不调整强制精英选路。
+- **调整**：若字段对账正确但偏差在同一模式持续同向，再单独评估投影校准；若偏差只来自特定敌人或战斗阶段，先按战斗上下文分层，不能直接改门槛。
+- **回滚**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期只移除终局对账 marker，地图强制进场 marker、评分、action 与 params 保持不变。
+- **验证**：按规定 `py -3 -B sts2-ascend/brain/selfcheck.py` 完整运行并输出 `SELFCHECK OK`、退出码0；临时 Windows DACL bootstrap 已在自检后删除，目标三文件 `git diff --check` 通过。`failed_review_replay.requested_packages=[]`，未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
