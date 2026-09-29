@@ -236,7 +236,7 @@ DEFAULT_POLICY = {
     "nonlethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a non-lethal no-card end-turn to a nearby GAME_OVER/Victory result, including a bounded same-combat chain; False removes only the outcome marker.
     "nonlethal_unavailable_chain_pressure_obs": True,  # Audit-only summary when a bounded same-combat terminal chain contains repeated non-lethal no-card turns; False removes only the pressure tail.
     "nonlethal_unavailable_energy_pressure_obs": True,  # Audit-only attribution when every repeated non-lethal chain row is energy-locked rather than hook-locked; False removes only this attribution tail.
-    "nonlethal_unavailable_terminal_overlap_obs": True,  # Audit-only overlap field on the non-lethal terminal join; records whether the bounded chain also observed a Waterfall self-destruct end-turn; False removes only this field.
+    "nonlethal_unavailable_terminal_overlap_obs": True,  # Audit-only overlap field on the non-lethal terminal join; records Waterfall self-destruct and/or Sandpit last-tick end-turn overlap; False removes only this field.
     "ringing_hook_lock_terminal_outcome_obs": True,  # Audit-only terminal join for a full RINGING_POWER hand lock (every remaining card blocked); False removes only this dedicated marker and never changes the action.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
     "kill_race_lethal_output_capacity_obs": True,  # Audit-only current target/affordable attack capacity at a kill-race lethal no-card end-turn and its terminal outcome join; False removes both capacity markers.

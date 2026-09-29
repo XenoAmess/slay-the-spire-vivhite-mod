@@ -6032,7 +6032,11 @@ class Policy:
         _overlap_tail = ""
         if _overlap_enabled:
             _overlap = str(_pending.get("terminal_overlap") or "unknown")
-            if _overlap not in {"none", "waterfall_about_to_blow", "unknown"}:
+            if _overlap not in {
+                    "none", "waterfall_about_to_blow",
+                    "sandpit_eat_end_turn",
+                    "waterfall_about_to_blow+sandpit_eat_end_turn",
+                    "unknown"}:
                 _overlap = "unknown"
             _overlap_tail = (
                 f"/terminal_overlap={_overlap}"
@@ -6181,6 +6185,22 @@ class Policy:
             and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS"
             in str(_candidate.get("reason") or "")
             for _candidate in _lookback[_source_pos:])
+        _sandpit_overlap = any(
+            isinstance(_candidate, dict)
+            and (_candidate.get("screen") in (None, "COMBAT"))
+            and (_candidate.get("action") == "end_turn")
+            and "SANDPIT_EAT_END_TURN_OBS"
+            in str(_candidate.get("reason") or "")
+            for _candidate in _lookback[_source_pos:])
+        if _waterfall_overlap and _sandpit_overlap:
+            _terminal_overlap = (
+                "waterfall_about_to_blow+sandpit_eat_end_turn")
+        elif _waterfall_overlap:
+            _terminal_overlap = "waterfall_about_to_blow"
+        elif _sandpit_overlap:
+            _terminal_overlap = "sandpit_eat_end_turn"
+        else:
+            _terminal_overlap = "none"
         # Keep a second, wider but still bounded same-combat tail for repeated
         # non-lethal resource exhaustion.  The ordinary source join remains
         # limited to 12 rows; this summary only counts persisted end_turn
@@ -6320,9 +6340,7 @@ class Policy:
                 "chain": bool(_source_offset),
                 "bridge_decisions": _source_offset,
                 "bridge_rounds": _bridge_rounds,
-                "terminal_overlap": (
-                    "waterfall_about_to_blow"
-                    if _waterfall_overlap else "none"),
+                "terminal_overlap": _terminal_overlap,
                 "pressure_count": _pressure_count,
                 "pressure_first_round": _pressure_first_round,
                 "pressure_last_round": _pressure_last_round,

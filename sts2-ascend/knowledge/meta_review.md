@@ -13799,3 +13799,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接受管 selfcheck 复现既有固定256槽临时池耗尽后，使用同一 clone 的 `.review-cache/selfcheck-pool` 进程内临时目录适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`；退出码0，输出 `SELFCHECK OK`，共274次临时分配。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1726局复盘（NONLETHAL_SANDPIT_OVERLAP_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1726`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非致死无牌链的 `incoming_gap` 可生还并不等于战斗仍可继续；第1726局 F33-T5 同时处于 `SANDPIT_EAT_END_TURN_OBS` 的沙坑末格，GAME_OVER 进一步判定 `terminal_cause=clock_expired`。若这类终局确实是资源耗尽链与原生沙坑时钟共同出现，终局审计应能在同一有界 COMBAT 尾部给出可检索的重叠指纹；若重叠字段在无沙坑、跨楼层或非末格样本出现，则假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260930-001254_54TK6NQR8K4R.json` 的 F33 T3/T5 均有非致死资源耗尽空过；T5 为 `hp=60/block=0/incoming=20/energy=0`，同时记录 `clock=1/rescue=unavailable/incoming_lethal=no` 的 `SANDPIT_EAT_END_TURN_OBS`，随后 GAME_OVER 记录 `final_hp=0/terminal_cause=clock_expired`。现有非致死终局链已能记录 `count=2/first_round=3/last_round=5`，但 overlap 只识别瀑布自爆，无法机械关联沙坑观测。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立终局窗口按 `run_id/floor/turn/action/terminal_overlap` 对账；仅当同楼层、同 COMBAT 的非致死终局链尾部还出现沙坑末格 marker 时追加 `terminal_overlap=sandpit_eat_end_turn`，瀑布与沙坑并存时保留组合值；无沙坑、跨楼层、非 `end_turn` 或旧战斗尾部不得追加。结合 `SANDPIT_TERMINAL_OUTCOME_OBS` 的 `terminal_cause` 核验时钟耗尽归因；action、params、评分、目标和门控必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：扩展既有默认开启的 `nonlethal_unavailable_terminal_overlap_obs` 注释，明确该回滚键同时覆盖瀑布自爆与沙坑末格重叠。
+- `sts2-ascend/brain/policy.py`：在既有最多12条、同楼层同 COMBAT 的非致死终局恢复中读取 `SANDPIT_EAT_END_TURN_OBS`，把 overlap 写为 `sandpit_eat_end_turn` 或与瀑布并存的组合值；不新增行为门，不进入评分、候选、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入第1726局 F33-T5 形状的沙坑重叠夹具，断言默认字段、既有链 marker、action/params 等价，以及关闭 overlap 键后只移除重叠字段。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集 3—10 个同类窗口，按 `terminal_overlap`、`terminal_cause`、沙坑 clock、rescue 可用性、非致死链次数和终局胜负分层；证据成熟前不改变 `end_turn`、救援牌或竞速攻防策略。
+- **调整**：若真实决策链的沙坑 marker 出现在非末格、同楼层另一场战斗或 `terminal_cause` 与 `clock_expired` 不一致，先收紧 COMBAT 尾部边界与字段契约，保留失败样本，不升级为行为闸门。
+- **回滚**：将 `nonlethal_unavailable_terminal_overlap_obs` 设为 `False`；预期只移除 `NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS` 及 `terminal_overlap` 字段，非致死终局链、沙坑终局对账、action 和 params 保持不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现固定256槽入口的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 内用进程级临时目录适配运行同一入口，退出码0并输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
+
+- `retry_resolution: 20260930-004932-1790700572589486100-3a8e2966 integrated`

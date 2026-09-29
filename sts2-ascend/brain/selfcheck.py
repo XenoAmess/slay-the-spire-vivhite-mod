@@ -17856,6 +17856,60 @@ def main() -> int:
                 not in d_nonlethal_waterfall_overlap_off.reason), \
         f"非致死链重叠观测关闭后动作或既有 marker 漂移: {d_nonlethal_waterfall_overlap_off}"
 
+    # 3z-4f2) 非致死资源耗尽链与沙坑末格相重叠：第1726局 F33-T5 的
+    #         形态——前置非致死空过与同战斗最后一格沙坑观测相邻，终局
+    #         另由 SANDPIT_TERMINAL_OUTCOME_OBS 判为 clock_expired；这里
+    #         只把两条持久观测链机械相连，不把 overlap 当作终局原因。
+    nonlethal_sandpit_overlap_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_sandpit_overlap_ctx = _SettleCtx()
+    nonlethal_sandpit_overlap_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 6, "reason": d_nonlethal_empty.reason,
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7,
+        "reason": "战斗：沙坑末格空过观测："
+                   "clock=1/hp=55/block=22/incoming=50/covered=no"
+                   "/forced_kill=no/rescue=unavailable/energy=0"
+                   "/rescue_effect=none/incoming_gap=28/incoming_lethal=no"
+                   "/rescue_viable=no（SANDPIT_EAT_END_TURN_OBS）",
+    }]
+    d_nonlethal_sandpit_overlap = nonlethal_sandpit_overlap_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_sandpit_overlap_ctx)
+    assert (d_nonlethal_sandpit_overlap.action
+            == d_nonlethal_chain.action
+            and d_nonlethal_sandpit_overlap.params
+            == d_nonlethal_chain.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_sandpit_overlap.reason
+            and "/terminal_overlap=sandpit_eat_end_turn"
+                in d_nonlethal_sandpit_overlap.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
+                in d_nonlethal_sandpit_overlap.reason), \
+        f"非致死链与沙坑末格重叠观测缺失或动作漂移: {d_nonlethal_sandpit_overlap}"
+    nonlethal_sandpit_overlap_off_know = knowledge.Knowledge(tmp)
+    nonlethal_sandpit_overlap_off_know.policy[
+        "nonlethal_unavailable_terminal_overlap_obs"] = False
+    nonlethal_sandpit_overlap_off_pol = policy.Policy(
+        nonlethal_sandpit_overlap_off_know)
+    nonlethal_sandpit_overlap_off_ctx = _SettleCtx()
+    nonlethal_sandpit_overlap_off_ctx.decisions = list(
+        nonlethal_sandpit_overlap_ctx.decisions)
+    d_nonlethal_sandpit_overlap_off = (
+        nonlethal_sandpit_overlap_off_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_sandpit_overlap_off_ctx))
+    assert (d_nonlethal_sandpit_overlap_off.action
+            == d_nonlethal_sandpit_overlap.action
+            and d_nonlethal_sandpit_overlap_off.params
+            == d_nonlethal_sandpit_overlap.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_sandpit_overlap_off.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
+                not in d_nonlethal_sandpit_overlap_off.reason), \
+        f"非致死链沙坑重叠关闭后动作或既有 marker 漂移: {d_nonlethal_sandpit_overlap_off}"
+
     # 3z-4g) 重复非致死资源耗尽压力摘要：第1722局 F17 在 T4/T5/T6/T8
     #         多次空过后才进入 T9 致死终局。摘要只统计同楼层、同 COMBAT
     #         的有界尾部，补充次数与首末回合，不改变终局动作或既有链 marker。
