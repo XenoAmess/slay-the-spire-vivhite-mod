@@ -14615,3 +14615,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.300017033537311局)，STOKE(16分/2.2150037956406865局)，BULLY(16分/2.8495420455780875局)
 - 策略进化：block_safety: 2.01 → 2.06（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1729 胜，当前目标进阶 0
+
+## 第 1730 局复盘（2026-09-30 02:01）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：FLAME_BARRIER, SHRUG_IT_OFF, BLUDGEON, TRUE_GRIT, ANGER, SWORD_BOOMERANG, SALVO, POMMEL_STRIKE, SPITE, HOWL_FROM_BEYOND, CRUELTY, MANGLE, CINDER, CINDER, DISMANTLE, CINDER, COLOSSUS, SWORD_BOOMERANG, FLAME_BARRIER, IMPERVIOUS
+- 本局遗物：STRAWBERRY, RIPPLE_BASIN, GREMLIN_HORN
+- 战斗记录：F17 Boss战 掉血60｜竞速投影审计：pool=230/dpt=29.7/ttk=7.74411/tsurv=5.89744（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=7.74411/actual_over_projected=0.77（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜｜竞速Boss有效火力收官对账：samples=4/actual_dpt=37.625/projected_dpt=30.3346/ratio=1.44/min_ratio=0.67（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=37.625/projected_dpt=30.3346/ratio=1.44/min_ratio=0.67（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血29; F22 Monster战 掉血13; F25 Monster战 掉血16; F31 Monster战 掉血17; F33 Boss战 掉血80｜竞速投影审计：pool=331/dpt=12.15/ttk=27.2428/tsurv=4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=27.2428/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.25（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=27.5/projected_dpt=17.1769/ratio=1.62/min_ratio=0.47（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=27.5/projected_dpt=17.1769/ratio=1.62/min_ratio=0.47（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/6.836516238522979局)，HELLRAISER(25分/5.75124110404008局)，FEED(24分/29.450077234896337局)，MANGLE(24分/50.70930179228899局)，PACTS_END(24分/57.64698140112583局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.291966973919931局)，STOKE(16分/2.2072512823559443局)，BULLY(16分/2.8395686484185645局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（高速失血爆毙（5回合掉血80，每回合16≥14）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.46 → 0.47（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
+- 生涯战绩：0/1730 胜，当前目标进阶 0
