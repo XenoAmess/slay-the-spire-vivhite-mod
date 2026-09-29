@@ -6205,6 +6205,36 @@ class Policy:
             _hook_cards = 0
             _hook_locked = 0
         _hook_ids = str(_pending.get("hook_ids") or "").strip()
+        _ringing_hook_transition_tail = ""
+        try:
+            _ringing_hook_transition_enabled = bool(int(float(pol.get(
+                "ringing_hook_lock_lethal_transition_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _ringing_hook_transition_enabled = False
+        _ringing_hook_transition = _pending.get(
+            "ringing_hook_lethal_transition")
+        if (_ringing_hook_transition_enabled
+                and isinstance(_ringing_hook_transition, dict)):
+            try:
+                _ringing_hook_transition_tail = (
+                    "；RINGING钩锁→致死无牌升级："
+                    f"source_round={_round(_ringing_hook_transition['source_round'])}"
+                    f"/source_hp={_num(_ringing_hook_transition['source_hp'])}"
+                    f"/source_post_gap="
+                    f"{_num(_ringing_hook_transition['source_post_gap'])}"
+                    f"/terminal_round="
+                    f"{_round(_ringing_hook_transition['terminal_round'])}"
+                    f"/terminal_hp={_num(_ringing_hook_transition['terminal_hp'])}"
+                    f"/terminal_post_gap="
+                    f"{_num(_ringing_hook_transition['terminal_post_gap'])}"
+                    f"/hp_delta={_num(_ringing_hook_transition['hp_delta'])}"
+                    f"/post_gap_delta="
+                    f"{_num(_ringing_hook_transition['post_gap_delta'])}"
+                    f"/bridge_rounds="
+                    f"{_round(_ringing_hook_transition['bridge_rounds'])}"
+                    "（RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                _ringing_hook_transition_tail = ""
         if (_ringing_hook_enabled and _hook_cards > 0
                 and _hook_locked == _hook_cards
                 and _hook_ids == "RINGING_POWER"):
@@ -6224,6 +6254,7 @@ class Policy:
                 f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
                 f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
                 f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+                f"{_ringing_hook_transition_tail}"
                 "（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）")
         try:
             _overlap_enabled = bool(int(float(pol.get(
@@ -6671,6 +6702,92 @@ class Policy:
             }
         except (TypeError, ValueError, OverflowError):
             return
+        _ringing_hook_transition = None
+        try:
+            _hook_cards = int(float(_pending.get("cards")))
+            _hook_locked = int(float(_pending.get("hook_locked")))
+        except (TypeError, ValueError, OverflowError):
+            _hook_cards = 0
+            _hook_locked = 0
+        _source_reason = str(row.get("reason") or "")
+        if (_hook_cards > 0 and _hook_locked == _hook_cards
+                and _pending.get("hook_ids") == "RINGING_POWER"
+                and "RINGING_HOOK_LOCK_END_TURN_OBS" in _source_reason):
+            try:
+                _source_round = int(float(_pending["terminal_round"]))
+            except (TypeError, ValueError, OverflowError):
+                _source_round = None
+
+            def _lethal_transition_number(_audit, _name):
+                _match = re.search(
+                    rf"(?:^|/|：){re.escape(_name)}="
+                    rf"([+-]?(?:\d+(?:\.\d*)?|\.\d+))", _audit)
+                if not _match:
+                    return None
+                try:
+                    return float(_match.group(1))
+                except (TypeError, ValueError, OverflowError):
+                    return None
+
+            if _source_round is not None:
+                _lethal_end_turn_marker = "（LETHAL_UNAVAILABLE_END_TURN_OBS）"
+                for _candidate in _overlap_tail_rows[1:]:
+                    if (not isinstance(_candidate, dict)
+                            or _candidate.get("action") != "end_turn"
+                            or _candidate.get("screen") not in (None, "COMBAT")):
+                        continue
+                    _candidate_reason = str(_candidate.get("reason") or "")
+                    _marker_at = _candidate_reason.find(
+                        _lethal_end_turn_marker)
+                    if _marker_at < 0:
+                        continue
+                    _audit_at = _candidate_reason.rfind(
+                        "致死无牌空过观测：", 0, _marker_at)
+                    if _audit_at < 0:
+                        continue
+                    _audit = _candidate_reason[
+                        _audit_at + len("致死无牌空过观测："):_marker_at]
+                    _terminal_round = _candidate.get(
+                        "turn", _candidate.get("round"))
+                    try:
+                        _terminal_round = int(float(_terminal_round))
+                    except (TypeError, ValueError, OverflowError):
+                        continue
+                    if _terminal_round <= _source_round:
+                        continue
+                    _terminal_hp = _lethal_transition_number(_audit, "hp")
+                    _terminal_post_gap = _lethal_transition_number(
+                        _audit, "hand_post_gap")
+                    if (_terminal_hp is None or _terminal_post_gap is None
+                            or not math.isfinite(_terminal_hp)
+                            or not math.isfinite(_terminal_post_gap)):
+                        continue
+                    _source_hp = _pending.get("hp")
+                    _source_post_gap = _pending.get("hand_post_gap")
+                    try:
+                        _source_hp = float(_source_hp)
+                        _source_post_gap = float(_source_post_gap)
+                    except (TypeError, ValueError, OverflowError):
+                        continue
+                    if (not math.isfinite(_source_hp)
+                            or not math.isfinite(_source_post_gap)):
+                        continue
+                    _ringing_hook_transition = {
+                        "source_round": _source_round,
+                        "source_hp": _source_hp,
+                        "source_post_gap": _source_post_gap,
+                        "terminal_round": _terminal_round,
+                        "terminal_hp": _terminal_hp,
+                        "terminal_post_gap": _terminal_post_gap,
+                        "hp_delta": _terminal_hp - _source_hp,
+                        "post_gap_delta": (
+                            _terminal_post_gap - _source_post_gap),
+                        "bridge_rounds": _terminal_round - _source_round,
+                    }
+                    break
+        if isinstance(_ringing_hook_transition, dict):
+            _pending["ringing_hook_lethal_transition"] = (
+                _ringing_hook_transition)
         self._nonlethal_unavailable_terminal_outcome_pending = _pending
         self._nonlethal_unavailable_terminal_outcome_reported = False
 

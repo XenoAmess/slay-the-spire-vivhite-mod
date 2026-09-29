@@ -13961,3 +13961,31 @@ production_code_commit: `2442ad7bb`（本地 commit，未 push）
 - **验证**：完整 selfcheck 在同一 clone 的 `.review-cache/selfcheck-pool` 进程级 `tempfile.mkdtemp` 适配下退出码0并输出 `SELFCHECK OK`；直接入口先复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`。`py_compile` 与限定目标 `git diff --check` 通过，最终生产改动 commit 为 `2442ad7bb`。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1735—1736局复盘（RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1735, 1736`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+failed_review_replay: `requested_packages=[]`，无回放包
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1736局 F17 在 T7 出现 RINGING_POWER 全手牌钩锁后，T8 进入致死无牌空过；若这是同一战斗内的资源压力升级，终局 reason 应能在有界同楼层同 COMBAT 决策尾部把两者直接相连。若前置不是全手牌 RINGING_POWER、后续不是完整致死 end_turn、跨楼层/跨屏或字段不可解析，则不得追加该桥。
+- **EVIDENCE**：完整读取 1736 运行证据 20260930-035055_FLK61B00JTVE.json 的199条 decisions。D193（F17/T7）为 HP26、能量3、4张牌全部 blocked_by_hook、hook_locked=4、hook_ids=RINGING_POWER、hand_post_gap=10，仍为 raw survival=yes；D197（F17/T8）为 HP11、能量0、来袭17、hand_post_gap=12、raw survival=no 的致死无牌空过；D198 已有非致死→致死与 RINGING 钩锁终局 marker，但没有两者之间的直接桥。1735 的 F25 终局为能量锁定且 hook_locked=0/hook_ids=none，作为不命中的批内对照。
+- **EXPECTED_SIGNAL**：未来3—10个独立终局窗口中，仅当同一 floor、同一 COMBAT、有界尾部先出现全 RINGING_POWER 钩锁 marker、后出现完整 LETHAL_UNAVAILABLE_END_TURN_OBS 时，追加 RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS，并记录 source/terminal round、HP、post-gap、delta 与 bridge_rounds；对照样本、跨边界样本和缺字段样本命中数应为0。评分、候选、门控、action 和 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- sts2-ascend/brain/knowledge.py：新增默认开启的 ringing_hook_lock_lethal_transition_obs 回滚开关。
+- sts2-ascend/brain/policy.py：在既有最多12条、同楼层同 COMBAT 的非致死终局恢复尾部中，只读连接全手牌 RINGING_POWER end_turn 与后续完整致死 end_turn；只追加终局 reason，不改变评分、候选、门控、action 或 params，并要求完整致死 marker，避免非致死 marker 子串误命中。
+- sts2-ascend/brain/selfcheck.py：加入正例、关闭开关的 action/params 等价断言和跨楼层负例。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个 RINGING_POWER 终局窗口，按 source/terminal round、HP/post-gap delta、桥接回合数和最终胜负分层；证据成熟前不改变钩锁处理、出牌、end_turn 或竞速策略。
+- **调整**：若真实 payload 出现同楼层复用旧战斗、钩锁并非全手牌、致死 marker 不是完整括号标记或回合字段漂移，收紧谓词并保留失败样本，不升级为行为门。
+- **回滚**：将 ringing_hook_lock_lethal_transition_obs 设为 False；预期仅移除 RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS，既有 RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS、action 和 params 不变。
+- **验证**：直接 selfcheck 入口复现宿主固定256槽的既有 REVIEW_SELFCHECK_BOOTSTRAP_FAILED；随后用 clone 内既有 selfcheck-pool 的进程级 tempfile.mkdtemp 适配执行，退出码0并输出 SELFCHECK OK。最终目标 diff 已回读，限定 git diff --check 通过；未写入 .runtime、正式 runs/archive、stats、progression、policy.json、lessons.md 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -17752,7 +17752,7 @@ def main() -> int:
         "turn": 8, "reason": "战斗：钩锁后续出牌",
     }, {
         "screen": "COMBAT", "action": "end_turn", "floor": 48,
-        "turn": 8, "reason": "战斗：钩锁后续收口",
+        "turn": 8, "reason": d_lethal_empty.reason,
     }]
     d_ringing_hook_terminal = ringing_hook_terminal_pol.decide(
         nonlethal_unavailable_outcome_state, ringing_hook_terminal_ctx)
@@ -17773,8 +17773,58 @@ def main() -> int:
             and "/hand_post_gap=23/hand_raw_survival=yes"
                 in d_ringing_hook_terminal.reason
             and "/bridge_decisions=2/bridge_rounds=1"
+                in d_ringing_hook_terminal.reason
+            and "RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS"
+                in d_ringing_hook_terminal.reason
+            and "source_round=7/source_hp=55/source_post_gap=23"
+                "/terminal_round=8/terminal_hp=9/terminal_post_gap=9"
+                "/hp_delta=-46/post_gap_delta=-14/bridge_rounds=1"
                 in d_ringing_hook_terminal.reason), \
         f"RINGING 全手牌钩锁终局对账缺失或动作漂移: {d_ringing_hook_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "ringing_hook_lock_lethal_transition_obs"] is True, \
+        "DEFAULT_POLICY 缺少 ringing_hook_lock_lethal_transition_obs"
+
+    ringing_hook_transition_off_know = knowledge.Knowledge(tmp)
+    ringing_hook_transition_off_know.policy[
+        "ringing_hook_lock_lethal_transition_obs"] = False
+    ringing_hook_transition_off_pol = policy.Policy(
+        ringing_hook_transition_off_know)
+    ringing_hook_transition_off_ctx = _SettleCtx()
+    ringing_hook_transition_off_ctx.decisions = list(
+        ringing_hook_terminal_ctx.decisions)
+    d_ringing_hook_transition_off = ringing_hook_transition_off_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        ringing_hook_transition_off_ctx)
+    assert (d_ringing_hook_transition_off.action
+            == d_ringing_hook_terminal.action
+            and d_ringing_hook_transition_off.params
+            == d_ringing_hook_terminal.params
+            and "RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS"
+                in d_ringing_hook_transition_off.reason
+            and "RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS"
+                not in d_ringing_hook_transition_off.reason), \
+        f"RINGING 钩锁致死桥关闭后动作或既有 marker 漂移: " \
+        f"on={d_ringing_hook_terminal} off={d_ringing_hook_transition_off}"
+
+    ringing_hook_no_transition_ctx = _SettleCtx()
+    ringing_hook_no_transition_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7, "reason": d_hook_nonlethal.reason,
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 8, "reason": "战斗：钩锁后续出牌",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 8,
+        "turn": 8, "reason": "战斗：跨边界收口",
+    }]
+    d_ringing_hook_no_transition = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            nonlethal_unavailable_outcome_state,
+            ringing_hook_no_transition_ctx)
+    assert "RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS" \
+        not in d_ringing_hook_no_transition.reason, \
+        "RINGING 钩锁致死桥越过楼层边界误命中"
 
     ringing_hook_terminal_off_know = knowledge.Knowledge(tmp)
     ringing_hook_terminal_off_know.policy[
