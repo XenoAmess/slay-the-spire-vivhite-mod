@@ -12331,7 +12331,7 @@ def main() -> int:
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
                           joint_player_hp=None, joint_incoming=None,
-                          joint_energy=None):
+                          joint_energy=None, slippery_tax_per_layer=None):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
         # 第271~294批新增的滚雪球锁持以隔离原有出口语义；锁持自身由下方
         # 3br-esc-latch-hold 夹具单独覆盖（含默认开与回滚分支）。
@@ -12410,6 +12410,9 @@ def main() -> int:
         cap_pol.know.policy["slippery_ttk_obs"] = ttk_obs
         cap_pol.know.policy[
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
+        if slippery_tax_per_layer is not None:
+            cap_pol.know.policy["boss_race_slippery_tax_per_layer"] = (
+                slippery_tax_per_layer)
         cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
         cap_pol.know.policy[
@@ -12459,6 +12462,8 @@ def main() -> int:
     d_combat_slippery = combat_flip_probe(0.0, slippery=True)
     assert "SLIPPERY_RACE_GUARD" in d_combat_slippery.reason, \
         f"live Slippery did not veto a static Boss race flip: {d_combat_slippery.reason}"
+    assert "SLIPPERY_RACE_COMBAT_TTK_TAX" in d_combat_slippery.reason, \
+        f"live Boss Slippery tax was not applied to combat ttk: {d_combat_slippery.reason}"
     assert "JOINT_FLIP_TTK_CAP" in d_combat_cap.reason \
         and "斩杀竞速投影" in d_combat_cap.reason \
         and "防守线复核：联合能量对账" not in d_combat_cap.reason, \
@@ -12485,10 +12490,12 @@ def main() -> int:
         and "SLIPPERY_RACE_GUARD" not in d_combat_slippery_rb.reason, \
         f"滑溜观测应独立于守卫开关留痕: {d_combat_slippery_rb.reason}"
     d_combat_slippery_noobs = combat_flip_probe(
-        0.0, slippery=True, ttk_obs=False)
+        0.0, slippery=True, ttk_obs=False, slippery_tax_per_layer=0.0)
     assert "SLIPPERY_TTK_OBS" not in d_combat_slippery_noobs.reason \
         and "SLIPPERY_RACE_GUARD" in d_combat_slippery_noobs.reason, \
         f"滑溜观测独立开关未严格回滚: {d_combat_slippery_noobs.reason}"
+    assert "SLIPPERY_RACE_COMBAT_TTK_TAX" not in d_combat_slippery_noobs.reason, \
+        f"live Boss Slippery combat tax did not roll back at zero: {d_combat_slippery_noobs.reason}"
 
     # 3br-effective-dpt：滑溜观测必须在完成一个回合边界后，对账实际敌血净降
     # 与投影 dpt；只读状态快照，不改变翻盘守卫、动作或评分，开关关闭严格无痕。

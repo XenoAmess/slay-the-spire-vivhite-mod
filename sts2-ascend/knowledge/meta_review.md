@@ -13230,3 +13230,24 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff 复核及 `git diff --check` 通过。宿主固定 256 槽直连入口因临时目录池耗尽，使用同一 selfcheck 的进程级临时目录适配完成完整回归；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1674~1675局复盘（SLIPPERY_RACE_COMBAT_TTK_TAX）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 实战快照中的 `ttk=pool/dpt` 未计入实时 Slippery 破层期，因而会系统性高估开局击杀速度。若只把当前快照已观测到的层数乘既有每层税加入 Boss 战斗 `ttk`，则同一窗口的调整后 TTK 应比旧口径更接近实际回合数；无 Slippery、非 Boss 或税率为 0 时不应出现新标记。
+- **EVIDENCE**：1674 F17 VANTOM 的原生知识为初始 SlipperyAmt=8/9，且每次失去生命只掉 1 点；该局战斗投影 `pool=171/dpt=10.8/ttk=15.83/tsurv=6.47`，实际 7 回合终局，跨回合有效 DPT 比为 0.05/0.09/0.07/0.10/0.10。独立 run 1619、1621、1622、1625、1632、1649、1650、1651、1653、1661、1669、1674 均已有 Slippery 实际/投影比留痕，多数低于 0.80；高于 1.0 的离群值保留，不强行删除。1675 F17 则是独立边界：终局容量为 `attack_candidates=0/raw_damage_cap=0/hook_locked=0/energy_locked=3`，应继续归入无输出容量终局，不能归因于 Slippery。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Boss Slippery 窗口中，默认税率 0.25/层时应出现 `SLIPPERY_RACE_COMBAT_TTK_TAX`，增量等于实时层数×税率；用“实际回合数/(旧 TTK+税)”对比旧比值，中心趋势应向 1 靠近且非 Slippery 窗口不变。若修正后仍持续低于 0.80，或非 Boss/无层目标出现标记，则假设被削弱并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：仅在 Boss 战斗且存在实时 Slippery 层时，复用已有 `boss_race_slippery_tax_per_layer` 将“实时层数×每层税”加入击杀侧 `ttk`，并写入 `SLIPPERY_RACE_COMBAT_TTK_TAX`；税率设为 0 即回滚，未改动 dpt、手牌评分或非 Boss 路径。
+- `sts2-ascend/brain/selfcheck.py`：为现有 Boss Slippery 夹具增加默认标记断言，并让既有观测关闭夹具以税率 0 验证新标记消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集上述 3~10 个窗口，分别保留实时层数、旧 TTK、加税 TTK、实际回合数和终局类型；1675 的无输出容量链单独跟踪。
+- **调整/回滚**：若调整后 TTK 残差不收敛，先只调 `boss_race_slippery_tax_per_layer`；将该键设为 0 可移除本批新增行为与标记，旧 Slippery 守卫和只读对账保持不变。
+- **验证**：selfcheck 通过并输出 `SELFCHECK OK`（退出码 0），目标文件 `git diff --check` 通过；宿主固定 256 槽不足时使用同一 selfcheck 文件的进程级继承 ACL 临时适配器完成全量回归。`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`

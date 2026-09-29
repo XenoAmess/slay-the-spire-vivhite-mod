@@ -7124,6 +7124,26 @@ class Policy:
                     _race_slippery_layers = sum(
                         self._enemy_slippery_stack(e)
                         for e in enemies if isinstance(e, dict))
+                    # Keep the live Boss projection on the same side of the
+                    # ledger as the pre-run Slippery break tax. Only observed
+                    # live layers are charged, and zero remains a full rollback.
+                    if (cctx.get("node_type") == "Boss"
+                            and _race_slippery_layers > 0.0):
+                        try:
+                            _slip_per_layer = max(
+                                0.0, float(pol.get(
+                                    "boss_race_slippery_tax_per_layer", 0.25)))
+                        except (TypeError, ValueError, OverflowError):
+                            _slip_per_layer = 0.0
+                        _slippery_combat_ttk_tax = (
+                            _race_slippery_layers * _slip_per_layer)
+                        if _slippery_combat_ttk_tax > 1e-9:
+                            ttk += _slippery_combat_ttk_tax
+                            danger_note += (
+                                f";Boss live Slippery="
+                                f"{_race_slippery_layers:g} layers: "
+                                f"ttk +{_slippery_combat_ttk_tax:.1f} "
+                                "(SLIPPERY_RACE_COMBAT_TTK_TAX)")
                     # 滑溜有效火力回合边界对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS，
                     # 本批新增）：上面的破层期估计只读当前手牌，不能证明实际敌血
                     # 是否按该速率下降。用已观测的「上一回合首→当前回合首」敌方总
