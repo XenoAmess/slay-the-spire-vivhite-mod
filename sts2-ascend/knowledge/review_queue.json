@@ -1,53 +1,75 @@
 {
- "pending": [
-  {
-   "run": 1723,
-   "time": "2026-09-29 23:26",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "QT5CU68EWNXC"
-  },
-  {
-   "run": 1724,
-   "time": "2026-09-29 23:42",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "15WEEXJ2DRK6"
-  },
-  {
-   "run": 1725,
-   "time": "2026-09-30 00:03",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "U8E5YX5U8W80"
-  }
- ],
- "reviewing": null
+ "pending": [],
+ "reviewing": {
+  "runs": [
+   1723,
+   1724,
+   1725
+  ],
+  "items": [
+   {
+    "run": 1723,
+    "time": "2026-09-29 23:26",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "QT5CU68EWNXC",
+    "queue_id": "31896-1790697848644329500-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 1724,
+    "time": "2026-09-29 23:42",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "15WEEXJ2DRK6",
+    "queue_id": "31896-1790697848644329500-1",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 1725,
+    "time": "2026-09-30 00:03",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "U8E5YX5U8W80",
+    "queue_id": "31896-1790697848644329500-2",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "",
+  "started": "2026-09-30 00:04:08"
+ }
 }
