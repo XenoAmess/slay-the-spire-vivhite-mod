@@ -18850,3 +18850,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3769994264094967局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.571108164104444局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/23.546182723513724局)
 - 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，致命Elite战实测自损37/掉血71（52%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.37 → 0.40（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.88 → 1.87（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F24 但致命战自损37/掉血71≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：4/1710 胜，当前目标进阶 4
+
+## 第 1711 局复盘（2026-09-29 19:54）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：GORGET, PEN_NIB
+- 战斗记录：F6 Monster战 掉血4｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血15｜自损13（可行动段13/非行动段16，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血33｜自损34（可行动段34/非行动段9，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损12（可行动段12/非行动段11，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血24｜自损36（可行动段36/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=59/dpt=16.0179/ttk=3.68338/tsurv=1.41667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=3.68338/actual_over_projected=2.71（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战10回合获胜; F17 Boss战 掉血47｜自损17（可行动段17/非行动段21，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=273/dpt=22.95/ttk=11.8954/tsurv=2.72727（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=11.8954/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.83（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=18.75/projected_dpt=21.8545/ratio=1.01/min_ratio=0.31（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=18.75/projected_dpt=21.8545/ratio=1.01/min_ratio=0.31（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.558505982268688局)，REND(38分/2.34278253476045局)，THINKING_AHEAD(37分/3.9519107797784643局)，MAYHEM(37分/3.2276433023770945局)，ROLLING_BOULDER(36分/3.976774106707368局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3686799284170634局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.49210928553008局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/23.463771083981428局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1711 胜，当前目标进阶 4
