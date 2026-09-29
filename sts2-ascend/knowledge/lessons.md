@@ -14329,3 +14329,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5195395116541084局)，BASH(14分/2.131918048322707局)，STOKE(16分/2.426412283128859局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1703 胜，当前目标进阶 0
+
+## 第 1704 局复盘（2026-09-29 17:26）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：RAMPAGE, RAMPAGE, UNMOVABLE, RAMPAGE, IMPERVIOUS, TRUE_GRIT, THUNDERCLAP, BATTLE_TRANCE, INFLAME, FEED
+- 本局遗物：RED_MASK, BAG_OF_MARBLES
+- 战斗记录：F5 Monster战 掉血0; F6 Monster战 掉血7; F9 Unknown战 掉血30; F11 Monster战 掉血6; F14 Monster战 掉血26; F15 Elite战 掉血35｜竞速投影审计：pool=94/dpt=18.9/ttk=4.97354/tsurv=1.52174（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=4.97354/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.94（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0452976735190798局)，PROWESS(26分/7.489019661099021局)，HELLRAISER(26分/4.239403793407577局)，FEED(24分/32.26090595532227局)，OFFERING(24分/15.824858649997045局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5107211233633193局)，BASH(14分/2.1244563351535777局)，STOKE(16分/2.417919840137908局)
+- 策略进化：elite_grey_safety_mult: 2.35 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1704 胜，当前目标进阶 0
