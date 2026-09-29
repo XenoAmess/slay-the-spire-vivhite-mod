@@ -14791,3 +14791,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.174542504212918局)，STOKE(16分/2.0941670563221426局)，BULLY(16分/2.6940888720817626局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.41 → 0.42（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.99 → 1.98（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F27——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1745 胜，当前目标进阶 0
+
+## 第 1746 局复盘（2026-09-30 06:58）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：SWORD_BOOMERANG, BATTLE_TRANCE, DISMANTLE, FLAME_BARRIER, TAUNT, MOLTEN_FIST, STOMP, TWIN_STRIKE, DISMANTLE, CINDER, SHRUG_IT_OFF, TAUNT, UNRELENTING, UNMOVABLE
+- 本局遗物：STONE_CRACKER
+- 战斗记录：F7 Monster战 掉血12; F9 Monster战 掉血10; F12 Monster战 掉血7; F13 Monster战 掉血5; F14 Monster战 掉血0; F17 Boss战 掉血61｜竞速投影审计：pool=161/dpt=5.4/ttk=29.8148/tsurv=3.8125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=29.8148/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.89（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战11回合阵亡｜竞速Boss有效火力收官对账：samples=9/actual_dpt=15.2222/projected_dpt=14.5304/ratio=1.21/min_ratio=0.11（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=9/actual_dpt=15.2222/projected_dpt=14.5304/ratio=1.21/min_ratio=0.11（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/7.422357856210792局)，HELLRAISER(25分/5.437489396970897局)，MANGLE(25分/49.86388563530527局)，FEED(24分/28.839965403012396局)，PACTS_END(24分/54.50212301407555局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.166931605448173局)，STOKE(16分/2.086837471625015局)，BULLY(16分/2.6846595610294766局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.41（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1746 胜，当前目标进阶 0
