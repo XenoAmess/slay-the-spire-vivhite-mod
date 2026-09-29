@@ -14087,3 +14087,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7215762512582087局)，BASH(14分/2.3028722126030994局)，STOKE(16分/2.620981340034364局)
 - 策略进化：block_safety: 2.02 → 2.07（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1681 胜，当前目标进阶 0
+
+## 第 1682 局复盘（2026-09-29 10:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：CINDER, SHRUG_IT_OFF, DRUM_OF_BATTLE, MOLTEN_FIST, IRON_WAVE, SPITE, FLAME_BARRIER, SPITE, BREAKTHROUGH, RUPTURE, ARMAMENTS, SWORD_BOOMERANG
+- 本局遗物：POTION_BELT
+- 战斗记录：F4 Unknown战 掉血0; F5 Monster战 掉血16; F6 Monster战 掉血0; F8 Monster战 掉血0; F14 Monster战 掉血3｜自损1（可行动段1/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血77｜竞速投影审计：pool=204/dpt=4.05/ttk=50.3704/tsurv=5.13333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=12/projected_ttk=50.3704/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.34（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战12回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.2093059264423918局)，HELLRAISER(26分/4.5793529453551916局)，PROWESS(25分/7.0281323542772505局)，FEED(24分/32.70623777263369局)，PACTS_END(24分/58.6154913085748局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.712050734378805局)，BASH(14分/2.2948121598589886局)，STOKE(16分/2.611807905344244局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1682 胜，当前目标进阶 0
