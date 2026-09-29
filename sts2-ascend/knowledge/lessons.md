@@ -14758,3 +14758,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1975359666351677局)，STOKE(16分/2.116310634303335局)，BULLY(16分/2.7225759819554023局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.01 → 2.00（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F23——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1742 胜，当前目标进阶 0
+
+## 第 1743 局复盘（2026-09-30 06:10）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：HEADBUTT, HEADBUTT, UNRELENTING, HEMOKINESIS, ULTIMATE_DEFEND, ARMAMENTS, CONFLAGRATION, TAUNT, STONE_ARMOR, BLUDGEON, CRIMSON_MANTLE, MOLTEN_FIST, SHRUG_IT_OFF, EVIL_EYE, ANGER, IRON_WAVE
+- 本局遗物：NUNCHAKU, RED_MASK
+- 战斗记录：F12 Unknown战 掉血0; F15 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血13｜自损6（可行动段6/非行动段10，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血6｜自损4（可行动段4/非行动段6，SELF_LOSS_PHASE_OBS）; F24 Elite战 掉血61｜自损31（可行动段31/非行动段27，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/7.500841356128879局)，HELLRAISER(25分/5.49498503473305局)，MANGLE(25分/50.39114292200418局)，FEED(24分/28.137880285319376局)，PACTS_END(24分/55.07842470283494局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1898445907519446局)，STOKE(16分/2.1089035470832735局)，BULLY(16分/2.7130469660185583局)
+- 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.40 → 0.43（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.00 → 1.99（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1743 胜，当前目标进阶 0
