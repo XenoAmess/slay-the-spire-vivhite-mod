@@ -14538,3 +14538,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.3571647132555817局)，STOKE(16分/2.2700391826149087局)，BULLY(16分/2.920343571736351局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1722 胜，当前目标进阶 0
+
+## 第 1723 局复盘（2026-09-29 23:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：BREAKTHROUGH, HEADBUTT, SHRUG_IT_OFF, INFLAME, EVIL_EYE, TWIN_STRIKE, SECOND_WIND, SWORD_BOOMERANG, THUNDERCLAP, FIEND_FIRE, OFFERING, JUGGERNAUT, HEMOKINESIS
+- 本局遗物：BOWLER_HAT
+- 战斗记录：F9 Monster战 掉血13｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血5; F12 Unknown战 掉血25｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血19｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血21｜自损1（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=58/dpt=15.6/ttk=3.71795/tsurv=1.75（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.71795/actual_over_projected=1.61（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜; F17 Boss战 掉血48｜自损2（可行动段2/非行动段39，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=169/dpt=15/ttk=11.2667/tsurv=1.76923（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.2667/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.39（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=14/projected_dpt=16.2696/ratio=0.84/min_ratio=0.16（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=2/actual_dpt=12.5/projected_dpt=14.2891/ratio=0.80/min_ratio=0.16|clear_samples=2/actual_dpt=15.5/projected_dpt=18.25/ratio=0.88/min_ratio=0.60（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/7.006380650260402局)，HELLRAISER(25分/5.894140082527539局)，FEED(24分/30.181812503356422局)，MANGLE(24分/49.933836652395634局)，PACTS_END(24分/57.06167915059334局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.3489146367591873局)，STOKE(16分/2.2620940454757568局)，BULLY(16分/2.910122369235274局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1723 胜，当前目标进阶 0
