@@ -13428,3 +13428,29 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：固定宿主256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行原始 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；目标文件 `git diff --check` 通过。已直接回读1690完整 run 验证来源扫描命中 D237；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1691—1692局复盘（LETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：非致死资源耗尽空过后，战斗可能继续执行少量出牌或牌堆顶选择，最后才以致死无牌空过进入 `GAME_OVER`；现有致死终局对账只保留最后一个致死来源，会漏掉这条延迟致死链。假设可由来源回合、桥接范围、跨房间串接或 action/params 漂移证伪。
+- **EVIDENCE**：完整精确 run `sts2-ascend/knowledge/runs/20260929-132314_90FBGE9MC6H4.json` 共205条 decisions、无裁剪。F21 的 D187/T2、D191/T3、D194/T4 均记录 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`；其后有 D195/D196 出牌、D197 结束回合、D198—D202 出牌及 D201 牌堆顶选择，D203/T6 才记录 `LETHAL_UNAVAILABLE_END_TURN_OBS`，D204 以 `GAME_OVER`、`final_hp=0` 收口。现有 marker 只能回接 D203，不能表达 D194→D203 的延迟链。
+- **EXPECTED_SIGNAL**：未来3—10个独立终局中，同楼层、同一 `COMBAT`、致死终局前最多12条决策内若存在非致死来源，应出现一次 `LETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`，带 `precursor_round/precursor_action/bridge_decisions/bridge_rounds`；紧邻致死终局继续使用旧 marker，跨房间、跨楼层、超出窗口、无来源不得生成链 marker。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：沿用 `lethal_unavailable_terminal_outcome_obs` 作为唯一回滚键；终局恢复从尾部向前最多扫描12条同楼层、连续 `COMBAT`/`CARD_SELECTION` 决策，遇到其他屏幕或楼层即断链。若找到非致死空过来源，终局只读尾缀改为 `LETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`，保存首个来源回合/动作与桥接计数；不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/knowledge.py`：同步既有回滚键的 bounded same-combat chain 契约说明，不新增行为开关。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认链 marker、Policy 重载、丢动作重试去重、关闭回滚及 `REWARD` 边界不串接；均断言 `continue_game_over` 与 `{}` 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：按 `run_id/floor/precursor_round/source_round/bridge_decisions/bridge_rounds/outcome/final_hp` 收集3—10个独立样本，并核对真实 `applied end_turn`、中间出牌和牌堆顶选择；证据成熟前不改变防守或竞速策略。
+- **调整**：若桥接计数、CARD_SELECTION 边界或持久链重载错配，先收紧来源屏幕/战斗身份与窗口；不得把观测异常直接升级为行为闸门。
+- **回滚**：将 `lethal_unavailable_terminal_outcome_obs` 设为 `False`；预期同时移除旧致死终局 marker 与新链 marker，致死/非致死前置 marker 及 action/params 保持不变。
+- **验证**：直接固定256槽入口复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用 clone 内继承 ACL 槽的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`；`git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

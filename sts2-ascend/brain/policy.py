@@ -5734,8 +5734,13 @@ class Policy:
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
         _result = "victory" if victory else "defeat"
+        _chain = bool(_pending.get("chain"))
+        _marker = ("LETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                   if _chain else "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS")
+        _prefix = ("；致死无牌链终局对账："
+                   if _chain else "；致死无牌终局对账：")
         return (
-            f"；致死无牌终局对账：outcome={_result}"
+            f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
             f"/source_round={_round(_pending.get('terminal_round'))}"
             f"/source_action={_pending.get('source_action') or '?'}"
@@ -5755,7 +5760,12 @@ class Policy:
             f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
             f"/forced={_flag(_pending.get('forced'))}"
             f"/gap={_flag(_pending.get('gap'))}"
-            "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
+            + (f"/precursor_round={_round(_pending.get('precursor_round'))}"
+               f"/precursor_action={_pending.get('precursor_action') or '?'}"
+               f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+               f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+               if _chain else "")
+            + f"（{_marker}）")
 
     def _restore_lethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -5763,14 +5773,17 @@ class Policy:
         decisions = getattr(ctx, "decisions", None)
         _reported = bool(getattr(
             self, "_lethal_unavailable_terminal_outcome_reported", False))
-        marker = "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+        markers = (
+            "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS",
+            "LETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS",
+        )
         if _reported:
             _last_reason = ""
             if isinstance(decisions, list) and decisions:
                 _last = decisions[-1]
                 if isinstance(_last, dict):
                     _last_reason = str(_last.get("reason") or "")
-            if marker in _last_reason:
+            if any(_marker in _last_reason for _marker in markers):
                 return
             self._lethal_unavailable_terminal_outcome_reported = False
         if isinstance(getattr(
@@ -5784,6 +5797,25 @@ class Policy:
         if (floor is not None and row.get("floor") is not None
                 and str(row.get("floor")) != str(floor)):
             return
+        _chain_source_row = None
+        _chain_source_offset = 0
+        _lookback = decisions[-12:-1]
+        for _offset, _candidate in enumerate(reversed(_lookback)):
+            if not isinstance(_candidate, dict):
+                break
+            if (floor is not None and _candidate.get("floor") is not None
+                    and str(_candidate.get("floor")) != str(floor)):
+                break
+            if _candidate.get("screen") not in (
+                    None, "COMBAT", "CARD_SELECTION"):
+                break
+            if _candidate.get("action") != "end_turn":
+                continue
+            _candidate_reason = str(_candidate.get("reason") or "")
+            if "NONLETHAL_UNAVAILABLE_END_TURN_OBS" in _candidate_reason:
+                _chain_source_row = _candidate
+                _chain_source_offset = _offset + 1
+                break
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("LETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -5805,10 +5837,29 @@ class Policy:
                 raise ValueError(name)
             return float(value)
 
+        _chain_bridge_rounds = 0
+        _chain_source_round = None
+        if isinstance(_chain_source_row, dict):
+            _chain_source_round = _chain_source_row.get(
+                "turn", _chain_source_row.get("round"))
+            try:
+                _chain_bridge_rounds = max(
+                    0,
+                    int(float(row.get("turn", row.get("round"))))
+                    - int(float(_chain_source_round)))
+            except (TypeError, ValueError, OverflowError):
+                _chain_bridge_rounds = 0
         try:
             _pending = {
                 "terminal_round": row.get("turn", row.get("round")),
                 "source_action": row.get("action") or "end_turn",
+                "chain": isinstance(_chain_source_row, dict),
+                "precursor_round": _chain_source_round,
+                "precursor_action": (
+                    _chain_source_row.get("action")
+                    if isinstance(_chain_source_row, dict) else None),
+                "bridge_decisions": _chain_source_offset,
+                "bridge_rounds": _chain_bridge_rounds,
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),
