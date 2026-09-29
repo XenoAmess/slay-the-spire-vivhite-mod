@@ -17638,6 +17638,73 @@ def main() -> int:
         "nonlethal_unavailable_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 nonlethal_unavailable_terminal_outcome_obs"
 
+    # Full native RINGING_POWER lock is a narrower terminal precursor than
+    # generic non-lethal resource exhaustion.  Add a dedicated join for that
+    # exact shape, while proving the generic marker and action remain stable.
+    ringing_hook_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    ringing_hook_terminal_ctx = _SettleCtx()
+    ringing_hook_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7, "reason": d_hook_nonlethal.reason,
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 8, "reason": "战斗：钩锁后续出牌",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 8, "reason": "战斗：钩锁后续收口",
+    }]
+    d_ringing_hook_terminal = ringing_hook_terminal_pol.decide(
+        nonlethal_unavailable_outcome_state, ringing_hook_terminal_ctx)
+    assert (d_ringing_hook_terminal.action
+            == d_nonlethal_empty_outcome.action
+            and d_ringing_hook_terminal.params
+            == d_nonlethal_empty_outcome.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_ringing_hook_terminal.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in d_ringing_hook_terminal.reason
+            and "RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS"
+                in d_ringing_hook_terminal.reason
+            and "/source_round=7/source_action=end_turn/final_hp=0"
+                in d_ringing_hook_terminal.reason
+            and "/cards=2/hook_locked=2/hook_ids=RINGING_POWER"
+                in d_ringing_hook_terminal.reason
+            and "/hand_post_gap=23/hand_raw_survival=yes"
+                in d_ringing_hook_terminal.reason
+            and "/bridge_decisions=2/bridge_rounds=1"
+                in d_ringing_hook_terminal.reason), \
+        f"RINGING 全手牌钩锁终局对账缺失或动作漂移: {d_ringing_hook_terminal}"
+
+    ringing_hook_terminal_off_know = knowledge.Knowledge(tmp)
+    ringing_hook_terminal_off_know.policy[
+        "ringing_hook_lock_terminal_outcome_obs"] = False
+    ringing_hook_terminal_off_pol = policy.Policy(
+        ringing_hook_terminal_off_know)
+    ringing_hook_terminal_off_ctx = _SettleCtx()
+    ringing_hook_terminal_off_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7, "reason": d_hook_nonlethal.reason,
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 8, "reason": "战斗：钩锁后续出牌",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 8, "reason": "战斗：钩锁后续收口",
+    }]
+    d_ringing_hook_terminal_off = ringing_hook_terminal_off_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        ringing_hook_terminal_off_ctx)
+    assert (d_ringing_hook_terminal_off.action
+            == d_ringing_hook_terminal.action
+            and d_ringing_hook_terminal_off.params
+            == d_ringing_hook_terminal.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_ringing_hook_terminal_off.reason
+            and "RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS"
+                not in d_ringing_hook_terminal_off.reason), \
+        f"RINGING 钩锁终局观测关闭后动作或既有 marker 漂移: " \
+        f"on={d_ringing_hook_terminal} off={d_ringing_hook_terminal_off}"
+
     nonlethal_unavailable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
     nonlethal_unavailable_replay_ctx = _SettleCtx()
     nonlethal_unavailable_replay_ctx.decisions = [{

@@ -13583,3 +13583,30 @@ production_code_commit: `8a3a86b60`（报告追加后由最终交付 commit 收�
 - **验证**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的继承 ACL 临时根中用进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。代码目标 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1710—1711局复盘（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1710, 1711`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS` 虽保留 `hook_locked/hook_ids` 原始字段，但没有把“所有剩余手牌均由同一个 `RINGING_POWER` 阻断”归一化为终局可检索谓词。若前置空过满足 `cards>0`、`hook_locked=cards`、`hook_ids=RINGING_POWER`，则它应在同战斗桥接后的权威终局追加专用 `RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS`；部分锁定、能量耗尽或其他 hook 不得追加。后续同形态未出现 marker、字段与源回合不一致，或关闭键改变 action/params，即证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-193908_5P335G26881G.json`（第1711局）F17 D214 的非致死空过为 `hp=12/block=5/incoming=15/energy=2/cards=4/hook_locked=4/hook_ids=RINGING_POWER/hand_post_gap=10/hand_raw_survival=yes`，并已有 `RINGING_HOOK_LOCK_END_TURN_OBS`；D219 为同战斗 `source_round=7/bridge_decisions=4/bridge_rounds=1` 的失败终局，但当前只有通用 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`。作为负对照，精确 run `sts2-ascend/knowledge/runs/20260929-192223_4JV672S7KAUN.json`（第1710局）F17 D166 与 D170 的同类链为 `hook_locked=0/hook_ids=none`，不应触发新 marker。原生知识 `sts2-ascend/knowledge/game/v0.111.0/mechanics/powers.jsonl` 的 `RINGING_POWER` 说明该 hook 在当前回合限制后续手牌出牌，并于敌方回合后移除。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立窗口按 `run_id/floor/source_round/terminal_round/cards/hook_locked/hook_ids/hand_post_gap/hand_raw_survival/bridge_decisions/bridge_rounds/outcome` 对账。完整单一 `RINGING_POWER` 锁定必须出现专用 marker；普通能量耗尽、部分锁定、混合 preventer、跨楼层/跨战斗链必须不出现。marker 开关为 False 时只移除专用尾缀，既有通用终局 marker、action 与 params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ringing_hook_lock_terminal_outcome_obs` 静态开关。
+- `sts2-ascend/brain/policy.py`：在既有非致死终局链对账中，仅对 `cards>0`、`hook_locked==cards` 且唯一 `hook_ids=RINGING_POWER` 的挂起源追加专用终局观测，记录源/终局、原始生还缺口和桥接长度；不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入完整 RINGING 锁定→同战斗桥接→GAME_OVER 夹具，断言专用 marker、通用 chain marker、桥接字段、关闭键及 action/params 完全等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集 3—10 个独立 RINGING 全锁窗口，按锁定牌数、RINGING 剩余层数、桥接回合和最终胜负分层；证据成熟前不改变 end_turn 或防守选择。
+- **调整**：若真实 payload 出现多个 preventer、诅咒/不可用牌计数与 `cards` 口径不一致，先收紧全锁谓词和持久化恢复，不把专用 marker升级为行为闸门。
+- **回滚**：将 `ringing_hook_lock_terminal_outcome_obs` 设为 `False`；预期只移除 `RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS`，通用终局对账、action 与 params 不变。
+- **验证**：直接 selfcheck 先复现宿主固定256-slot临时池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位中，用进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

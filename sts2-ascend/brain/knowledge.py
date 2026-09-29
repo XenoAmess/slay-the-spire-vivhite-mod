@@ -234,6 +234,7 @@ DEFAULT_POLICY = {
     "lethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a lethal no-card end-turn to the next GAME_OVER/Victory result; False removes only the outcome marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; includes native hook_locked/hook_ids plus raw hand block capacity and counterfactual post-block survival; False removes only the marker.
     "nonlethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a non-lethal no-card end-turn to a nearby GAME_OVER/Victory result, including a bounded same-combat chain; False removes only the outcome marker.
+    "ringing_hook_lock_terminal_outcome_obs": True,  # Audit-only terminal join for a full RINGING_POWER hand lock (every remaining card blocked); False removes only this dedicated marker and never changes the action.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
     "kill_race_lethal_output_capacity_obs": True,  # Audit-only current target/affordable attack capacity at a kill-race lethal no-card end-turn and its terminal outcome join; False removes both capacity markers.
     "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat (COMBAT/CARD_SELECTION bridge) source-to-terminal output-capacity join; False removes only the transition marker.

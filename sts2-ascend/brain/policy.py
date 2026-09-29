@@ -5896,7 +5896,40 @@ class Policy:
                    if _chain else "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS")
         _prefix = ("；非致死无牌链终局对账："
                    if _chain else "；非致死无牌终局对账：")
-        return (
+        try:
+            _ringing_hook_enabled = bool(int(float(pol.get(
+                "ringing_hook_lock_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _ringing_hook_enabled = False
+        _ringing_hook_note = ""
+        try:
+            _hook_cards = int(float(_pending.get("cards")))
+            _hook_locked = int(float(_pending.get("hook_locked")))
+        except (TypeError, ValueError, OverflowError):
+            _hook_cards = 0
+            _hook_locked = 0
+        _hook_ids = str(_pending.get("hook_ids") or "").strip()
+        if (_ringing_hook_enabled and _hook_cards > 0
+                and _hook_locked == _hook_cards
+                and _hook_ids == "RINGING_POWER"):
+            _ringing_hook_note = (
+                f"；RINGING钩锁终局对账：outcome={_result}"
+                f"/floor={_round(floor)}"
+                f"/source_round={_round(_pending.get('terminal_round'))}"
+                f"/source_action={_pending.get('source_action') or '?'}"
+                f"/final_hp={_num(final_hp)}"
+                f"/source_hp={_num(_pending.get('hp'))}"
+                f"/source_block={_num(_pending.get('block'))}"
+                f"/source_incoming={_num(_pending.get('incoming'))}"
+                f"/source_energy={_num(_pending.get('energy'))}"
+                f"/cards={_hook_cards}/hook_locked={_hook_locked}"
+                f"/hook_ids={_hook_ids}"
+                f"/hand_post_gap={_num(_pending.get('hand_post_gap'))}"
+                f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
+                f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+                "（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）")
+        _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
             f"/source_round={_round(_pending.get('terminal_round'))}"
@@ -5922,6 +5955,7 @@ class Policy:
                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                if _chain else "")
             + f"（{_marker}）")
+        return _base + _ringing_hook_note
 
     def _restore_nonlethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
