@@ -14835,3 +14835,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.144258365420275局)，STOKE(16分/2.0650022799768784局)，BULLY(16分/2.6565691817727566局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1749 胜，当前目标进阶 0
+
+## 第 1750 局复盘（2026-09-30 07:59）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：HEADBUTT, TRUE_GRIT, FIGHT_ME, CRUELTY, CINDER, CINDER, CINDER, INFLAME, RAMPAGE, CINDER, EVIL_EYE, SPITE
+- 本局遗物：VEXING_PUZZLEBOX
+- 战斗记录：F6 Monster战 掉血5; F7 Monster战 掉血3; F13 Monster战 掉血12; F14 Unknown战 掉血13; F15 Monster战 掉血1; F17 Boss战 掉血70｜竞速投影审计：pool=172/dpt=6.75/ttk=25.4815/tsurv=4.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=13/projected_ttk=25.4815/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.79（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战13回合阵亡｜竞速Boss有效火力收官对账：samples=9/actual_dpt=15.6667/projected_dpt=15.5826/ratio=1.02/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=9/actual_dpt=15.6667/projected_dpt=15.5826/ratio=1.02/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/8.315489117705718局)，HELLRAISER(25分/5.361763269170515局)，MANGLE(25分/49.169447687831514局)，FEED(24分/28.43832068310108局)，PACTS_END(24分/53.74308985898467局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1367534611413044局)，STOKE(16分/2.0577747719969595局)，BULLY(16分/2.647271189636552局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1750 胜，当前目标进阶 0
