@@ -7169,6 +7169,70 @@ class Policy:
             f"/cards={'|'.join(_rows)}"
             "（LETHAL_PLAYABLE_REJECT_OBS）")
 
+    def _kill_race_nonlethal_playable_reject_observation_note(
+            self, pol, hand, energy, my_hp, my_block, incoming, lethal_now,
+            combat, kill_race, race_allin, candidate_audit=None) -> str:
+        """Expose a rejected playable card before a kill-race terminal.
+
+        This is deliberately separate from the lethal marker: a zero-incoming
+        end-turn can still reject a playable card while the race latch is active.
+        The audit is copied from the scoring pass above, so this helper never
+        rescored a card or changes the selected action.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_nonlethal_playable_reject_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if (not _enabled or lethal_now
+                or not (kill_race or race_allin)):
+            return ""
+        _audit_by_index = {
+            _row[0]: _row[1:]
+            for _row in (candidate_audit or [])
+            if isinstance(_row, (tuple, list)) and len(_row) == 4
+        }
+        _rows = []
+        for _card in hand or []:
+            if (not _card.get("playable")
+                    or self._card_unavailable(_card)):
+                continue
+            try:
+                _cost = (energy if _card.get("costs_x")
+                         else float(_card.get("energy_cost") or 0.0))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _cost > float(energy):
+                continue
+            _audit = _audit_by_index.get(_card.get("index"))
+            if _audit is None:
+                continue
+            try:
+                _damage, _block, _hits = card_numbers(_card)
+                _damage_total = float(_damage) * max(1, int(_hits))
+                _block_total = float(_block)
+            except (TypeError, ValueError, OverflowError):
+                _damage_total = 0.0
+                _block_total = 0.0
+            _card_id = str(_card.get("card_id") or "?").upper()
+            _name = _card.get("name") or _card_id
+            _score, _threshold, _status = _audit
+            _rows.append(
+                f"{_name}[{_card_id}]@{_cost:g}"
+                f"/dmg={_damage_total:g}/block={_block_total:g}"
+                f"/score={_score:.2f}/threshold={_threshold:.2f}"
+                f"/status={_status}")
+        if not _rows:
+            return ""
+        return (
+            f"；竞速非致死可牌拒绝观测：hp={float(my_hp):g}"
+            f"/block={float(my_block):g}/incoming={float(incoming):g}"
+            f"/energy={float(energy):g}"
+            f"/kill_race={'yes' if kill_race else 'no'}"
+            f"/race_allin={'yes' if race_allin else 'no'}"
+            f"/cards={'|'.join(_rows)}"
+            "（KILL_RACE_NONLETHAL_PLAYABLE_REJECT_OBS）")
+
     def _vivhite_hp_pressure_playable_reject_observation_note(
             self, pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
             lethal_now, combat, kill_race, race_allin, player_powers) -> str:
@@ -10676,6 +10740,10 @@ class Policy:
         # list is passed to the existing marker after the scoring pass, so this
         # adds no second evaluation and cannot alter selection.
         _lethal_candidate_audit: list = []
+        # The non-lethal counterpart is limited to the same kill-race scoring
+        # pass. It exposes a playable card rejected before the terminal turn;
+        # it never feeds back into ranking or action selection.
+        _kill_race_nonlethal_candidate_audit: list = []
         # 激怒技能税（ENRAGE_SKILL_TAX，第 637~656 局批复盘新增，静态键
         # enrage_skill_tax）：原生 EnragePower.AfterCardPlayed 在玩家打出
         # Skill 牌时给持有者 +Amount 力量（mechanics/powers.jsonl 实证），
@@ -11158,6 +11226,12 @@ class Policy:
                                  and not _hp_gate_hit)
             if lethal_now:
                 _lethal_candidate_audit.append(
+                    (c.get("index"), float(score),
+                     float(pol["play_threshold"]),
+                     "eligible" if eligible_for_best
+                     else "hp_gate" if _hp_gate_hit else "vetoed"))
+            elif kill_race or race_allin:
+                _kill_race_nonlethal_candidate_audit.append(
                     (c.get("index"), float(score),
                      float(pol["play_threshold"]),
                      "eligible" if eligible_for_best
@@ -12323,6 +12397,11 @@ class Policy:
                 self._lethal_playable_reject_observation_note(
                     pol, hand, energy, my_hp, my_block, incoming, lethal_now,
                     combat, kill_race, race_allin, _lethal_candidate_audit))
+            _kill_race_nonlethal_playable_reject_note = (
+                self._kill_race_nonlethal_playable_reject_observation_note(
+                    pol, hand, energy, my_hp, my_block, incoming, lethal_now,
+                    combat, kill_race, race_allin,
+                    _kill_race_nonlethal_candidate_audit))
             _hp_pressure_playable_reject_note = (
                 self._vivhite_hp_pressure_playable_reject_observation_note(
                     pol, hand, energy, my_hp, my_max_hp, my_block, incoming,
@@ -12405,7 +12484,7 @@ class Policy:
                         "KILL_RACE_LETHAL_FREE_ENERGY_FUNCTION_OBS")
             _rearm_note = self._consume_hp_gate_stall_rearm_note()
             return Decision("end_turn", {},
-                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
+                            f"战斗：评估后无值得出的牌（{hand_desc}），结束回合（敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲）{risk}{energy_note}{danger_note}{audit_note}{_tax_note}{_gate_note}{_rearm_note}{_resc_invuln_note}{_invuln_end_turn_note}{_waterfall_blow_end_turn_note}{_ritual_skip_note}{_lethal_playable_reject_note}{_kill_race_nonlethal_playable_reject_note}{_hp_pressure_playable_reject_note}{self._sandpit_end_turn_observation_note(ctx, combat, hand, energy, my_hp, my_block, incoming, pol)}",
                             wait=1.2)
         return Decision(None, {}, "战斗：等待出牌时机", wait=0.7)
 

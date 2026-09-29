@@ -19061,6 +19061,103 @@ def main() -> int:
             not in d_lethal_playable_outcome_off.reason), \
         f"致死可牌拒绝终局对账关闭后动作或 marker 漂移: {d_lethal_playable_outcome_off}"
 
+    # 3z-6c) 竞速非致死可牌拒绝观测（KILL_RACE_NONLETHAL_PLAYABLE_REJECT_OBS）：
+    #       1739-F17-T8 的形态——7 血、意图0、竞速锁仍在，坚毅可支付却因
+    #       溢出格挡低分被拒，随后继续竞速并在后续回合阵亡。它不能落入
+    #       LETHAL_PLAYABLE_REJECT_OBS，因为当帧并不致死；只追加候选分数和
+    #       竞速 regime 观测，关闭键必须保持 action/params 与旧理由一致。
+    def _race_nonlethal_playable_reject_state():
+        state = _lethal_unavailable_state(False)
+        state["turn"] = 8
+        state["available_actions"] = ["play_card", "end_turn"]
+        state["combat"]["player"].update({
+            "current_hp": 7, "block": 0, "energy": 3,
+        })
+        state["combat"]["end_turn_will_kill_player"] = False
+        state["combat"]["hand"] = [{
+            "index": 0, "card_id": "TRUE_GRIT", "name": "坚毅",
+            "playable": True, "energy_cost": 1, "requires_target": False,
+            "card_type": "Skill", "dynamic_values": [
+                {"name": "Block", "current_value": 7},
+            ],
+        }]
+        state["combat"]["enemies"][0].update({
+            "enemy_id": "VANTOM", "name": "墨影幻灵",
+            "current_hp": 60, "max_hp": 173,
+            "intents": [{"total_damage": 0}],
+        })
+        state["run"].update({"current_hp": 7, "floor": 17})
+        return state
+
+    race_nonlethal_know = knowledge.Knowledge(tmp)
+    race_nonlethal_pol = policy.Policy(race_nonlethal_know)
+    race_nonlethal_pol._krace_latch = True
+    race_nonlethal_pol._krace_latch_round = 5
+    race_nonlethal_pol._krace_turns = 3
+    race_nonlethal_pol._krace_dmg = 45.0
+    race_nonlethal_pol._krace_dmg_sustained = 45.0
+    race_nonlethal_pol._race_terminal_projection = {
+        "round": 8, "enemy_hp": 60.0, "dpt": 15.0,
+        "ttk": 4.0, "tsurv": 1.0,
+    }
+    race_nonlethal_ctx = _SettleCtx()
+    race_nonlethal_ctx.combat = {"comp_id": "VANTOM", "node_type": "Boss"}
+    race_nonlethal_ctx.current_combat_is_hard = True
+    race_nonlethal_pol._race_combat = race_nonlethal_ctx.combat
+    race_nonlethal_pol._race_rounds = 1
+    race_nonlethal_pol._race_loss_rate = 10.0
+    d_race_nonlethal = None
+    for _ in range(6):
+        d_candidate = race_nonlethal_pol.decide(
+            _race_nonlethal_playable_reject_state(), race_nonlethal_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_nonlethal = d_candidate
+            break
+    assert d_race_nonlethal is not None \
+        and d_race_nonlethal.params == {} \
+        and "KILL_RACE_NONLETHAL_PLAYABLE_REJECT_OBS" in d_race_nonlethal.reason \
+        and "hp=7/block=0/incoming=0/energy=3" in d_race_nonlethal.reason \
+        and "/race_allin=yes" in d_race_nonlethal.reason \
+        and "TRUE_GRIT" in d_race_nonlethal.reason \
+        and "/score=" in d_race_nonlethal.reason \
+        and "/threshold=" in d_race_nonlethal.reason \
+        and "（LETHAL_PLAYABLE_REJECT_OBS）" not in d_race_nonlethal.reason, \
+        f"竞速非致死可牌拒绝观测缺失: {d_race_nonlethal and d_race_nonlethal.reason}"
+
+    race_nonlethal_off_know = knowledge.Knowledge(tmp)
+    race_nonlethal_off_know.policy[
+        "kill_race_nonlethal_playable_reject_obs"] = False
+    race_nonlethal_off_pol = policy.Policy(race_nonlethal_off_know)
+    race_nonlethal_off_pol._krace_latch = True
+    race_nonlethal_off_pol._krace_latch_round = 5
+    race_nonlethal_off_pol._krace_turns = 3
+    race_nonlethal_off_pol._krace_dmg = 45.0
+    race_nonlethal_off_pol._krace_dmg_sustained = 45.0
+    race_nonlethal_off_pol._race_terminal_projection = dict(
+        race_nonlethal_pol._race_terminal_projection)
+    race_nonlethal_off_ctx = _SettleCtx()
+    race_nonlethal_off_ctx.combat = {
+        "comp_id": "VANTOM", "node_type": "Boss",
+    }
+    race_nonlethal_off_ctx.current_combat_is_hard = True
+    race_nonlethal_off_pol._race_combat = race_nonlethal_off_ctx.combat
+    race_nonlethal_off_pol._race_rounds = 1
+    race_nonlethal_off_pol._race_loss_rate = 10.0
+    d_race_nonlethal_off = None
+    for _ in range(6):
+        d_candidate = race_nonlethal_off_pol.decide(
+            _race_nonlethal_playable_reject_state(),
+            race_nonlethal_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_nonlethal_off = d_candidate
+            break
+    assert d_race_nonlethal_off is not None \
+        and d_race_nonlethal_off.action == d_race_nonlethal.action \
+        and d_race_nonlethal_off.params == d_race_nonlethal.params \
+        and "KILL_RACE_NONLETHAL_PLAYABLE_REJECT_OBS" \
+            not in d_race_nonlethal_off.reason, \
+        f"竞速非致死可牌拒绝观测关闭后动作或 marker 漂移: {d_race_nonlethal_off}"
+
     # 3z-7) 白绮低血量可支付生命牌的非致死拒绝观测：1531-F17-T9 的
     #       21 血/0 甲低血窗口作为边界，使用 10 点来袭伤害构造非致死对照；
     #       变身式仍可出且能量足够，却落入「评估后无值得出的牌」。只增加牌面、

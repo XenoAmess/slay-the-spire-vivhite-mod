@@ -251,6 +251,7 @@ DEFAULT_POLICY = {
     "race_projection_latch_intent_obs": True,  # Audit-only first live-latch pressure snapshot (current intent/EMA, loss rate and Steam Eruption); False removes only this marker.
     "kill_race_terminal_latch_hold_obs": True,  # Audit-only link for whether RACE_ESC_LATCH_HOLD occurred before the terminal join; False removes only this tail.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
+    "kill_race_nonlethal_playable_reject_obs": True,  # Audit-only marker for a non-lethal kill-race end-turn after affordable playable cards were rejected; False removes only the marker.
     "lethal_playable_reject_outcome_obs": True,  # Audit-only link from that rejection to the next GAME_OVER result; False removes only the outcome marker.
     "vivhite_hp_pressure_playable_reject_obs": True,  # Audit-only Vivhite low-HP LifeCost-card rejection marker; False removes only the marker.
     "vivhite_hp_pressure_playable_reject_hp_pct": 0.35,  # HP fraction at or below which the low-HP rejection marker is eligible.
