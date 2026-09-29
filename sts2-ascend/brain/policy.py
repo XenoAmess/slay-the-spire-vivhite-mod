@@ -6024,6 +6024,34 @@ class Policy:
                 f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
                 f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                 "（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）")
+        _race_nonlethal_note = ""
+        try:
+            _race_nonlethal_enabled = bool(int(float(pol.get(
+                "kill_race_nonlethal_unavailable_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _race_nonlethal_enabled = False
+        _race_transition = _pending.get("kill_race_transition")
+        if (_race_nonlethal_enabled
+                and isinstance(_race_transition, dict)):
+            _race_nonlethal_note = (
+                f"；竞速非致死资源耗尽终局对账：outcome={_result}"
+                f"/floor={_round(floor)}"
+                f"/lock_round={_round(_race_transition.get('lock_round'))}"
+                f"/race_source_round={_round(_race_transition.get('race_source_round'))}"
+                f"/race_pool={_num(_race_transition.get('race_pool'))}"
+                f"/race_dpt={_num(_race_transition.get('race_dpt'))}"
+                f"/race_ttk={_num(_race_transition.get('race_ttk'))}"
+                f"/race_tsurv={_num(_race_transition.get('race_tsurv'))}"
+                f"/nonlethal_source_round={_round(_pending.get('terminal_round'))}"
+                f"/terminal_round={_round(_race_transition.get('terminal_round'))}"
+                f"/source_hp={_num(_pending.get('hp'))}"
+                f"/source_incoming={_num(_pending.get('incoming'))}"
+                f"/source_energy={_num(_pending.get('energy'))}"
+                f"/source_hand_post_gap={_num(_pending.get('hand_post_gap'))}"
+                f"/source_hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
+                f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+                "（KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6050,7 +6078,7 @@ class Policy:
                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                if _chain else "")
             + f"（{_marker}）")
-        return _base + _ringing_hook_note
+        return _base + _ringing_hook_note + _race_nonlethal_note
 
     def _restore_nonlethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -6161,6 +6189,61 @@ class Policy:
             }
         except (TypeError, ValueError, OverflowError):
             return
+        _race_source_index = max(0, len(decisions) - 1 - _source_offset)
+        _race_transition = None
+        for _index in range(_race_source_index, len(decisions)):
+            _candidate = decisions[_index]
+            if not isinstance(_candidate, dict):
+                continue
+            if (floor is not None and _candidate.get("floor") is not None
+                    and str(_candidate.get("floor")) != str(floor)):
+                break
+            if _candidate.get("screen") not in (None, "COMBAT"):
+                break
+            _candidate_reason = str(_candidate.get("reason") or "")
+            _audit_marker_at = _candidate_reason.rfind(
+                "KILL_RACE_TERMINAL_AUDIT_OBS")
+            if _audit_marker_at < 0:
+                continue
+            _audit_at = _candidate_reason.rfind(
+                "竞速终端对账：", 0, _audit_marker_at)
+            if _audit_at < 0:
+                continue
+            _audit = _candidate_reason[_audit_at:_audit_marker_at]
+
+            def _race_token(name: str):
+                _match = re.search(
+                    rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)",
+                    _audit)
+                return _match.group(1) if _match else None
+
+            try:
+                _race_transition = {
+                    "lock_round": int(float(_race_token("lock_round"))),
+                    "race_source_round": int(float(
+                        _race_token("last_round"))),
+                    "race_pool": float(_race_token("pool")),
+                    "race_dpt": float(_race_token("dpt")),
+                    "race_ttk": float(_race_token("ttk")),
+                    "race_tsurv": float(_race_token("tsurv")),
+                    "terminal_round": _candidate.get(
+                        "turn", _candidate.get("round")),
+                    "kill_race": _race_token("kill_race") or "unknown",
+                }
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (_race_transition["kill_race"] != "yes"
+                    or _race_transition["lock_round"] < 0
+                    or _race_transition["race_source_round"] < 0
+                    or any(not math.isfinite(_race_transition[_key])
+                           or _race_transition[_key] < 0.0
+                           for _key in ("race_pool", "race_dpt", "race_ttk",
+                                        "race_tsurv"))):
+                _race_transition = None
+                continue
+            break
+        if isinstance(_race_transition, dict):
+            _pending["kill_race_transition"] = _race_transition
         self._nonlethal_unavailable_terminal_outcome_pending = _pending
         self._nonlethal_unavailable_terminal_outcome_reported = False
 

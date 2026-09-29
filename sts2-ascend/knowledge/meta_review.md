@@ -13691,3 +13691,30 @@ production_code_commit: `011a056b33da4511526c91890754c091c3cca367`
 - **验证**：宿主固定256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位中用进程级 `tempfile.mkdtemp` 适配运行完整 selfcheck，退出码0并输出 `SELFCHECK OK`（274次临时分配）；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1717—1720局复盘（KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1717, 1718, 1719, 1720`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：同一场 Boss 战中，竞速投影已经锁定为“击杀还需更多回合、但只能存活更少回合”后，若随后先出现非致死资源耗尽空过，再进入致死终端，现有通用非致死终局链会丢失竞速锁定与终端之间的关系。若这种“竞速判死 → 非致死空过 → 终端”形态可重复，则终局应能同时对账竞速锁定回合、投影池/DPT/TTK/生存回合、非致死来源和桥接长度；若非致死链发生在无竞速锁定、跨战斗或字段不一致的窗口中，则本假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-220914_EKZYS6WHNE1A.json`（第1720局）F17 Boss 的 D196 已记录 `pool=195/dpt=25.65/ttk=7.60/tsurv=2.53`，并明确“击杀还需8回合、可存活3回合”；D197 随即为 `hp=48/incoming=19/energy=0/cards=4/hand_block_candidates=2/affordable=0/max_block=8/post_gap=11/raw_survival=yes` 的非致死空过。D200 仍为 `hp=29/incoming=18/energy=0` 的同类空过，D204 才写入 `KILL_RACE_TERMINAL_AUDIT_OBS` 与致死资源耗尽，D205 进入终局。既有通用链能标出非致死来源和终局，但没有把这组竞速锁定字段接上。
+- **EXPECTED_SIGNAL**：未来3—10个独立同战斗窗口按 `run_id/floor/source_round/lock_round/terminal_round/pool/dpt/ttk/tsurv/source_hp/source_incoming/source_energy/hand_post_gap/raw_survival/bridge/outcome` 对账；仅当同楼层、同战斗的有界非致死来源后出现 `kill_race=yes` 的终端竞速审计时出现 `KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS`。无竞速锁定、跨楼层/战斗、非有限字段或 `kill_race!=yes` 不得出现；action、params、评分、候选和出牌策略必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_nonlethal_unavailable_outcome_obs` 静态回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有非致死资源耗尽终局恢复链中，从同楼层/同战斗有界窗口读取最近 `KILL_RACE_TERMINAL_AUDIT_OBS`，追加竞速投影与非致死来源的终局对账尾缀；不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入竞速锁定→非致死空过→终端夹具，断言新字段、默认键和既有通用链；关闭开关后断言 action/params 与既有 marker 严格保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个同类窗口，按竞速锁定与终端回合差、非致死来源 HP/来袭/牌面缺口、桥接长度和最终胜负分层；证据成熟前不改变 end_turn、攻防或目标选择。
+- **调整**：若真实决策链的战斗边界、`kill_race` 语义或投影字段与夹具契约不一致，先收紧恢复契约并保留失败样本，不把专用 marker 升级为行为门。
+- **回滚**：将 `kill_race_nonlethal_unavailable_outcome_obs` 设为 `False`；预期仅移除 `KILL_RACE_NONLETHAL_UNAVAILABLE_OUTCOME_OBS`，通用非致死终局 marker、评分、action 与 params 保持不变。
+- **验证**：规定的直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 槽位中以进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
