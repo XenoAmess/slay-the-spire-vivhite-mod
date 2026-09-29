@@ -12279,6 +12279,23 @@ class Policy:
                         f"target={e.get('enemy_id') or e.get('name') or 'unknown'}"
                         f"#{e.get('index', '?')} intent={_intent_text}"
                         f" role={_intent_role}")
+                    if (bool(pol.get("ovicopter_summon_pressure_obs", True))
+                            and _intent_role == "summon"
+                            and str(e.get("enemy_id") or "").upper() == "OVICOPTER"):
+                        _alive_teammates = [
+                            _teammate for _teammate in enemies
+                            if _teammate is not e
+                            and _teammate.get("is_alive") is not False
+                        ]
+                        _alive_eggs = sum(
+                            1 for _teammate in _alive_teammates
+                            if str(_teammate.get("enemy_id") or "").upper()
+                            == "TOUGH_EGG")
+                        _support_intent_obs += (
+                            f"|OVICOPTER_SUMMON_PRESSURE_OBS"
+                            f" alive_teammates={len(_alive_teammates)}"
+                            f"/tough_eggs={_alive_eggs}"
+                            f"/can_lay={'yes' if len(_alive_teammates) <= 3 else 'no'}")
                     # Native DebuffIntent acts on the player, not a teammate.
                     # Keep the old support heuristic for unknown/mixed payloads,
                     # but stop a known debuff from receiving the teammate-support

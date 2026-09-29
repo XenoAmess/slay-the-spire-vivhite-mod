@@ -13557,3 +13557,29 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 selfcheck 仍受宿主固定 256 槽池限制；使用同一 clone 的 selfcheck 池做进程级临时目录适配后输出 `SELFCHECK OK`，目标源码 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1708局复盘（OVICOPTER_SUMMON_PRESSURE_OBS）
+
+profile_id: `ironclad`
+production_code_commit: `8a3a86b60`（报告追加后由最终交付 commit 收束）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：通用 `SUPPORT_TARGET_INTENT_OBS` 只记录了 `Summon`，无法区分 Ovicopter 是否仍满足原生 `CanLay`。若选中的 Ovicopter 原生意图为 `Summon`，则 `alive_teammates <= 3` 应对应 `CanLay=true`，`alive_teammates > 3` 应对应 `CanLay=false`；把队友数、`TOUGH_EGG` 数和该布尔值写入只读 marker，可以验证 F29 的转火是否发生在真实产卵压力窗口。若字段与原生状态不一致、非 Ovicopter/Summon 误挂 marker，或开关导致 action/params 改变，即证伪并回滚。
+- **EVIDENCE**：完整决策链 `sts2-ascend/knowledge/runs/20260929-183529_THTEHGN1FZAA.json` 共437条。F29 D409 将 `Summon` 的 `TOUGH_EGG#2` 作为目标，D418 又将 `Summon` 的 `OVICOPTER#1` 作为目标；D417/D418/D424/D427 出现焦点漂移，D427 的 Ovicopter 已转为 `Buff` 并带 `strength+3`，D430 已出现非致死缺口13，D435 无可用终结动作，D436 终局。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的 `OVICOPTER` 定义为 `GetTeammatesOf(...).Count <= 3`，`LayEggsMove` 最多新增3个 `TOUGH_EGG`，否则走 `NutritionalPasteMove` 自身加3力量；现有通用 marker 没有这些压力字段。
+- **EXPECTED_SIGNAL**：后续3—10个独立 Ovicopter `Summon` 窗口按 `run_id/floor/turn/decision_id/alive_teammates/tough_eggs/can_lay` 对账，并与下一条权威 `COMBAT` roster/intent 核对：`can_lay=yes` 的真实产卵窗口应能观察到卵或 roster 槽位变化，`can_lay=no` 不应被解释为即将产卵。任一计数错配、边界外串线、marker 缺失/误挂或 action/params 漂移都停止扩展并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `ovicopter_summon_pressure_obs`；设为 `False` 只移除新 marker。
+- `sts2-ascend/brain/policy.py`：仅在既有零伤害辅助体 `Summon` 观察命中 Ovicopter 时，排除自身统计存活队友、统计存活 `TOUGH_EGG`，追加 `OVICOPTER_SUMMON_PRESSURE_OBS`；不进入评分、候选、门控、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入 `CanLay=yes`、`CanLay=no` 夹具，以及关闭键后的 action/params 完全等价断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个独立窗口，按实际卵生成、Ovicopter后续意图、焦点漂移和最终胜负分层；证据重复前不改变转火或防守策略。
+- **调整**：若真实 API 的 enemy identity、alive 语义或 roster 更新时序与夹具不同，先修正来源契约并保留失败样本，不把观测升级为行为门。
+- **回滚**：将 `ovicopter_summon_pressure_obs` 设为 `False`；预期新 marker 消失，既有 `SUPPORT_TARGET_INTENT_OBS`、action 与 params 保持不变。
+- **验证**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的继承 ACL 临时根中用进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码0并输出 `SELFCHECK OK`。代码目标 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

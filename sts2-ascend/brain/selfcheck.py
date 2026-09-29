@@ -1474,6 +1474,19 @@ def main() -> int:
                             "intents": [{"total_damage": 20}]}]},
             "run": {"current_hp": 70, "max_hp": 80, "gold": 0, "floor": 17, "deck": []}}
 
+    def ovicopter_support_state(extra_eggs=1):
+        state = support_state(0, "Summon")
+        ovicopter = state["combat"]["enemies"][0]
+        ovicopter["enemy_id"] = "OVICOPTER"
+        ovicopter["name"] = "Ovicopter"
+        for offset in range(extra_eggs):
+            state["combat"]["enemies"].append({
+                "index": 2 + offset, "enemy_id": "TOUGH_EGG", "name": "Tough Egg",
+                "current_hp": 16, "max_hp": 16, "block": 0,
+                "is_alive": True, "is_hittable": True,
+                "intents": [{"total_damage": 0, "intent_type": "Summon"}]})
+        return state
+
     # 夹具卫生：全部夹具共享 ctx（ctx.combat=None 视为同一战斗实例），3yh 是
     # 独立逻辑战斗——FOCUS_DRIFT_LOCK 的逐战斗翻线计数/打出火线记忆须与既有
     # _focus_index 一样显式复位，避免前序夹具（如 3yk 重生体连打）漏账干扰。
@@ -1548,6 +1561,40 @@ def main() -> int:
         and "role=unknown" in d_summon_rb.reason, \
         f"support_target_summon_obs=False 未严格回滚且行为不等价: {d_summon_rb.reason}"
     pol.know.policy["support_target_summon_obs"] = True
+    ov_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ovicopter-pressure-on-")))
+    assert ov_know.policy.get("ovicopter_summon_pressure_obs") is True, \
+        "DEFAULT_POLICY missing ovicopter_summon_pressure_obs"
+    ov_pol = policy.Policy(ov_know, random.Random(11))
+    d_ov_yes = ov_pol.decide(ovicopter_support_state(1), ctx)
+    assert d_ov_yes.action == "play_card" \
+        and d_ov_yes.params.get("target_index") == 0 \
+        and "OVICOPTER_SUMMON_PRESSURE_OBS" in d_ov_yes.reason \
+        and "alive_teammates=2" in d_ov_yes.reason \
+        and "tough_eggs=1" in d_ov_yes.reason \
+        and "can_lay=yes" in d_ov_yes.reason, \
+        f"Ovicopter CanLay=yes 观测缺失或改写动作: {d_ov_yes.reason}"
+    ov_rb_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ovicopter-pressure-off-")))
+    ov_rb_know.policy["ovicopter_summon_pressure_obs"] = False
+    ov_rb_pol = policy.Policy(ov_rb_know, random.Random(11))
+    d_ov_rb = ov_rb_pol.decide(ovicopter_support_state(1), ctx)
+    assert d_ov_rb.action == d_ov_yes.action \
+        and d_ov_rb.params == d_ov_yes.params \
+        and "OVICOPTER_SUMMON_PRESSURE_OBS" not in d_ov_rb.reason \
+        and "SUPPORT_TARGET_INTENT_OBS" in d_ov_rb.reason \
+        and "role=summon" in d_ov_rb.reason, \
+        f"ovicopter_summon_pressure_obs=False 未严格回滚观测且保持行为等价: {d_ov_rb.reason}"
+    ov_no_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ovicopter-pressure-no-")))
+    ov_no_pol = policy.Policy(ov_no_know, random.Random(11))
+    d_ov_no = ov_no_pol.decide(ovicopter_support_state(3), ctx)
+    assert d_ov_no.action == "play_card" \
+        and d_ov_no.params.get("target_index") == 0 \
+        and "alive_teammates=4" in d_ov_no.reason \
+        and "tough_eggs=3" in d_ov_no.reason \
+        and "can_lay=no" in d_ov_no.reason, \
+        f"Ovicopter CanLay=no 边界观测缺失: {d_ov_no.reason}"
     pol.know.policy["support_target_debuff_gate"] = False
     d_shrinker_gate_rb = pol.decide(shrinker_obs_state, ctx)
     assert d_shrinker_gate_rb.action == "play_card" \
