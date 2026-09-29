@@ -12711,6 +12711,7 @@ class Policy:
                 e.get("index") for e in _kin_leader_pool}
             _kin_minion_indices = {
                 e.get("index") for e in _kin_minion_pool}
+            _kin_leader_tradeoff_rows = []
             # 集火连续性（第 695~697 批复盘）：多体精英（残杀千足虫等分段体）的
             # 力量轮转让逐张重算的火线在节间横跳（697 局 F28 阵亡记录 0→1→2），
             # 三条血同时剩半截无一减员——给延续上一目标的小幅粘性分，减员前置。
@@ -13033,6 +13034,12 @@ class Policy:
                     _kin_leader_focus_active
                     and e.get("index") in _kin_minion_indices)
                 if _kin_follower_gate_blocked:
+                    if bool(pol.get("kin_leader_removal_tradeoff_obs", True)):
+                        _kin_leader_tradeoff_rows.append((
+                            e.get("index"),
+                            float(_effective_pool(e)),
+                            float(s),
+                            float(_rem_cost)))
                     # The native Kin follower gives up when its leader dies.
                     # Keep the gate after kill/removal scoring so a cheap or
                     # lethal follower cannot outrank the still-live priest.
@@ -13189,6 +13196,27 @@ class Policy:
                 why += (f"｜多强化体火线锁：保持{_locked_name}，"
                         f"已发生{self._focus_drift_flips}次非击杀换线"
                         "（FOCUS_DRIFT_MULTI_SCALER_LOCK）")
+            # 领袖闸减员对账（KIN_LEADER_REMOVAL_TRADEOFF_OBS）：1733-F17
+            # 再次出现低池随从被闸压制、所有攻击留在高池神官的形态。这里只
+            # 披露闸前已有的减员成本评分，不把反事实分数送回目标选择；这样
+            # 后续真机可以区分「领袖语义确实值得优先」与「闸掩盖了廉价减员」。
+            if (best_t in _kin_leader_indices
+                    and _kin_leader_tradeoff_rows
+                    and bool(pol.get("kin_leader_removal_tradeoff_obs", True))):
+                _tradeoff = min(_kin_leader_tradeoff_rows,
+                                key=lambda row: row[1])
+                _leader = next(
+                    (e for e in _kin_leader_pool
+                     if e.get("index") == best_t), None)
+                _leader_pool = float(_effective_pool(_leader or {}))
+                why += (
+                    f"｜领袖闸减员对账：leader=KIN_PRIEST#{best_t}"
+                    f"/leader_pool={_leader_pool:.0f}"
+                    f"/blocked_follower=KIN_FOLLOWER#{_tradeoff[0]}"
+                    f"/follower_pool={_tradeoff[1]:.0f}"
+                    f"/pre_gate_score={_tradeoff[2]:.2f}"
+                    f"/removal_bonus={_tradeoff[3]:.2f}"
+                    "（KIN_LEADER_REMOVAL_TRADEOFF_OBS）")
             # 致死生还线部分击杀旁观（LETHAL_PARTIAL_KILL_COVER_OBS）：
             # ``best_kill`` 只说明当前单体目标会被击杀。1712-F23 的
             # LETHAL_SURVIVABLE_LINE 仍先打掉一个卵，耗尽能量后留下其他敌人与

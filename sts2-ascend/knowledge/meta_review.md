@@ -13907,3 +13907,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配执行同一 selfcheck，退出码 0 并输出 `SELFCHECK OK`。目标三文件完整 diff 已回读，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1733局复盘（KIN_LEADER_REMOVAL_TRADEOFF_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1733`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1733局 F17 的 `KIN_LEADER_FOCUS_GATE` 在减员成本评分之后压低了低血量 `KIN_FOLLOWER`，使可攻击回合持续选择 `KIN_PRIEST`；这可能是原生“领袖死亡后随从失去意义”的正确行为，也可能掩盖了“廉价减员”与领袖闸之间的真实取舍。若后者为真，后续同类终局应能在不改变目标或动作的情况下复现可量化的闸前取舍。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-030120_2BKT5GT3JNBC.json` 的205条 decisions。D183—D202 的可攻击回合均指向 `KIN_PRIEST`，期间多次出现非致死空过；D201—D202 仍记录领袖闸与竞速压力，D204 失败时 `KIN_FOLLOWER` 仍存活。原生知识确认 `KIN_FOLLOWER` 的 `MINION_POWER` 依赖领袖死亡语义，`KIN_PRIEST` 的 Ritual 与随从的 Dance 都是各自自强化；因此旧的“神官替随从增益”解释不成立，但当前闸与减员成本的冲突仍缺少逐次对账字段。
+- **EXPECTED_SIGNAL**：未来3—10个同类 `KIN_FOLLOWER+KIN_PRIEST` 终局窗口中，仅当最终选择 `KIN_PRIEST` 且确有被领袖闸压制的随从候选时，追加 `KIN_LEADER_REMOVAL_TRADEOFF_OBS`，记录 `follower_pool`、`pre_gate_score`、`removal_bonus` 和领袖池值；若无压制行、目标为随从、跨战斗或字段缺失则不命中。评分、候选排序、目标、action 与 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kin_leader_removal_tradeoff_obs` 回滚开关，关闭只移除该观测尾缀。
+- `sts2-ascend/brain/policy.py`：在既有 `KIN_LEADER_FOCUS_GATE` 压制分支采集低血随从池值、闸前分数与减员加分；只在最终目标为 `KIN_PRIEST` 时把最小池值行追加到 reason，不进入评分、排序、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：扩展领袖闸正例并加入开关关闭夹具，断言新 marker 消失而既有 marker、action 和 params 等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个同敌方组合、同终局语义的窗口，按目标、有效 DPT、减员池值、闸前分数和最终胜负分层；证据成熟前不改变领袖闸或减员成本权重。
+- **调整**：若后续真实窗口显示领袖优先失败来自有效 DPT/能量而非减员取舍，收紧身份与字段边界并保留失败样本，再决定是否调整评分；不得把该观测直接升级为行为门。
+- **回滚**：将 `kin_leader_removal_tradeoff_obs` 设为 `False`；预期只移除 `KIN_LEADER_REMOVAL_TRADEOFF_OBS`，既有 `KIN_LEADER_FOCUS_GATE`、评分、目标、action 和 params 不变。
+- **验证**：完整 selfcheck 在同一 clone 的 `.review-cache/selfcheck-pool` 进程级 `tempfile.mkdtemp` 适配下退出码0并输出 `SELFCHECK OK`；初始直接运行仅复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`。目标源文件 diff 已回读，未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -659,6 +659,11 @@ DEFAULT_POLICY = {
                                         # 原生 MinionPower 规定领袖死亡后随从放弃战斗，
                                         # 因此这是一个有界行为修正，不扩展到其他携带
                                         # MINION_POWER 的组合；False 严格恢复旧目标与评分。
+    "kin_leader_removal_tradeoff_obs": True,  # 领袖闸与减员成本的只读对账：记录被
+                                                # KIN_LEADER_FOCUS_GATE 压制的低血随从
+                                                # 之池值、闸前分数与减员加分；不改变
+                                                # 目标、评分、动作或参数，False 仅移除
+                                                # KIN_LEADER_REMOVAL_TRADEOFF_OBS。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的

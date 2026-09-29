@@ -1810,8 +1810,24 @@ def main() -> int:
     d_kl_on = kl_on.decide(kin_leader_focus_state(), ctx)
     assert d_kl_on.action == "play_card" \
         and d_kl_on.params.get("target_index") == 1 \
-        and "KIN_LEADER_FOCUS_GATE" in d_kl_on.reason, \
+        and "KIN_LEADER_FOCUS_GATE" in d_kl_on.reason \
+        and "KIN_LEADER_REMOVAL_TRADEOFF_OBS" in d_kl_on.reason, \
         f"同族领袖闸未把目标转向神官: {d_kl_on.params}（{d_kl_on.reason}）"
+    kl_tradeoff_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-tradeoff-off-")))
+    kl_tradeoff_off_know.policy["kin_leader_removal_tradeoff_obs"] = False
+    kl_tradeoff_off = policy.Policy(
+        kl_tradeoff_off_know, random.Random(11))
+    d_kl_tradeoff_off = kl_tradeoff_off.decide(
+        kin_leader_focus_state(), ctx)
+    assert (d_kl_tradeoff_off.action == d_kl_on.action
+            and d_kl_tradeoff_off.params == d_kl_on.params
+            and "KIN_LEADER_FOCUS_GATE" in d_kl_tradeoff_off.reason
+            and "KIN_LEADER_REMOVAL_TRADEOFF_OBS"
+                not in d_kl_tradeoff_off.reason), \
+        f"领袖闸减员对账关闭后动作或既有闸漂移: " \
+        f"on={d_kl_on.params}（{d_kl_on.reason}） " \
+        f"off={d_kl_tradeoff_off.params}（{d_kl_tradeoff_off.reason}）"
     kl_off_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-leader-off-")))
     kl_off_know.policy["kin_leader_focus_gate"] = False
