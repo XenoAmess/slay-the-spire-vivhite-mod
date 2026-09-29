@@ -4963,6 +4963,39 @@ class Policy:
                 _capacity_tail += self._race_output_capacity_availability_tail(
                     _capacity)
 
+        _capacity_transition_tail = ""
+        try:
+            _capacity_transition_obs = bool(int(float(pol.get(
+                "kill_race_terminal_output_capacity_transition_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _capacity_transition_obs = False
+        _capacity_transition = _pending.get("output_capacity_transition")
+        if (_capacity_transition_obs
+                and isinstance(_capacity, dict)
+                and isinstance(_capacity_transition, dict)):
+            try:
+                _capacity_transition_tail = (
+                    f"；终端输出容量首末对账：source_round="
+                    f"{_round(_capacity_transition.get('source_round'))}"
+                    f"/source_action={_capacity_transition.get('source_action') or '?'}"
+                    f"/source_target_hp={float(_capacity_transition['target_hp']):g}"
+                    f"/source_target_block={float(_capacity_transition['target_block']):g}"
+                    f"/source_attack_candidates="
+                    f"{int(_capacity_transition['attack_candidates'])}"
+                    f"/source_raw_damage_cap="
+                    f"{float(_capacity_transition['raw_damage_cap']):g}"
+                    f"/terminal_target_hp={float(_capacity['target_hp']):g}"
+                    f"/terminal_target_block={float(_capacity['target_block']):g}"
+                    f"/terminal_attack_candidates="
+                    f"{int(_capacity['attack_candidates'])}"
+                    f"/terminal_raw_damage_cap="
+                    f"{float(_capacity['raw_damage_cap']):g}"
+                    f"/outcome={_result}"
+                    "（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                _capacity_transition_tail = ""
+
         _latch_projection_tail = ""
         try:
             _latch_projection_obs = bool(int(float(pol.get(
@@ -5025,6 +5058,7 @@ class Policy:
             f"/race_allin={_flag(_pending.get('race_allin'))}"
             f"{_latch_hold_tail}"
             f"{_capacity_tail}"
+            f"{_capacity_transition_tail}"
             f"{_latch_projection_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
@@ -5307,6 +5341,80 @@ class Policy:
             f"/played={'yes' if ritual_played else 'no'}"
             "（VIVHITE_RITUAL_WINDOW_OUTCOME_OBS）")
 
+    @staticmethod
+    def _find_race_output_capacity_transition_source(
+            decisions, floor=None, before_index=None) -> dict | None:
+        """Find a bounded same-combat race output-capacity source row.
+
+        The source is an already persisted observation, never a recomputed
+        combat snapshot.  Stop at an explicit floor or screen boundary so a
+        same-floor later combat cannot borrow an earlier capacity sample.
+        """
+        if not isinstance(decisions, list) or not decisions:
+            return None
+        try:
+            _stop = (len(decisions) if before_index is None
+                     else int(before_index))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        _stop = max(0, min(len(decisions), _stop))
+
+        def _same_floor(left, right):
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        for _index in range(_stop - 1, max(-1, _stop - 24), -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen != "COMBAT":
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(
+                "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS")
+            if _marker_at < 0:
+                continue
+            _label_at = _reason.rfind(
+                "race-allin lethal output capacity:", 0, _marker_at)
+            if _label_at < 0:
+                continue
+            _capacity_text = _reason[_label_at:_marker_at]
+
+            def _token(name: str):
+                _match = re.search(
+                    rf"(?:^|/){re.escape(name)}=([^/；（）()\s]+)",
+                    _capacity_text)
+                return _match.group(1) if _match else None
+
+            try:
+                _source = {
+                    "source_round": _row.get(
+                        "turn", _row.get("round")),
+                    "source_action": _row.get("action") or "?",
+                    "target_hp": float(_token("target_hp")),
+                    "target_block": float(_token("target_block")),
+                    "attack_candidates": int(float(
+                        _token("attack_candidates"))),
+                    "raw_damage_cap": float(_token("raw_damage_cap")),
+                }
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_source[_key])
+                         and _source[_key] >= 0.0
+                         for _key in ("target_hp", "target_block",
+                                      "raw_damage_cap"))
+                    or _source["attack_candidates"] < 0):
+                continue
+            return _source
+        return None
+
     def _restore_kill_race_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
         """Recover a terminal audit after a policy/process reload.
@@ -5452,6 +5560,12 @@ class Policy:
                         _pending.pop("output_capacity", None)
         except (TypeError, ValueError, OverflowError):
             return
+        if isinstance(_pending.get("output_capacity"), dict):
+            _transition_source = (
+                self._find_race_output_capacity_transition_source(
+                    decisions, floor=floor, before_index=len(decisions) - 1))
+            if isinstance(_transition_source, dict):
+                _pending["output_capacity_transition"] = _transition_source
         self._race_terminal_outcome_pending = _pending
         self._race_terminal_outcome_reported = False
 
@@ -6681,6 +6795,7 @@ class Policy:
                     race_allin=_race_allin_state)
                 _lethal_unavailable_note += _terminal_audit_note
                 _terminal_output_capacity = None
+                _output_capacity_transition_source = None
                 if _kill_race_state:
                     _terminal_output_capacity = (
                         self._race_allin_lethal_output_capacity_snapshot(
@@ -6695,6 +6810,10 @@ class Policy:
                             "hook_ids": _hook_ids,
                             "energy_locked": _count_energy_locked_cards(),
                         })
+                        _output_capacity_transition_source = (
+                            self._find_race_output_capacity_transition_source(
+                                getattr(ctx, "decisions", None),
+                                floor=(state.get("run") or {}).get("floor")))
                     _lethal_unavailable_note += (
                         self._race_allin_lethal_output_capacity_note(
                             hand, combat.get("enemies", []), energy,
@@ -6737,6 +6856,10 @@ class Policy:
                                     "energy_locked")
                                 if _key in _terminal_output_capacity
                             }
+                        if isinstance(_output_capacity_transition_source, dict):
+                            self._race_terminal_outcome_pending[
+                                "output_capacity_transition"] = dict(
+                                    _output_capacity_transition_source)
                         self._race_terminal_outcome_reported = False
                 _latch_projection = self._race_latch_projection_snapshot(pol)
                 if (isinstance(_latch_projection, dict)

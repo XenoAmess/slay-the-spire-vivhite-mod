@@ -17583,6 +17583,16 @@ def main() -> int:
     race_terminal_pol = policy.Policy(race_terminal_know)
     race_terminal_ctx = _SettleCtx()
     race_terminal_ctx.combat = {}
+    race_terminal_output_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 5,
+        "reason":
+            "; race-allin lethal output capacity: hp=9/block=0"
+            "/incoming=20/energy=2/target_hp=48/target_block=0"
+            "/attack_candidates=1/raw_damage_cap=16/cards=STRIKE:1@16"
+            " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)",
+    }
+    race_terminal_ctx.decisions = [race_terminal_output_source_row]
     assert race_terminal_pol.decide(
         _lethal_unavailable_state(True), race_terminal_ctx).action == "play_card", \
         "竞速终端对账夹具热身帧未进入出牌状态"
@@ -17627,6 +17637,9 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "kill_race_lethal_output_capacity_obs"] is True, \
         "DEFAULT_POLICY 缺少 kill_race_lethal_output_capacity_obs 静态键或默认值被改"
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_terminal_output_capacity_transition_obs"] is True, \
+        "DEFAULT_POLICY 缺少 kill_race_terminal_output_capacity_transition_obs 静态键或默认值被改"
     assert "/target_hp=200/target_block=0/attack_candidates=0/raw_damage_cap=0/cards=none" \
         in d_race_terminal.reason, \
         f"竞速致死输出容量观测缺失: {d_race_terminal.reason}"
@@ -17789,6 +17802,14 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局未继承输出容量: {d_race_terminal_outcome}"
+    assert ("source_round=5/source_action=play_card/source_target_hp=48"
+            "/source_target_block=0/source_attack_candidates=1"
+            "/source_raw_damage_cap=16/terminal_target_hp=200"
+            "/terminal_target_block=0/terminal_attack_candidates=0"
+            "/terminal_raw_damage_cap=0/outcome=defeat"
+            "（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS）"
+            in d_race_terminal_outcome.reason), \
+        f"竞速终端输出容量首末对账缺失: {d_race_terminal_outcome}"
     assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
             "/latch_tsurv=8/latest_round=6/latest_pool=46/latest_dpt=21"
             "/latest_ttk=2.2/latest_tsurv=0.5/drift=yes"
@@ -17829,10 +17850,13 @@ def main() -> int:
 
     race_terminal_replay_pol = policy.Policy(race_terminal_know)
     race_terminal_replay_ctx = _SettleCtx()
-    race_terminal_replay_ctx.decisions = [{
-        "action": "end_turn", "floor": 33,
-        "reason": d_race_terminal.reason,
-    }]
+    race_terminal_replay_ctx.decisions = [
+        dict(race_terminal_output_source_row),
+        {
+            "action": "end_turn", "floor": 33,
+            "reason": d_race_terminal.reason,
+        },
+    ]
     d_race_terminal_replay = race_terminal_replay_pol.decide(
         race_terminal_outcome_state, race_terminal_replay_ctx)
     assert (d_race_terminal_replay.action == d_race_terminal_outcome.action
@@ -17846,6 +17870,14 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
             in d_race_terminal_replay.reason), \
         f"进程重载后未恢复终端输出容量: {d_race_terminal_replay}"
+    assert ("source_round=5/source_action=play_card/source_target_hp=48"
+            "/source_target_block=0/source_attack_candidates=1"
+            "/source_raw_damage_cap=16/terminal_target_hp=200"
+            "/terminal_target_block=0/terminal_attack_candidates=0"
+            "/terminal_raw_damage_cap=0/outcome=defeat"
+            "（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS）"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复输出容量首末对账: {d_race_terminal_replay}"
     assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
             "/latch_tsurv=8/latest_round=6/latest_pool=46/latest_dpt=21"
             "/latest_ttk=2.2/latest_tsurv=0.5/drift=yes"
@@ -17856,6 +17888,32 @@ def main() -> int:
     assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_replay.reason, \
         f"进程重载后未恢复锁持尾部: {d_race_terminal_replay}"
+
+    race_terminal_transition_off_know = knowledge.Knowledge(tmp)
+    race_terminal_transition_off_know.policy[
+        "kill_race_terminal_output_capacity_transition_obs"] = False
+    race_terminal_transition_off_pol = policy.Policy(
+        race_terminal_transition_off_know)
+    race_terminal_transition_off_ctx = _SettleCtx()
+    race_terminal_transition_off_ctx.decisions = [
+        dict(race_terminal_output_source_row),
+        {
+            "action": "end_turn", "floor": 33,
+            "reason": d_race_terminal.reason,
+        },
+    ]
+    d_race_terminal_transition_off = race_terminal_transition_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_transition_off_ctx)
+    assert (d_race_terminal_transition_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_transition_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS"
+            not in d_race_terminal_transition_off.reason
+            and "KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS"
+            in d_race_terminal_transition_off.reason), \
+        f"终端输出容量首末对账关闭后动作或既有容量观测漂移: " \
+        f"{d_race_terminal_transition_off}"
 
     race_terminal_replay_off_know = knowledge.Knowledge(tmp)
     race_terminal_replay_off_know.policy[

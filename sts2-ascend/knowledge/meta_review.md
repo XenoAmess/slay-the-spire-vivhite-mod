@@ -13402,3 +13402,29 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：固定 256 槽入口因自检夹具临时分配超限报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0、输出 `SELFCHECK OK`。目标 diff 无空白错误；未写入在线状态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1689—1690局复盘（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速终端当前只记录最后一帧输出容量，可能丢失此前已经观测到的可支付攻击容量；若从同楼层、同一 `COMBAT` 尾部的持久化 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS` 回接终端快照，就能区分“牌面容量随回合收缩”与“终端快照孤立”，且不改变动作或参数。该假设可被来源回合/字段错配、跨战斗串线、重复 marker 或行为漂移证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-125249_WUDC963M9FMJ.json`（第1690局，F17）D237 的前置输出容量为 `source_round=7/source_action=play_card/target_hp=48/target_block=0/attack_candidates=1/raw_damage_cap=16`；同场 D238 的致死 `end_turn` 与 D239 的 `GAME_OVER` 终端容量已降为 `target_hp=24/target_block=0/attack_candidates=0/raw_damage_cap=0`。既有终端 marker 只保留后者，缺少首末来源字段。第1689局虽出现前置 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`，但没有符合条件的竞速终端容量 join，构成不应凭空生成 transition 的反例。
+- **EXPECTED_SIGNAL**：未来3—10个独立竞速终局中，同一 `run_id/floor/COMBAT` 若存在有界来源，应在 `GAME_OVER`/重载恢复追加 `KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS`，字段同时保留 source 与 terminal 的 target/block/candidate/raw-cap；缺来源、越过屏幕或楼层边界、字段不一致、重复写入或 action/params 漂移即停止并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `kill_race_terminal_output_capacity_transition_obs` 只读开关。
+- `sts2-ascend/brain/policy.py`：仅从最近24条同楼层 `COMBAT` 持久化决策中解析既有来源 marker，把来源快照接入终端 pending；同进程和 Policy 重载均覆盖，终端追加首末容量对账。不重算来源，不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加来源→致死 end-turn→GAME_OVER 的同进程夹具、重载夹具及关闭开关夹具，验证 transition marker 可恢复且 action/params 保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个独立样本，按 source/terminal 回合、敌方血池变化、可支付攻击候选数、raw damage cap 与胜负分层；证据成熟前保持只读观测，不调整竞速或防守策略。
+- **调整**：若来源只能在特定回合或某类遭遇成立，先收紧同战斗边界与字段契约；若首末容量变化不能复现，保留失败样本并不升级为行为门。
+- **回滚**：将 `kill_race_terminal_output_capacity_transition_obs` 设为 `False`；预期只移除新 transition marker，既有终端容量、终端审计、action 与 params 保持不变。
+- **验证**：固定宿主256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行原始 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；目标文件 `git diff --check` 通过。已直接回读1690完整 run 验证来源扫描命中 D237；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
