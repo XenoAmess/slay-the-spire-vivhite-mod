@@ -6055,6 +6055,22 @@ class Policy:
                     f"/first_round={_round(_pending.get('pressure_first_round'))}"
                     f"/last_round={_round(_pending.get('pressure_last_round'))}"
                     "（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）")
+                if (_pending.get("pressure_first_hp") is not None
+                        and _pending.get("pressure_last_hp") is not None
+                        and _pending.get("pressure_hp_delta") is not None
+                        and _pending.get("pressure_first_post_gap") is not None
+                        and _pending.get("pressure_last_post_gap") is not None
+                        and _pending.get("pressure_post_gap_delta") is not None):
+                    _pressure_tail = (
+                        _pressure_tail[:-len(
+                            "（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）")]
+                        + f"/first_hp={_num(_pending.get('pressure_first_hp'))}"
+                        f"/last_hp={_num(_pending.get('pressure_last_hp'))}"
+                        f"/hp_delta={_num(_pending.get('pressure_hp_delta'))}"
+                        f"/first_post_gap={_num(_pending.get('pressure_first_post_gap'))}"
+                        f"/last_post_gap={_num(_pending.get('pressure_last_post_gap'))}"
+                        f"/post_gap_delta={_num(_pending.get('pressure_post_gap_delta'))}"
+                        "（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6170,6 +6186,24 @@ class Policy:
             if (_candidate.get("action") == "end_turn"
                 and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
                 in str(_candidate.get("reason") or ""))]
+
+        def _pressure_metric(_candidate, _name):
+            """Read one numeric field from a persisted precursor marker."""
+            _reason = str(_candidate.get("reason") or "")
+            _marker_at = _reason.find("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
+            if _marker_at < 0:
+                return None
+            _match = re.search(
+                rf"(?<![A-Za-z0-9_]){re.escape(_name)}="
+                rf"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _reason[:_marker_at])
+            if not _match:
+                return None
+            try:
+                return float(_match.group(1))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
         _pressure_rounds = []
         for _candidate in _pressure_rows:
             try:
@@ -6182,6 +6216,31 @@ class Policy:
             _pressure_rounds[0] if _pressure_rounds else None)
         _pressure_last_round = (
             _pressure_rounds[-1] if _pressure_rounds else None)
+        _pressure_hp = [
+            _value for _value in (
+                _pressure_metric(_candidate, "hp")
+                for _candidate in _pressure_rows)
+            if _value is not None]
+        _pressure_post_gap = [
+            _value for _value in (
+                _pressure_metric(_candidate, "hand_post_gap")
+                for _candidate in _pressure_rows)
+            if _value is not None]
+        _pressure_first_hp = _pressure_hp[0] if _pressure_hp else None
+        _pressure_last_hp = _pressure_hp[-1] if _pressure_hp else None
+        _pressure_hp_delta = (
+            _pressure_last_hp - _pressure_first_hp
+            if _pressure_first_hp is not None and _pressure_last_hp is not None
+            else None)
+        _pressure_first_post_gap = (
+            _pressure_post_gap[0] if _pressure_post_gap else None)
+        _pressure_last_post_gap = (
+            _pressure_post_gap[-1] if _pressure_post_gap else None)
+        _pressure_post_gap_delta = (
+            _pressure_last_post_gap - _pressure_first_post_gap
+            if (_pressure_first_post_gap is not None
+                and _pressure_last_post_gap is not None)
+            else None)
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -6223,6 +6282,12 @@ class Policy:
                 "pressure_count": _pressure_count,
                 "pressure_first_round": _pressure_first_round,
                 "pressure_last_round": _pressure_last_round,
+                "pressure_first_hp": _pressure_first_hp,
+                "pressure_last_hp": _pressure_last_hp,
+                "pressure_hp_delta": _pressure_hp_delta,
+                "pressure_first_post_gap": _pressure_first_post_gap,
+                "pressure_last_post_gap": _pressure_last_post_gap,
+                "pressure_post_gap_delta": _pressure_post_gap_delta,
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),

@@ -13034,6 +13034,33 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-09-29 第1722局复盘（NONLETHAL_CHAIN_PRESSURE_TREND_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1722`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：已有 `NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS` 只记录重复空过的次数与回合范围，无法判断压力链是否伴随生存余量恶化。若重复空过确实是同一条逐步失血链，应在同一有界战斗尾部追加首末 HP 与反事实格挡后缺口的 delta；若字段与来源 marker 顺序不符、少于两次空过仍输出，或动作发生变化，则假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-225238_HLUMP9DFEDD6.json`（第1722局，243 decisions，F17 `LAGAVULIN_MATRIARCH`）的 T4/T5/T6/T8 均有 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`，T9 才进入致死 `end_turn`。首个 T4 marker 为 `hp=58/hand_post_gap=14`，末个 T8 marker 为 `hp=22/hand_post_gap=15`，终局 HP 为 0；本地只读回放得到 `count=4/first_round=4/last_round=8/first_hp=58/last_hp=22/hp_delta=-36/first_post_gap=14/last_post_gap=15/post_gap_delta=1`。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立同类终局窗口按 `run_id/floor/turn/action` 对账；仅在同楼层、同 `COMBAT` 尾部至少两条非致死 `end_turn` marker 时输出首末 HP/缺口与 delta。跨楼层、跨屏幕、非 `end_turn`、字段缺失或顺序反转不得输出；评分、候选、目标、action 与 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有有界压力链恢复中解析已持久化 marker 的 `hp` 与 `hand_post_gap`，将首值、末值和 delta 追加到既有 `NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS` 尾部；不新增评分或行为分支。
+- `sts2-ascend/brain/selfcheck.py`：扩展第1722局形状夹具，使用首末不同 HP/缺口断言新字段，并继续断言终局 action/params 与关闭既有压力键后的回滚等价。
+- 未修改 `knowledge.py`：沿用已有 `nonlethal_unavailable_chain_pressure_obs` 默认开启/回滚契约；未写入 runs、stats、progression、policy、lessons、`.runtime` 或 replay。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集 3—10 个同类压力链，比较 HP delta、格挡后缺口 delta、终局 outcome 与实际相邻回合；证据成熟前不升级为行为闸门。
+- **调整**：若真实 reason 的字段边界、来源顺序或同战斗边界与夹具不符，先收紧解析契约并保留失败样本。
+- **回滚**：将 `nonlethal_unavailable_chain_pressure_obs` 设为 `False`；预期移除整个压力尾部（含新增字段），既有终局 marker、action 与 params 不变。
+- **验证**：宿主固定256槽入口报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位及进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0 并输出 `SELFCHECK OK`；真实 1722 只读回放输出 `RUN1722_REPLAY OK`；目标 diff `git diff --check` 通过；`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; pressure trend fields integrated)`
+
 ## 2026-09-29 第1721局复盘（NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS）
 
 profile_id: `ironclad`

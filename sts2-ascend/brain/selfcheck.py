@@ -17861,9 +17861,13 @@ def main() -> int:
     #         的有界尾部，补充次数与首末回合，不改变终局动作或既有链 marker。
     nonlethal_pressure_pol = policy.Policy(knowledge.Knowledge(tmp))
     nonlethal_pressure_ctx = _SettleCtx()
+    nonlethal_pressure_first_reason = d_nonlethal_empty.reason.replace(
+        "hp=55", "hp=58").replace("/hand_post_gap=23", "/hand_post_gap=14")
+    nonlethal_pressure_last_reason = d_nonlethal_empty.reason.replace(
+        "hp=55", "hp=22").replace("/hand_post_gap=23", "/hand_post_gap=15")
     nonlethal_pressure_ctx.decisions = [
         {"screen": "COMBAT", "action": "end_turn", "floor": 48,
-         "turn": 4, "reason": d_nonlethal_empty.reason},
+         "turn": 4, "reason": nonlethal_pressure_first_reason},
         {"screen": "COMBAT", "action": "play_card", "floor": 48,
          "turn": 5, "reason": "战斗：压力链桥接出牌"},
         {"screen": "COMBAT", "action": "end_turn", "floor": 48,
@@ -17871,7 +17875,7 @@ def main() -> int:
         {"screen": "COMBAT", "action": "play_card", "floor": 48,
          "turn": 7, "reason": "战斗：压力链桥接出牌"},
         {"screen": "COMBAT", "action": "end_turn", "floor": 48,
-         "turn": 8, "reason": d_nonlethal_empty.reason},
+         "turn": 8, "reason": nonlethal_pressure_last_reason},
         {"screen": "COMBAT", "action": "end_turn", "floor": 48,
          "turn": 9, "reason": d_lethal_empty.reason},
     ]
@@ -17884,6 +17888,8 @@ def main() -> int:
             and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
                 in d_nonlethal_pressure.reason
             and "count=3/first_round=4/last_round=8"
+                "/first_hp=58/last_hp=22/hp_delta=-36"
+                "/first_post_gap=14/last_post_gap=15/post_gap_delta=1"
                 in d_nonlethal_pressure.reason), \
         f"重复非致死资源耗尽压力摘要缺失或动作漂移: {d_nonlethal_pressure}"
     assert knowledge.DEFAULT_POLICY[
