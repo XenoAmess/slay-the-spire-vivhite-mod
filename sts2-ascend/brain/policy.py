@@ -7389,22 +7389,6 @@ class Policy:
                             0.0, _life_cost - _terminal_margin)
                         _native_reason = self._native_card_unplayable_reason(
                             _card) or "none"
-                        # ``unplayable_reason`` is a normalized first reason, while
-                        # ``unplayable_reason_raw`` can contain independent native
-                        # blockers (for example RingingPower plus CardModel logic).
-                        # Preserve both raw attribution and the native preventer in
-                        # the audit without feeding either field back into policy.
-                        _native_raw = re.sub(
-                            r"[^a-z0-9]+", "_",
-                            str(_card.get("unplayable_reason_raw")
-                                or _native_reason or "").casefold()).strip("_")
-                        _native_raw = _native_raw or "none"
-                        _native_preventer = re.sub(
-                            r"[^a-z0-9_.:-]+", "_",
-                            str(_card.get("unplayable_preventer_id")
-                                or _card.get("unplayable_preventer_type")
-                                or "").casefold()).strip("_")
-                        _native_preventer = _native_preventer or "none"
                         _playable = "yes" if bool(_card.get("playable")) else "no"
                         _unavailable = (
                             "yes" if self._card_unavailable(_card) else "no")
@@ -7420,9 +7404,7 @@ class Policy:
                             f"/playable={_playable}"
                             f"/unavailable={_unavailable}"
                             f"/energy={_energy_cost:g}"
-                            f"/native={_native_reason}"
-                            f"/native_raw={_native_raw}"
-                            f"/native_preventer={_native_preventer}")
+                            f"/native={_native_reason}")
                     _terminal_lock_note = (
                         f"｜生命支付终端锁观测：非诅咒{len(non_curse_cards)}张，"
                         f"native_blocked_by_hook={_hook_blocked}/"
