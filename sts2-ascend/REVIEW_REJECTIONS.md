@@ -454,4 +454,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260929-163315-1790670795726949000-f1080c23 -->
 | 2026-09-29 16:33:15 | 第 1696~1697 局 | `f1080c23` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `a79ee4f0` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 a79ee4f0 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260930-004932-1790700572589486100-3a8e2966 -->
-| 2026-09-30 00:49:32 | 第 1726 局 | `3a8e2966` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260930-004932-1790700572589486100-3a8e2966` | 隔离复盘写出 sandbox repo 边界：../.codex-filesystem-preflight-home/ |
+| 2026-09-30 00:49:32 | 第 1726 局 | `3a8e2966` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `1d17f299` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 1d17f299 已推送；远端确认后精确清理对应失败包 |
