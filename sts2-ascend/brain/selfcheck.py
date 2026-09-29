@@ -17699,6 +17699,16 @@ def main() -> int:
             "/attack_candidates=0/raw_damage_cap=0/cards=none"
             " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)",
     }
+    # Native combat decisions can persist an in-combat CARD_SELECTION screen
+    # between two capacity observations.  It must not hide the earlier positive
+    # source from the terminal transition join.
+    race_terminal_card_selection_bridge_row = {
+        "screen": "CARD_SELECTION", "action": "select_deck_card", "floor": 33,
+        "turn": 6,
+        "reason": "牌堆选择：战斗内选择牌堆顶",
+    }
+    race_terminal_ctx.decisions.append(
+        race_terminal_card_selection_bridge_row)
     race_terminal_ctx.decisions.append(
         race_terminal_later_output_source_row)
     race_terminal_pol._krace_latch = True

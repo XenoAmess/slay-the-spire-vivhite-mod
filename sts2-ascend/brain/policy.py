@@ -5349,10 +5349,12 @@ class Policy:
         """Find the earliest bounded same-combat output-capacity source row.
 
         The source is an already persisted observation, never a recomputed
-        combat snapshot.  Stop at an explicit floor or screen boundary so a
-        same-floor later combat cannot borrow an earlier capacity sample.  Keep
-        the earliest valid row in that bounded window so a sequence of
-        shrinking capacity frames cannot make the terminal row its own source.
+        combat snapshot.  Stop at an explicit floor or non-combat screen
+        boundary so a same-floor later combat cannot borrow an earlier capacity
+        sample.  ``CARD_SELECTION`` is an in-combat UI bridge in the native
+        decision chain and must not sever that boundary.  Keep the earliest
+        valid row in that bounded window so a sequence of shrinking capacity
+        frames cannot make the terminal row its own source.
         """
         if not isinstance(decisions, list) or not decisions:
             return None
@@ -5379,7 +5381,7 @@ class Policy:
             if not _same_floor(floor, _row.get("floor")):
                 break
             _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen != "COMBAT":
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
                 break
             _reason = str(_row.get("reason") or "")
             _marker_at = _reason.rfind(

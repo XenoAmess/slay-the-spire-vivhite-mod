@@ -13506,3 +13506,29 @@ production_code_commit: `e96bbafe6afc0ae83ab340c8eea3f6e95f1da73b`
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽上限并报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 临时根中，以进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0、输出 `SELFCHECK OK`；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1704—1705局复盘（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_CARD_SELECTION_BRIDGE_OBS）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速终端输出容量首末对账已经改为保留同一战斗窗口内最早来源，但仍把任意非 `COMBAT` 屏幕当成边界；原生战斗中的 `CARD_SELECTION` 会把真实的早期正容量帧与后续零容量帧隔开，导致终端来源退化为 zero-capacity self-join。若仅把 `CARD_SELECTION` 作为同楼层、同一战斗的允许桥接屏，首末对账应恢复真实来源，且不改变动作或参数。该假设可被跨楼层/非战斗屏串线、仍选末端零容量、重复 marker 或 action/params 漂移证伪。
+- **EVIDENCE**：完整回读 `sts2-ascend/knowledge/runs/20260929-173403_LT6FN0ATJSZ0.json`（第1705局）显示 F17 T6 的 D256/D257 已记录正容量（D256：`target_hp=215/attack_candidates=3/raw_damage_cap=28`）；其间 D258 为战斗内 `CARD_SELECTION`，D259 的容量已降为 `target_hp=195/attack_candidates=0/raw_damage_cap=0`，D260 随后 `end_turn` 进入终端。旧扫描在 D258 处断边界，实际终端首末记录 `source_target_hp=195/source_attack_candidates=0/source_raw_damage_cap=0`。修正后对完整链直接调用来源解析器返回 `source_round=6/target_hp=215/attack_candidates=3/raw_damage_cap=28`。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立竞速终局中，若正容量来源与终端之间只有同楼层、同一战斗的 `CARD_SELECTION` 桥接，`KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS` 必须保留最早正/有效来源并分别记录 terminal 快照；遇到 `REWARD`、`MAP`、其他非战斗屏、楼层变化、24 条窗口外或缺来源时不得生成 transition。action/params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：来源扫描仍保持同楼层、最多24条、遇非战斗屏即停止和“最早有效帧”语义，仅允许 `COMBAT` 与 `CARD_SELECTION` 连续桥接；不重算容量，不进入评分、候选、门控、目标或动作。
+- `sts2-ascend/brain/knowledge.py`：把现有 transition 开关契约明确为 `COMBAT/CARD_SELECTION` 桥接，关闭键语义不变。
+- `sts2-ascend/brain/selfcheck.py`：在既有正容量→零容量夹具中插入战斗内 `CARD_SELECTION`，继续断言首来源、终端结局、重载恢复、关闭开关及 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3—10 个独立终端窗口，按 source/terminal 的回合、目标血量、候选数、raw damage cap、屏幕桥接链与终局胜负分层；保持只读观测，不把来源修复直接升级为竞速行为闸门。
+- **调整**：若真实运行中 `CARD_SELECTION` 可在无战斗连续性证明时出现，或仍出现跨房间/楼层 join，先收紧 combat 连续性契约并保留失败样本。
+- **回滚**：将 `kill_race_terminal_output_capacity_transition_obs` 设为 `False`；预期仅移除首末 transition marker，既有 terminal capacity、评分、action 与 params 保持不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定256槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 槽位中用进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，输出 `SELFCHECK OK`。完整链来源探针返回 `target_hp=215/attack_candidates=3/raw_damage_cap=28`；目标三文件 `git diff --check` 无错误。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

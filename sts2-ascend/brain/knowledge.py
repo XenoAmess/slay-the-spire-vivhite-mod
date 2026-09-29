@@ -236,7 +236,7 @@ DEFAULT_POLICY = {
     "nonlethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a non-lethal no-card end-turn to a nearby GAME_OVER/Victory result, including a bounded same-combat chain; False removes only the outcome marker.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
     "kill_race_lethal_output_capacity_obs": True,  # Audit-only current target/affordable attack capacity at a kill-race lethal no-card end-turn and its terminal outcome join; False removes both capacity markers.
-    "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat source-to-terminal output-capacity join; False removes only the transition marker.
+    "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat (COMBAT/CARD_SELECTION bridge) source-to-terminal output-capacity join; False removes only the transition marker.
     "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result, preserving those regime flags.
     "race_audit_projection_latch_drift_obs": True,  # Audit-only first-latch versus terminal re-projection comparison; False removes only the snapshot/drift tails.
     "race_projection_latch_intent_obs": True,  # Audit-only first live-latch pressure snapshot (current intent/EMA, loss rate and Steam Eruption); False removes only this marker.
