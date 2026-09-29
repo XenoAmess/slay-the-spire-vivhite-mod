@@ -14065,3 +14065,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7407277717452208局)，BASH(14分/2.3190773453228792局)，STOKE(16分/2.639424981951999局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1679 胜，当前目标进阶 0
+
+## 第 1680 局复盘（2026-09-29 09:51）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：BATTLE_TRANCE, CINDER, EVIL_EYE, CRUELTY, DRUM_OF_BATTLE, TAUNT, COLOSSUS, CONFLAGRATION, HEADBUTT, UNRELENTING, FEED
+- 本局遗物：WHITE_STAR, HORN_CLEAT
+- 战斗记录：F7 Monster战 掉血3; F9 Monster战 掉血15; F11 Unknown战 掉血35; F13 Monster战 掉血18; F15 Elite战 掉血28｜竞速投影审计：pool=50/dpt=9.9/ttk=5.05051/tsurv=1.61905（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=5.05051/actual_over_projected=1.39（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T5判死→实战7回合获胜; F17 Boss战 掉血38｜竞速投影审计：pool=166/dpt=6.075/ttk=27.3251/tsurv=18（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=27.3251/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.33（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.224852640480912局)，HELLRAISER(26分/4.6115774960028855局)，PROWESS(25分/7.077588775241443局)，FEED(24分/32.93638902504344局)，PACTS_END(24分/59.02796396376258局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7311352245441127局)，BASH(14分/2.310960574614249局)，STOKE(16分/2.630186994515167局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1680 胜，当前目标进阶 0
