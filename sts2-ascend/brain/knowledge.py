@@ -257,6 +257,7 @@ DEFAULT_POLICY = {
     "vivhite_hp_pressure_playable_reject_hp_pct": 0.35,  # HP fraction at or below which the low-HP rejection marker is eligible.
     "vivhite_hp_zero_pressure_attack_reject_obs": True,  # Audit-only marker for attack cards rejected on a non-lethal Monster zero-pressure turn; False removes only the marker.
     "potion_reserve_end_turn_obs": True,  # Audit-only raw potion-slot snapshot on a lethal no-card end-turn; False removes only this marker.
+    "potion_reserve_terminal_outcome_obs": True,  # Audit-only join from that lethal potion-slot snapshot to the next GAME_OVER/Victory result; False removes only the terminal marker.
     "native_mandatory_card_priority": True,  # Native mandatory-card behavior gate:
                                              # ENTHRALLED is playable in the live payload but
                                              # its v0.111.0 CardModel.ShouldPlay contract

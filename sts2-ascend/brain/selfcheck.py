@@ -17613,6 +17613,109 @@ def main() -> int:
         "lethal_unavailable_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 lethal_unavailable_terminal_outcome_obs"
 
+    # 3z-4c-0) 终端药水储备对账（POTION_RESERVE_TERMINAL_OUTCOME_OBS）：
+    #         1744-F17-T8 的形态——致死无牌空过已经记录了显式的药水槽位，
+    #         但 GAME_OVER 还没有把 state/slots/occupied/can_use 接回权威结局。
+    #         只追加终局观测，必须保持 continue_game_over 与空 params 不变，
+    #         并从持久 source reason 恢复。
+    potion_reserve_terminal_ctx = _SettleCtx()
+    potion_reserve_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_potion_reserve.reason,
+    }]
+    d_potion_reserve_outcome = potion_reserve_pol.decide(
+        lethal_unavailable_outcome_state, potion_reserve_terminal_ctx)
+    assert (d_potion_reserve_outcome.action
+            == d_lethal_empty_outcome.action
+            and d_potion_reserve_outcome.params
+            == d_lethal_empty_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_potion_reserve_outcome.reason
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            in d_potion_reserve_outcome.reason
+            and "outcome=defeat/floor=33/source_round=6"
+            in d_potion_reserve_outcome.reason
+            and "/source_action=end_turn/final_hp=0/state=present"
+            "/slots=2/occupied=1/can_use=0/ids=BLOCK_P/ready_ids=none"
+            in d_potion_reserve_outcome.reason), \
+        f"终端药水储备对账缺失或动作漂移: {d_potion_reserve_outcome}"
+    potion_source_absent_know = knowledge.Knowledge(tmp)
+    potion_source_absent_know.policy["potion_reserve_end_turn_obs"] = False
+    potion_source_absent_pol = policy.Policy(potion_source_absent_know)
+    potion_source_absent_ctx = _SettleCtx()
+    assert potion_source_absent_pol.decide(
+        _lethal_unavailable_state(True), potion_source_absent_ctx).action \
+        == "play_card", "无药水源快照负例热身帧未进入出牌状态"
+    d_potion_source_absent = None
+    for _ in range(6):
+        d_candidate = potion_source_absent_pol.decide(
+            _lethal_unavailable_state(False), potion_source_absent_ctx)
+        if d_candidate.action == "end_turn":
+            d_potion_source_absent = d_candidate
+            break
+    assert d_potion_source_absent is not None \
+        and "LETHAL_UNAVAILABLE_END_TURN_OBS" \
+            in d_potion_source_absent.reason \
+        and "POTION_RESERVE_END_TURN_OBS" \
+            not in d_potion_source_absent.reason, \
+        "无药水源快照负例未保持致死观测边界"
+    potion_source_absent_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": d_potion_source_absent.reason,
+    }]
+    d_potion_source_absent_outcome = potion_source_absent_pol.decide(
+        lethal_unavailable_outcome_state, potion_source_absent_ctx)
+    assert (d_potion_source_absent_outcome.action
+            == d_lethal_empty_outcome.action
+            and d_potion_source_absent_outcome.params
+            == d_lethal_empty_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_potion_source_absent_outcome.reason
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            not in d_potion_source_absent_outcome.reason), \
+        "无药水源快照的致死终局错误生成终端药水 marker"
+    assert knowledge.DEFAULT_POLICY[
+        "potion_reserve_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 potion_reserve_terminal_outcome_obs"
+
+    potion_reserve_terminal_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
+    potion_reserve_terminal_replay_ctx = _SettleCtx()
+    potion_reserve_terminal_replay_ctx.decisions = list(
+        potion_reserve_terminal_ctx.decisions)
+    d_potion_reserve_terminal_replay = (
+        potion_reserve_terminal_replay_pol.decide(
+            lethal_unavailable_outcome_state,
+            potion_reserve_terminal_replay_ctx))
+    assert (d_potion_reserve_terminal_replay.action
+            == d_potion_reserve_outcome.action
+            and d_potion_reserve_terminal_replay.params
+            == d_potion_reserve_outcome.params
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            in d_potion_reserve_terminal_replay.reason), \
+        f"终端药水储备对账未从持久链恢复: {d_potion_reserve_terminal_replay}"
+
+    potion_reserve_terminal_off_know = knowledge.Knowledge(tmp)
+    potion_reserve_terminal_off_know.policy[
+        "potion_reserve_terminal_outcome_obs"] = False
+    potion_reserve_terminal_off_pol = policy.Policy(
+        potion_reserve_terminal_off_know)
+    potion_reserve_terminal_off_ctx = _SettleCtx()
+    potion_reserve_terminal_off_ctx.decisions = list(
+        potion_reserve_terminal_ctx.decisions)
+    d_potion_reserve_terminal_off = potion_reserve_terminal_off_pol.decide(
+        lethal_unavailable_outcome_state,
+        potion_reserve_terminal_off_ctx)
+    assert (d_potion_reserve_terminal_off.action
+            == d_potion_reserve_outcome.action
+            and d_potion_reserve_terminal_off.params
+            == d_potion_reserve_outcome.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+            in d_potion_reserve_terminal_off.reason
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            not in d_potion_reserve_terminal_off.reason), \
+        f"终端药水储备对账关闭后动作或既有 marker 漂移: " \
+        f"{d_potion_reserve_terminal_off}"
+
     lethal_unavailable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
     lethal_unavailable_replay_ctx = _SettleCtx()
     lethal_unavailable_replay_ctx.decisions = [{

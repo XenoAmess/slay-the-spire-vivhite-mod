@@ -4546,6 +4546,37 @@ class Policy:
             "（POTION_RESERVE_END_TURN_OBS）")
 
     @staticmethod
+    def _parse_potion_reserve_end_turn_observation(reason):
+        """Recover one persisted potion-slot snapshot for a terminal join."""
+        _reason = str(reason or "")
+        _marker = "POTION_RESERVE_END_TURN_OBS"
+        _marker_at = _reason.rfind(_marker)
+        if _marker_at < 0:
+            return None
+        # The source note is appended after the lethal marker, so parse the
+        # bounded tail immediately before this marker rather than the generic
+        # lethal audit prefix.  This also keeps unrelated ``state=`` tokens
+        # from another reason segment out of the terminal snapshot.
+        _tail = _reason[max(0, _marker_at - 320):_marker_at]
+
+        def _token(name):
+            match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", _tail)
+            return match.group(1) if match else None
+
+        _state = _token("state")
+        if _state not in {"present", "missing", "invalid"}:
+            return None
+        return {
+            "state": _state,
+            "slots": _token("slots") or "?",
+            "occupied": _token("occupied") or "?",
+            "can_use": _token("can_use") or "?",
+            "ids": _token("ids") or "?",
+            "ready_ids": _token("ready_ids") or "?",
+        }
+
+    @staticmethod
     def _elite_forced_entry_projected_after(note) -> str:
         """Extract the map gate's post-Elite HP projection for a durable join.
 
@@ -6385,6 +6416,14 @@ class Policy:
             text = str(value or "unknown").casefold()
             return text if text in {"yes", "no", "unknown"} else "unknown"
 
+        def _text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace("；", "_")
+                    .replace("（", "_")
+                    .replace("）", "_")
+                    .replace(" ", "_"))
+
         _result = "victory" if victory else "defeat"
         _transition_tail = ""
         try:
@@ -6413,6 +6452,28 @@ class Policy:
                     "（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS）")
             except (KeyError, TypeError, ValueError, OverflowError):
                 _transition_tail = ""
+        _potion_terminal_tail = ""
+        try:
+            _potion_terminal_enabled = bool(int(float(pol.get(
+                "potion_reserve_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _potion_terminal_enabled = False
+        _potion = _pending.get("potion_reserve")
+        if _potion_terminal_enabled and isinstance(_potion, dict):
+            _potion_terminal_tail = (
+                "；终端药水储备终局对账："
+                f"outcome={_result}"
+                f"/floor={_round(floor)}"
+                f"/source_round={_round(_pending.get('terminal_round'))}"
+                f"/source_action={_text(_pending.get('source_action'))}"
+                f"/final_hp={_num(final_hp)}"
+                f"/state={_text(_potion.get('state'))}"
+                f"/slots={_text(_potion.get('slots'))}"
+                f"/occupied={_text(_potion.get('occupied'))}"
+                f"/can_use={_text(_potion.get('can_use'))}"
+                f"/ids={_text(_potion.get('ids'))}"
+                f"/ready_ids={_text(_potion.get('ready_ids'))}"
+                "（POTION_RESERVE_TERMINAL_OUTCOME_OBS）")
         return (
             f"；致死无牌终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6435,6 +6496,7 @@ class Policy:
             f"/forced={_flag(_pending.get('forced'))}"
             f"/gap={_flag(_pending.get('gap'))}"
             f"{_transition_tail}"
+            f"{_potion_terminal_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
 
     def _restore_lethal_unavailable_terminal_outcome_from_decisions(
@@ -6516,6 +6578,9 @@ class Policy:
             terminal_post_gap=_pending.get("hand_post_gap"))
         if isinstance(_transition, dict):
             _pending["nonlethal_transition"] = _transition
+        _potion = self._parse_potion_reserve_end_turn_observation(reason)
+        if isinstance(_potion, dict):
+            _pending["potion_reserve"] = _potion
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 

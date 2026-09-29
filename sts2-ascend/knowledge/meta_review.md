@@ -14073,3 +14073,31 @@ failed_review_replay: `requested_packages=[]`，无回放包
 - **验证**：直接受管入口先复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配运行完整 selfcheck，退出码0并输出 `SELFCHECK OK`。最终目标源码 diff 复核无空白错误；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md`、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1743—1744局复盘（POTION_RESERVE_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1743, 1744`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+failed_review_replay: `requested_packages=[]`，无回放包
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1744局 F17-T8 的 D194 已在致死无牌空过中记录显式药水槽位快照，但紧邻的权威 D195 GAME_OVER 没有接回该快照；若假设成立，只追加同楼层终局桥接即可区分“槽位存在但没有可用药水”和其他资源耗尽原因，action、params、评分与候选保持不变。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-061912_TLE6706BJ3PX.json` 的196条 decisions。D194 为 F17/T8、`hp=2/block=5/incoming=10/energy=0`，DEFEND 因 `not_enough_energy` 锁定；reason 含 `POTION_RESERVE_END_TURN_OBS`：`state=present/slots=3/occupied=0/can_use=0/ids=none/ready_ids=none`。D195 为同楼层 `GAME_OVER`、`outcome=defeat/final_hp=0`，已有致死/竞速终局审计但缺少药水快照终局 marker。
+- **EXPECTED_SIGNAL**：未来3—10个独立致死无牌终局中，仅当同楼层最后一条持久 `end_turn` reason 含完整 `POTION_RESERVE_END_TURN_OBS`、随后进入权威 GAME_OVER/Victory 时，追加 `POTION_RESERVE_TERMINAL_OUTCOME_OBS`，保留 `state/slots/occupied/can_use/ids/ready_ids` 与 outcome/floor/source_round/final_hp；跨楼层、无源快照、字段缺失或非该前置 marker 不命中。动作、参数、评分、候选和门控必须逐位不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `potion_reserve_terminal_outcome_obs` 回滚开关；关闭只移除新增终局 marker。
+- `sts2-ascend/brain/policy.py`：从既有致死无牌终局恢复链的有界 source reason 中恢复药水槽位快照，在既有 GAME_OVER/Victory 终局对账尾部追加一次只读观测；不进入评分、候选、门控或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：加入 present/2 槽、1 个占用但不可用药水的正例；覆盖无药水源负例、进程重载、关闭开关，并断言 `continue_game_over` 与空参数及原有 marker 保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个同类终局，按槽位数、占用数、可用数、药水 ID、终端血量和胜负分层；证据成熟前不调整药水使用、空过或竞速策略。
+- **调整**：若真实链出现跨楼层/跨战斗误接、source reason 词形漂移或 `state/slots` 字段缺失，保留失败样本并收紧恢复边界；不把终局观测升级为行为闸门。
+- **回滚**：将 `potion_reserve_terminal_outcome_obs` 设为 `False`；预期仅移除 `POTION_RESERVE_TERMINAL_OUTCOME_OBS`，既有致死终局审计、action 和 params 不变。
+- **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配运行同一完整 selfcheck，退出码0并输出 `SELFCHECK OK`。最终三个目标文件完整 diff 已回读，限定 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
