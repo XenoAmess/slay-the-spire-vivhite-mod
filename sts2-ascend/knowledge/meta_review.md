@@ -13637,3 +13637,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接受管入口复现宿主固定256槽池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的继承 ACL 槽位中用进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标代码 `git diff --check` 通过；未写入 `.runtime/`、正式 `runs/archive`、`stats`、`progression`、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1714—1715局复盘（RACE_PROJ_ROSTER_DRIFT_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1714, 1715`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：F12 的 `TWO_TAILED_RAT` 召唤/死亡造成的敌方编制变化，至少部分解释了既有竞速投影从首锁到终局的数值漂移；若首锁与终局编制不变而漂移仍持续，则该假设被削弱，不能把漂移归因于召唤编制。
+- **EVIDENCE**：完整读取 1714 局链 `sts2-ascend/knowledge/runs/20260929-202549_YSU7R16BRRR2.json` 与 1715 局链 `sts2-ascend/knowledge/runs/20260929-203948_WQAV3M4MCEH8.json`；1715 共179条决策，F12 的 T2—T9 编制在决策链中出现 3、2、4、2 只同名鼠实例的变化，D177 已记录首锁/终局数值漂移，D178 失败。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 的 `TWO_TAILED_RAT` 含 `CALL_FOR_BACKUP_MOVE`、`CanSummon` 与 `TurnsUntilSummonable`，支持这是原生机制证据而非臆测。
+- **EXPECTED_SIGNAL**：未来3—10个独立竞速终端窗口应按 `run_id/floor/turn/decision_id/latch_roster/latch_roster_count/terminal_roster/terminal_roster_count/roster_changed` 对账，并与同战斗 `CALL_FOR_BACKUP_MOVE`、死亡、终局及既有 `RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS` 对照；同编制仍漂移或编制字段与原生 roster 不一致即证伪并停止扩展。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_projection_roster_obs`，关闭只移除编制观测尾缀。
+- `sts2-ascend/brain/policy.py`：在既有首锁投影、致死终端和进程重载链中记录最多8个存活/可击中敌人的有界 roster，并追加 `RACE_PROJ_ROSTER_DRIFT_OBS`；不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入首锁3实例→终端1实例夹具，覆盖即时 GAME_OVER、进程重载恢复、默认键和关闭键 action/params 等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个真实召唤/死亡竞速终端，按编制是否变化、数值漂移和最终胜负分层；证据成熟前不改变竞速攻防或目标选择。
+- **调整**：若真实 payload 的 identity、存活/可击中语义或 roster 更新时序与 marker 不一致，先修正来源契约并保留失败样本。
+- **回滚**：将 `race_audit_projection_roster_obs` 设为 `False`；预期只移除 `RACE_PROJ_ROSTER_DRIFT_OBS` 及首末编制字段，既有数值漂移观测、action 与 params 不变。
+- **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` 在 clone 内继承 ACL 临时池执行，退出码0并输出 `SELFCHECK OK`；目标源码 `git diff --check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

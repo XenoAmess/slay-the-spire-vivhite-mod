@@ -4316,11 +4316,27 @@ class Policy:
                        for _key, _value in _snapshot.items()
                        if _key != "round")):
             return None
+        try:
+            _roster_enabled = bool(int(float(pol.get(
+                "race_audit_projection_roster_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _roster_enabled = False
+        if _roster_enabled:
+            _roster = str(_audit.get("projection_roster") or "").strip()
+            try:
+                _roster_count = int(float(
+                    _audit.get("projection_roster_count")))
+            except (TypeError, ValueError, OverflowError):
+                _roster_count = -1
+            if _roster and 0 <= _roster_count <= 8:
+                _snapshot["roster"] = _roster
+                _snapshot["roster_count"] = _roster_count
         return _snapshot
 
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy, *,
-            kill_race=True, race_allin=False) -> str:
+            kill_race=True, race_allin=False, terminal_roster=None,
+            terminal_roster_count=None) -> str:
         """Link a lethal no-card end-turn to the last latched race projection.
 
         This is deliberately an observation-only tail.  It requires the
@@ -4382,7 +4398,28 @@ class Policy:
                 f"/latch_dpt={_latch_snapshot['dpt']:g}"
                 f"/latch_ttk={_latch_snapshot['ttk']:g}"
                 f"/latch_tsurv={_latch_snapshot['tsurv']:g}"
-                "（RACE_PROJ_LATCH_SNAPSHOT_OBS）")
+                + (f"/latch_roster={_latch_snapshot['roster']}"
+                   f"/latch_roster_count={_latch_snapshot['roster_count']}"
+                   if "roster" in _latch_snapshot
+                   and "roster_count" in _latch_snapshot else "")
+                + "（RACE_PROJ_LATCH_SNAPSHOT_OBS）")
+
+        _terminal_roster_tail = ""
+        try:
+            _roster_enabled = bool(int(float(pol.get(
+                "race_audit_projection_roster_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _roster_enabled = False
+        if _roster_enabled:
+            _terminal_roster_text = str(terminal_roster or "").strip()
+            try:
+                _terminal_roster_number = int(float(terminal_roster_count))
+            except (TypeError, ValueError, OverflowError):
+                _terminal_roster_number = -1
+            if _terminal_roster_text and 0 <= _terminal_roster_number <= 8:
+                _terminal_roster_tail = (
+                    f"/terminal_roster={_terminal_roster_text}"
+                    f"/terminal_roster_count={_terminal_roster_number}")
 
         return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
@@ -4396,6 +4433,7 @@ class Policy:
             f"/kill_race={'yes' if _kill_race_state else 'no'}"
             f"/race_allin={'yes' if race_allin else 'no'}"
             f"{_latch_hold_tail}"
+            f"{_terminal_roster_tail}"
             f"{_latch_snapshot_tail}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
@@ -5042,6 +5080,39 @@ class Policy:
             except (KeyError, TypeError, ValueError, OverflowError):
                 pass
 
+        _roster_drift_tail = ""
+        try:
+            _roster_obs = bool(int(float(pol.get(
+                "race_audit_projection_roster_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _roster_obs = False
+        if _roster_obs and isinstance(_latch_projection, dict):
+            _latch_roster = str(
+                _latch_projection.get("roster") or "").strip()
+            _terminal_roster = str(
+                _pending.get("terminal_roster") or "").strip()
+            try:
+                _latch_roster_count = int(float(
+                    _latch_projection.get("roster_count")))
+                _terminal_roster_count = int(float(
+                    _pending.get("terminal_roster_count")))
+            except (TypeError, ValueError, OverflowError):
+                _latch_roster_count = -1
+                _terminal_roster_count = -1
+            if (_latch_roster and _terminal_roster
+                    and 0 <= _latch_roster_count <= 8
+                    and 0 <= _terminal_roster_count <= 8):
+                _roster_changed = (
+                    _latch_roster != _terminal_roster
+                    or _latch_roster_count != _terminal_roster_count)
+                _roster_drift_tail = (
+                    f"；竞速编制首末对账：latch_roster={_latch_roster}"
+                    f"/latch_roster_count={_latch_roster_count}"
+                    f"/terminal_roster={_terminal_roster}"
+                    f"/terminal_roster_count={_terminal_roster_count}"
+                    f"/roster_changed={'yes' if _roster_changed else 'no'}"
+                    "（RACE_PROJ_ROSTER_DRIFT_OBS）")
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5062,6 +5133,7 @@ class Policy:
             f"{_capacity_tail}"
             f"{_capacity_transition_tail}"
             f"{_latch_projection_tail}"
+            f"{_roster_drift_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -5529,6 +5601,29 @@ class Policy:
                                 if _key != "round")):
                     _pending["latch_projection"] = _latch_projection
             except (KeyError, TypeError, ValueError, OverflowError):
+                pass
+            try:
+                _latch_roster = _token("latch_roster")
+                _latch_roster_count = _token("latch_roster_count")
+                _terminal_roster = _token("terminal_roster")
+                _terminal_roster_count = _token("terminal_roster_count")
+                if (_latch_roster is not None
+                        and _latch_roster_count is not None
+                        and isinstance(_pending.get("latch_projection"), dict)):
+                    _latch_roster_count = int(float(_latch_roster_count))
+                    if 0 <= _latch_roster_count <= 8:
+                        _pending["latch_projection"].update({
+                            "roster": _latch_roster,
+                            "roster_count": _latch_roster_count,
+                        })
+                if (_terminal_roster is not None
+                        and _terminal_roster_count is not None):
+                    _terminal_roster_count = int(float(_terminal_roster_count))
+                    if 0 <= _terminal_roster_count <= 8:
+                        _pending["terminal_roster"] = _terminal_roster
+                        _pending["terminal_roster_count"] = (
+                            _terminal_roster_count)
+            except (TypeError, ValueError, OverflowError):
                 pass
             _hold_token = _token("esc_latch_hold_count")
             try:
@@ -6905,10 +7000,27 @@ class Policy:
                 except (AttributeError, TypeError, ValueError, OverflowError):
                     _race_allin_state = False
                 _lethal_unavailable_note += _potion_reserve_note
+                _terminal_roster = None
+                _terminal_roster_count = None
+                try:
+                    _roster_enabled = bool(int(float(pol.get(
+                        "race_audit_projection_roster_obs", 1) or 0)))
+                except (TypeError, ValueError, OverflowError, AttributeError):
+                    _roster_enabled = False
+                if _roster_enabled and _kill_race_state:
+                    _terminal_roster, _terminal_roster_count = (
+                        self._boss_effective_dpt_roster([
+                            _enemy for _enemy in combat.get("enemies", [])
+                            if isinstance(_enemy, dict)
+                            and _enemy.get("is_alive")
+                            and _enemy.get("is_hittable")
+                        ]))
                 _terminal_audit_note = self._kill_race_terminal_audit_note(
                     pol, my_hp, my_block, incoming, energy,
                     kill_race=_kill_race_state,
-                    race_allin=_race_allin_state)
+                    race_allin=_race_allin_state,
+                    terminal_roster=_terminal_roster,
+                    terminal_roster_count=_terminal_roster_count)
                 _lethal_unavailable_note += _terminal_audit_note
                 _terminal_output_capacity = None
                 _output_capacity_transition_source = None
@@ -6976,6 +7088,13 @@ class Policy:
                             self._race_terminal_outcome_pending[
                                 "output_capacity_transition"] = dict(
                                     _output_capacity_transition_source)
+                        if (_terminal_roster is not None
+                                and _terminal_roster_count is not None):
+                            self._race_terminal_outcome_pending.update({
+                                "terminal_roster": _terminal_roster,
+                                "terminal_roster_count": int(
+                                    _terminal_roster_count),
+                            })
                         self._race_terminal_outcome_reported = False
                 _latch_projection = self._race_latch_projection_snapshot(pol)
                 if (isinstance(_latch_projection, dict)
@@ -8486,6 +8605,24 @@ class Policy:
                                         except (KeyError, TypeError, ValueError,
                                                 OverflowError):
                                             pass
+                                try:
+                                    _roster_enabled = bool(int(float(pol.get(
+                                        "race_audit_projection_roster_obs",
+                                        1) or 0)))
+                                except (TypeError, ValueError, OverflowError,
+                                        AttributeError):
+                                    _roster_enabled = False
+                                if (_roster_enabled
+                                        and "projection_roster" not in _ra_audit):
+                                    _projection_roster, _projection_roster_count = (
+                                        self._boss_effective_dpt_roster(enemies))
+                                    if (isinstance(_projection_roster, str)
+                                            and 0 <= _projection_roster_count <= 8):
+                                        _ra_audit.update({
+                                            "projection_roster": _projection_roster,
+                                            "projection_roster_count": (
+                                                int(_projection_roster_count)),
+                                        })
         if kill_race:
             # 高危姿态与竞速路线互斥（第 92~93 批复盘）：防守已被投影证伪时，
             # 压攻击=拖长战斗多吃意图、抬格挡=给买不到胜利的延寿加价。
