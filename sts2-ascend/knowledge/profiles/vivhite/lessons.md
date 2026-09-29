@@ -18938,3 +18938,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.31125307099677局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.946805068811795局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.89490966019139局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：4/1718 胜，当前目标进阶 4
+
+## 第 1719 局复盘（2026-09-29 22:08）
+- 结果：💀 失败｜进阶 4｜到达层数 4｜当局评分 4
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_LOCAL_HOMEOMORPHISM
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血7｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血55｜自损32（可行动段32/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=17/dpt=2.50909/ttk=6.77536/tsurv=0.769231（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=16/projected_ttk=6.77536/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=20.80（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T13判死→实战16回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.266464141944724局)，REND(38分/2.2779825977163948局)，THINKING_AHEAD(37分/3.842603336200672局)，MAYHEM(37分/3.1383686558012927局)，ROLLING_BOULDER(36分/3.8667789586602987局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3031636852482813局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.869991251070953局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.814777476380723局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（16回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Monster战实测自损32/掉血55（58%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1719 胜，当前目标进阶 4
