@@ -14549,3 +14549,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.3489146367591873局)，STOKE(16分/2.2620940454757568局)，BULLY(16分/2.910122369235274局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1723 胜，当前目标进阶 0
+
+## 第 1724 局复盘（2026-09-29 23:42）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：HEMOKINESIS, MOLTEN_FIST, HEMOKINESIS, FEEL_NO_PAIN, FIGHT_ME, CONFLAGRATION, TAUNT, FLAME_BARRIER, BREAKTHROUGH, HEADBUTT, SPITE, PACTS_END, FLAME_BARRIER, RUPTURE, HOWL_FROM_BEYOND, HEADBUTT, RUPTURE, IRON_WAVE, MOLTEN_FIST, CONFLAGRATION, HOWL_FROM_BEYOND, TAUNT, DISMANTLE, EQUILIBRIUM
+- 本局遗物：MINIATURE_CANNON, CHANDELIER, STONE_CALENDAR
+- 战斗记录：F22 Monster战 掉血33｜自损10（可行动段10/非行动段29，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血0; F24 Monster战 掉血36｜自损2（可行动段2/非行动段40，SELF_LOSS_PHASE_OBS）; F28 Monster战 掉血22｜自损12（可行动段12/非行动段15，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血29｜自损26（可行动段26/非行动段9，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血33｜竞速投影审计：pool=269/dpt=35.1/ttk=7.66382/tsurv=2.0625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=7.66382/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.42（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=34/projected_dpt=41.0333/ratio=0.85/min_ratio=0.55（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=34/projected_dpt=41.0333/ratio=0.85/min_ratio=0.55（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/6.981858317984491局)，HELLRAISER(25分/5.873510592238692局)，FEED(24分/30.076176159594677局)，PACTS_END(24分/57.86196327356627局)，MANGLE(24分/49.759068224112255局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.34069343553053局)，STOKE(16分/2.2541767163165916局)，BULLY(16分/2.8999369409429505局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.00 → 1.99（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.30 → 2.25（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1724 胜，当前目标进阶 0
