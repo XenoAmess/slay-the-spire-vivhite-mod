@@ -18619,3 +18619,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.5586195454341736局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/24.29570569902084局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.2443466059718局)
 - 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：4/1689 胜，当前目标进阶 4
+
+## 第 1690 局复盘（2026-09-29 13:04）
+- 结果：💀 失败｜进阶 4｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损46（可行动段46/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=9/dpt=1.93846/ttk=4.64286/tsurv=0.538462（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=18/projected_ttk=4.64286/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=33.43（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T15判死→实战18回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/11.365252964163856局)，REND(38分/2.521788233325067局)，THINKING_AHEAD(37分/4.253865630176739局)，MAYHEM(37分/3.4742588270734567局)，ROLLING_BOULDER(36分/4.2806286968977565局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.549664377025154局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/24.210670729074266局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/22.166491392850897局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（18回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1690 胜，当前目标进阶 4
