@@ -13907,3 +13907,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配执行同一 selfcheck，退出码 0 并输出 `SELFCHECK OK`。目标三文件完整 diff 已回读，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1732局复盘（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_CARD_SELECTION_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1732`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS` 在同一场战斗遇到原生 `CARD_SELECTION` 升级模态时过早停止，漏掉非致死资源耗尽到后续致死空过的压力转移；若且仅若一个 `CARD_SELECTION` 被同楼层的两条战斗行直接包夹，应补上只读桥接，不改变当前动作。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20260930-023737_9H920R08DAUQ.json` 的 F17 中，D219 为回合6非致死（HP37/格挡7/来袭12），D225 为回合8非致死（HP32/格挡0/来袭21），D229 为同楼层 `CARD_SELECTION` 升级，D230 仍为 `COMBAT`，D231 为回合9致死空过（HP11/格挡8/来袭22/hand_post_gap=1）。原逻辑从 D231 向前遇 D229 即停止；补丁后的只读链探针得到 `count=2/first_round=6/last_round=8/terminal_round=9/screen_bridge=card_selection`。
+- **EXPECTED_SIGNAL**：未来 3—10 个终局尾部中，只有同楼层、同战斗、单个且被 COMBAT 直接包夹的 `CARD_SELECTION` 才出现 `screen_bridge=card_selection`；事件、地图、楼层边界、重复模态或不完整字段继续拒绝。评分、候选、action 与 params 不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：补充既有开关的窄桥契约与回滚语义。
+- `sts2-ascend/brain/policy.py`：允许一个同楼层 COMBAT 直接包夹的 `CARD_SELECTION`，重复模态即停止；仅在终局 reason 追加 `screen_bridge=card_selection`，不重算快照、不进入行为决策。
+- `sts2-ascend/brain/selfcheck.py`：加入 F17 形态正例、跨屏边界负例和关闭开关后的 action/params 等价断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集 3—10 个同类终局尾部，按桥接模态数量、非致死回合、终端 HP/缺口和真实 `run_id/floor` 对账；证据成熟前不改变出牌、end_turn、防守或竞速策略。
+- **调整**：若真实 payload 出现多模态连续升级、缺少可证明的 COMBAT 邻接、回合字段漂移或跨战斗误接，先收紧屏幕/楼层契约并保留失败样本，不升级为行为门。
+- **回滚**：将 `nonlethal_unavailable_lethal_transition_obs` 设为 `False`；预期仅移除该 transition tail，既有终局 marker、action 和 params 保持不变。
+- **验证**：直接 selfcheck 入口复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 用进程级 `tempfile.mkdtemp` 适配执行同一入口，退出码 0 并输出 `SELFCHECK OK`。持久链只读探针命中上述桥接，限定目标 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

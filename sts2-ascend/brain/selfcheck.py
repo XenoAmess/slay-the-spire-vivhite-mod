@@ -17680,6 +17680,71 @@ def main() -> int:
                 not in d_lethal_transition_boundary.reason), \
         f"非致死到致死边界桥越过屏幕边界: {d_lethal_transition_boundary}"
 
+    # CARD_SELECTION 是战斗内升级模态，不是新的战斗边界；只有它被同楼层
+    # COMBAT 行直接包夹时才允许作为窄桥。第1732局 F17 的 D225→D229→D231
+    # 形态用于防止真实升级窗口把此前的非致死压力链静默截断。
+    lethal_transition_card_selection_pol = policy.Policy(
+        knowledge.Knowledge(tmp))
+    lethal_transition_card_selection_ctx = _SettleCtx()
+    lethal_transition_card_selection_ctx.decisions = [
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 4, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "CARD_SELECTION", "action": "select_deck_card",
+            "floor": 33, "turn": 5, "reason": "升级卡牌：【撕裂】",
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 5, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 6, "reason": d_lethal_empty.reason,
+        },
+    ]
+    d_lethal_transition_card_selection = (
+        lethal_transition_card_selection_pol.decide(
+            lethal_unavailable_outcome_state,
+            lethal_transition_card_selection_ctx))
+    assert (d_lethal_transition_card_selection.action
+            == d_lethal_transition.action
+            and d_lethal_transition_card_selection.params
+            == d_lethal_transition.params
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                in d_lethal_transition_card_selection.reason
+            and "/screen_bridge=card_selection"
+                in d_lethal_transition_card_selection.reason
+            and "count=2/first_round=4/last_nonlethal_round=5"
+                in d_lethal_transition_card_selection.reason), \
+        f"战斗内 CARD_SELECTION 桥缺失或动作漂移: " \
+        f"{d_lethal_transition_card_selection}"
+
+    lethal_transition_card_selection_off_know = knowledge.Knowledge(tmp)
+    lethal_transition_card_selection_off_know.policy[
+        "nonlethal_unavailable_lethal_transition_obs"] = False
+    lethal_transition_card_selection_off_pol = policy.Policy(
+        lethal_transition_card_selection_off_know)
+    lethal_transition_card_selection_off_ctx = _SettleCtx()
+    lethal_transition_card_selection_off_ctx.decisions = list(
+        lethal_transition_card_selection_ctx.decisions)
+    d_lethal_transition_card_selection_off = (
+        lethal_transition_card_selection_off_pol.decide(
+            lethal_unavailable_outcome_state,
+            lethal_transition_card_selection_off_ctx))
+    assert (d_lethal_transition_card_selection_off.action
+            == d_lethal_transition_card_selection.action
+            and d_lethal_transition_card_selection_off.params
+            == d_lethal_transition_card_selection.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in d_lethal_transition_card_selection_off.reason
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                not in d_lethal_transition_card_selection_off.reason), \
+        f"CARD_SELECTION 桥关闭后动作或既有 marker 漂移: " \
+        f"on={d_lethal_transition_card_selection} " \
+        f"off={d_lethal_transition_card_selection_off}"
+
     # 3z-4d) 非致死资源耗尽终局对账（NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）：
     #         第1679局 F17-T9 的形态——前置算术 gap 仍标记 raw_survival=yes，
     #         但同楼层下一条权威 GAME_OVER 仍为失败；只把这次反例接回终局，
