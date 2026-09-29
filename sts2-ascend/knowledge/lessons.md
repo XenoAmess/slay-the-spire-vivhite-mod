@@ -14109,3 +14109,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.702558556808479局)，BASH(14分/2.286780317299482局)，STOKE(16分/2.602666577675539局)
 - 策略进化：elite_grey_safety_mult: 2.45 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1683 胜，当前目标进阶 0
+
+## 第 1684 局复盘（2026-09-29 11:19）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：MOLTEN_FIST, BREAKTHROUGH, TWIN_STRIKE, DARK_EMBRACE, DISMANTLE, SHRUG_IT_OFF, HEADBUTT, SHRUG_IT_OFF, TRUE_GRIT, AGGRESSION, ANGER, CINDER, JUGGERNAUT, PACTS_END, UNRELENTING, STONE_ARMOR, SWORD_BOOMERANG
+- 本局遗物：VAJRA, BAG_OF_PREPARATION
+- 战斗记录：F14 Monster战 掉血0; F17 Boss战 掉血35｜自损1（可行动段1/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=173/dpt=10.125/ttk=17.0864/tsurv=4.3125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=17.0864/actual_over_projected=0.47（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战8回合获胜; F19 Monster战 掉血20; F20 Monster战 掉血6; F22 Monster战 掉血26; F23 Monster战 掉血39（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1938678489548944局)，HELLRAISER(26分/4.5473535718112865局)，PROWESS(25分/6.97902152241865局)，FEED(24分/32.47769475963798局)，PACTS_END(24分/59.20590090918331局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.6930996018596494局)，BASH(14分/2.278776586188934局)，STOKE(16分/2.5935572446536748局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.38（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F23——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1684 胜，当前目标进阶 0
