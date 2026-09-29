@@ -14021,3 +14021,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.7794360643516085局)，BASH(14分/2.351830515989823局)，STOKE(16分/2.676702538507333局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（67%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1675 胜，当前目标进阶 0
+
+## 第 1676 局复盘（2026-09-29 08:32）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：CINDER, BREAKTHROUGH, THUNDERCLAP, PILLAGE, BLUDGEON, FIGHT_ME, BLUDGEON, HEADBUTT, FEEL_NO_PAIN, ETERNAL_ARMOR, JUGGERNAUT, TWIN_STRIKE, TRUE_GRIT, PACTS_END, TAUNT, FEEL_NO_PAIN, FIGHT_ME, ARMAMENTS, ANGER, CINDER, UNRELENTING
+- 本局遗物：FESTIVE_POPPER, JUZU_BRACELET, RAZOR_TOOTH
+- 战斗记录：F19 Monster战 掉血6; F20 Monster战 掉血15; F21 Monster战 掉血17｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血19; F27 Monster战 掉血21; F28 Monster战 掉血26｜竞速投影审计：pool=86/dpt=5.4/ttk=15.9259/tsurv=1.6（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=15.9259/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.2562750414583688局)，HELLRAISER(26分/4.676708477975111局)，PROWESS(25分/7.177548129134252局)，FEED(25分/32.387438233183374局)，PACTS_END(24分/59.86163731309115局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.769708038126378局)，BASH(14分/2.3435991091838586局)，STOKE(16分/2.6673340796225578局)
+- 策略进化：block_safety: 1.98 → 2.03（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.38（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F28——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1676 胜，当前目标进阶 0
