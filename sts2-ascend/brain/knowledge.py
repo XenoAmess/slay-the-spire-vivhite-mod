@@ -245,6 +245,7 @@ DEFAULT_POLICY = {
     "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat (COMBAT/CARD_SELECTION bridge) source-to-terminal output-capacity join; False removes only the transition marker.
     "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result, preserving those regime flags.
     "race_audit_projection_latch_drift_obs": True,  # Audit-only first-latch versus terminal re-projection comparison; False removes only the snapshot/drift tails.
+    "race_audit_projection_intent_drift_obs": True,  # Audit-only first-latch versus terminal incoming-intent comparison; False removes only this tail.
     "race_audit_projection_roster_obs": True,  # Audit-only first-latch versus terminal live-enemy roster comparison; False removes only the roster tails.
     "race_projection_latch_intent_obs": True,  # Audit-only first live-latch pressure snapshot (current intent/EMA, loss rate and Steam Eruption); False removes only this marker.
     "kill_race_terminal_latch_hold_obs": True,  # Audit-only link for whether RACE_ESC_LATCH_HOLD occurred before the terminal join; False removes only this tail.

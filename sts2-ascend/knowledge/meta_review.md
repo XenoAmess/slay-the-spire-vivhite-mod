@@ -13934,3 +13934,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：完整 selfcheck 在同一 clone 的 `.review-cache/selfcheck-pool` 进程级 `tempfile.mkdtemp` 适配下退出码0并输出 `SELFCHECK OK`；初始直接运行仅复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`。目标源文件 diff 已回读，未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1734局复盘（RACE_PROJ_LATCH_INTENT_DRIFT_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1734`
+production_code_commit: `2442ad7bb`（本地 commit，未 push）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1734局 F33 知识恶魔的竞速判断在首次入锁时记录了当前意图，但终局只分别留下首锁压力与终端来袭值，无法直接证伪“意图在锁后持续抬升导致终端失守”这一解释。若该缺口真实存在，同一 Boss 竞速终局应能在持久终端链中对账首次入锁意图与终端来袭意图；该对账只做观测，不应改变评分、候选、动作或参数。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-031629_9H9S260M0TVC.json` 的420条 decisions。F33 首次竞速入锁（D394）已有 `intent=17` 的 `RACE_PROJ_LATCH_INTENT_PRESSURE_OBS`；终端空过（D418）为 `incoming=30`，随后 D419 的 `GAME_OVER` 已有投影漂移与编制漂移对账，但没有 `17→30` 的单一持久字段。`failed_review_replay.requested_packages=[]`，本批无回放包。
+- **EXPECTED_SIGNAL**：未来3—10个独立 Boss 竞速终局窗口中，仅当同一场首次入锁与终端字段均为有限非负数时，追加 `RACE_PROJ_LATCH_INTENT_DRIFT_OBS`，记录 `latch_intent`、`terminal_intent`、差值和是否漂移；字段缺失、非 Boss 入锁或跨战斗恢复不得伪造命中。动作、参数与评分保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_projection_intent_drift_obs` 回滚开关；关闭只移除意图快照/终端尾缀。
+- `sts2-ascend/brain/policy.py`：在首次 Boss 竞速入锁保存 `incoming`，把它随既有终端审计 reason 持久化并在进程重载时恢复；GAME_OVER 只追加首末意图差值，不进入任何行为决策。
+- `sts2-ascend/brain/selfcheck.py`：覆盖首次入锁捕获、终端对账、进程重载和关闭开关后的 action/params 等价性。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个 Boss 竞速终局，按首次意图、终端意图、差值、同回合损失和最终胜负分层；证据成熟前不调整竞速锁持、DPT、TTK 或防守行为。
+- **调整**：若后续样本显示意图字段受多敌切换、阶段过渡或非 Boss 误接影响，收紧同战斗/同 Boss 边界并保留失败样本，不把观测升级为行为闸。
+- **回滚**：将 `race_audit_projection_intent_drift_obs` 设为 `False`；预期只移除 `RACE_PROJ_LATCH_INTENT_DRIFT_OBS` 及其快照字段，既有投影/编制对账、action 和 params 不变。
+- **验证**：完整 selfcheck 在同一 clone 的 `.review-cache/selfcheck-pool` 进程级 `tempfile.mkdtemp` 适配下退出码0并输出 `SELFCHECK OK`；直接入口先复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`。`py_compile` 与限定目标 `git diff --check` 通过，最终生产改动 commit 为 `2442ad7bb`。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

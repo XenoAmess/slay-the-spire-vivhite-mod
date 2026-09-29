@@ -4317,6 +4317,20 @@ class Policy:
                        if _key != "round")):
             return None
         try:
+            _intent_enabled = bool(int(float(pol.get(
+                "race_audit_projection_intent_drift_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _intent_enabled = False
+        if _intent_enabled:
+            try:
+                _latch_intent = float(_audit.get("projection_intent"))
+            except (TypeError, ValueError, OverflowError):
+                _latch_intent = None
+            if (_latch_intent is not None
+                    and math.isfinite(_latch_intent)
+                    and _latch_intent >= 0.0):
+                _snapshot["intent"] = _latch_intent
+        try:
             _roster_enabled = bool(int(float(pol.get(
                 "race_audit_projection_roster_obs", 1) or 0)))
         except (TypeError, ValueError, OverflowError, AttributeError):
@@ -4402,6 +4416,8 @@ class Policy:
                    f"/latch_roster_count={_latch_snapshot['roster_count']}"
                    if "roster" in _latch_snapshot
                    and "roster_count" in _latch_snapshot else "")
+                + (f"/latch_intent={_latch_snapshot['intent']:g}"
+                   if "intent" in _latch_snapshot else "")
                 + "（RACE_PROJ_LATCH_SNAPSHOT_OBS）")
 
         _terminal_roster_tail = ""
@@ -5113,6 +5129,30 @@ class Policy:
                     f"/roster_changed={'yes' if _roster_changed else 'no'}"
                     "（RACE_PROJ_ROSTER_DRIFT_OBS）")
 
+        _intent_drift_tail = ""
+        try:
+            _intent_drift_obs = bool(int(float(pol.get(
+                "race_audit_projection_intent_drift_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _intent_drift_obs = False
+        if _intent_drift_obs and isinstance(_latch_projection, dict):
+            try:
+                _latch_intent = float(_latch_projection["intent"])
+                _terminal_intent = float(_pending["incoming"])
+                _intent_delta = _terminal_intent - _latch_intent
+                if (math.isfinite(_latch_intent)
+                        and math.isfinite(_terminal_intent)
+                        and _latch_intent >= 0.0
+                        and _terminal_intent >= 0.0):
+                    _intent_drift_tail = (
+                        f"；竞速意图首末对账：latch_intent={_latch_intent:g}"
+                        f"/terminal_intent={_terminal_intent:g}"
+                        f"/intent_delta={_intent_delta:+g}"
+                        f"/drift={'yes' if abs(_intent_delta) > 1e-9 else 'no'}"
+                        "（RACE_PROJ_LATCH_INTENT_DRIFT_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                pass
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5134,6 +5174,7 @@ class Policy:
             f"{_capacity_transition_tail}"
             f"{_latch_projection_tail}"
             f"{_roster_drift_tail}"
+            f"{_intent_drift_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -5601,6 +5642,17 @@ class Policy:
                                 if _key != "round")):
                     _pending["latch_projection"] = _latch_projection
             except (KeyError, TypeError, ValueError, OverflowError):
+                pass
+            try:
+                _latch_intent = _token("latch_intent")
+                if (_latch_intent is not None
+                        and isinstance(_pending.get("latch_projection"), dict)):
+                    _latch_intent = float(_latch_intent)
+                    if (math.isfinite(_latch_intent)
+                            and _latch_intent >= 0.0):
+                        _pending["latch_projection"]["intent"] = (
+                            _latch_intent)
+            except (TypeError, ValueError, OverflowError):
                 pass
             try:
                 _latch_roster = _token("latch_roster")
@@ -9063,6 +9115,26 @@ class Policy:
                                         except (KeyError, TypeError, ValueError,
                                                 OverflowError):
                                             pass
+                                try:
+                                    _intent_drift_enabled = bool(int(float(
+                                        pol.get(
+                                            "race_audit_projection_intent_drift_obs",
+                                            1) or 0)))
+                                except (TypeError, ValueError, OverflowError,
+                                        AttributeError):
+                                    _intent_drift_enabled = False
+                                if (_intent_drift_enabled
+                                        and cctx.get("node_type") == "Boss"
+                                        and "projection_intent" not in _ra_audit):
+                                    try:
+                                        _latch_intent = float(incoming)
+                                    except (TypeError, ValueError, OverflowError):
+                                        _latch_intent = None
+                                    if (_latch_intent is not None
+                                            and math.isfinite(_latch_intent)
+                                            and _latch_intent >= 0.0):
+                                        _ra_audit["projection_intent"] = (
+                                            _latch_intent)
                                 try:
                                     _roster_enabled = bool(int(float(pol.get(
                                         "race_audit_projection_roster_obs",
