@@ -6037,6 +6037,24 @@ class Policy:
             _overlap_tail = (
                 f"/terminal_overlap={_overlap}"
                 "（NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS）")
+        _pressure_tail = ""
+        try:
+            _pressure_enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_chain_pressure_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _pressure_enabled = False
+        if _pressure_enabled:
+            try:
+                _pressure_count = int(float(
+                    _pending.get("pressure_count", 0) or 0))
+            except (TypeError, ValueError, OverflowError):
+                _pressure_count = 0
+            if _pressure_count >= 2:
+                _pressure_tail = (
+                    f"；非致死无牌链累计：count={_pressure_count}"
+                    f"/first_round={_round(_pending.get('pressure_first_round'))}"
+                    f"/last_round={_round(_pending.get('pressure_last_round'))}"
+                    "（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -6062,6 +6080,7 @@ class Policy:
             + (f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
                f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                if _chain else "")
+            + _pressure_tail
             + _overlap_tail
             + f"（{_marker}）")
         return _base + _ringing_hook_note
@@ -6129,6 +6148,40 @@ class Policy:
             and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS"
             in str(_candidate.get("reason") or "")
             for _candidate in _lookback[_source_pos:])
+        # Keep a second, wider but still bounded same-combat tail for repeated
+        # non-lethal resource exhaustion.  The ordinary source join remains
+        # limited to 12 rows; this summary only counts persisted end_turn
+        # markers before the terminal and never feeds back into policy.
+        _combat_segment = []
+        for _candidate in reversed(decisions):
+            if not isinstance(_candidate, dict):
+                break
+            if (floor is not None and _candidate.get("floor") is not None
+                    and str(_candidate.get("floor")) != str(floor)):
+                break
+            if _candidate.get("screen") not in (None, "COMBAT"):
+                break
+            _combat_segment.append(_candidate)
+            if len(_combat_segment) >= 64:
+                break
+        _combat_segment.reverse()
+        _pressure_rows = [
+            _candidate for _candidate in _combat_segment
+            if (_candidate.get("action") == "end_turn"
+                and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
+                in str(_candidate.get("reason") or ""))]
+        _pressure_rounds = []
+        for _candidate in _pressure_rows:
+            try:
+                _pressure_rounds.append(int(float(
+                    _candidate.get("turn", _candidate.get("round")))))
+            except (TypeError, ValueError, OverflowError):
+                continue
+        _pressure_count = len(_pressure_rows)
+        _pressure_first_round = (
+            _pressure_rounds[0] if _pressure_rounds else None)
+        _pressure_last_round = (
+            _pressure_rounds[-1] if _pressure_rounds else None)
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -6167,6 +6220,9 @@ class Policy:
                 "terminal_overlap": (
                     "waterfall_about_to_blow"
                     if _waterfall_overlap else "none"),
+                "pressure_count": _pressure_count,
+                "pressure_first_round": _pressure_first_round,
+                "pressure_last_round": _pressure_last_round,
                 "hp": _number("hp"),
                 "block": _number("block"),
                 "incoming": _number("incoming"),

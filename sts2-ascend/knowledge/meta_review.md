@@ -13718,3 +13718,30 @@ production_code_commit: `011a056b33da4511526c91890754c091c3cca367`
 - **验证**：宿主固定256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位中用进程级 `tempfile.mkdtemp` 适配运行完整 selfcheck，退出码0并输出 `SELFCHECK OK`（274次临时分配）；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1722局复盘（NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1722`
+production_code_commit: `fd021e7990e133cc3690129a5cda4de2a58b0dbb`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS` 目前只保留终局链中的最后一个非致死无牌来源，可能漏掉同一战斗内重复资源耗尽形成的压力。若 F17 的重复空过确实是可复核压力链，应能在终局审计中追加次数及首末回合；若后续计数、边界或 marker 与持久化决策不符，则假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-225238_HLUMP9DFEDD6.json`（第1722局，243 decisions，F17，`LAGAVULIN_MATRIARCH`）中，T4/T5/T6/T8 均出现 `NONLETHAL_UNAVAILABLE_END_TURN_OBS`，T9 才进入致死 end_turn；既有终局 reason 只有最后来源及 bridge 字段，没有重复压力累计。
+- **EXPECTED_SIGNAL**：未来 3—10 个同类终局窗口按 `run_id/floor/COMBAT/turn/action` 对账；同楼层、同战斗尾部只在至少 2 个非致死 marker 时输出 `count/first_round/last_round`，不得跨楼层、跨屏幕或把非 end_turn 算入；action/params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `nonlethal_unavailable_chain_pressure_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有非致死终局恢复中扫描最多 64 条同楼层、同 `COMBAT` 的持久化尾部，仅计数既有非致死 `end_turn` marker，并把累计字段追加到终局 reason；不进入评分、候选、门控或动作。
+- `sts2-ascend/brain/selfcheck.py`：加入 T4/T5/T6/T8→T9 夹具，断言新 marker、`count=3/first_round=4/last_round=8`、终局 action/params，以及关闭开关后只移除新压力尾部。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3—10 个同类窗口，核对累计次数、首末回合和同战斗边界，继续保持只读审计。
+- **调整**：若真实决策链出现 marker 漏计、回合字段漂移或跨屏幕/跨楼层边界，先修正观测契约并保留失败样本，不升级为行为门。
+- **回滚**：将 `nonlethal_unavailable_chain_pressure_obs` 设为 `False`；预期只移除 `NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS` 与三项累计字段，既有终局 marker、action、params 不变。
+- **验证**：完整 selfcheck 输出 `SELFCHECK OK`；源码提交前目标三文件 `git diff --cached --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或 replay。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

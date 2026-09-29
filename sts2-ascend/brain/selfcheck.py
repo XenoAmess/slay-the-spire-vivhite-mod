@@ -17856,6 +17856,59 @@ def main() -> int:
                 not in d_nonlethal_waterfall_overlap_off.reason), \
         f"非致死链重叠观测关闭后动作或既有 marker 漂移: {d_nonlethal_waterfall_overlap_off}"
 
+    # 3z-4g) 重复非致死资源耗尽压力摘要：第1722局 F17 在 T4/T5/T6/T8
+    #         多次空过后才进入 T9 致死终局。摘要只统计同楼层、同 COMBAT
+    #         的有界尾部，补充次数与首末回合，不改变终局动作或既有链 marker。
+    nonlethal_pressure_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_pressure_ctx = _SettleCtx()
+    nonlethal_pressure_ctx.decisions = [
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 4, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 5, "reason": "战斗：压力链桥接出牌"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 6, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 7, "reason": "战斗：压力链桥接出牌"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 8, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 9, "reason": d_lethal_empty.reason},
+    ]
+    d_nonlethal_pressure = nonlethal_pressure_pol.decide(
+        nonlethal_unavailable_outcome_state, nonlethal_pressure_ctx)
+    assert (d_nonlethal_pressure.action == "continue_game_over"
+            and d_nonlethal_pressure.params == {}
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_pressure.reason
+            and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
+                in d_nonlethal_pressure.reason
+            and "count=3/first_round=4/last_round=8"
+                in d_nonlethal_pressure.reason), \
+        f"重复非致死资源耗尽压力摘要缺失或动作漂移: {d_nonlethal_pressure}"
+    assert knowledge.DEFAULT_POLICY[
+        "nonlethal_unavailable_chain_pressure_obs"] is True, \
+        "DEFAULT_POLICY 缺少 nonlethal_unavailable_chain_pressure_obs"
+
+    nonlethal_pressure_off_know = knowledge.Knowledge(tmp)
+    nonlethal_pressure_off_know.policy[
+        "nonlethal_unavailable_chain_pressure_obs"] = False
+    nonlethal_pressure_off_pol = policy.Policy(nonlethal_pressure_off_know)
+    nonlethal_pressure_off_ctx = _SettleCtx()
+    nonlethal_pressure_off_ctx.decisions = list(
+        nonlethal_pressure_ctx.decisions)
+    d_nonlethal_pressure_off = nonlethal_pressure_off_pol.decide(
+        nonlethal_unavailable_outcome_state, nonlethal_pressure_off_ctx)
+    assert (d_nonlethal_pressure_off.action
+            == d_nonlethal_pressure.action
+            and d_nonlethal_pressure_off.params
+            == d_nonlethal_pressure.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_pressure_off.reason
+            and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
+                not in d_nonlethal_pressure_off.reason), \
+        f"重复非致死压力摘要关闭后动作或既有 marker 漂移: {d_nonlethal_pressure_off}"
+
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能
