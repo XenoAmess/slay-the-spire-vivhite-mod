@@ -13034,34 +13034,6 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
-## 2026-09-30 runs 1747-1748: KILL_RACE_TERMINAL_TAIL_OBS
-
-profile_id: `ironclad`
-requested_runs: `1747, 1748`
-production_code_commit: pending local commit (final SHA in delivery receipt)
-failed_review_replay: `requested_packages=[]`
-
-### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**: after an in-memory kill-race terminal audit, valid COMBAT actions can clear the race latch before a later lethal unmarked `end_turn`; the existing GAME_OVER join then reports the old source snapshot without the terminal predecessor. Falsifiable: only a bounded same-floor tail may add the new marker, and disabling it must preserve action/params and the existing outcome marker.
-- **EVIDENCE**: exact runs 1747 and 1748 were read; latest full chain is `sts2-ascend/knowledge/runs/20260930-071633_ZDCAWTPKR42S.json`. In 1748-F17, D255 is round 11 and D270 is the final COMBAT `end_turn` at round 15 with `hp=2/block=21/incoming=51/energy=0`, followed by D271 GAME_OVER whose race outcome still says `terminal_round=11`, `hp=6/block=0/incoming=13`. The full chain has no persisted race-audit marker before D270, so the implementation uses the existing in-memory pending source round only for the fallback; a read-only probe recovered `source_index=255`, `source_turn=11`, `tail_round=15`, `bridge_decisions=15`, `bridge_rounds=4`.
-- **EXPECTED_SIGNAL**: over the next 3-10 independent same-combat windows, `KILL_RACE_TERMINAL_TAIL_OBS` should record source/tail round, HP, block, incoming, energy, and bridge counts only when the same-floor COMBAT tail exists. Cross-screen/floor, absent pending/source, or already-marked tails must not emit it.
-
-### MINIMUM_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `kill_race_terminal_tail_obs`.
-- `sts2-ascend/brain/policy.py`: add bounded 32-row same-floor COMBAT/CARD_SELECTION terminal-tail recovery/output; pending-only source-round fallback handles an unpersisted marker; no score/candidate/action/params path changes.
-- `sts2-ascend/brain/selfcheck.py`: cover pending fallback, marker-backed reload, exact source/tail fields, and off-switch action/params equivalence.
-
-### CONTINUE / ADJUST / ROLLBACK / VALIDATION
-
-- **Continue**: collect 3-10 independent windows keyed by `run_id/floor/source_round/source_hp/source_block/source_incoming/source_energy/terminal_tail_round/terminal_tail_hp/terminal_tail_block/terminal_tail_incoming/terminal_tail_energy/bridge_decisions/bridge_rounds/outcome`; compare stale-source vs actual tail.
-- **Adjust**: if source-round fallback attaches to a different combat, a non-COMBAT screen, an unrelated same-round end_turn, or missing `turn_end_state`, tighten the bounded predicate and retain the failure sample; do not turn this observation into behavior.
-- **Rollback**: set `kill_race_terminal_tail_obs` to `False`; the new tail marker disappears while the existing `KILL_RACE_TERMINAL_OUTCOME_OBS`, action, and params remain.
-- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's known fixed-256 temp-pool bootstrap failure; the same selfcheck then ran via a process-level `tempfile.mkdtemp` adapter rooted in this clone's inherited-ACL `.review-cache/selfcheck-pool` and ended with `SELFCHECK OK`. Actual-chain probe recovered the 1748 D255->D270 tail; final target `git diff --check` passed. No runtime, formal runs/archive, learning files, review prompt, or online process was touched.
-
-- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
-
 
 ## 2026-09-29 第1722局复盘（NONLETHAL_CHAIN_PRESSURE_TREND_OBS）
 

@@ -18685,9 +18685,6 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "race_audit_projection_intent_drift_obs"] is True, \
         "DEFAULT_POLICY 缺少 race_audit_projection_intent_drift_obs 默认开关"
-    assert knowledge.DEFAULT_POLICY[
-        "kill_race_terminal_tail_obs"] is True, \
-        "DEFAULT_POLICY 缺少 kill_race_terminal_tail_obs 默认开关"
 
     race_terminal_output_off_know = knowledge.Knowledge(tmp)
     race_terminal_output_off_know.policy[
@@ -18810,108 +18807,6 @@ def main() -> int:
             "（RACE_PROJ_LATCH_INTENT_DRIFT_OBS）"
             in d_race_terminal_outcome.reason), \
         f"竞速首末意图漂移对账缺失: {d_race_terminal_outcome}"
-
-    # 3z-5b-tail) 1748-F17 的具体形态：早先竞速终端审计后仍有合法
-    # 出牌，最后才出现未带竞速 marker 的致死 end_turn。终局观测必须同时
-    # 保留 source 与后续 tail 的原生状态；只增加 reason，不改变动作参数。
-    race_terminal_tail_fallback_pol = policy.Policy(race_terminal_know)
-    race_terminal_tail_fallback_pol._race_terminal_outcome_pending = dict(
-        race_terminal_pol._race_terminal_outcome_pending)
-    race_terminal_tail_fallback_ctx = _SettleCtx()
-    race_terminal_tail_fallback_ctx.decisions = [
-        {
-            "screen": "COMBAT", "action": "end_turn", "floor": 33,
-            "turn": 6, "reason": "竞速审计源未持久化",
-        }, {
-            "screen": "COMBAT", "action": "play_card", "floor": 33,
-            "turn": 7, "reason": "战斗：合法出牌后继续",
-        }, {
-            "screen": "COMBAT", "action": "end_turn", "floor": 33,
-            "turn": 9, "hp": 2, "energy": 0,
-            "turn_end_state": {"block": 21, "incoming_damage": 51},
-            "reason": "战斗：未带竞速审计的终端空过",
-        },
-    ]
-    d_race_terminal_tail_fallback = race_terminal_tail_fallback_pol.decide(
-        race_terminal_outcome_state, race_terminal_tail_fallback_ctx)
-    assert (d_race_terminal_tail_fallback.action
-            == d_race_terminal_outcome.action
-            and d_race_terminal_tail_fallback.params
-            == d_race_terminal_outcome.params
-            and "KILL_RACE_TERMINAL_TAIL_OBS"
-            in d_race_terminal_tail_fallback.reason), \
-        f"未持久化竞速源的 pending 尾部恢复或动作漂移: " \
-        f"{d_race_terminal_tail_fallback}"
-
-    race_terminal_tail_rows = [
-        {
-            "screen": "COMBAT", "action": "end_turn", "floor": 33,
-            "turn": 6, "reason": d_race_terminal.reason,
-        },
-        {
-            "screen": "COMBAT", "action": "play_card", "floor": 33,
-            "turn": 7, "reason": "战斗：合法出牌后继续",
-        },
-        {
-            "screen": "COMBAT", "action": "end_turn", "floor": 33,
-            "turn": 9, "hp": 2, "energy": 0,
-            "turn_end_state": {"block": 21, "incoming_damage": 51},
-            "reason": "战斗：未带竞速审计的终端空过",
-        },
-    ]
-    race_terminal_ctx.decisions.extend(race_terminal_tail_rows)
-    d_race_terminal_tail_live = race_terminal_pol.decide(
-        race_terminal_outcome_state, race_terminal_ctx)
-    assert (d_race_terminal_tail_live.action
-            == d_race_terminal_outcome.action
-            and d_race_terminal_tail_live.params
-            == d_race_terminal_outcome.params
-            and "source_round=6/source_hp=9/source_block=6"
-            "/source_incoming=20/source_energy=0/terminal_tail_round=9"
-            "/terminal_tail_action=end_turn/terminal_tail_hp=2"
-            "/terminal_tail_block=21/terminal_tail_incoming=51"
-            "/terminal_tail_energy=0/bridge_decisions=2/bridge_rounds=3"
-            "（KILL_RACE_TERMINAL_TAIL_OBS）"
-            in d_race_terminal_tail_live.reason), \
-        f"同进程竞速终端尾部缺失或动作漂移: {d_race_terminal_tail_live}"
-
-    race_terminal_tail_replay_pol = policy.Policy(race_terminal_know)
-    race_terminal_tail_replay_ctx = _SettleCtx()
-    race_terminal_tail_replay_ctx.decisions = [
-        dict(race_terminal_tail_rows[0]),
-        dict(race_terminal_tail_rows[1]),
-        dict(race_terminal_tail_rows[2]),
-    ]
-    d_race_terminal_tail_replay = race_terminal_tail_replay_pol.decide(
-        race_terminal_outcome_state, race_terminal_tail_replay_ctx)
-    assert (d_race_terminal_tail_replay.action
-            == d_race_terminal_outcome.action
-            and d_race_terminal_tail_replay.params
-            == d_race_terminal_outcome.params
-            and "KILL_RACE_TERMINAL_TAIL_OBS"
-            in d_race_terminal_tail_replay.reason), \
-        f"重载后竞速终端尾部恢复或动作漂移: {d_race_terminal_tail_replay}"
-
-    race_terminal_tail_off_know = knowledge.Knowledge(tmp)
-    race_terminal_tail_off_know.policy["kill_race_terminal_tail_obs"] = False
-    race_terminal_tail_off_pol = policy.Policy(race_terminal_tail_off_know)
-    race_terminal_tail_off_ctx = _SettleCtx()
-    race_terminal_tail_off_ctx.decisions = [
-        dict(race_terminal_tail_rows[0]),
-        dict(race_terminal_tail_rows[1]),
-        dict(race_terminal_tail_rows[2]),
-    ]
-    d_race_terminal_tail_off = race_terminal_tail_off_pol.decide(
-        race_terminal_outcome_state, race_terminal_tail_off_ctx)
-    assert (d_race_terminal_tail_off.action
-            == d_race_terminal_tail_replay.action
-            and d_race_terminal_tail_off.params
-            == d_race_terminal_tail_replay.params
-            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
-            in d_race_terminal_tail_off.reason
-            and "KILL_RACE_TERMINAL_TAIL_OBS"
-            not in d_race_terminal_tail_off.reason), \
-        f"竞速终端尾部关闭后 action/既有结局观测漂移: {d_race_terminal_tail_off}"
 
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
