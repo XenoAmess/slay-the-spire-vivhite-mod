@@ -4463,6 +4463,8 @@ def main() -> int:
             "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
             "name": "弦光投影", "card_type": "Attack", "playable": False,
             "unplayable_reason": "blocked_by_hook", "energy_cost": 1,
+            "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+            "unplayable_preventer_id": "RINGING_POWER",
             "requires_target": True, "valid_target_indices": [0],
             "dynamic_values": [
                 {"name": "Damage", "current_value": 10},
@@ -4472,6 +4474,8 @@ def main() -> int:
             "card_id": "VIVHITE_CARD_CLOSED_PROJECTION",
             "name": "闭域投影", "card_type": "Attack", "playable": False,
             "unplayable_reason": "blocked_by_hook", "energy_cost": 1,
+            "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+            "unplayable_preventer_id": "RINGING_POWER",
             "requires_target": True, "valid_target_indices": [0],
             "dynamic_values": [
                 {"name": "Damage", "current_value": 20},
@@ -4496,8 +4500,8 @@ def main() -> int:
     assert d_tll.action == "end_turn" \
         and "VIVHITE_HP_TERMINAL_LOCK_OBS" in d_tll.reason \
         and "native_blocked_by_hook=2/2" in d_tll.reason \
-        and "cards=VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook|" in d_tll.reason \
-        and "VIVHITE_CARD_CLOSED_PROJECTION:life=3/margin=0/effective=3/playable=no/unavailable=no/energy=1/native=blocked_by_hook" in d_tll.reason \
+        and "cards=VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook/native_raw=blockedbyhook_blockedbycardlogic/native_preventer=ringing_power|" in d_tll.reason \
+        and "VIVHITE_CARD_CLOSED_PROJECTION:life=3/margin=0/effective=3/playable=no/unavailable=no/energy=1/native=blocked_by_hook/native_raw=blockedbyhook_blockedbycardlogic/native_preventer=ringing_power" in d_tll.reason \
         and "/hp=2/block=16/gap=26/energy=2/incoming=42/end_turn_lethal=yes" in d_tll.reason, \
         f"终端生命锁缺稳定观测字段: {d_tll.reason}"
 
@@ -4540,6 +4544,7 @@ def main() -> int:
             and "VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS" in d_tllo.reason
             and "outcome=defeat/floor=33/terminal_round=9/final_hp=0" in d_tllo.reason
             and "/native_blocked_by_hook=2/2" in d_tllo.reason
+            and "native_raw=blockedbyhook_blockedbycardlogic/native_preventer=ringing_power" in d_tllo.reason
             and "/end_turn_lethal=yes" in d_tllo.reason
             and "/cards=VIVHITE_CARD_LUMINOUS_PROJECTION:" in d_tllo.reason), \
         f"终端锁终局对账缺失或动作漂移: {d_tllo}"

@@ -5894,3 +5894,33 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-09-30 第1726局：终端锁原生复合原因观测
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+## HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1726-F17-T10 的生命支付终端锁不应只归因为 `RingingPower`。当前原生牌快照同时给五张非诅咒牌 `unplayable_reason_raw="BlockedByHook, BlockedByCardLogic"`，而既有 marker 只保留规范化首因 `native=blocked_by_hook`；这遮蔽了白绮 `LifeCalculationCard.IsPlayable` 的卡牌逻辑门。若在同一逐卡 marker 中保留原始复合原因和原生 preventer，就能区分两类门且不改变决策。
+- **EVIDENCE**：精确失败链为 `sts2-ascend/knowledge/profiles/vivhite/runs/20260930-002527_ZJDHDWW134QH.json`；`decisions=195`，完整持久链标记为 `complete_persisted_chain=false`，只把选定的 115 条保留在提示证据中。F17-T10 为 `hp=1/block=0/incoming=20/energy=11/gap=20/end_turn_lethal=yes`，五张非诅咒牌均有上述复合 raw 原因及 `unplayable_preventer_id=RINGING_POWER`，随后同楼层进入 `GAME_OVER defeat`。该证据支持归因缺口，不单独证明唯一死因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 终端锁 combat 中，每张牌的 `native_raw` 应与原生 `unplayable_reason_raw` 归一化后一致，`native_preventer` 应与原生 preventer 对齐；同楼层 GAME_OVER 对账、真实 `applied` action/params、两次确认和学习统计保持不变。字段缺失、归一化错配、重复消费或 action/params 漂移即证伪。
+
+## PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `VIVHITE_HP_TERMINAL_LOCK_OBS` 的逐卡审计中追加 `native_raw` 与 `native_preventer`；两者只用于观测，不回灌可玩性判断、候选评分、等待预算或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：将终端锁夹具升级为 `BlockedByHook, BlockedByCardLogic` + `RINGING_POWER`，并覆盖逐卡字段、GAME_OVER 对账和既有 action/params 不变断言。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+## VALIDATION
+
+- 必需的 `py -3 -B sts2-ascend/brain/selfcheck.py` 首次只暴露宿主既有 256 槽临时池耗尽并退出 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 selfcheck 脚本的进程级临时目录适配重跑，退出码 0，输出 `SELFCHECK OK`。
+- 已完整回读目标源码 diff；目标 `git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+## FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立终端锁 combat，按 run/floor/turn 对比原始牌快照、逐卡 raw/preventer、既有 terminal-lock marker、同楼层 GAME_OVER、最终 HP 与胜负，并核对真实 applied action/params。
+- 若字段与原生快照不一致、marker 重复/错楼层、终局对账断链或行为漂移，回滚本地 commit 并保留本批原始证据；在复核前不把该观测升级为行为门。
+
+## REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])
