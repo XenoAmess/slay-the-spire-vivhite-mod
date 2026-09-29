@@ -10274,6 +10274,61 @@ def main() -> int:
     d_etf_duplicate = etf_pol.decide(etf_game_over, etf_ctx)
     assert "ELITE_FORCED_ENTRY_OUTCOME_OBS" not in d_etf_duplicate.reason, \
         f"强制精英结局 marker 非幂等: {d_etf_duplicate.reason}"
+
+    # Repeated forced entries in one run must not overwrite the earlier map
+    # fact: 1737 entered forced Elite at F12 and F14 before the F15 defeat.
+    etf_seq_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-forced-seq-"))
+    etf_seq_know = knowledge.Knowledge(etf_seq_dir)
+    etf_seq_pol = policy.Policy(etf_seq_know)
+    etf_seq_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [],
+        "run_id": "ELITE-FORCED-SEQUENCE-CHECK",
+        "died_in_combat": {
+            "comp_id": "TEST_FORCED_SEQUENCE", "node_type": "Elite",
+            "floor": 15, "rounds": 3, "hp_lost": 15.0,
+            "self_hp_loss": 0.0, "stall": False,
+        },
+    })()
+    etf_seq_state = dict(etf_state)
+    etf_seq_state["run_id"] = etf_seq_ctx.run_id
+    etf_seq_state["run"] = dict(etf_state["run"])
+    etf_seq_state["run"]["floor"] = 12
+    etf_seq_state["run"]["current_hp"] = 36
+    d_etf_seq_first = etf_seq_pol.decide(etf_seq_state, etf_seq_ctx)
+    assert d_etf_seq_first.action == "choose_map_node", \
+        f"强制精英序列首项动作漂移: {d_etf_seq_first.action}"
+    etf_seq_ctx.decisions.append({
+        "screen": "MAP", "floor": 12, "action": d_etf_seq_first.action,
+        "params": d_etf_seq_first.params, "reason": d_etf_seq_first.reason,
+    })
+    etf_seq_state["run"]["floor"] = 14
+    etf_seq_state["run"]["current_hp"] = 15
+    d_etf_seq_second = etf_seq_pol.decide(etf_seq_state, etf_seq_ctx)
+    assert d_etf_seq_second.action == "choose_map_node", \
+        f"强制精英序列末项动作漂移: {d_etf_seq_second.action}"
+    etf_seq_ctx.decisions.append({
+        "screen": "MAP", "floor": 14, "action": d_etf_seq_second.action,
+        "params": d_etf_seq_second.params, "reason": d_etf_seq_second.reason,
+    })
+    etf_seq_game_over = {
+        "screen": "GAME_OVER", "run_id": etf_seq_ctx.run_id,
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 15,
+                       "can_continue": True},
+        "run": {"current_hp": 0},
+    }
+    d_etf_seq_outcome = etf_seq_pol.decide(
+        etf_seq_game_over, etf_seq_ctx)
+    assert (d_etf_seq_outcome.action == "continue_game_over"
+            and d_etf_seq_outcome.params == {}
+            and d_etf_seq_outcome.reason.count(
+                "ELITE_FORCED_ENTRY_SEQUENCE_OBS") == 1
+            and "/forced_entry_sequence_count=2" in d_etf_seq_outcome.reason
+            and "/forced_entry_sequence_floors=12,14" in d_etf_seq_outcome.reason
+            and "/forced_entry_sequence_modes=only_candidate,only_candidate"
+            in d_etf_seq_outcome.reason), \
+        f"强制精英重复入场序列观测缺失: {d_etf_seq_outcome.reason}"
+
     etf_know.policy["elite_forced_entry_outcome_obs"] = False
     etf_pol_outcome_off = policy.Policy(etf_know)
     etf_ctx_outcome_off = type("C", (), {"credit_tags": [], "decisions": [],

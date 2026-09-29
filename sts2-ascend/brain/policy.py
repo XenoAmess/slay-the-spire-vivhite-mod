@@ -4556,6 +4556,75 @@ class Policy:
         except (TypeError, ValueError, OverflowError):
             return "?"
 
+    @staticmethod
+    def _parse_elite_forced_entry_observation(reason):
+        """Parse one durable forced-Elite map observation from a decision reason."""
+        _reason = str(reason or "")
+        _marker_at = _reason.rfind("ELITE_FORCED_ENTRY_OBS")
+        if _marker_at < 0:
+            return None
+        _match = re.search(
+            r"floor=(?P<entry_floor>\d+)/hp=(?P<hp>[^/]+)/(?P<max_hp>[^/]+)/"
+            r"good_cards=(?P<good_cards>[^/]+)/(?P<required>[^/]+)/"
+            r"gate=(?P<gate>[^/]+)/candidates=(?P<candidates>\d+)/"
+            r"mode=(?P<mode>[A-Za-z_]+)"
+            r"(?:/projected_after_pct=(?P<projected>[^（/]+))?",
+            _reason[:_marker_at])
+        if not _match:
+            return None
+        try:
+            return {
+                "entry_floor": int(_match.group("entry_floor")),
+                "expected_floor": int(_match.group("entry_floor")) + 1,
+                "hp": int(float(_match.group("hp"))),
+                "max_hp": int(float(_match.group("max_hp"))),
+                "good_cards": int(float(_match.group("good_cards"))),
+                "required": int(float(_match.group("required"))),
+                "gate": float(_match.group("gate")),
+                "candidates": int(_match.group("candidates")),
+                "mode": _match.group("mode"),
+                "projected_after_pct": (
+                    _match.group("projected") or "?").strip(),
+            }
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    def _elite_forced_entry_sequence(self, ctx, pending) -> list[dict]:
+        """Return the bounded forced-Elite sequence for the current run.
+
+        A later forced map choice replaces the in-memory pending sample. Reading
+        the durable decision tail restores the earlier choices so a terminal
+        audit can distinguish one unavoidable Elite from repeated forced entries.
+        The sequence is intentionally capped to the latest eight entries and is
+        observation-only.
+        """
+        _samples = []
+        _decisions = getattr(ctx, "decisions", None)
+        if isinstance(_decisions, list):
+            for _row in _decisions:
+                if (isinstance(_row, dict)
+                        and _row.get("action") == "choose_map_node"):
+                    _sample = self._parse_elite_forced_entry_observation(
+                        _row.get("reason"))
+                    if _sample is not None:
+                        _samples.append(_sample)
+        if isinstance(pending, dict):
+            _pending_sample = dict(pending)
+            _samples.append(_pending_sample)
+
+        _keys = (
+            "entry_floor", "hp", "max_hp", "good_cards", "required",
+            "gate", "candidates", "mode", "projected_after_pct")
+        _deduped = []
+        _seen = set()
+        for _sample in _samples:
+            _key = tuple(_sample.get(_name) for _name in _keys)
+            if _key in _seen:
+                continue
+            _seen.add(_key)
+            _deduped.append(_sample)
+        return _deduped[-8:]
+
     def _remember_elite_forced_entry_observation(
             self, floor, hp, max_hp, good_cards, elite_deck_req,
             elite_gate_f, candidates, mode, projected_after_pct="?") -> None:
@@ -4674,6 +4743,19 @@ class Policy:
                     except (TypeError, ValueError, OverflowError):
                         pass
 
+        _sequence = self._elite_forced_entry_sequence(ctx, _pending)
+        _sequence_note = ""
+        if len(_sequence) > 1:
+            _sequence_note = (
+                f"/forced_entry_sequence_count={len(_sequence)}"
+                "/forced_entry_sequence_floors="
+                + ",".join(str(_sample.get("entry_floor", "?"))
+                            for _sample in _sequence)
+                + "/forced_entry_sequence_modes="
+                + ",".join(str(_sample.get("mode", "?"))
+                            for _sample in _sequence)
+                + " (ELITE_FORCED_ENTRY_SEQUENCE_OBS)")
+
         _result = "victory" if victory else "defeat"
         _terminal_floor = "?" if floor is None else str(floor)
         return (
@@ -4688,6 +4770,7 @@ class Policy:
             f"/projected_after_pct={_projected_after_pct}"
             f"/actual_after_pct={_actual_after_pct}"
             f"/outcome={_result}/terminal_floor={_terminal_floor}"
+            f"{_sequence_note}"
             f"{_combat_tail}"
             " (ELITE_FORCED_ENTRY_OUTCOME_OBS)")
 

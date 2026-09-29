@@ -13989,3 +13989,31 @@ failed_review_replay: `requested_packages=[]`，无回放包
 - **验证**：直接 selfcheck 入口复现宿主固定256槽的既有 REVIEW_SELFCHECK_BOOTSTRAP_FAILED；随后用 clone 内既有 selfcheck-pool 的进程级 tempfile.mkdtemp 适配执行，退出码0并输出 SELFCHECK OK。最终目标 diff 已回读，限定 git diff --check 通过；未写入 .runtime、正式 runs/archive、stats、progression、policy.json、lessons.md 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1737局复盘（ELITE_FORCED_ENTRY_SEQUENCE_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1737`
+production_code_commit: `34642507f`（本地 commit，未 push）
+failed_review_replay: `requested_packages=[]`，无回放包
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1737局先在 F12、再在 F14 被迫进入精英，终局观测只保留后一次 `_elite_forced_entry_pending`，因而无法证伪“重复强制精英入场叠加了终局风险”。若该缺口真实存在，终局应能从同局持久决策链恢复多次强制入场的顺序，而不改变任何选择行为。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-040658_6YCJRGUQK557.json` 的249条 decisions。D174/F12 记录 `hp=36/80`、D230/F14 记录 `hp=15/80`，两次均为 `ELITE_FORCED_ENTRY_OBS`；D248 仅连接 F14 的入场与 BYRDONIS 阵亡，未列出 F12。`failed_review_replay.requested_packages=[]`，本批无回放包。
+- **EXPECTED_SIGNAL**：未来3—10个独立终局中，仅当同一 run 的持久 `choose_map_node` 链出现两次以上可解析强制精英标记时，追加 `ELITE_FORCED_ENTRY_SEQUENCE_OBS`，记录有界的 count、楼层与 mode；单次、跨 run、字段缺失或非强制路径不命中。终局 action、params、候选、排序、评分和门控必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：从当前 run 的持久地图决策与最新 pending 样本恢复并去重最近最多8次强制入场，只在既有 `elite_forced_entry_outcome_obs` 终局尾缀中追加序列观测；不新增行为闸门。
+- `sts2-ascend/brain/knowledge.py`：更新既有回滚开关注释，明确该尾缀包含重复入场序列；未新增默认策略旋钮。
+- `sts2-ascend/brain/selfcheck.py`：加入 F12→F14→F15 正例，断言序列字段、动作和空参数；已有单次、幂等和关闭开关夹具继续覆盖。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：只读收集3—10个包含精英强制闸的终局，按强制次数、楼层序列、入场血量、模式、战斗结算和最终胜负分层；证据成熟前不调整精英规避阈值或路径评分。
+- **调整**：若后续出现旧决策尾部串入新 run、同一入场重复计数或 marker 语法漂移，收紧 run/决策边界与解析谓词，保留失败样本，不把序列观测升级为行为门。
+- **回滚**：将 `elite_forced_entry_outcome_obs` 设为 `False`；预期同时移除既有强制精英终局对账及 `ELITE_FORCED_ENTRY_SEQUENCE_OBS`，选择、评分、action 和 params 不变。
+- **验证**：完整 selfcheck 目标运行退出码0并输出 `SELFCHECK OK`；限定目标 `git diff --check` 通过，生产代码 commit 为 `34642507f`。默认临时槽入口先触发宿主既有配额失败，随后使用同一 clone 的进程级可复用临时隔离适配完成通过；未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
