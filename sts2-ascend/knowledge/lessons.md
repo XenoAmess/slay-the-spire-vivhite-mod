@@ -14373,3 +14373,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.48445071292212局)，BASH(14分/2.102227526318717局)，STOKE(16分/2.3926204367022725局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.99 → 1.98（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1707 胜，当前目标进阶 0
+
+## 第 1708 局复盘（2026-09-29 18:50）
+- 结果：💀 失败｜进阶 0｜到达层数 29｜当局评分 29
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：MOLTEN_FIST, WHIRLWIND, CINDER, CRUELTY, DISMANTLE, TWIN_STRIKE, HEMOKINESIS, HELLRAISER, STONE_ARMOR, DOMINATE, TAUNT, CINDER, ANGER, INFLAME, FEEL_NO_PAIN, DISMANTLE
+- 本局遗物：TUNGSTEN_ROD, STONE_CRACKER
+- 战斗记录：F17 Boss战 掉血59｜自损2（可行动段2/非行动段33，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=168/dpt=10.8/ttk=15.5556/tsurv=3.77778（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=15.5556/actual_over_projected=0.71（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战11回合获胜｜竞速Boss有效火力收官对账：samples=9/actual_dpt=19.1111/projected_dpt=16.3108/ratio=1.27/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=9/actual_dpt=19.1111/projected_dpt=16.3108/ratio=1.27/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血9; F20 Monster战 掉血11｜自损1（可行动段1/非行动段16，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血40｜自损12（可行动段12/非行动段33，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血7｜自损1（可行动段1/非行动段12，SELF_LOSS_PHASE_OBS）; F29 Monster战 掉血78｜自损4（可行动段4/非行动段57，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.016813485007188局)，HELLRAISER(26分/5.180363010057113局)，PROWESS(26分/7.384722545545676局)，FEED(24分/31.811618920631265局)，OFFERING(24分/15.604471044419324局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4757551354268927局)，BASH(14分/2.094869729976602局)，STOKE(16分/2.3842462651738145局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.41（行至 F29（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.98 → 1.97（行至 F29（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F29——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1708 胜，当前目标进阶 0
