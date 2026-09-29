@@ -19147,3 +19147,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.1623015464363577局)，FASTEN(21分/5.068663221823104局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/22.412431518700988局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1737 胜，当前目标进阶 4
+
+## 第 1738 局复盘（2026-09-30 04:43）
+- 结果：💀 失败｜进阶 4｜到达层数 6｜当局评分 6
+- 死因：敌人组合 HAUNTED_SHIP
+- 本局拿牌：VIVHITE_CARD_GEODESIC_VEIL, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_HEURISTIC_SHIELD
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损8（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血4｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血18｜自损20（可行动段20/非行动段12，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血47｜自损28（可行动段28/非行动段13，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/2.1311752294061765局)，JACKPOT(37分/11.556340841481399局)，THINKING_AHEAD(37分/3.594962075107107局)，MAYHEM(37分/2.936112658056912局)，ROLLING_BOULDER(36分/3.617579670076042局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.1547334910238307局)，FASTEN(21分/5.050922900546723局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/22.333988008385536局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，致命Monster战实测自损28/掉血47（60%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：4/1738 胜，当前目标进阶 4

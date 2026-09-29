@@ -1,0 +1,5499 @@
+{
+ "run_id": "KYLUECG783LQ",
+ "run_number": 1738,
+ "profile_id": "vivhite",
+ "character_id": "VIVHITE_CHARACTER_VIVHITE_CHARACTER",
+ "profile_run_number": 1738,
+ "ascension": 4,
+ "started_at": "2026-09-30 04:40:39",
+ "victory": false,
+ "floor": 6,
+ "decisions": [
+  {
+   "t": "04:40:39",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「轰鸣海螺」（经验价值 2.5）；轰鸣海螺=2.5(n=33.97774230406972) / 卷轴箱=2.5(n=22.248004896971114) / 涅奥骨骰=0.0(n=0)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 79%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "轰鸣海螺",
+      "score": 2.5,
+      "status": "chosen",
+      "why": "经验样本 33.97774230406972",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "卷轴箱",
+      "score": 2.5,
+      "status": "rejected",
+      "why": "经验样本 22.248004896971114",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "涅奥骨骰",
+      "score": 0.0,
+      "status": "rejected",
+      "why": "经验样本 0",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "轰鸣海螺",
+     "params": {
+      "option_index": 1
+     },
+     "score": 2.5
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "04:40:40",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "04:40:44",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 62,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "路径规划：Monster(1,4)（路径分 -47.99，预计进 Boss 血量 71%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计71%<75%（饥饿放宽自88%），优先续航路线）；候选：Monster(1,0)=-58.69|前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,2)=-54.01|前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,4)=-47.99|前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计71%<75%（饥饿放宽自88%），优先续航路线",
+   "trace": {
+    "observation": {
+     "title": "MAP · F1",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F1",
+      "生命 62/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅0张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "3 条候选；最高 -47.99"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 71%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(1,4)",
+      "score": -47.99,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计71%<75%（饥饿放宽自88%），优先续航",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "4",
+       "projected_hp": "0.7139852853802693"
+      }
+     },
+     {
+      "label": "Monster(1,2)",
+      "score": -54.008,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "2",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(1,0)",
+      "score": -58.69,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "0",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(1,4)",
+     "params": {
+      "option_index": 2
+     },
+     "score": -47.99,
+     "target": {
+      "row": "1",
+      "col": "4",
+      "projected_hp": "0.7139852853802693"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "04:40:46",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 62,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（辅助体优先转火：蟾蜍蝌蚪（零伤害意图，放生=纵容其强化队友）｜零伤害目标意图审计：target=TOADPOLE#0 intent=Buff role=buff（SUPPORT_TARGET_INTENT_OBS）｜换线阻尼+4.0（教义在场延续集火记忆，FOCUS_DRIFT_DAMP）｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]；火线身份歧义：键TOADPOLE来源enemy_id、在场2个同类实例、索引[0,1]（FOCUS_IDENTITY_AMBIGUITY_OBS））；敌意图总伤7，我方62血/0甲；重生名册读侧：TOADPOLE=id:未知(n=0,rs=24)（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "04:40:47",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 60,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（辅助体优先转火：蟾蜍蝌蚪（零伤害意图，放生=纵容其强化队友）｜零伤害目标意图审计：target=TOADPOLE#0 intent=Buff role=buff（SUPPORT_TARGET_INTENT_OBS）｜换线阻尼+4.0（教义在场延续集火记忆，FOCUS_DRIFT_DAMP）｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX）；火线身份歧义：键TOADPOLE来源enemy_id、在场2个同类实例、索引[0,1]（FOCUS_IDENTITY_AMBIGUITY_OBS））；敌意图总伤7，我方60血/0甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "04:40:48",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 58,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（可击杀蟾蜍蝌蚪｜零伤害目标意图审计：target=TOADPOLE#0 intent=Buff role=buff（SUPPORT_TARGET_INTENT_OBS）｜换线阻尼+4.0（教义在场延续集火记忆，FOCUS_DRIFT_DAMP）｜VIVHITE_LIVE_ESTIMATE=+10.05[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=0;crown=16/kill;dimension=0]｜同回合第3次复打税+2.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤7，我方58血/0甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "04:40:50",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 72,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=72/block=0/incoming=7/gap=7/hand_tax=0/energy=0/cards=2/energy_locked=2/hook_locked=0/hook_ids=none/hand_block_candidates=2/hand_affordable_block_candidates=0/hand_max_block=9/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 72/78",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 7"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 7,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:40:54",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 65,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（闭域映射✓,弦光投影✓,白绮的变身式✓,闭域映射✓,闭域映射✓），结束回合（敌意图总伤0，我方65血/0甲）；謦欬出牌门拦下【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【弦光投影】实付2血、【白绮的变身式】实付4血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）（VIVHITE_HP_PLAY_MARGIN_GATE）；零压回合攻击门拦观测：hp=65/max_hp=78/block=0/incoming=0/energy=3/cards=VIVHITE_CARD_LUMINOUS_PROJECTION@1/pay=2/score=4.24/cause=margin/dmg=10（VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 2,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 65/78",
+      "回合 2",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 65"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 4.243,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension",
+      "index": 1,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "蟾蜍蝌蚪"
+      }
+     },
+     {
+      "label": "白绮的变身式",
+      "score": -1.582,
+      "status": "謦欬门拒",
+      "why": "能力/增益牌（第2回合）｜长战加成+1.8（敌血池21）｜VIVHITE_LIVE_ESTIMATE=-9.90[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;c",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 4,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:40:57",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 65,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤9，我方65血/0甲；意图升级+9，防御前置",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "04:40:59",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 63,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（单体伤害≈10.0｜荆棘反伤≈2未计价（THORNS_REFLECT_OBS）｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤9，我方63血/9甲；意图升级+9，防御前置",
+   "turn": 3,
+   "energy": 2
+  },
+  {
+   "t": "04:41:00",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 61,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（单体伤害≈10.0｜荆棘反伤≈2未计价（THORNS_REFLECT_OBS）｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤9，我方61血/7甲；意图升级+9，防御前置",
+   "turn": 3,
+   "energy": 1
+  },
+  {
+   "t": "04:41:02",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 59,
+   "gold": 99,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=59/block=5/incoming=9/gap=4/hand_tax=0/energy=0/cards=2/energy_locked=2/hook_locked=0/hook_ids=none/hand_block_candidates=1/hand_affordable_block_candidates=0/hand_max_block=9/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 3,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F2",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F2",
+      "生命 59/78",
+      "回合 3",
+      "能量 0",
+      "敌方意图伤害 9"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 5,
+    "incoming_damage": 9,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:06",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 55,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→蟾蜍蝌蚪（可击杀蟾蜍蝌蚪｜VIVHITE_LIVE_ESTIMATE=+10.05[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤7，我方55血/0甲",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "04:41:06",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 69,
+   "gold": 99,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：7金币"
+  },
+  {
+   "t": "04:41:07",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 69,
+   "gold": 106,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "04:41:08",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 69,
+   "gold": 106,
+   "action": "choose_reward_card",
+   "params": {
+    "option_index": 2
+   },
+   "reason": "奖励选牌：【测地护幕】（价值 8.5，≥ 门槛 0.0）；VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]；VIVHITE_BUILD_SYNERGY=+1.80[GEODESIC_VEIL;混合桥×9]；CARD_BURST_PICK_AUDIT:card=VIVHITE_CARD_GEODESIC_VEIL,before=36.0,after=36.0,delta=+0.0,line=91.5,starved_before=1,starved_after=1,offer_max=VIVHITE_CARD_GEODESIC_VEIL(+0.0),supply_left=+0.0;VIVHITE_LIFE_COST_PICK_AUDIT:source=REWARD,card=VIVHITE_CARD_GEODESIC_VEIL,life=6,deck_tax=20/20,over=0,forced=0,offer_life=3/3,best_nonlife=NONE；候选：测地护幕=8.5, 明暗对照=4.1, 回溯咒文=-1.3",
+   "trace": {
+    "observation": {
+     "title": "REWARD · F2",
+     "facts": [
+      "屏幕 REWARD",
+      "楼层 F2",
+      "生命 69/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REWARD"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 8.45 / 门槛 0.00；单薄保底=True"
+     },
+     {
+      "label": "RANK 奖励卡价值",
+      "status": "pass",
+      "value": "3 个当前可选候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_reward_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": 8.45,
+      "status": "chosen",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 2,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": 4.1,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 1,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "回溯咒文",
+      "score": -1.25,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 0,
+      "action": "choose_reward_card"
+     }
+    ],
+    "selected": {
+     "action": "choose_reward_card",
+     "label": "测地护幕",
+     "params": {
+      "option_index": 2
+     },
+     "score": 8.45
+    }
+   }
+  },
+  {
+   "t": "04:41:09",
+   "screen": "REWARD",
+   "floor": 2,
+   "hp": 69,
+   "gold": 106,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "04:41:12",
+   "screen": "MAP",
+   "floor": 2,
+   "hp": 69,
+   "gold": 106,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(2,5)（路径分 -11.48，预计进 Boss 血量 69%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计69%<75%（饥饿放宽自88%），优先续航路线）；候选：Unknown(2,4)=-18.14|输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价 / Monster(2,5)=-11.48|前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计69%<75%（饥饿放宽自88%），优先续航路线",
+   "trace": {
+    "observation": {
+     "title": "MAP · F2",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F2",
+      "生命 69/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅1张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "2 条候选；最高 -11.48"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 69%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(2,5)",
+      "score": -11.477,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计69%<75%（饥饿放宽自88%），优先续航",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "5",
+       "projected_hp": "0.6905091531453086"
+      }
+     },
+     {
+      "label": "Unknown(2,4)",
+      "score": -18.14,
+      "status": "rejected",
+      "why": "输出饥饿战损上浮×1.21（缺口61%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "2",
+       "col": "4",
+       "projected_hp": "0.9392163481050907"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(2,5)",
+     "params": {
+      "option_index": 1
+     },
+     "score": -11.477,
+     "target": {
+      "row": "2",
+      "col": "5",
+      "projected_hp": "0.6905091531453086"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "04:41:14",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 69,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤11，我方69血/0甲；重生名册读侧：SEAPUNK=id:未知(n=0,rs=24)（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "04:41:15",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 67,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤11，我方67血/9甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "04:41:16",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 65,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤11，我方65血/9甲",
+   "turn": 1,
+   "energy": 1
+  },
+  {
+   "t": "04:41:19",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 63,
+   "gold": 106,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[白绮的变身式(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=63/block=9/incoming=11/gap=2/hand_tax=0/energy=0/cards=2/energy_locked=2/hook_locked=0/hook_ids=none/hand_block_candidates=1/hand_affordable_block_candidates=0/hand_max_block=9/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 1,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 63/78",
+      "回合 1",
+      "能量 0",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:21",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 61,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤8，我方61血/0甲",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "04:41:22",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 59,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤8，我方59血/9甲",
+   "turn": 2,
+   "energy": 2
+  },
+  {
+   "t": "04:41:23",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 57,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤8，我方57血/9甲",
+   "turn": 2,
+   "energy": 1
+  },
+  {
+   "t": "04:41:25",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 55,
+   "gold": 106,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],测地护幕(2费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=55/block=9/incoming=8/gap=0/hand_tax=0/energy=0/cards=2/energy_locked=2/hook_locked=0/hook_ids=none/hand_block_candidates=2/hand_affordable_block_candidates=0/hand_max_block=24/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 2,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 55/78",
+      "回合 2",
+      "能量 0",
+      "敌方意图伤害 8"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "测地护幕",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 8,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:29",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 55,
+   "gold": 106,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（测地护幕✓），结束回合（敌意图总伤0，我方55血/0甲）；謦欬出牌门拦下【测地护幕】实付6血（VIVHITE_HP_ZERO_PRESSURE_GATE）（VIVHITE_HP_PLAY_MARGIN_GATE）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 3,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F3",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F3",
+      "生命 55/78",
+      "回合 3",
+      "能量 3",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 55"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": -15.849,
+      "status": "謦欬门拒",
+      "why": "格挡24｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:33",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 55,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方55血/0甲；意图升级+12，防御前置",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "04:41:34",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 53,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方53血/9甲；意图升级+12，防御前置",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "04:41:35",
+   "screen": "COMBAT",
+   "floor": 3,
+   "hp": 51,
+   "gold": 106,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→海洋混混（可击杀海洋混混｜VIVHITE_LIVE_ESTIMATE=+10.05[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤12，我方51血/9甲；意图升级+12，防御前置",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "04:41:36",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 65,
+   "gold": 106,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：12金币"
+  },
+  {
+   "t": "04:41:37",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 65,
+   "gold": 118,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "04:41:38",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 65,
+   "gold": 118,
+   "action": "choose_reward_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "奖励选牌：【递推星芒】（价值 20.4，≥ 门槛 0.0）；饥饿供给纠偏+4.5（delta=+3.0，BURST_STARVE_SUPPLY_LEVER）；VIVHITE_LIVE_ESTIMATE=-11.90[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]；VIVHITE_BUILD_SYNERGY=+1.80[RECURRENT_STARLIGHT;混合桥×9]；謦欬血税密度扣分（卡组目录血税26/软顶20，-2.4，VIVHITE_LIFE_COST_DECK_TAX）；CARD_BURST_PICK_AUDIT:card=VIVHITE_CARD_RECURRENT_STARLIGHT,before=36.0,after=39.0,delta=+3.0,line=91.5,starved_before=1,starved_after=1,offer_max=VIVHITE_CARD_RECURRENT_STARLIGHT(+3.0),supply_left=+0.0;VIVHITE_LIFE_COST_PICK_AUDIT:source=REWARD,card=VIVHITE_CARD_RECURRENT_STARLIGHT,life=4,deck_tax=26/20,over=6,forced=0,offer_life=2/3,best_nonlife=VIVHITE_CARD_ASTRAL_MEASURE,selected_minus_nonlife=7.9；候选：递推星芒=20.4, 开集庇护=15.6, 星体测度=12.4",
+   "trace": {
+    "observation": {
+     "title": "REWARD · F3",
+     "facts": [
+      "屏幕 REWARD",
+      "楼层 F3",
+      "生命 65/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REWARD"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 20.38 / 门槛 0.00；单薄保底=True"
+     },
+     {
+      "label": "RANK 奖励卡价值",
+      "status": "pass",
+      "value": "3 个当前可选候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_reward_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "递推星芒",
+      "score": 20.383,
+      "status": "chosen",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 1,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "开集庇护",
+      "score": 15.6,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 0,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "星体测度",
+      "score": 12.44,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 2,
+      "action": "choose_reward_card"
+     }
+    ],
+    "selected": {
+     "action": "choose_reward_card",
+     "label": "递推星芒",
+     "params": {
+      "option_index": 1
+     },
+     "score": 20.383
+    }
+   }
+  },
+  {
+   "t": "04:41:39",
+   "screen": "REWARD",
+   "floor": 3,
+   "hp": 65,
+   "gold": 118,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续"
+  },
+  {
+   "t": "04:41:41",
+   "screen": "MAP",
+   "floor": 3,
+   "hp": 65,
+   "gold": 118,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(3,4)（路径分 -28.46，预计进 Boss 血量 93%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价）；候选：Monster(3,4)=-28.46|前期需要战斗积累卡牌；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+   "trace": {
+    "observation": {
+     "title": "MAP · F3",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F3",
+      "生命 65/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅2张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 -28.46"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 93%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(3,4)",
+      "score": -28.457,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "3",
+       "col": "4",
+       "projected_hp": "0.9281177599395344"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(3,4)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -28.457,
+     "target": {
+      "row": "3",
+      "col": "4",
+      "projected_hp": "0.9281177599395344"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "04:41:43",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 65,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤8，我方65血/0甲；重生名册读侧：SLUDGE_SPINNER=id:未知(n=0,rs=24)（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "04:41:45",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 63,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→淤泥旋螺（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤8，我方63血/9甲",
+   "turn": 1,
+   "energy": 2
+  },
+  {
+   "t": "04:41:46",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 61,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（测地护幕✗,白绮的变身式✓,闭域映射✓），结束回合（敌意图总伤8，我方61血/9甲）",
+   "turn": 1,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 61/78",
+      "回合 1",
+      "能量 1",
+      "敌方意图伤害 8"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 61"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "白绮的变身式",
+      "score": -0.999,
+      "status": "rejected",
+      "why": "能力/增益牌（第1回合）｜长战加成+2.3（敌血池28）｜VIVHITE_LIVE_ESTIMATE=-9.90[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;c",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "rejected",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 8,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:49",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 61,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 2
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤11，我方61血/0甲；意图升级+3，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "04:41:51",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 59,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（测地护幕✓,弦光投影✓,弦光投影✓,闭域映射✓,递推星芒✓），结束回合（敌意图总伤11，我方59血/9甲）；意图升级+3，防御前置；謦欬出牌门拦下【弦光投影】实付2血、【弦光投影】实付2血、【递推星芒】实付4血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截0/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+3（HP_GATE_STALL_ESC_OBS）；连续未覆盖拦截1回合（VIVHITE_HP_GATE_STALL_UNCOVERED）",
+   "turn": 2,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 59/78",
+      "回合 2",
+      "能量 2",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 2 / 当前生命 59"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 4.543,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 1,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "淤泥旋螺"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 4.543,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 2,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "淤泥旋螺"
+      }
+     },
+     {
+      "label": "递推星芒",
+      "score": 1.223,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈9.0｜VIVHITE_LIVE_ESTIMATE=-11.90[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension",
+      "index": 4,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "淤泥旋螺"
+      }
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.89,
+      "status": "rejected",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "测地护幕",
+      "score": -15.789,
+      "status": "rejected",
+      "why": "格挡24｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:54",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 57,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（测地护幕✓），结束回合（敌意图总伤6，我方57血/0甲）",
+   "turn": 3,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 57/78",
+      "回合 3",
+      "能量 2",
+      "敌方意图伤害 6"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 6 / 当前生命 57"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": -15.669,
+      "status": "rejected",
+      "why": "格挡24｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 6,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:41:57",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 51,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：残能救场[格挡]：剩余能量3打出【测地护幕】，拒绝带能量空过（意图11/甲0/缺口11）原裁决：评估后无值得出的牌(测地护幕✓)；⚠残能空漏审计(IDLE_LEAK_BLK)：能量3空过，受击净缺口11，可负担格挡【测地护幕】可抵11，扣除謦欬6/余裕机会成本0后净保命5；意图升级+5，防御前置；首窗实测6伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付6，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 3
+  },
+  {
+   "t": "04:41:58",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 45,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→淤泥旋螺（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤11，我方45血/24甲；意图升级+5，防御前置；首窗实测4伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付6，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "04:42:00",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 43,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],白绮的变身式(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=43/block=24/incoming=11/gap=0/hand_tax=0/energy=0/cards=4/energy_locked=4/hook_locked=0/hook_ids=none/hand_block_candidates=3/hand_affordable_block_candidates=0/hand_max_block=9/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 43/78",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 11"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 24,
+    "incoming_damage": 11,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:05",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 43,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤14，我方43血/0甲；意图升级+3，防御前置；首窗实测8伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付12，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 5,
+   "energy": 3
+  },
+  {
+   "t": "04:42:06",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 41,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 0,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→淤泥旋螺（单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤14，我方41血/9甲；意图升级+3，防御前置；首窗实测6伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付12，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 5,
+   "energy": 2
+  },
+  {
+   "t": "04:42:07",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 39,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜同回合第2次复打税+1.0已计价仍过门（VIVHITE_HP_REPEAT_PLAY_TAX））；敌意图总伤14，我方39血/9甲；意图升级+3，防御前置；首窗实测8伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付12，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 5,
+   "energy": 1
+  },
+  {
+   "t": "04:42:09",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 37,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[弦光投影(1费)✗[not_enough_energy],递推星芒(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=37/block=18/incoming=14/gap=0/hand_tax=0/energy=0/cards=2/energy_locked=2/hook_locked=0/hook_ids=none/hand_block_candidates=0/hand_affordable_block_candidates=0/hand_max_block=0/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 5,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 37/78",
+      "回合 5",
+      "能量 0",
+      "敌方意图伤害 14"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "递推星芒",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 18,
+    "incoming_damage": 14,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:12",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 37,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤9，我方37血/0甲；首窗实测8伤/回合低于引擎先验下限15（謦欬成长卡组换挡期，竞速dpt取先验下限，VIVHITE_RACE_DPT_PRIOR_FLOOR）；竞速生存分母按敌方归属口径（已隔离謦欬实付16，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "04:42:13",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 35,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→淤泥旋螺（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤9，我方35血/9甲；竞速生存分母按敌方归属口径（已隔离謦欬实付16，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "04:42:14",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 33,
+   "gold": 118,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（白绮的变身式✓,测地护幕✗,闭域映射✓），结束回合（敌意图总伤9，我方33血/9甲）；竞速生存分母按敌方归属口径（已隔离謦欬实付16，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 6,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F4",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F4",
+      "生命 33/78",
+      "回合 6",
+      "能量 1",
+      "敌方意图伤害 9"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 33"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "rejected",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": -7.791,
+      "status": "rejected",
+      "why": "能力/增益牌（第6回合）｜VIVHITE_LIVE_ESTIMATE=-9.90[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dim",
+      "index": 0,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 9,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:18",
+   "screen": "COMBAT",
+   "floor": 4,
+   "hp": 33,
+   "gold": 118,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→淤泥旋螺（可击杀淤泥旋螺｜VIVHITE_LIVE_ESTIMATE=+10.05[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=1/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤14，我方33血/0甲；意图升级+5，防御前置；竞速生存分母按敌方归属口径（已隔离謦欬实付20，VIVHITE_RACE_SELF_LOSS_EXCLUDE）",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "04:42:19",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 47,
+   "gold": 118,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：12金币"
+  },
+  {
+   "t": "04:42:20",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 47,
+   "gold": 130,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "领取奖励：技能药水"
+  },
+  {
+   "t": "04:42:21",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 47,
+   "gold": 130,
+   "action": "claim_reward",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "打开卡牌奖励：将一张牌添加到你的牌组。"
+  },
+  {
+   "t": "04:42:22",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 47,
+   "gold": 130,
+   "action": "skip_reward_cards",
+   "params": {},
+   "reason": "奖励选牌：；謦欬血税超软顶且本次供给全为生命支付，跳过（VIVHITE_LIFE_COST_OVERCAP_SKIP:source=REWARD,deck_tax=30/20,offer_life=3/3）；候选：黄金分割=7.6, 综合色序=5.9, 闭合流形=-31.1",
+   "trace": {
+    "observation": {
+     "title": "REWARD · F4",
+     "facts": [
+      "屏幕 REWARD",
+      "楼层 F4",
+      "生命 47/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "REWARD"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 7.60 / 门槛 0.00；单薄保底=True"
+     },
+     {
+      "label": "RANK 奖励卡价值",
+      "status": "pass",
+      "value": "3 个当前可选候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "skip_reward_cards"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "黄金分割",
+      "score": 7.6,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 1,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "综合色序",
+      "score": 5.877,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 2,
+      "action": "choose_reward_card"
+     },
+     {
+      "label": "闭合流形",
+      "score": -31.1,
+      "status": "rejected",
+      "why": "奖励卡价值（含真实卡组上下文）",
+      "index": 0,
+      "action": "choose_reward_card"
+     }
+    ],
+    "selected": {
+     "action": "skip_reward_cards",
+     "label": "skip_reward_cards",
+     "params": {}
+    }
+   }
+  },
+  {
+   "t": "04:42:23",
+   "screen": "REWARD",
+   "floor": 4,
+   "hp": 47,
+   "gold": 130,
+   "action": "collect_rewards_and_proceed",
+   "params": {},
+   "reason": "一键收取奖励并继续（放弃无法领取的：将一张牌添加到你的牌组。）"
+  },
+  {
+   "t": "04:42:26",
+   "screen": "MAP",
+   "floor": 4,
+   "hp": 47,
+   "gold": 130,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Shop(4,3)（路径分 -44.11，预计进 Boss 血量 84%；金币130够买药水；血量60%偏低，药水可代偿休整；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计84%免于续航罚分）；竞速判死后获胜1016/2441，必败战力倾斜被审计闸否决（RACE_DOOM_POWER_BONUS_AUDIT_GATE），战力节点加成不计）；候选：Shop(4,3)=-44.11|金币130够买药水；血量60%偏低，药水可代偿休整；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计84%免于续航罚分）；竞速判死后获胜1016/2441，必败战力倾斜被审计闸否决（RACE_DOOM_POWER_BONUS_AUDIT_GATE），战力节点加成不计 / Monster(4,4)=-59.03|血量偏低，前期积累让位续航；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；投影中途死亡 / Monster(4,5)=-61.70|血量偏低，前期积累让位续航；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+   "trace": {
+    "observation": {
+     "title": "MAP · F4",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F4",
+      "生命 47/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅2张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "3 条候选；最高 -44.11"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 84%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Shop(4,3)",
+      "score": -44.11,
+      "status": "chosen",
+      "why": "金币130够买药水；血量60%偏低，药水可代偿休整；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计84%免于续航罚分）；竞速判死后",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "3",
+       "projected_hp": "0.8361727365931393"
+      }
+     },
+     {
+      "label": "Monster(4,4)",
+      "score": -59.034,
+      "status": "rejected",
+      "why": "血量偏低，前期积累让位续航；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；投影中途死亡",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "4",
+       "projected_hp": "0.0"
+      }
+     },
+     {
+      "label": "Monster(4,5)",
+      "score": -61.701,
+      "status": "rejected",
+      "why": "血量偏低，前期积累让位续航；连续作战3场，疲劳压制×0.75；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "4",
+       "col": "5",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Shop(4,3)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -44.11,
+     "target": {
+      "row": "4",
+      "col": "3",
+      "projected_hp": "0.8361727365931393"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "04:42:28",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 130,
+   "action": "open_shop_inventory",
+   "params": {},
+   "reason": "商店：打开货架"
+  },
+  {
+   "t": "04:42:30",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 130,
+   "action": "buy_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "商店：购买卡牌【星体测度】（73金，价值11.5≥门槛1.0）",
+   "trace": {
+    "observation": {
+     "title": "SHOP · F5",
+     "facts": [
+      "屏幕 SHOP",
+      "楼层 F5",
+      "生命 47/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "SHOP"
+     },
+     {
+      "label": "GATE 商店成交门槛",
+      "status": "pass",
+      "value": "最高 11.49 / 基线 1.00 / 卡牌线 1.00"
+     },
+     {
+      "label": "GATE 购买资格",
+      "status": "pass",
+      "value": "金币 130；冷却阻塞=False"
+     },
+     {
+      "label": "GATE 输出与药水预留",
+      "status": "warn",
+      "value": "输出饥饿=True；进攻药加价=0.0"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "buy_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "星体测度",
+      "score": 11.492,
+      "status": "chosen",
+      "why": "卡牌净价值；门槛 1.00",
+      "index": 1,
+      "action": "buy_card"
+     },
+     {
+      "label": "计策",
+      "score": 8.1,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 1.00",
+      "index": 5,
+      "action": "buy_card"
+     },
+     {
+      "label": "补色残像",
+      "score": 5.311,
+      "status": "rejected",
+      "why": "卡牌净价值；门槛 1.00",
+      "index": 0,
+      "action": "buy_card"
+     },
+     {
+      "label": "迅捷药水",
+      "score": 2.183,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 1,
+      "action": "buy_potion"
+     },
+     {
+      "label": "格挡药水",
+      "score": 2.137,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 2,
+      "action": "buy_potion"
+     },
+     {
+      "label": "异蛇之油",
+      "score": 1.8,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 0,
+      "action": "buy_potion"
+     },
+     {
+      "label": "测地护幕",
+      "score": 0.55,
+      "status": "below_threshold",
+      "why": "净价值未越过卡牌门槛 1.00",
+      "index": 2,
+      "action": "buy_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": -0.767,
+      "status": "below_threshold",
+      "why": "净价值未越过卡牌门槛 1.00",
+      "index": 3,
+      "action": "buy_card"
+     }
+    ],
+    "selected": {
+     "action": "buy_card",
+     "label": "星体测度",
+     "params": {
+      "option_index": 1
+     },
+     "score": 11.492
+    },
+    "explanation": [
+     "商店候选均使用本次货架评估已经得到的净价值。"
+    ]
+   }
+  },
+  {
+   "t": "04:42:32",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 57,
+   "action": "buy_potion",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "商店：购买药水【迅捷药水】（50金，价值2.2）",
+   "trace": {
+    "observation": {
+     "title": "SHOP · F5",
+     "facts": [
+      "屏幕 SHOP",
+      "楼层 F5",
+      "生命 47/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "SHOP"
+     },
+     {
+      "label": "GATE 商店成交门槛",
+      "status": "pass",
+      "value": "最高 2.18 / 基线 1.00 / 卡牌线 1.00"
+     },
+     {
+      "label": "GATE 购买资格",
+      "status": "pass",
+      "value": "金币 57；冷却阻塞=False"
+     },
+     {
+      "label": "GATE 输出与药水预留",
+      "status": "warn",
+      "value": "输出饥饿=True；进攻药加价=0.0"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "buy_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "迅捷药水",
+      "score": 2.183,
+      "status": "chosen",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 1,
+      "action": "buy_potion"
+     },
+     {
+      "label": "格挡药水",
+      "score": 2.137,
+      "status": "rejected",
+      "why": "药水价值减价格成本与预留修正",
+      "index": 2,
+      "action": "buy_potion"
+     },
+     {
+      "label": "明暗对照",
+      "score": -0.017,
+      "status": "below_threshold",
+      "why": "净价值未越过卡牌门槛 1.00",
+      "index": 3,
+      "action": "buy_card"
+     }
+    ],
+    "selected": {
+     "action": "buy_potion",
+     "label": "迅捷药水",
+     "params": {
+      "option_index": 1
+     },
+     "score": 2.183
+    },
+    "explanation": [
+     "商店候选均使用本次货架评估已经得到的净价值。"
+    ]
+   }
+  },
+  {
+   "t": "04:42:33",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 7,
+   "action": "close_shop_inventory",
+   "params": {},
+   "reason": "商店：货架无值得购买，关闭"
+  },
+  {
+   "t": "04:42:34",
+   "screen": "SHOP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 7,
+   "action": "proceed",
+   "params": {},
+   "reason": "商店：本店已评估过，离开"
+  },
+  {
+   "t": "04:42:39",
+   "screen": "MAP",
+   "floor": 5,
+   "hp": 47,
+   "gold": 7,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "路径规划：Monster(5,4)（路径分 -43.71，预计进 Boss 血量 88%；血量偏低，前期积累让位续航；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计88%免于续航罚分））；候选：Monster(5,4)=-43.71|血量偏低，前期积累让位续航；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；输出饥饿，Boss入场线放宽至75%（预计88%免于续航罚分）",
+   "trace": {
+    "observation": {
+     "title": "MAP · F5",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F5",
+      "生命 47/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅3张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "1 条候选；最高 -43.71"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 88%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(5,4)",
+      "score": -43.711,
+      "status": "chosen",
+      "why": "血量偏低，前期积累让位续航；低血尾部生存复核：单场最差42打完仅剩5(≤8)，尾部罚分；输出饥饿战损上浮×1.20（缺口57%）；路径中段含未达标精英，投影罚分；竞速判死后获胜1016/2441，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "5",
+       "col": "4",
+       "projected_hp": "0.8773574770716343"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(5,4)",
+     "params": {
+      "option_index": 0
+     },
+     "score": -43.711,
+     "target": {
+      "row": "5",
+      "col": "4",
+      "projected_hp": "0.8773574770716343"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "04:42:41",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 47,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【星体测度】→幽灵船（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=+0.00[ASTRAL_MEASURE;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤0，我方47血/0甲；重生名册读侧：HAUNTED_SHIP=id:未知(n=0,rs=24)（RESPAWN_ROSTER_READ_OBS）",
+   "turn": 1,
+   "energy": 3
+  },
+  {
+   "t": "04:42:44",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 47,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（闭域映射✓,递推星芒✓,闭域映射✓,白绮的变身式✓），结束回合（敌意图总伤0，我方47血/0甲）；謦欬出牌门拦下【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【递推星芒】实付4血、【闭域映射】实付2血（VIVHITE_HP_ZERO_PRESSURE_GATE）、【白绮的变身式】实付4血（VIVHITE_HP_PLAY_MARGIN_GATE）；零压回合攻击门拦观测：hp=47/max_hp=78/block=0/incoming=0/energy=2/cards=VIVHITE_CARD_RECURRENT_STARLIGHT@1/pay=4/score=1.92/cause=margin/dmg=13（VIVHITE_HP_ZERO_PRESSURE_ATTACK_REJECT_OBS）（普通战不享意图0减免，VIVHITE_HP_FREE_TURN_HARD_ONLY）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截1/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）",
+   "turn": 1,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 47/78",
+      "回合 1",
+      "能量 2",
+      "敌方意图伤害 0"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 47"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "递推星芒",
+      "score": 1.923,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈13.0｜VIVHITE_LIVE_ESTIMATE=-11.90[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 1,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "白绮的变身式",
+      "score": 1.084,
+      "status": "謦欬门拒",
+      "why": "能力/增益牌（第1回合）｜长战加成+4.4（敌血池53）｜VIVHITE_LIVE_ESTIMATE=-9.90[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;c",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "謦欬门拒",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 2,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 0,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:49",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 47,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 4
+   },
+   "reason": "战斗：打出【测地护幕】（格挡24｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方47血/0甲；意图升级+13，防御前置",
+   "turn": 2,
+   "energy": 3
+  },
+  {
+   "t": "04:42:51",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 41,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（弦光投影✓,弦光投影✓,弦光投影✓,闭域映射✓），结束回合（敌意图总伤13，我方41血/24甲）；意图升级+13，防御前置；謦欬出牌门拦下【弦光投影】实付2血、【弦光投影】实付2血、【弦光投影】实付2血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截2/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截2/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+13（HP_GATE_STALL_ESC_OBS）",
+   "turn": 2,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 41/78",
+      "回合 2",
+      "能量 1",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 41"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 5.143,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 0,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 5.143,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 1,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 5.143,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 2,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "闭域映射",
+      "score": -5.95,
+      "status": "rejected",
+      "why": "格挡9｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimens",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 24,
+    "incoming_damage": 13,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:54",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 41,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-5.95[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方41血/0甲",
+   "turn": 3,
+   "energy": 3
+  },
+  {
+   "t": "04:42:55",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 39,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（弦光投影✓,测地护幕✓,晕眩✗,递推星芒✓），结束回合（敌意图总伤12，我方39血/9甲）；謦欬出牌门拦下【弦光投影】实付2血、【递推星芒】实付4血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截0/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截3/4含未覆盖（零进展1，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+13（HP_GATE_STALL_ESC_OBS）；连续未覆盖拦截1回合（VIVHITE_HP_GATE_STALL_UNCOVERED）",
+   "turn": 3,
+   "energy": 2,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 39/78",
+      "回合 3",
+      "能量 2",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 3 / 当前生命 39"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 4.843,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=",
+      "index": 0,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "递推星芒",
+      "score": 1.523,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈9.0｜VIVHITE_LIVE_ESTIMATE=-11.90[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension",
+      "index": 3,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "测地护幕",
+      "score": -15.759,
+      "status": "rejected",
+      "why": "格挡24｜溢出大挡贬值｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "DAZED",
+      "name": "晕眩",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "unplayable",
+      "unplayable_reason_raw": "HasUnplayableKeyword",
+      "why_not_playable": "unplayable"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:42:58",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 36,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【测地护幕】（格挡24｜VIVHITE_LIVE_ESTIMATE=-17.85[GEODESIC_VEIL;dynamic=yes;hp-cost=6;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方36血/0甲；意图升级+1，防御前置",
+   "turn": 4,
+   "energy": 2
+  },
+  {
+   "t": "04:42:59",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 30,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【星体测度】→幽灵船（单体伤害≈7.0｜VIVHITE_LIVE_ESTIMATE=+0.00[ASTRAL_MEASURE;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方30血/24甲；意图升级+1，防御前置",
+   "turn": 4,
+   "energy": 1
+  },
+  {
+   "t": "04:43:01",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 30,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],晕眩(-1费)✗[unplayable],白绮的变身式(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=30/block=24/incoming=13/gap=0/hand_tax=0/energy=0/cards=4/energy_locked=3/hook_locked=0/hook_ids=none/hand_block_candidates=1/hand_affordable_block_candidates=0/hand_max_block=9/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 4,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 30/78",
+      "回合 4",
+      "能量 0",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "晕眩",
+      "score": null,
+      "status": "locked",
+      "why": "unplayable",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 24,
+    "incoming_damage": 13,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "DAZED",
+      "name": "晕眩",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "unplayable",
+      "unplayable_reason_raw": "HasUnplayableKeyword",
+      "why_not_playable": "unplayable"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:05",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 30,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（弦光投影✓,晕眩✗,弦光投影✓,晕眩✗,晕眩✗），结束回合（敌意图总伤12，我方30血/0甲）；謦欬出牌门拦下【弦光投影】实付2血、【弦光投影】实付2血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截0/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截4/4含未覆盖（零进展0，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+13（HP_GATE_STALL_ESC_OBS）；连续未覆盖拦截2回合（VIVHITE_HP_GATE_STALL_UNCOVERED）",
+   "turn": 5,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 30/78",
+      "回合 5",
+      "能量 3",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 12 / 当前生命 30"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 4.443,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension",
+      "index": 0,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 4.443,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-5.95[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension",
+      "index": 2,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 0,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "DAZED",
+      "name": "晕眩",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "unplayable",
+      "unplayable_reason_raw": "HasUnplayableKeyword",
+      "why_not_playable": "unplayable"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 3,
+      "card_id": "DAZED",
+      "name": "晕眩",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "unplayable",
+      "unplayable_reason_raw": "HasUnplayableKeyword",
+      "why_not_playable": "unplayable"
+     },
+     {
+      "index": 4,
+      "card_id": "DAZED",
+      "name": "晕眩",
+      "energy_cost": -1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "unplayable",
+      "unplayable_reason_raw": "HasUnplayableKeyword",
+      "why_not_playable": "unplayable"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:09",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 18,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方18血/0甲；意图升级+1，防御前置",
+   "turn": 6,
+   "energy": 3
+  },
+  {
+   "t": "04:43:10",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 16,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 0
+   },
+   "reason": "战斗：残能救场[格挡]：剩余能量2打出【闭域映射】，拒绝带能量空过（意图13/甲9/缺口4）原裁决：评估后无值得出的牌(闭域映射✓,递推星芒✓,弦光投影✓,弦光投影✓)；⚠残能空漏审计(IDLE_LEAK_BLK)：能量2空过，受击净缺口4，可负担格挡【闭域映射】可抵4，扣除謦欬2/余裕机会成本0后净保命2；意图升级+1，防御前置；门拦格挡净保命放行（VIVHITE_HP_GATE_RESCUE_BLOCK）",
+   "turn": 6,
+   "energy": 2
+  },
+  {
+   "t": "04:43:11",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 14,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（递推星芒✓,弦光投影✓,弦光投影✓），结束回合（敌意图总伤13，我方14血/18甲）；意图升级+1，防御前置；謦欬出牌门拦下【弦光投影】实付2血、【弦光投影】实付2血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截1/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截5/4含未覆盖（零进展1，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+14（HP_GATE_STALL_ESC_OBS）;VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS:hp=14/max_hp=78/block=18/incoming=13/gap=0/energy=1/kill_race=no/race_allin=no/cards=VIVHITE_CARD_RECURRENT_STARLIGHT@1/life=4/margin=0/pay=4/dmg=13/block=0|VIVHITE_CARD_LUMINOUS_PROJECTION@1/life=2/margin=0/pay=2/dmg=10/block=0|VIVHITE_CARD_LUMINOUS_PROJECTION@1/life=2/margin=0/pay=2/dmg=10/block=0",
+   "turn": 6,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 14/78",
+      "回合 6",
+      "能量 1",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 14"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 2.193,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-11.90[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 1,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 2.193,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-11.90[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 2,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "递推星芒",
+      "score": -6.077,
+      "status": "rejected",
+      "why": "单体伤害≈13.0｜VIVHITE_LIVE_ESTIMATE=-23.80[RECURRENT_STARLIGHT;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 0,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 18,
+    "incoming_damage": 13,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:15",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 14,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方14血/0甲",
+   "turn": 7,
+   "energy": 3
+  },
+  {
+   "t": "04:43:16",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 12,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：残能救场[格挡]：剩余能量2打出【闭域映射】，拒绝带能量空过（意图12/甲9/缺口3）原裁决：评估后无值得出的牌(弦光投影✓,白绮的变身式✓,弦光投影✓,闭域映射✓)；⚠残能空漏审计(IDLE_LEAK_BLK)：能量2空过，受击净缺口3，可负担格挡【闭域映射】可抵3，扣除謦欬2/余裕机会成本0后净保命1",
+   "turn": 7,
+   "energy": 2
+  },
+  {
+   "t": "04:43:17",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 10,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：评估后无值得出的牌（弦光投影✓,白绮的变身式✓,弦光投影✓），结束回合（敌意图总伤12，我方10血/18甲）；謦欬出牌门拦下【弦光投影】实付2血、【弦光投影】实付2血（VIVHITE_HP_PLAY_MARGIN_GATE）；连续低危拦截2/6（VIVHITE_HP_GATE_STALL_BREAK 进度）；连续拦截6/4含未覆盖（零进展2，VIVHITE_HP_GATE_STALL_ANY 进度）；门拦空过升级账：意图趋势累计+14（HP_GATE_STALL_ESC_OBS）;VIVHITE_HP_PRESSURE_PLAYABLE_REJECT_OBS:hp=10/max_hp=78/block=18/incoming=12/gap=0/energy=1/kill_race=no/race_allin=no/cards=VIVHITE_CARD_LUMINOUS_PROJECTION@1/life=2/margin=0/pay=2/dmg=10/block=0|VIVHITE_CARD_VIVHITE_TRANSFORMATION@1/life=4/margin=0/pay=4/dmg=0/block=0|VIVHITE_CARD_LUMINOUS_PROJECTION@1/life=2/margin=0/pay=2/dmg=10/block=0",
+   "turn": 7,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 10/78",
+      "回合 7",
+      "能量 1",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 致死检查",
+      "status": "pass",
+      "value": "伤害缺口 0 / 当前生命 10"
+     },
+     {
+      "label": "GATE 防御能量预留",
+      "status": "pass",
+      "value": "预留=False；最低有效格挡费用 0"
+     },
+     {
+      "label": "GATE 斩杀竞速",
+      "status": "pass",
+      "value": "败局竞速=False；斩杀竞速=False"
+     },
+     {
+      "label": "GATE 竞速格挡下限",
+      "status": "pass",
+      "value": "末点1费格挡预留=False；合格挡费用≤1"
+     },
+     {
+      "label": "RANK 出牌阈值",
+      "status": "neutral",
+      "value": "> 0.40"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "弦光投影",
+      "score": 1.893,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-11.90[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 0,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "弦光投影",
+      "score": 1.893,
+      "status": "謦欬门拒",
+      "why": "单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-11.90[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimensio",
+      "index": 2,
+      "action": "play_card",
+      "target": {
+       "index": "0",
+       "name": "幽灵船"
+      }
+     },
+     {
+      "label": "白绮的变身式",
+      "score": -17.816,
+      "status": "rejected",
+      "why": "能力/增益牌（第7回合）｜长战加成+1.9（敌血池46）｜VIVHITE_LIVE_ESTIMATE=-21.80[VIVHITE_TRANSFORMATION;dynamic=yes;hp-cost=4;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 18,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "play_card",
+     "save_and_quit",
+     "use_potion",
+     "discard_potion"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": false
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": true,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ]
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:21",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 10,
+   "gold": 7,
+   "action": "use_potion",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "战斗：低血兜底使用药水【技能药水】（描述无法分类，宁滥勿囤）",
+   "turn": 8,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 10/78",
+      "回合 8",
+      "能量 3",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "2 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "星体测度",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "04:43:22",
+   "screen": "CARD_SELECTION",
+   "floor": 6,
+   "hp": 10,
+   "gold": 7,
+   "action": "select_deck_card",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "选择卡牌：【启发式护盾】（价值 8.7）；謦欬血税密度扣分（卡组目录血税30/软顶20，-2.0，VIVHITE_LIFE_COST_DECK_TAX）;VIVHITE_LIFE_COST_PICK_AUDIT:source=CARD_SELECTION,card=VIVHITE_CARD_HEURISTIC_SHIELD,life=2,deck_tax=30/20,over=10,forced=1,offer_life=3/3,best_nonlife=NONE;VIVHITE_LIFE_COST_FORCED_CAP_OBS:source=CARD_SELECTION,before=30,after=32,cap=20,over_before=10,over_after=12,selected_life=2,offer_min_life=2,offer_max_life=10,selected_minus_min=0；候选：启发式护盾=8.7 / 守恒递归=6.3 / 明暗对照=0.2",
+   "trace": {
+    "observation": {
+     "title": "CARD_SELECTION · F6",
+     "facts": [
+      "屏幕 CARD_SELECTION",
+      "楼层 F6",
+      "生命 10/78"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "CARD_SELECTION"
+     },
+     {
+      "label": "GATE 动态拾取门槛",
+      "status": "pass",
+      "value": "最高 8.70 / 门槛 0.00；可跳过=False"
+     },
+     {
+      "label": "GATE 选牌语义",
+      "status": "pass",
+      "value": "强制入组"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "select_deck_card"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "启发式护盾",
+      "score": 8.7,
+      "status": "chosen",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 1,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "守恒递归",
+      "score": 6.25,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 0,
+      "action": "select_deck_card"
+     },
+     {
+      "label": "明暗对照",
+      "score": 0.2,
+      "status": "rejected",
+      "why": "选牌价值（真实卡组上下文）",
+      "index": 2,
+      "action": "select_deck_card"
+     }
+    ],
+    "selected": {
+     "action": "select_deck_card",
+     "label": "启发式护盾",
+     "params": {
+      "option_index": 1
+     },
+     "score": 8.7
+    },
+    "explanation": [
+     "选牌轨迹只复制本次语义分支已经计算的价值，不会重新评价候选。"
+    ]
+   }
+  },
+  {
+   "t": "04:43:25",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 10,
+   "gold": 7,
+   "action": "use_potion",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "战斗：硬仗使用增益药水【迅捷药水】",
+   "turn": 8,
+   "energy": 3,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 10/78",
+      "回合 8",
+      "能量 3",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "6 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "use_potion"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "星体测度",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "递推星芒",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "启发式护盾",
+      "score": null,
+      "status": "available",
+      "why": "",
+      "index": 5,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "use_potion",
+     "label": "use_potion",
+     "params": {
+      "option_index": 1
+     }
+    }
+   }
+  },
+  {
+   "t": "04:43:26",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 10,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 5
+   },
+   "reason": "战斗：打出【启发式护盾】（格挡8/抽牌2｜VIVHITE_LIVE_ESTIMATE=-9.90[HEURISTIC_SHIELD;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方10血/0甲；意图升级+1，防御前置",
+   "turn": 8,
+   "energy": 3
+  },
+  {
+   "t": "04:43:27",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 8,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 3
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤13，我方8血/8甲；意图升级+1，防御前置",
+   "turn": 8,
+   "energy": 3
+  },
+  {
+   "t": "04:43:28",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 6,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 1,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【星体测度】→幽灵船（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=+0.00[ASTRAL_MEASURE;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜謦欬门全拦截僵局放行：连续拦截6回合（含意图未覆盖回合）且敌血量零进展3回合≥3，空过期间意图趋势累计+14（HP_GATE_STALL_ESC_OBS），本场余量门停用（VIVHITE_HP_GATE_STALL_ANY））；敌意图总伤13，我方6血/17甲；意图升级+1，防御前置",
+   "turn": 8,
+   "energy": 2
+  },
+  {
+   "t": "04:43:29",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 6,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【弦光投影】→幽灵船（单体伤害≈10.0｜VIVHITE_LIVE_ESTIMATE=-11.90[LUMINOUS_PROJECTION;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]｜謦欬门全拦截僵局放行：连续拦截6回合（含意图未覆盖回合）且敌血量零进展3回合≥3，空过期间意图趋势累计+14（HP_GATE_STALL_ESC_OBS），本场余量门停用（VIVHITE_HP_GATE_STALL_ANY））；敌意图总伤13，我方6血/17甲；意图升级+1，防御前置",
+   "turn": 8,
+   "energy": 1
+  },
+  {
+   "t": "04:43:31",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 4,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：确认无牌可出（能量耗尽或全部不可用），结束回合｜能量0｜[测地护幕(2费)✗[not_enough_energy],递推星芒(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],弦光投影(1费)✗[not_enough_energy],闭域映射(1费)✗[not_enough_energy]]；非致死资源耗尽空过观测：hp=4/block=17/incoming=13/gap=0/hand_tax=0/energy=0/cards=7/energy_locked=7/hook_locked=0/hook_ids=none/hand_block_candidates=3/hand_affordable_block_candidates=0/hand_max_block=24/hand_post_gap=0/hand_raw_survival=yes/block_locked=no（NONLETHAL_UNAVAILABLE_END_TURN_OBS）",
+   "turn": 8,
+   "energy": 0,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 4/78",
+      "回合 8",
+      "能量 0",
+      "敌方意图伤害 13"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "7 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "递推星芒",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 3,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 4,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 5,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 6,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 17,
+    "incoming_damage": 13,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic, EnergyCostTooHigh",
+      "unplayable_preventer_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "unplayable_preventer_type": "Vivhite.Cards.Conservation.GeodesicVeil",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "name": "递推星芒",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic, EnergyCostTooHigh",
+      "unplayable_preventer_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+      "unplayable_preventer_type": "Vivhite.Cards.Recursion.RecurrentStarlight",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 4,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 5,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 6,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "EnergyCostTooHigh",
+      "why_not_playable": "not_enough_energy"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:34",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 4,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 1
+   },
+   "reason": "战斗：打出【闭域映射】（格挡9｜VIVHITE_LIVE_ESTIMATE=-11.90[CLOSED_DOMAIN_MAPPING;dynamic=yes;hp-cost=2;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]；敌方血量出现真实进展，余量门重新武装（VIVHITE_HP_GATE_STALL_REARM））；敌意图总伤12，我方4血/0甲",
+   "turn": 9,
+   "energy": 3
+  },
+  {
+   "t": "04:43:35",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 2,
+   "gold": 7,
+   "action": "play_card",
+   "params": {
+    "card_index": 3,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【星体测度】→幽灵船（单体伤害≈10.0｜败局竞速全攻｜VIVHITE_LIVE_ESTIMATE=+0.00[ASTRAL_MEASURE;dynamic=yes;hp-cost=0;margin=0/spent=0;drain=0%/0hp;kills=0/lethal=0;crown=16/kill;dimension=0]）；敌意图总伤12，我方2血/9甲；竞速模式同回合翻转：round=9/from=normal/to=race_allin/flip=1/race_allin=yes（KILL_RACE_MODE_FLIP_OBS）",
+   "turn": 9,
+   "energy": 2
+  },
+  {
+   "t": "04:43:37",
+   "screen": "COMBAT",
+   "floor": 6,
+   "hp": 2,
+   "gold": 7,
+   "action": "end_turn",
+   "params": {},
+   "reason": "战斗：当前2生命，全部非诅咒手牌因謦欬会令生命低于1，结束回合｜能量1｜[测地护幕(2费)✗[not_enough_energy],白绮的变身式(1费)✗[blocked_by_hook],闭域映射(1费)✗[blocked_by_hook],弦光投影(1费)✗[blocked_by_hook]]｜生命支付终端锁观测：非诅咒4张，native_blocked_by_hook=3/4/hp=2/block=9/gap=3/energy=1/incoming=12/end_turn_lethal=yes/cards=VIVHITE_CARD_GEODESIC_VEIL:life=6/margin=0/effective=6/playable=no/unavailable=no/energy=2/native=not_enough_energy|VIVHITE_CARD_VIVHITE_TRANSFORMATION:life=4/margin=0/effective=4/playable=no/unavailable=no/energy=1/native=blocked_by_hook|VIVHITE_CARD_CLOSED_DOMAIN_MAPPING:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook|VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook（VIVHITE_HP_TERMINAL_LOCK_OBS）",
+   "turn": 9,
+   "energy": 1,
+   "trace": {
+    "observation": {
+     "title": "COMBAT · F6",
+     "facts": [
+      "屏幕 COMBAT",
+      "楼层 F6",
+      "生命 2/78",
+      "回合 9",
+      "能量 1",
+      "敌方意图伤害 12"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "COMBAT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "4 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "end_turn"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "测地护幕",
+      "score": null,
+      "status": "locked",
+      "why": "not_enough_energy",
+      "index": 0,
+      "action": "play_card"
+     },
+     {
+      "label": "白绮的变身式",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 1,
+      "action": "play_card"
+     },
+     {
+      "label": "闭域映射",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 2,
+      "action": "play_card"
+     },
+     {
+      "label": "弦光投影",
+      "score": null,
+      "status": "locked",
+      "why": "blocked_by_hook",
+      "index": 3,
+      "action": "play_card"
+     }
+    ],
+    "selected": {
+     "action": "end_turn",
+     "label": "end_turn",
+     "params": {}
+    }
+   },
+   "turn_end_state": {
+    "block": 9,
+    "incoming_damage": 12,
+    "available_actions": [
+     "end_turn",
+     "save_and_quit"
+    ],
+    "hand": [
+     {
+      "index": 0,
+      "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "name": "测地护幕",
+      "energy_cost": 2,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "not_enough_energy",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic, EnergyCostTooHigh",
+      "unplayable_preventer_id": "VIVHITE_CARD_GEODESIC_VEIL",
+      "unplayable_preventer_type": "Vivhite.Cards.Conservation.GeodesicVeil",
+      "why_not_playable": "not_enough_energy"
+     },
+     {
+      "index": 1,
+      "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "name": "白绮的变身式",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+      "unplayable_preventer_type": "Vivhite.Cards.Basics.VivhiteTransformation",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 2,
+      "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "name": "闭域映射",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": false,
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+      "unplayable_preventer_type": "Vivhite.Cards.Basics.ClosedDomainMapping",
+      "why_not_playable": "blocked_by_hook"
+     },
+     {
+      "index": 3,
+      "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "name": "弦光投影",
+      "energy_cost": 1,
+      "playable": false,
+      "requires_target": true,
+      "valid_target_indices": [
+       0
+      ],
+      "unplayable_reason": "blocked_by_hook",
+      "unplayable_reason_raw": "BlockedByHook, BlockedByCardLogic",
+      "unplayable_preventer_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+      "unplayable_preventer_type": "Vivhite.Cards.Basics.LuminousProjection",
+      "why_not_playable": "blocked_by_hook"
+     }
+    ],
+    "action_readiness": {
+     "can_use_combat_actions": true,
+     "reason": "ready",
+     "actions_settled": true,
+     "modal_open": false,
+     "player_actions_disabled": false,
+     "combat_in_progress": true,
+     "combat_over_or_ending": false,
+     "combat_room_mode": "ActiveCombat",
+     "hand_in_card_play": false,
+     "hand_in_card_selection": false,
+     "hand_mode": "Play",
+     "local_turn_ready": true,
+     "snapshot_stable": true,
+     "player_action_phase": true
+    }
+   }
+  },
+  {
+   "t": "04:43:44",
+   "screen": "GAME_OVER",
+   "floor": 6,
+   "hp": 0,
+   "gold": 7,
+   "action": "continue_game_over",
+   "params": {},
+   "reason": "结算：确认战绩，执行原生分数、解锁与存档流程；非致死无牌链终局对账：outcome=defeat/floor=6/source_round=8/source_action=end_turn/final_hp=0/hp=4/block=17/incoming=13/energy=0/cards=7/energy_locked=7/hook_locked=0/hook_ids=none/hand_block_candidates=3/hand_affordable_block_candidates=0/hand_max_block=24/hand_post_gap=0/hand_raw_survival=yes/block_locked=no/bridge_decisions=3/bridge_rounds=1/terminal_overlap=none（NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS）（NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS）；生命支付终端锁终局对账：outcome=defeat/floor=6/terminal_round=9/final_hp=0/hp=2/block=9/gap=3/incoming=12/energy=1/native_blocked_by_hook=3/4/end_turn_lethal=yes/cards=VIVHITE_CARD_GEODESIC_VEIL:life=6/margin=0/effective=6/playable=no/unavailable=no/energy=2/native=not_enough_energy|VIVHITE_CARD_VIVHITE_TRANSFORMATION:life=4/margin=0/effective=4/playable=no/unavailable=no/energy=1/native=blocked_by_hook|VIVHITE_CARD_CLOSED_DOMAIN_MAPPING:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook|VIVHITE_CARD_LUMINOUS_PROJECTION:life=2/margin=0/effective=2/playable=no/unavailable=no/energy=1/native=blocked_by_hook（VIVHITE_HP_TERMINAL_LOCK_OUTCOME_OBS）"
+  }
+ ],
+ "combat_notes": [
+  "F2 Monster战 掉血0｜自损8（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）",
+  "F3 Monster战 掉血4｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）",
+  "F4 Monster战 掉血18｜自损20（可行动段20/非行动段12，SELF_LOSS_PHASE_OBS）",
+  "F6 Monster战 掉血47｜自损28（可行动段28/非行动段13，SELF_LOSS_PHASE_OBS）（阵亡）"
+ ],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_GEODESIC_VEIL"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_RECURRENT_STARLIGHT"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "map_node",
+   "Shop"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_ASTRAL_MEASURE"
+  ],
+  [
+   "map_node",
+   "Monster"
+  ],
+  [
+   "card_pick",
+   "VIVHITE_CARD_HEURISTIC_SHIELD"
+  ]
+ ],
+ "native_save": {
+  "run_id": "KYLUECG783LQ",
+  "phase": "summary_ready",
+  "save_status": "verified",
+  "save_verified": true,
+  "save_error": null
+ },
+ "final_deck": [
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_CLOSED_DOMAIN_MAPPING",
+   "upgraded": false,
+   "name": "闭域映射",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_LUMINOUS_PROJECTION",
+   "upgraded": false,
+   "name": "弦光投影",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_VIVHITE_TRANSFORMATION",
+   "upgraded": false,
+   "name": "白绮的变身式",
+   "card_type": "Power",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+   "upgraded": false,
+   "name": "测地护幕",
+   "card_type": "Skill",
+   "rarity": "Uncommon"
+  },
+  {
+   "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+   "upgraded": false,
+   "name": "递推星芒",
+   "card_type": "Attack",
+   "rarity": "Common"
+  },
+  {
+   "card_id": "VIVHITE_CARD_ASTRAL_MEASURE",
+   "upgraded": false,
+   "name": "星体测度",
+   "card_type": "Attack",
+   "rarity": "Uncommon"
+  }
+ ],
+ "deck_changes": [
+  {
+   "sequence": 1,
+   "source": "run.deck_diff",
+   "floor": 2,
+   "screen": "REWARD",
+   "observed_at": "2026-09-30 04:41:09",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_GEODESIC_VEIL",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 2,
+   "source": "run.deck_diff",
+   "floor": 3,
+   "screen": "REWARD",
+   "observed_at": "2026-09-30 04:41:38",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_RECURRENT_STARLIGHT",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  },
+  {
+   "sequence": 3,
+   "source": "run.deck_diff",
+   "floor": 5,
+   "screen": "SHOP",
+   "observed_at": "2026-09-30 04:42:31",
+   "acquired": [
+    {
+     "card_id": "VIVHITE_CARD_ASTRAL_MEASURE",
+     "upgraded": false,
+     "count": 1
+    }
+   ],
+   "removed": [],
+   "upgraded": []
+  }
+ ]
+}
