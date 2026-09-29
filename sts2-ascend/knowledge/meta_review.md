@@ -13253,3 +13253,26 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：直接运行规定命令时宿主固定 256 槽池报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用 clone 内继承 ACL 槽的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck 两次，均退出码 0、输出 **SELFCHECK OK**。目标源码 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1678局复盘（RACE_ALLIN_LETHAL_COVER_DECISION_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：败局竞速致死回合中，已有覆盖容量、输出容量和买活余量审计，但没有直接记录“覆盖成立后为何仍全攻/为何切换格挡”的分支决定。若 F17/T5 的 `all_in` 是边界按设计生效，未来 3–10 个有实测输出速率且覆盖可执行的窗口应能稳定对上覆盖结果、严格买活余量、低池上限与 `cover/all_in` 决定，且 action/params 不变。
+- **EVIDENCE**：第1678局精确链 `sts2-ascend/knowledge/runs/20260929-090543_5EE4C4JPK6Z7.json` 共 180 条决策（packet 内嵌 99 条、裁剪 81 条）。F17/T5 decision 178 在 `hp=15/block=10/incoming=27` 时有 `need=17`、防御组合可覆盖，当前目标池仍为 131；已有 `RACE_ALLIN_LETHAL_COVER_OBS` 与 `RACE_ALLIN_BUYBACK_MARGIN_OBS` 记录覆盖和严格余量 `-10.2`，但没有直接记录大池超过 `cap=100` 后维持全攻的分支。decision 179/180 随后显示四张手牌能量锁定、`attack_candidates=0`、`outcome=defeat`。
+- **EXPECTED_SIGNAL**：未来 3–10 个满足条件的窗口产生一次 `RACE_ALLIN_LETHAL_COVER_DECISION_OBS`，字段能对上 `coverage=yes/decision=cover|all_in/strict_margin/pool/cap/margin_floor`；严格余量≥0或低池宽限命中时为 `cover`，大池/严格负余量时为 `all_in`。关闭开关只移除新尾缀；字段错配、无覆盖误记、重复 marker 或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `race_allin_lethal_cover_decision_obs`。
+- `sts2-ascend/brain/policy.py`：在既有可执行覆盖和实测 DPT 分支内追加 `cover/all_in` 决策、严格余量、池值、低池上限与 margin floor；不进入评分、目标、门控或 action/params。
+- `sts2-ascend/brain/selfcheck.py`：覆盖大池 all-in、严格余量 cover、低池宽限 cover、行为门回滚和观测开关回滚；断言 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3–10 个独立覆盖窗口，按 `decision`、`pool/cap`、严格余量、实际掉池、下一回合资源与终局分层；证据成熟前不扩大覆盖行为边界。
+- **调整**：若大池且严格负余量重复出现覆盖成立后失败，另开行为假设；若 `decision` 与现有行为门不一致，先修观测链，不直接改出牌。
+- **回滚**：将 `race_allin_lethal_cover_decision_obs` 设为 `False`；预期仅移除新 marker，现有覆盖/容量/买活审计、评分、action 与 params 不变。
+- **验证**：规定命令先复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用全新 clone 内 cache 子目录的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0 且输出 `SELFCHECK OK`；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

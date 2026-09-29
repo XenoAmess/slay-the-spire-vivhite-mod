@@ -8698,6 +8698,17 @@ class Policy:
                                 f"/cap={_ralc_low_pool_cap:.0f}"
                                 f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
                                 "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
+                        if bool(pol.get(
+                                "race_allin_lethal_cover_decision_obs", True)):
+                            _ralc_decision = (
+                                "cover" if race_lethal_cover else "all_in")
+                            danger_note += (
+                                f"；败局竞速覆盖决策：coverage=yes/decision="
+                                f"{_ralc_decision}/strict_margin="
+                                f"{_ralc_strict_margin:+.1f}/pool={_ralc_pool:.0f}"
+                                f"/cap={_ralc_low_pool_cap:.0f}/margin_floor="
+                                f"{_ralc_min_margin:+.1f}"
+                                "（RACE_ALLIN_LETHAL_COVER_DECISION_OBS）")
                         _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
                                          else "买活仍必败")
                         danger_note += (

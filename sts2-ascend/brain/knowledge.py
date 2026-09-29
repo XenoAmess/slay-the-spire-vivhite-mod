@@ -1381,6 +1381,11 @@ DEFAULT_POLICY = {
                                         # 敌血池不超过 kill_race_min_enemy_hp×1.25 时，才允许
                                         # 将该负余量窗口接入格挡优先；大池仍要求严格余量>=0。
                                         # 设为0恢复旧严格口径，行为总开关仍可一键回滚。
+      "race_allin_lethal_cover_decision_obs": True,
+                                         # 败局竞速覆盖分支决策旁观：在可执行覆盖成立且
+                                         # 有实测输出速率时，记录严格买活余量、低池上限和
+                                         # 最终采用 cover/all_in 的分支；只读，不改评分、
+                                         # 目标、动作或参数，False 严格移除该尾缀。
      # --- 滚雪球入锁锁持（第271~294局批复盘新增，静态键） ---
      "race_esc_latch_hold": True,    # esc（滚雪球）局实测口径竞速入锁后，不再被静态联合
                                       # 复核逐 tick 翻案解锁（RACE_ESC_LATCH_HOLD）：294-F11

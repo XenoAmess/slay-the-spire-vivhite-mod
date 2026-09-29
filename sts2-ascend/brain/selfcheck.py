@@ -19307,6 +19307,8 @@ def main() -> int:
     assert d_rallcv2.action == "play_card" \
         and d_rallcv2.params.get("card_index") == 0 \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallcv2.reason \
+        and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" in d_rallcv2.reason \
+        and "decision=all_in" in d_rallcv2.reason \
         and "组合实付2血后覆盖成立（RACE_ALLIN_COVER_EXEC_SIM）" in d_rallcv2.reason \
         and "买活后约可存活0.3回合（净损15/回合）→买活仍必败" in d_rallcv2.reason \
         and "RACE_ALLIN_COVER_PHANTOM_OBS" not in d_rallcv2.reason, \
@@ -19320,6 +19322,8 @@ def main() -> int:
     assert d_rallcv4.action == "play_card" \
         and d_rallcv4.params.get("card_index") == 1 \
         and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv4.reason \
+        and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" in d_rallcv4.reason \
+        and "decision=cover" in d_rallcv4.reason \
         and "买活余量：严格+0.1/宽松+1.1回合→严格可翻盘" in d_rallcv4.reason, \
         f"严格可翻盘覆盖未切换到格挡行为: {d_rallcv4.action}（{d_rallcv4.reason}）"
     # ⑤ 第1625局 F21-T2 同型：低池94、9甲支付后严格余量约-1.8，
@@ -19332,6 +19336,8 @@ def main() -> int:
         and d_rallcv_relief.params.get("card_index") == 1 \
         and "mode=low_pool_relief" in d_rallcv_relief.reason \
         and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv_relief.reason \
+        and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" in d_rallcv_relief.reason \
+        and "decision=cover" in d_rallcv_relief.reason \
         and "pool=94/cap=100/margin_floor=-2.0" in d_rallcv_relief.reason, \
         f"低池负余量覆盖未恢复格挡优先: {d_rallcv_relief.action}（{d_rallcv_relief.reason}）"
     pol_rallcv_relief_rb = rallc_v_policy(False)
@@ -19352,8 +19358,24 @@ def main() -> int:
     assert d_rallcv4_rb.action == "play_card" \
         and d_rallcv4_rb.params.get("card_index") == 0 \
         and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" not in d_rallcv4_rb.reason \
+        and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" in d_rallcv4_rb.reason \
+        and "decision=all_in" in d_rallcv4_rb.reason \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallcv4_rb.reason, \
         f"行为键=False 未回滚败局竞速覆盖行为: {d_rallcv4_rb.action}（{d_rallcv4_rb.reason}）"
+    pol_rallcv_decision_off = rallc_v_policy()
+    pol_rallcv_decision_off.know.policy[
+        "race_allin_lethal_cover_decision_obs"] = False
+    d_rallcv_decision_off = rallc_v_decide(
+        pol_rallcv_decision_off, 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=800.0, measured_turns=2, enemy_hp=80, latched=True)
+    assert d_rallcv_decision_off.action == d_rallcv4.action \
+        and d_rallcv_decision_off.params == d_rallcv4.params \
+        and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" not in d_rallcv_decision_off.reason, \
+        f"覆盖决策旁观关闭改变动作/参数或未同灭: " \
+        f"on={d_rallcv4.action}/{d_rallcv4.params} " \
+        f"off={d_rallcv_decision_off.action}/{d_rallcv_decision_off.params}/" \
+        f"{d_rallcv_decision_off.reason}"
     pol_rallcv3 = rallc_v_policy()
     pol_rallcv3.know.policy["race_allin_lethal_cover_obs"] = False
     d_rallcv3 = rallc_v_decide(pol_rallcv3, 3, 23, 3,
