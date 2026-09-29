@@ -14417,3 +14417,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.449850584358136局)，BASH(14分/2.072950494456885局)，STOKE(16分/2.3592991982151763局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1711 胜，当前目标进阶 0
+
+## 第 1712 局复盘（2026-09-29 20:04）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 BOWLBUG_EGG+BOWLBUG_ROCK+BOWLBUG_SILK
+- 本局拿牌：HEADBUTT, FEEL_NO_PAIN, SHRUG_IT_OFF, UNRELENTING, CINDER, MANGLE, SPITE, SECOND_WIND, AGGRESSION, PACTS_END, INFLAME, HEADBUTT, BLUDGEON, STOMP, CINDER
+- 本局遗物：LASTING_CANDY
+- 战斗记录：F14 Monster战 掉血1; F17 Boss战 掉血43｜竞速投影审计：pool=185/dpt=14.175/ttk=13.0511/tsurv=4.73333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=13.0511/actual_over_projected=0.69（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战9回合获胜｜竞速Boss有效火力收官对账：samples=1/actual_dpt=41/projected_dpt=22.95/ratio=1.79/min_ratio=1.79（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=1/actual_dpt=41/projected_dpt=22.95/ratio=1.79/min_ratio=1.79（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血7; F20 Monster战 掉血12; F22 Monster战 掉血47; F23 Monster战 掉血14（阵亡）
+- 当前高价值卡牌：HELLRAISER(26分/5.108217796942675局)，PROWESS(26分/7.28187794164339局)，FEED(24分/31.368588958814186局)，OFFERING(24分/15.387152704594083局)，MANGLE(24分/50.89024382956947局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.441276107312883局)，BASH(14分/2.065695167726286局)，STOKE(16分/2.3510416510214234局)
+- 策略进化：block_safety: 1.97 → 2.02（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.38（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.02 → 2.01（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.40 → 2.35（行至 F23——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1712 胜，当前目标进阶 0
