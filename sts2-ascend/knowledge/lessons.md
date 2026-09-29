@@ -14505,3 +14505,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.382089210317511局)，BASH(14分/2.015613947191741局)，STOKE(16分/2.2940424203264578局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1719 胜，当前目标进阶 0
+
+## 第 1720 局复盘（2026-09-29 22:15）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：TWIN_STRIKE, CINDER, SWORD_BOOMERANG, ARMAMENTS, INFLAME, MOLTEN_FIST, TRUE_GRIT, HOWL_FROM_BEYOND, FIEND_FIRE, SHRUG_IT_OFF, RAMPAGE
+- 本局遗物：BAG_OF_PREPARATION, WAR_PAINT
+- 战斗记录：F3 Monster战 掉血0; F4 Monster战 掉血12; F6 Monster战 掉血16; F13 Unknown战 掉血19; F14 Monster战 掉血6; F17 Boss战 掉血48｜竞速投影审计：pool=195/dpt=25.65/ttk=7.60234/tsurv=2.52632（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=7.60234/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.38（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=2/actual_dpt=25.5/projected_dpt=26.19/ratio=0.97/min_ratio=0.82（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=2/actual_dpt=25.5/projected_dpt=26.19/ratio=0.97/min_ratio=0.82（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/7.080465635900198局)，HELLRAISER(25分/5.956464313135358局)，FEED(24分/30.500952906584597局)，OFFERING(24分/14.96155343887013局)，MANGLE(24分/50.46183359632347局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.3737518980814局)，BASH(14分/2.00855929837657局)，STOKE(16分/2.286013271855315局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1720 胜，当前目标进阶 0
