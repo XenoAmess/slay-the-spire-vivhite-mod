@@ -450,6 +450,6 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260929-053756-1790631476900090800-181d8167 -->
 | 2026-09-29 05:37:56 | 第 1665~1666 局 | `181d8167` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `fc8b131f` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 fc8b131f 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260929-154700-1790668020902086400-7d23015c -->
-| 2026-09-29 15:47:00 | 第 1696~1697 局 | `7d23015c` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260929-154700-1790668020902086400-7d23015c` | 复盘 patch 触碰 deny-only 路径边界：sts2-ascend/knowledge/profiles/vivhite/meta_review.md (online-runtime), sts2-ascend/knowledge/profiles/vivhite/review_conclusion.txt (online-runtime) |
+| 2026-09-29 15:47:00 | 第 1696~1697 局 | `7d23015c` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `a79ee4f0` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 a79ee4f0 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260929-163315-1790670795726949000-f1080c23 -->
 | 2026-09-29 16:33:15 | 第 1696~1697 局 | `f1080c23` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `a79ee4f0` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 a79ee4f0 已推送；远端确认后精确清理对应失败包 |
