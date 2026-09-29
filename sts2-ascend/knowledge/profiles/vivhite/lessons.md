@@ -19213,3 +19213,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.1172886875571715局)，FASTEN(21分/4.963148326046397局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.060169935576752局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1743 胜，当前目标进阶 4
+
+## 第 1744 局复盘（2026-09-30 06:33）
+- 结果：💀 失败｜进阶 4｜到达层数 15｜当局评分 15
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_TERMINATION_CONDITION, NOSTALGIA
+- 本局遗物：ANCHOR
+- 战斗记录：F3 Monster战 掉血14｜自损18（可行动段18/非行动段10，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损22（可行动段22/非行动段4，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血9｜自损16（可行动段16/非行动段13，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血36｜自损58（可行动段58/非行动段6，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血23｜自损8（可行动段8/非行动段7，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：REND(38分/2.0868103303447216局)，JACKPOT(37分/11.315771277853848局)，THINKING_AHEAD(37分/3.5201253712118925局)，MAYHEM(37分/2.8749912918217904局)，ROLLING_BOULDER(36分/3.542272133325808局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.1098781771507213局)，FASTEN(21分/4.945777306905235局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.982959340802235局)
+- 策略进化：elite_grey_safety_mult: 1.95 → 2.15（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1744 胜，当前目标进阶 4
