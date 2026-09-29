@@ -1,0 +1,376 @@
+{
+ "run_id": "32T4YGQKHNUV",
+ "run_number": 1728,
+ "profile_id": "ironclad",
+ "character_id": "IRONCLAD",
+ "profile_run_number": 1728,
+ "ascension": 0,
+ "started_at": "2026-09-30 01:11:11",
+ "victory": false,
+ "in_progress": true,
+ "floor": 2,
+ "decisions": [
+  {
+   "t": "01:11:11",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 80,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "事件【涅奥】：选择「营养牡蛎」（经验价值 13.1）；营养牡蛎=13.1(n=30.944396657209822) / 羽翼之靴=2.3(n=35.769574858577336) / 寻龙尺=0.3(n=2.3170260500434274)",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 80/80"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 最坏情况生存",
+      "status": "pass",
+      "value": "无历史致死尾部"
+     },
+     {
+      "label": "RANK 事件经验价值",
+      "status": "pass",
+      "value": "3 个闸门后候选"
+     },
+     {
+      "label": "GATE 受控探索",
+      "status": "active",
+      "value": "生命 100%；配额 0/1；致死尾部=False"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "营养牡蛎",
+      "score": 13.097,
+      "status": "chosen",
+      "why": "经验样本 30.944396657209822",
+      "index": 1,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "羽翼之靴",
+      "score": 2.326,
+      "status": "rejected",
+      "why": "经验样本 35.769574858577336",
+      "index": 0,
+      "action": "choose_event_option"
+     },
+     {
+      "label": "寻龙尺",
+      "score": 0.269,
+      "status": "rejected",
+      "why": "经验样本 2.3170260500434274",
+      "index": 2,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "营养牡蛎",
+     "params": {
+      "option_index": 1
+     },
+     "score": 13.097
+    },
+    "explanation": [
+     "事件候选分数与样本数直接来自本次经验账读取结果。"
+    ]
+   }
+  },
+  {
+   "t": "01:11:12",
+   "screen": "EVENT",
+   "floor": 1,
+   "hp": 91,
+   "gold": 99,
+   "action": "choose_event_option",
+   "params": {
+    "option_index": 0
+   },
+   "reason": "事件：已结束，继续",
+   "trace": {
+    "observation": {
+     "title": "EVENT · F1",
+     "facts": [
+      "屏幕 EVENT",
+      "楼层 F1",
+      "生命 91/91"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "EVENT"
+     },
+     {
+      "label": "GATE 动作可用性",
+      "status": "pass",
+      "value": "接口允许"
+     },
+     {
+      "label": "RANK 候选池",
+      "status": "pass",
+      "value": "1 个可展示候选"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_event_option"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Proceed",
+      "score": null,
+      "status": "chosen",
+      "why": "",
+      "index": 0,
+      "action": "choose_event_option"
+     }
+    ],
+    "selected": {
+     "action": "choose_event_option",
+     "label": "Proceed",
+     "params": {
+      "option_index": 0
+     }
+    }
+   }
+  },
+  {
+   "t": "01:11:16",
+   "screen": "MAP",
+   "floor": 1,
+   "hp": 91,
+   "gold": 99,
+   "action": "choose_map_node",
+   "params": {
+    "option_index": 1
+   },
+   "reason": "路径规划：Monster(1,3)（路径分 -13.31，预计进 Boss 血量 56%；前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计56%<75%（饥饿放宽自88%），优先续航路线）；候选：Monster(1,1)=-17.20|前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计55%<75%（饥饿放宽自88%），优先续航路线 / Monster(1,3)=-13.31|前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计56%<75%（饥饿放宽自88%），优先续航路线 / Monster(1,4)=-47.58|前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；路径中段含未达标精英，投影罚分；投影中途死亡 / Monster(1,5)=-45.26|前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计70%<75%（饥饿放宽自88%），优先续航路线",
+   "trace": {
+    "observation": {
+     "title": "MAP · F1",
+     "facts": [
+      "屏幕 MAP",
+      "楼层 F1",
+      "生命 91/91"
+     ]
+    },
+    "gates": [
+     {
+      "label": "SCAN 状态载荷",
+      "status": "pass",
+      "value": "MAP"
+     },
+     {
+      "label": "GATE 精英生存闸门",
+      "status": "warn",
+      "value": "非基础牌仅1张(<7)，卡组强度不足规避精英"
+     },
+     {
+      "label": "RANK 路径聚合评分",
+      "status": "pass",
+      "value": "4 条候选；最高 -13.31"
+     },
+     {
+      "label": "GATE Boss 入场投影",
+      "status": "pass",
+      "value": "选中路径预计入场血量 56%"
+     },
+     {
+      "label": "LOCK 最终选择",
+      "status": "pass",
+      "value": "choose_map_node"
+     }
+    ],
+    "candidates": [
+     {
+      "label": "Monster(1,3)",
+      "score": -13.312,
+      "status": "chosen",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计56%<75%（饥饿放宽自88%），优先续航路线",
+      "index": 1,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "3",
+       "projected_hp": "0.5607385374820716"
+      }
+     },
+     {
+      "label": "Monster(1,1)",
+      "score": -17.197,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计55%<75%（饥饿放宽自88%），优先续航路线",
+      "index": 0,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "1",
+       "projected_hp": "0.5477242586023278"
+      }
+     },
+     {
+      "label": "Monster(1,5)",
+      "score": -45.255,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；竞速判死后获胜619/1379，Boss入场线豁免被审计闸否决（RACE_AUDIT_DOOM_WAIVER_GATE），续航罚分照常计价；进Boss血量预计70%<75%（饥饿放宽自88%），优先续航路线",
+      "index": 3,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "5",
+       "projected_hp": "0.7023992194051807"
+      }
+     },
+     {
+      "label": "Monster(1,4)",
+      "score": -47.581,
+      "status": "rejected",
+      "why": "前期需要战斗积累卡牌；输出饥饿战损上浮×1.25（缺口71%）；路径中段含未达标精英，投影罚分；投影中途死亡",
+      "index": 2,
+      "action": "choose_map_node",
+      "target": {
+       "row": "1",
+       "col": "4",
+       "projected_hp": "0.0"
+      }
+     }
+    ],
+    "selected": {
+     "action": "choose_map_node",
+     "label": "Monster(1,3)",
+     "params": {
+      "option_index": 1
+     },
+     "score": -13.312,
+     "target": {
+      "row": "1",
+      "col": "3",
+      "projected_hp": "0.5607385374820716"
+     }
+    },
+    "explanation": [
+     "地图评分由房间价值、路径危险先验和生存投影一次聚合完成。"
+    ]
+   }
+  },
+  {
+   "t": "01:11:18",
+   "screen": "COMBAT",
+   "floor": 2,
+   "hp": 91,
+   "gold": 99,
+   "action": "play_card",
+   "params": {
+    "card_index": 2,
+    "target_index": 0
+   },
+   "reason": "战斗：打出【痛击】→蟾蜍蝌蚪（辅助体优先转火：蟾蜍蝌蚪（零伤害意图，放生=纵容其强化队友）｜零伤害目标意图审计：target=TOADPOLE#0 intent=Buff role=buff（SUPPORT_TARGET_INTENT_OBS）｜换线阻尼+4.0（教义在场延续集火记忆，FOCUS_DRIFT_DAMP）；火线身份歧义：键TOADPOLE来源enemy_id、在场2个同类实例、索引[0,1]（FOCUS_IDENTITY_AMBIGUITY_OBS））；敌意图总伤7，我方91血/0甲；重生名册读侧：TOADPOLE=id:否决(n=6,rs=30)（RESPAWN_ROSTER_READ_OBS）；名册命中被原生白名单否决：TOADPOLE（RESPAWN_NATIVE_VETO_OBS）",
+   "turn": 1,
+   "energy": 3
+  }
+ ],
+ "combat_notes": [],
+ "attribution_tags": [
+  [
+   "map_node",
+   "Monster"
+  ]
+ ],
+ "human_assisted": false,
+ "excluded_from_learning": false,
+ "deck_snapshot": [
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "STRIKE_IRONCLAD",
+   "upgraded": false,
+   "name": "打击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "DEFEND_IRONCLAD",
+   "upgraded": false,
+   "name": "防御",
+   "card_type": "Skill",
+   "rarity": "Basic"
+  },
+  {
+   "card_id": "BASH",
+   "upgraded": false,
+   "name": "痛击",
+   "card_type": "Attack",
+   "rarity": "Basic"
+  }
+ ]
+}
