@@ -5814,10 +5814,8 @@ class Policy:
         """Find a bounded same-combat non-lethal-to-lethal transition.
 
         This is an audit join over already persisted end-turn markers.  It
-        deliberately stops at a floor or screen boundary; the only permitted
-        modal bridge is one CARD_SELECTION row directly bracketed by COMBAT
-        rows on the same floor.  It never recomputes a combat snapshot, so
-        the result cannot affect the current action.
+        deliberately stops at a floor or screen boundary and never recomputes
+        a combat snapshot, so the result cannot affect the current action.
         """
         if not isinstance(decisions, list) or not decisions:
             return None
@@ -5856,34 +5854,13 @@ class Policy:
                 return None
 
         _rows = []
-        _bridge_screens = set()
         for _index in range(_stop - 1, max(-1, _stop - 64), -1):
             _row = decisions[_index]
             if not isinstance(_row, dict):
                 continue
             if not _same_floor(floor, _row.get("floor")):
                 break
-            _screen = _row.get("screen")
-            if _screen == "CARD_SELECTION":
-                if _bridge_screens:
-                    break
-                _older_index = _index - 1
-                _newer_index = _index + 1
-                if not (0 <= _older_index < _stop
-                        and 0 <= _newer_index < _stop):
-                    break
-                _older = decisions[_older_index]
-                _newer = decisions[_newer_index]
-                if (not isinstance(_older, dict)
-                        or not isinstance(_newer, dict)
-                        or _older.get("screen") not in (None, "COMBAT")
-                        or _newer.get("screen") not in (None, "COMBAT")
-                        or not _same_floor(floor, _older.get("floor"))
-                        or not _same_floor(floor, _newer.get("floor"))):
-                    break
-                _bridge_screens.add("CARD_SELECTION")
-                continue
-            if _screen not in (None, "COMBAT"):
+            if _row.get("screen") not in (None, "COMBAT"):
                 break
             if (_row.get("action") == "end_turn"
                     and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
@@ -5932,8 +5909,6 @@ class Policy:
             "terminal_post_gap": _terminal_post_gap,
             "hp_delta": _terminal_hp - _last["hp"],
             "post_gap_delta": _terminal_post_gap - _last["post_gap"],
-            "screen_bridge": (
-                "card_selection" if _bridge_screens else "none"),
         }
 
     def _consume_lethal_unavailable_terminal_outcome_note(
@@ -6001,7 +5976,6 @@ class Policy:
                     f"{_num(_transition['terminal_post_gap'])}"
                     f"/hp_delta={_num(_transition['hp_delta'])}"
                     f"/post_gap_delta={_num(_transition['post_gap_delta'])}"
-                    f"/screen_bridge={_transition.get('screen_bridge', 'none')}"
                     "（NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS）")
             except (KeyError, TypeError, ValueError, OverflowError):
                 _transition_tail = ""
