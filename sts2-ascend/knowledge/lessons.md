@@ -14351,3 +14351,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.5019335994315477局)，BASH(14分/2.1170207379805404局)，STOKE(16分/2.4094571206974256局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1705 胜，当前目标进阶 0
+
+## 第 1706 局复盘（2026-09-29 18:06）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 PHANTASMAL_GARDENER
+- 本局拿牌：RUPTURE, INFLAME, TWIN_STRIKE, HAND_OF_GREED, MOLTEN_FIST, CINDER, BREAKTHROUGH, TRUE_GRIT, FEEL_NO_PAIN, INFLAME, HEMOKINESIS, HEMOKINESIS
+- 本局遗物：STRAWBERRY, STONE_CRACKER
+- 战斗记录：F6 Monster战 掉血3; F8 Monster战 掉血9｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血19; F12 Elite战 掉血52｜自损1（可行动段1/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=116/dpt=16.2/ttk=7.16049/tsurv=2.6875（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=7.16049/actual_over_projected=0.98（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战7回合获胜; F14 Monster战 掉血11; F15 Elite战 掉血22｜自损2（可行动段2/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=84/dpt=12.15/ttk=6.91358/tsurv=0.294118（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=6.91358/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.80（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.031005644700947局)，PROWESS(26分/7.436688263962178局)，HELLRAISER(26分/4.2097798995501945局)，FEED(24分/32.035474809732975局)，OFFERING(24分/15.71427849396553局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.493176831833537局)，BASH(14分/2.1096111653976086局)，STOKE(16分/2.401024020774985局)
+- 策略进化：本局无参数调整
+- 生涯战绩：0/1706 胜，当前目标进阶 0
