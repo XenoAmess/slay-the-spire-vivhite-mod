@@ -17922,61 +17922,6 @@ def main() -> int:
             in d_race_terminal_outcome.reason), \
         f"竞速首末投影漂移对账缺失: {d_race_terminal_outcome}"
 
-    # 3z-5b-generic) 普通 kill-race（race_allin=no）也必须留下一个
-    #        非致死容量来源，才能在终端对账中区分“容量逐步收缩”与
-    #        “只有终端零帧”。该来源仍只进入观测，不改变终端动作。
-    race_terminal_generic_know = knowledge.Knowledge(tmp)
-    race_terminal_generic_pol = policy.Policy(race_terminal_generic_know)
-    race_terminal_generic_ctx = _SettleCtx()
-    race_terminal_generic_ctx.combat = {}
-    race_terminal_generic_ctx.decisions = [{
-        "screen": "COMBAT", "action": "play_card", "floor": 33,
-        "turn": 5,
-        "reason":
-            "; kill-race output capacity: hp=9/block=0"
-            "/incoming=20/energy=2/target_hp=48/target_block=0"
-            "/attack_candidates=1/raw_damage_cap=16/cards=STRIKE:1@16"
-            " (KILL_RACE_OUTPUT_CAPACITY_OBS)",
-    }]
-    assert race_terminal_generic_pol.decide(
-        _lethal_unavailable_state(True), race_terminal_generic_ctx
-    ).action == "play_card", "普通 kill-race 容量来源夹具预热未走 play_card"
-    race_terminal_generic_pol._krace_latch = True
-    race_terminal_generic_pol._krace_latch_round = 5
-    race_terminal_generic_pol._race_terminal_projection = {
-        "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
-        "ttk": 2.2, "tsurv": 0.5,
-    }
-    race_terminal_generic_pol._race_audit = {
-        "latched": True, "latch_round": 5, "esc": False,
-        "projection_pool": 200.0, "projection_dpt": 10.0,
-        "projection_ttk": 20.0, "projection_tsurv": 8.0,
-    }
-    d_race_terminal_generic = None
-    for _ in range(6):
-        d_candidate = race_terminal_generic_pol.decide(
-            _lethal_unavailable_state(False), race_terminal_generic_ctx)
-        if d_candidate.action == "end_turn":
-            d_race_terminal_generic = d_candidate
-            break
-    assert d_race_terminal_generic is not None, \
-        "普通 kill-race 容量来源夹具未进入终端 end_turn"
-    d_race_terminal_generic_outcome = race_terminal_generic_pol.decide(
-        race_terminal_outcome_state, race_terminal_generic_ctx)
-    generic_reason = d_race_terminal_generic_outcome.reason
-    assert d_race_terminal_generic_outcome.action == "continue_game_over", \
-        f"普通 kill-race 终端动作漂移: {d_race_terminal_generic_outcome}"
-    assert d_race_terminal_generic_outcome.params == {}, \
-        f"普通 kill-race 终端参数漂移: {d_race_terminal_generic_outcome}"
-    assert "KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS" in generic_reason, \
-        f"普通 kill-race 容量 transition 缺失: {d_race_terminal_generic_outcome}"
-    assert "source_round=5/source_action=play_card" in generic_reason, \
-        f"普通 kill-race 容量来源轮次缺失: {d_race_terminal_generic_outcome}"
-    assert "source_target_hp=48/source_target_block=0" in generic_reason, \
-        f"普通 kill-race 容量来源目标缺失: {d_race_terminal_generic_outcome}"
-    assert "source_attack_candidates=1/source_raw_damage_cap=16" in generic_reason, \
-        f"普通 kill-race 容量来源上限缺失: {d_race_terminal_generic_outcome}"
-
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
     assert (d_race_terminal_hook_outcome.action == "continue_game_over"

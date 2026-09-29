@@ -5349,12 +5349,10 @@ class Policy:
         """Find the earliest bounded same-combat output-capacity source row.
 
         The source is an already persisted observation, never a recomputed
-        combat snapshot.  Accept both the legacy race-all-in source and the
-        ordinary kill-race source.  Stop at an explicit floor or screen
-        boundary so a same-floor later combat cannot borrow an earlier capacity
-        sample.  Keep the earliest valid row in that bounded window so a
-        sequence of shrinking capacity frames cannot make the terminal row its
-        own source.
+        combat snapshot.  Stop at an explicit floor or screen boundary so a
+        same-floor later combat cannot borrow an earlier capacity sample.  Keep
+        the earliest valid row in that bounded window so a sequence of
+        shrinking capacity frames cannot make the terminal row its own source.
         """
         if not isinstance(decisions, list) or not decisions:
             return None
@@ -5384,24 +5382,15 @@ class Policy:
             if _screen and _screen != "COMBAT":
                 break
             _reason = str(_row.get("reason") or "")
-            _source_specs = (
-                ("RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS",
-                 "race-allin lethal output capacity:"),
-                ("KILL_RACE_OUTPUT_CAPACITY_OBS",
-                 "kill-race output capacity:"),
-            )
-            _capacity_text = None
-            for _marker, _label in _source_specs:
-                _marker_at = _reason.rfind(_marker)
-                if _marker_at < 0:
-                    continue
-                _label_at = _reason.rfind(_label, 0, _marker_at)
-                if _label_at < 0:
-                    continue
-                _capacity_text = _reason[_label_at:_marker_at]
-                break
-            if _capacity_text is None:
+            _marker_at = _reason.rfind(
+                "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS")
+            if _marker_at < 0:
                 continue
+            _label_at = _reason.rfind(
+                "race-allin lethal output capacity:", 0, _marker_at)
+            if _label_at < 0:
+                continue
+            _capacity_text = _reason[_label_at:_marker_at]
 
             def _token(name: str):
                 _match = re.search(
@@ -9048,18 +9037,6 @@ class Policy:
         if (race_allin and bool(kill_race) and reserve_lethal and gap_now > 0):
             danger_note += self._race_allin_lethal_output_capacity_note(
                 hand, enemies, energy, my_hp, my_block, incoming, pol)
-        # Ordinary kill-race also needs a persisted pre-terminal capacity
-        # source.  The terminal snapshot itself is deliberately excluded from
-        # this source path, so a race_allin=no window can still prove a
-        # capacity collapse without changing its action/params.
-        if (bool(kill_race) and not race_allin
-                and bool(getattr(self, "_krace_latch", False))
-                and not reserve_lethal and gap_now > 0):
-            danger_note += self._race_allin_lethal_output_capacity_note(
-                hand, enemies, energy, my_hp, my_block, incoming, pol,
-                enabled_key="kill_race_lethal_output_capacity_obs",
-                marker="KILL_RACE_OUTPUT_CAPACITY_OBS",
-                label="kill-race output capacity")
         # 竞速格挡下限（第891局批复盘落地；856~876批 §四.3 预注册到期兑现）：
         # 斩杀竞速局的非致死回合，末点能量保留给最便宜的合格挡牌——
         # 891 局 F28-T2 实证：斩杀竞速「全攻提速」留痕下 6 费全部流向攻击、
