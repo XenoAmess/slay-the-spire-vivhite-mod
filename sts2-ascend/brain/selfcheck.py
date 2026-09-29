@@ -17897,6 +17897,64 @@ def main() -> int:
         "nonlethal_unavailable_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 nonlethal_unavailable_terminal_outcome_obs"
 
+    # The latest failure chain (1746-F17) had a marked non-lethal source,
+    # several intervening actions, and an unmarked end_turn immediately before
+    # GAME_OVER.  Keep that terminal predecessor observable without changing
+    # the terminal action or the existing source attribution.
+    nonlethal_terminal_tail_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_terminal_tail_ctx = _SettleCtx()
+    nonlethal_terminal_tail_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 7, "reason": d_nonlethal_empty.reason,
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 8, "reason": "combat bridge play",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 8, "hp": 5, "energy": 0,
+        "turn_end_state": {"block": 0, "incoming_damage": 0},
+        "reason": "combat terminal predecessor without source marker",
+    }]
+    d_nonlethal_terminal_tail = nonlethal_terminal_tail_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_terminal_tail_ctx)
+    assert (d_nonlethal_terminal_tail.action
+            == d_nonlethal_empty_outcome.action
+            and d_nonlethal_terminal_tail.params
+            == d_nonlethal_empty_outcome.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_terminal_tail.reason
+            and "source_round=7" in d_nonlethal_terminal_tail.reason
+            and "terminal_tail_round=8/terminal_tail_action=end_turn"
+                in d_nonlethal_terminal_tail.reason
+            and "/terminal_tail_hp=5/terminal_tail_block=0"
+                "/terminal_tail_incoming=0/terminal_tail_energy=0"
+                in d_nonlethal_terminal_tail.reason
+            and "/bridge_decisions=2/bridge_rounds=1"
+                in d_nonlethal_terminal_tail.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_TAIL_OBS"
+                in d_nonlethal_terminal_tail.reason), \
+        f"terminal tail observation missing or action drifted: {d_nonlethal_terminal_tail}"
+    nonlethal_terminal_tail_off_know = knowledge.Knowledge(tmp)
+    nonlethal_terminal_tail_off_know.policy[
+        "nonlethal_unavailable_terminal_tail_obs"] = False
+    d_nonlethal_terminal_tail_off = policy.Policy(
+        nonlethal_terminal_tail_off_know).decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_terminal_tail_ctx)
+    assert (d_nonlethal_terminal_tail_off.action
+            == d_nonlethal_terminal_tail.action
+            and d_nonlethal_terminal_tail_off.params
+            == d_nonlethal_terminal_tail.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_terminal_tail_off.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_TAIL_OBS"
+                not in d_nonlethal_terminal_tail_off.reason), \
+        f"terminal tail toggle changed action or left marker: {d_nonlethal_terminal_tail_off}"
+    assert knowledge.DEFAULT_POLICY[
+        "nonlethal_unavailable_terminal_tail_obs"] is True, \
+        "DEFAULT_POLICY missing nonlethal_unavailable_terminal_tail_obs"
+
     # Full native RINGING_POWER lock is a narrower terminal precursor than
     # generic non-lethal resource exhaustion.  Add a dedicated join for that
     # exact shape, while proving the generic marker and action remain stable.

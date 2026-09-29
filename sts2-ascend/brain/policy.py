@@ -6770,6 +6770,28 @@ class Policy:
                 f"/last_round={_round(_pending.get('energy_pressure_last_round'))}"
                 "/energy=0/hook_locked=0"
                 "（NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS）")
+        _terminal_tail_note = ""
+        try:
+            _terminal_tail_enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_terminal_tail_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _terminal_tail_enabled = False
+        _terminal_tail = _pending.get("terminal_tail")
+        if (_terminal_tail_enabled and isinstance(_terminal_tail, dict)):
+            _terminal_tail_note = (
+                ";nonlethal_terminal_tail:"
+                f"source_round={_round(_pending.get('terminal_round'))}"
+                f"/terminal_tail_round={_round(_terminal_tail.get('round'))}"
+                f"/terminal_tail_action={_text(_terminal_tail.get('action'))}"
+                f"/terminal_tail_hp={_num(_terminal_tail.get('hp'))}"
+                f"/terminal_tail_block={_num(_terminal_tail.get('block'))}"
+                f"/terminal_tail_incoming="
+                f"{_num(_terminal_tail.get('incoming'))}"
+                f"/terminal_tail_energy={_num(_terminal_tail.get('energy'))}"
+                f"/bridge_decisions="
+                f"{_round(_terminal_tail.get('bridge_decisions'))}"
+                f"/bridge_rounds={_round(_terminal_tail.get('bridge_rounds'))}"
+                "(NONLETHAL_UNAVAILABLE_TERMINAL_TAIL_OBS)")
         _steam_veto_tail = ""
         try:
             _steam_veto_enabled = bool(int(float(pol.get(
@@ -6819,6 +6841,7 @@ class Policy:
                if _chain else "")
             + _pressure_tail
             + _energy_pressure_tail
+            + _terminal_tail_note
             + _overlap_tail
             + _steam_veto_tail
             + f"（{_marker}）")
@@ -6881,6 +6904,42 @@ class Policy:
         row = _source_row
         _source_pos = len(_lookback) - 1 - _source_offset
         _overlap_tail_rows = _lookback[_source_pos:]
+        # The persisted source marker may be followed by valid plays and one
+        # unmarked end_turn immediately before GAME_OVER.  Preserve that
+        # terminal predecessor as observation-only context; it must never
+        # replace the source marker or feed back into action selection.
+        _terminal_tail = None
+        if (_source_pos < len(_lookback) - 1
+                and isinstance(_tail, dict)
+                and _tail.get("action") == "end_turn"
+                and _tail.get("screen") in (None, "COMBAT")
+                and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
+                not in str(_tail.get("reason") or "")):
+            _tail_state = _tail.get("turn_end_state")
+            if not isinstance(_tail_state, dict):
+                _tail_state = {}
+            try:
+                _terminal_tail_round = _tail.get(
+                    "turn", _tail.get("round"))
+                _source_round_value = row.get(
+                    "turn", row.get("round"))
+                _terminal_tail_bridge_rounds = max(
+                    0, int(float(_terminal_tail_round))
+                    - int(float(_source_round_value)))
+            except (TypeError, ValueError, OverflowError):
+                _terminal_tail_bridge_rounds = 0
+            _terminal_tail = {
+                "round": _tail.get("turn", _tail.get("round")),
+                "action": _tail.get("action") or "end_turn",
+                "hp": _tail.get("hp"),
+                "block": _tail_state.get("block", _tail.get("block")),
+                "incoming": _tail_state.get(
+                    "incoming_damage", _tail_state.get("incoming",
+                                                         _tail.get("incoming"))),
+                "energy": _tail.get("energy"),
+                "bridge_decisions": _source_offset,
+                "bridge_rounds": _terminal_tail_bridge_rounds,
+            }
         _waterfall_marker_overlap = any(
             isinstance(_candidate, dict)
             and (_candidate.get("screen") in (None, "COMBAT"))
@@ -7111,6 +7170,7 @@ class Policy:
                 "chain": bool(_source_offset),
                 "bridge_decisions": _source_offset,
                 "bridge_rounds": _bridge_rounds,
+                "terminal_tail": _terminal_tail,
                 "terminal_overlap": _terminal_overlap,
                 "pressure_count": _pressure_count,
                 "pressure_first_round": _pressure_first_round,

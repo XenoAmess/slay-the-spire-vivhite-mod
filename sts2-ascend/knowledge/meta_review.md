@@ -13034,6 +13034,7 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+
 ## 2026-09-29 第1722局复盘（NONLETHAL_CHAIN_PRESSURE_TREND_OBS）
 
 profile_id: `ironclad`
@@ -14099,5 +14100,33 @@ failed_review_replay: `requested_packages=[]`，无回放包
 - **调整**：若真实链出现跨楼层/跨战斗误接、source reason 词形漂移或 `state/slots` 字段缺失，保留失败样本并收紧恢复边界；不把终局观测升级为行为闸门。
 - **回滚**：将 `potion_reserve_terminal_outcome_obs` 设为 `False`；预期仅移除 `POTION_RESERVE_TERMINAL_OUTCOME_OBS`，既有致死终局审计、action 和 params 不变。
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定256槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 预置 ACL 槽内用进程级 `tempfile.mkdtemp` 适配运行同一完整 selfcheck，退出码0并输出 `SELFCHECK OK`。最终三个目标文件完整 diff 已回读，限定 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1745-1746: NONLETHAL_UNAVAILABLE_TERMINAL_TAIL_OBS
+
+profile_id: `ironclad`
+requested_runs: `1745, 1746`
+production_code_commit: pending local commit (final SHA in delivery receipt)
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: when the latest persisted `NONLETHAL_UNAVAILABLE_END_TURN_OBS` is followed by valid actions and an unmarked `end_turn` immediately before the authoritative `GAME_OVER`, the current terminal join reports the older source round as if it were the terminal predecessor. This is falsifiable: the new observation must appear only when that bounded same-combat tail exists, and must not change the terminal action or parameters.
+- **EVIDENCE**: full run `sts2-ascend/knowledge/runs/20260930-065004_E9KDZF6S5ZHA.json` (1746) contains the marked source at D250/round 10, valid actions D251-D252, and unmarked D253/round 11 with `hp=5/block=0/incoming_damage=0`; D254's prior join still reports `source_round=10` and no immediate tail. Run 1745 was also read in full and did not justify widening the observation beyond this shape.
+- **EXPECTED_SIGNAL**: in the next 3-10 same-combat terminal windows, add `NONLETHAL_UNAVAILABLE_TERMINAL_TAIL_OBS` only for a bounded unmarked predecessor, recording source/tail rounds, HP, block, incoming, energy, and bridge counts. Cross-floor, cross-screen, missing-source, or already-marked-tail cases must remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on audit-only `nonlethal_unavailable_terminal_tail_obs` rollback switch.
+- `sts2-ascend/brain/policy.py`: preserve the immediate unmarked `end_turn` in the existing non-lethal terminal pending record and append one gated observation marker; no scoring, candidate ordering, or action path changes.
+- `sts2-ascend/brain/selfcheck.py`: cover the 1746-shaped source/play/tail chain, assert `continue_game_over` with `{}`, and assert the switch removes only the new marker.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminal windows and compare source/tail rounds and the persisted `turn_end_state` fields.
+- **Adjust**: if a tail crosses a combat/screen boundary or the marker drifts into an unrelated end-turn, tighten the bounded scan and retain the failure sample; do not promote the observation into behavior.
+- **Rollback**: set `nonlethal_unavailable_terminal_tail_obs` to `False`; the existing terminal marker, action, and params remain.
+- **Validation**: direct selfcheck reproduced the host's fixed 256-directory bootstrap limit; a process-level `tempfile.mkdtemp` adapter rooted in the clone's existing `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. The actual 1746 chain replay emitted `source_round=10/terminal_tail_round=11/terminal_tail_hp=5/terminal_tail_block=0/terminal_tail_incoming=0` while preserving `action=continue_game_over` and `params={}`. AST parsing, targeted `git diff --check`, and final diff review passed; no runtime, formal run/archive, learning-memory, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
