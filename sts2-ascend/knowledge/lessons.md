@@ -14461,3 +14461,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4157323204133285局)，BASH(14分/2.0440811941958943局)，STOKE(16分/2.326442013665463局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1715 胜，当前目标进阶 0
+
+## 第 1716 局复盘（2026-09-29 21:12）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：TRUE_GRIT, CINDER, SHRUG_IT_OFF, INFLAME, UNRELENTING
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血0; F4 Monster战 掉血0; F5 Monster战 掉血67; F8 Monster战 掉血29｜竞速投影审计：pool=65/dpt=19.2/ttk=3.38542/tsurv=1.125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=3.38542/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.44（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：HELLRAISER(26分/5.0370773265007545局)，PROWESS(26分/7.180465620739764局)，FEED(24分/30.931728929673508局)，OFFERING(24分/15.172860885865903局)，MANGLE(24分/51.174524378836885局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.407277257291882局)，BASH(14分/2.036926910016209局)，STOKE(16分/2.318299466617634局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1716 胜，当前目标进阶 0
