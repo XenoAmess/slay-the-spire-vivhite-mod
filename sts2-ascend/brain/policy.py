@@ -5282,6 +5282,34 @@ class Policy:
                 f"/esc_latch_hold={'yes' if _hold_count > 0 else 'no'}"
                 " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)")
 
+        _terminal_tail_note = ""
+        try:
+            _terminal_tail_enabled = bool(int(float(pol.get(
+                "kill_race_terminal_tail_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _terminal_tail_enabled = False
+        _terminal_tail = _pending.get("terminal_tail")
+        if (_terminal_tail_enabled and isinstance(_terminal_tail, dict)):
+            _terminal_tail_note = (
+                f"；竞速终端尾部：source_round="
+                f"{_round(_pending.get('terminal_round'))}"
+                f"/source_hp={_num(_pending.get('hp'))}"
+                f"/source_block={_num(_pending.get('block'))}"
+                f"/source_incoming={_num(_pending.get('incoming'))}"
+                f"/source_energy={_num(_pending.get('energy'))}"
+                f"/terminal_tail_round={_round(_terminal_tail.get('round'))}"
+                f"/terminal_tail_action="
+                f"{_terminal_tail.get('action') or '?'}"
+                f"/terminal_tail_hp={_num(_terminal_tail.get('hp'))}"
+                f"/terminal_tail_block={_num(_terminal_tail.get('block'))}"
+                f"/terminal_tail_incoming="
+                f"{_num(_terminal_tail.get('incoming'))}"
+                f"/terminal_tail_energy={_num(_terminal_tail.get('energy'))}"
+                f"/bridge_decisions="
+                f"{_round(_terminal_tail.get('bridge_decisions'))}"
+                f"/bridge_rounds={_round(_terminal_tail.get('bridge_rounds'))}"
+                "（KILL_RACE_TERMINAL_TAIL_OBS）")
+
         _capacity_tail = ""
         try:
             _capacity_obs = bool(int(float(pol.get(
@@ -5455,6 +5483,7 @@ class Policy:
             f"/kill_race={_flag(_pending.get('kill_race'))}"
             f"/race_allin={_flag(_pending.get('race_allin'))}"
             f"{_latch_hold_tail}"
+            f"{_terminal_tail_note}"
             f"{_capacity_tail}"
             f"{_capacity_transition_tail}"
             f"{_latch_projection_tail}"
@@ -5832,16 +5861,119 @@ class Policy:
             # the bounded same-combat window.
         return _source
 
+    @staticmethod
+    def _find_kill_race_terminal_tail(
+            decisions, floor=None, before_index=None,
+            source_round=None) -> dict | None:
+        """Find a bounded unmarked end-turn after a kill-race audit source.
+
+        This is an observation-only join for the concrete shape where a
+        latched race audit is followed by valid in-combat decisions and a
+        later lethal ``end_turn``.  Keep the search same-floor and within the
+        trailing 32 COMBAT/CARD_SELECTION rows so an earlier room cannot be
+        attached to the terminal result.  When an in-memory pending audit is
+        already present, ``source_round`` is a narrow fallback for runs where
+        the source marker was not persisted; reload recovery never supplies it.
+        """
+        if not isinstance(decisions, list) or not decisions:
+            return None
+        try:
+            _stop = (len(decisions) if before_index is None
+                     else int(before_index))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        _stop = max(0, min(len(decisions), _stop))
+        if _stop < 2:
+            return None
+
+        def _same_floor(left, right):
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _tail_index = _stop - 1
+        _tail = decisions[_tail_index]
+        if (not isinstance(_tail, dict)
+                or _tail.get("action") != "end_turn"
+                or not _same_floor(floor, _tail.get("floor"))):
+            return None
+        _tail_screen = str(_tail.get("screen") or "").upper()
+        if _tail_screen and _tail_screen not in {
+                "COMBAT", "CARD_SELECTION"}:
+            return None
+
+        def _round_value(row):
+            _value = row.get("turn")
+            return row.get("round") if _value is None else _value
+
+        _source_index = None
+        for _index in range(
+                _tail_index, max(-1, _tail_index - 32), -1):
+            _candidate = decisions[_index]
+            if not isinstance(_candidate, dict):
+                break
+            if not _same_floor(floor, _candidate.get("floor")):
+                break
+            _screen = str(_candidate.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if (_candidate.get("action") == "end_turn"
+                    and "KILL_RACE_TERMINAL_AUDIT_OBS"
+                    in str(_candidate.get("reason") or "")):
+                _source_index = _index
+                break
+            if (_candidate.get("action") == "end_turn"
+                    and source_round is not None):
+                try:
+                    _candidate_round = int(float(_round_value(_candidate)))
+                    _pending_round = int(float(source_round))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if _candidate_round == _pending_round:
+                    _source_index = _index
+                    break
+        if _source_index is None or _source_index >= _tail_index:
+            return None
+
+        _tail_state = _tail.get("turn_end_state")
+        if not isinstance(_tail_state, dict):
+            _tail_state = {}
+        _tail_round = _round_value(_tail)
+        _source_round = _round_value(decisions[_source_index])
+        try:
+            _bridge_rounds = max(
+                0, int(float(_tail_round)) - int(float(_source_round)))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        return {
+            "source_row": decisions[_source_index],
+            "source_index": _source_index,
+            "terminal_tail": {
+                "round": _tail_round,
+                "action": _tail.get("action") or "end_turn",
+                "hp": _tail.get("hp"),
+                "block": _tail_state.get("block", _tail.get("block")),
+                "incoming": _tail_state.get(
+                    "incoming_damage",
+                    _tail_state.get("incoming", _tail.get("incoming"))),
+                "energy": _tail.get("energy"),
+                "bridge_decisions": _tail_index - _source_index,
+                "bridge_rounds": _bridge_rounds,
+            },
+        }
+
     def _restore_kill_race_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
         """Recover a terminal audit after a policy/process reload.
 
-        The terminal audit is already persisted in the preceding decision
-        before the native GAME_OVER state is observed.  Keep this recovery
-        observation-only: require the most recent persisted decision to be the
-        matching terminal end-turn, then rebuild exactly the fields consumed by
-        ``_consume_kill_race_terminal_outcome_note``.  No scoring or action
-        selection reads this snapshot.
+        The terminal audit is already persisted in a preceding decision before
+        the native GAME_OVER state is observed.  Keep this recovery
+        observation-only: rebuild from the marked source, and optionally join
+        one bounded later unmarked end-turn as terminal-tail context.  No
+        scoring or action selection reads this snapshot.
         """
         decisions = getattr(ctx, "decisions", None)
         _reported = bool(getattr(
@@ -5861,11 +5993,28 @@ class Policy:
             if "KILL_RACE_TERMINAL_OUTCOME_OBS" in _last_reason:
                 return
             self._race_terminal_outcome_reported = False
-        if isinstance(getattr(self, "_race_terminal_outcome_pending", None), dict):
+        _existing_pending = getattr(
+            self, "_race_terminal_outcome_pending", None)
+        if isinstance(_existing_pending, dict):
+            _tail_info = self._find_kill_race_terminal_tail(
+                decisions, floor=floor,
+                source_round=_existing_pending.get("terminal_round"))
+            if (isinstance(_tail_info, dict)
+                    and not isinstance(
+                        _existing_pending.get("terminal_tail"), dict)):
+                _terminal_tail = _tail_info.get("terminal_tail")
+                if isinstance(_terminal_tail, dict):
+                    _existing_pending["terminal_tail"] = _terminal_tail
             return
         if not isinstance(decisions, list) or not decisions:
             return
+        _tail_info = self._find_kill_race_terminal_tail(
+            decisions, floor=floor)
         row = decisions[-1]
+        if isinstance(_tail_info, dict):
+            _source_row = _tail_info.get("source_row")
+            if isinstance(_source_row, dict):
+                row = _source_row
         if not isinstance(row, dict) or row.get("action") != "end_turn":
             return
         if (floor is not None and row.get("floor") is not None
@@ -5902,9 +6051,14 @@ class Policy:
                 "ttk": _number("ttk"),
                 "tsurv": _number("tsurv"),
             }
+            try:
+                _terminal_round = int(float(
+                    row.get("turn", row.get("round"))))
+            except (TypeError, ValueError, OverflowError):
+                _terminal_round = _last_round
             _pending = {
                 "projection": _projection,
-                "terminal_round": _last_round,
+                "terminal_round": _terminal_round,
                 "lock_round": _lock_round,
                 "hp": _number("hp"),
                 "block": _number("block"),
@@ -5913,6 +6067,10 @@ class Policy:
                 "kill_race": _token("kill_race") or "unknown",
                 "race_allin": _token("race_allin") or "unknown",
             }
+            if isinstance(_tail_info, dict):
+                _terminal_tail = _tail_info.get("terminal_tail")
+                if isinstance(_terminal_tail, dict):
+                    _pending["terminal_tail"] = _terminal_tail
             try:
                 _latch_projection = {
                     "round": int(_number("latch_round")),
