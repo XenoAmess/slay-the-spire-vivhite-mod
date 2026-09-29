@@ -821,7 +821,9 @@ DEFAULT_POLICY = {
     "race_audit_projection_ratio_obs": True,  # 追加实际回合/投影TTK比值，仅观测、可回滚；
                                                # 只有胜利样本的 actual_rounds 是击杀耗时并
                                                # 输出数值比值；阵亡样本标 actual_rounds_kind=terminal
-                                               # 且 ratio_valid=no，避免把存活回合当作 TTK 校准
+                                               # 且 ratio_valid=no，避免把存活回合当作 TTK 校准；
+                                               # 阵亡样本另记录实际存活回合/投影可存活回合，
+                                               # 由 RACE_PROJ_SURVIVAL_RATIO_OBS 单独校准
     "race_prelock_defense_obs": True,  # 竞速判死但实测样本尚未达到入锁门槛时，
                                         # 记录实际选中的格挡牌/样本回合；只读观测，
                                         # 不改变评分、目标、判决或动作，False 严格回滚

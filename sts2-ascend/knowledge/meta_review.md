@@ -13230,3 +13230,26 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff 复核及 `git diff --check` 通过。宿主固定 256 槽直连入口因临时目录池耗尽，使用同一 selfcheck 的进程级临时目录适配完成完整回归；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1676局复盘（RACE_PROJ_SURVIVAL_RATIO_OBS）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速投影的阵亡样本中，`actual_rounds` 是存活到终局的回合数而非击杀耗时，因此现有 `RACE_PROJ_TTK_RATIO_OBS` 正确标为 `NA`；但同一读数仍可用于校准 `projected_tsurv`。若把两者混为 TTK 会污染模型，若完全丢弃则无法判断可存活回合投影是否系统性偏差。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-082256_Q8S9EZFZ7HF8.json`（第1676局）F28 的完整链中，decision 276 为 `end_turn`，`hp=16/block=0/incoming=16/energy=0`，竞速投影为 `pool=86/dpt=5.4/ttk=15.9259/tsurv=1.6`；decision 277 紧接同楼层 `GAME_OVER`，`final_hp=0`、实际存活 2 回合。现有战斗记录因此是 `actual_rounds=2/.../actual_over_projected=NA/.../actual_rounds_kind=terminal`，没有存活投影比值。
+- **EXPECTED_SIGNAL**：未来 3–10 个独立竞速终局应在阵亡样本追加 `actual_over_projected_survival=actual_rounds/projected_tsurv` 与 `RACE_PROJ_SURVIVAL_RATIO_OBS`；胜利样本仍只输出原有 TTK 比值。F28 按当前字段应得到 `2/1.6=1.25`。缺失或出现在胜利样本、`projected_tsurv<=0`、跨战斗样本，或 action/params 改变，即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/agent.py`：在既有 `race_audit_projection_ratio_obs` 开关下，仅对阵亡竞速样本读取 `projection_tsurv` 并追加 `RACE_PROJ_SURVIVAL_RATIO_OBS`；不改变原有 TTK `NA` 语义、评分、目标、门控或动作。
+- `sts2-ascend/brain/knowledge.py`：补充该开关同时承载 TTK 与独立 survival 校准的静态契约。
+- `sts2-ascend/brain/selfcheck.py`：新增死亡样本 `1.97` 比值断言，并验证关闭同一开关后 TTK/survival 两类尾部均消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3–10 个独立终局，按 `run_id/floor/actual_rounds/projected_tsurv/outcome` 对账；证据成熟前只做观测，不调整竞速或防守策略。
+- **调整**：若 survival 比值在多个同类终局稳定偏离 1，再单独评估 `tsurv` 投影口径；不得用阵亡 survival 比值替代胜利 TTK 校准。
+- **回滚**：将 `race_audit_projection_ratio_obs` 设为 `False`；预期同时移除两类比值尾部，保留 `RACE_PROJ_CALIB_AUDIT`、判定、action 与 params。
+- **验证**：直接运行规定命令时宿主固定 256 槽池报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用 clone 内继承 ACL 槽的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck 两次，均退出码 0、输出 **SELFCHECK OK**。目标源码 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

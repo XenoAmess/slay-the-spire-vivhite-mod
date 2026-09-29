@@ -3732,6 +3732,19 @@ class Agent:
                                 "/actual_over_projected=NA"
                                 "（RACE_PROJ_TTK_RATIO_OBS）"
                                 "/actual_rounds_kind=terminal/ratio_valid=no")
+                            try:
+                                _projected_tsurv = float(
+                                    _ra.get("projection_tsurv") or 0.0)
+                                if (math.isfinite(_projected_tsurv)
+                                        and _projected_tsurv > 0.0):
+                                    _survival_ratio = (
+                                        _actual_rounds / _projected_tsurv)
+                                    note += (
+                                        f"/actual_over_projected_survival="
+                                        f"{_survival_ratio:.2f}"
+                                        "（RACE_PROJ_SURVIVAL_RATIO_OBS）")
+                            except (TypeError, ValueError, OverflowError):
+                                pass
                         else:
                             _ttk_ratio = _actual_rounds / _projected_ttk
                             note += (

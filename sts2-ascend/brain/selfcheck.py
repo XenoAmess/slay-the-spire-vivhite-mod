@@ -15379,6 +15379,8 @@ def main() -> int:
         "关闭比值观测不应移除既有竞速投影快照"
     assert "RACE_PROJ_TTK_RATIO_OBS" not in ra_agent.ctx.combat_notes[-1], \
         "关闭比值观测后不应新增实际/预计TTK比值"
+    assert "RACE_PROJ_SURVIVAL_RATIO_OBS" not in ra_agent.ctx.combat_notes[-1], \
+        "关闭比值观测后不应新增实际/预计存活回合比值"
 
     ra_agent.know.policy["race_audit_projection_obs"] = False
     ra_agent.policy._race_audit = {
@@ -15419,6 +15421,21 @@ def main() -> int:
             "/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）"
             "/actual_rounds_kind=terminal/ratio_valid=no") in _ra_terminal_note, \
         f"阵亡样本不应伪造TTK比值: {_ra_terminal_note}"
+    assert "/actual_over_projected_survival=1.97" \
+        "（RACE_PROJ_SURVIVAL_RATIO_OBS）" in _ra_terminal_note, \
+        f"阵亡样本未记录存活投影比值: {_ra_terminal_note}"
+    ra_agent.know.policy["race_audit_projection_ratio_obs"] = False
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 2, "esc": False,
+        "projection_pool": 261.0, "projection_dpt": 5.4,
+        "projection_ttk": 48.3333, "projection_tsurv": 4.05405,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    _ra_terminal_off_note = ra_agent.ctx.combat_notes[-1]
+    assert "RACE_PROJ_TTK_RATIO_OBS" not in _ra_terminal_off_note \
+        and "RACE_PROJ_SURVIVAL_RATIO_OBS" not in _ra_terminal_off_note, \
+        f"关闭比值观测后阵亡样本仍有比值尾部: {_ra_terminal_off_note}"
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
