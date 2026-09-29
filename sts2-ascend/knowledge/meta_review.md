@@ -13276,3 +13276,28 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：规定命令先复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用全新 clone 内 cache 子目录的进程级 `tempfile.mkdtemp` 适配运行同一 selfcheck，退出码 0 且输出 `SELFCHECK OK`；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1679局复盘（NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`NONLETHAL_UNAVAILABLE_END_TURN_OBS` 只说明当前算术来袭缺口仍可活，不能解释随后同楼层是否立即进入权威终局。若把最近一条同楼层非致死无牌空过与下一条 `GAME_OVER` 连接，F17/T9 应出现一次可核对的终局结果，而不改前置 `end_turn`。
+- **EVIDENCE**：精确 run `9CLNV1HPFN1E`（第1679局）完整链位于 `sts2-ascend/knowledge/runs/20260929-092006_9CLNV1HPFN1E.json`。F17 decision 199（T9）为 `end_turn`，记录 `hp=5/block=7/incoming=11/gap=4/energy=0/cards=2/energy_locked=2/hand_block_candidates=2/hand_affordable_block_candidates=0/hand_max_block=6/hand_post_gap=0/hand_raw_survival=yes`，下一条 decision 200 为同楼层 `GAME_OVER`、失败、终局 HP 0。此前 T1/T2/T3/T5/T6/T7 也有同类非致死空过，说明不能把单帧 `raw_survival=yes` 当作真实终局保证。
+- **EXPECTED_SIGNAL**：未来 3–10 个独立窗口中，仅同楼层持久化非致死空过紧接权威 `GAME_OVER` 时产生一次 `NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS`，并对上 `source_round/source_action/outcome/final_hp` 及来源资源字段；跨楼层、无来源、已提交重试和普通继续路径不得重复。marker 缺失、错配或 action/params 漂移即证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可独立关闭的 `nonlethal_unavailable_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：在 `GAME_OVER` 的各结算/旧终局返回分支，从最后一条同楼层已持久化 `end_turn` 恢复非致死无牌审计，追加 `outcome/final_hp`、来源回合和资源容量字段；只读，不进入评分、候选、门控或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认接线、Policy 重载、丢动作重试、提交后去重和关闭键回滚；均保持 `continue_game_over` 与空参数。
+- 未修改 runs、stats、progression、`policy.json`、lessons、`.runtime`、归档、资产或在线进程；本批无 replay target。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：按 `run_id/floor/source_round/source_action/outcome/final_hp` 收集 3–10 个独立非致死空过终局，核对 `raw_survival`、格挡容量、真实 `applied end_turn {}` 与下一条状态；证据成熟前不改变防守或竞速策略。
+- **调整**：若同楼层 marker 与终局间隔不止一条、终局前已有新的战斗决策，或 `raw_survival=yes` 的正常继续样本被误接入，先收紧来源/邻接门禁，不升级为行为闸门。
+- **撤回**：将 `nonlethal_unavailable_terminal_outcome_obs` 设为 `False`；预期只移除终局 marker，既有非致死空过观测以及 action/params 保持不变。
+- **验证**：宿主固定 256 槽 selfcheck 入口先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用 clone 内继承 ACL 槽的进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码 0、输出 `SELFCHECK OK`；目标三文件 `git diff --check` 通过。未写入在线状态、学习账本或本任务书。
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

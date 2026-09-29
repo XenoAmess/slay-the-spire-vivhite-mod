@@ -901,6 +901,8 @@ class Policy:
         self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
         self._lethal_unavailable_terminal_outcome_pending = None  # 最近一次致死无牌空过，等待 GAME_OVER 结局对账
         self._lethal_unavailable_terminal_outcome_reported = False  # 致死无牌空过结局 marker 每场只写一次
+        self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
+        self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
@@ -2469,6 +2471,8 @@ class Policy:
             self._elite_forced_entry_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
+            self._nonlethal_unavailable_terminal_outcome_pending = None
+            self._nonlethal_unavailable_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
@@ -5554,6 +5558,147 @@ class Policy:
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 
+    def _consume_nonlethal_unavailable_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a non-lethal no-card end-turn to the authoritative GAME_OVER.
+
+        The precursor deliberately says that the arithmetic incoming gap was
+        survivable.  This terminal-only join records when native combat still
+        ended immediately afterward, without changing the preceding action or
+        treating the precursor as a lethal prediction.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "nonlethal_unavailable_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_nonlethal_unavailable_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_nonlethal_unavailable_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._nonlethal_unavailable_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _flag(value) -> str:
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            text = str(value or "unknown").casefold()
+            return text if text in {"yes", "no", "unknown"} else "unknown"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；非致死无牌终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('terminal_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/final_hp={_num(final_hp)}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/cards={_pending.get('cards', '?')}"
+            f"/energy_locked={_pending.get('energy_locked', '?')}"
+            f"/hook_locked={_pending.get('hook_locked', '?')}"
+            f"/hook_ids={_pending.get('hook_ids', '?')}"
+            f"/hand_block_candidates="
+            f"{_pending.get('hand_block_candidates', '?')}"
+            f"/hand_affordable_block_candidates="
+            f"{_pending.get('hand_affordable_block_candidates', '?')}"
+            f"/hand_max_block={_num(_pending.get('hand_max_block'))}"
+            f"/hand_post_gap={_num(_pending.get('hand_post_gap'))}"
+            f"/hand_raw_survival={_flag(_pending.get('hand_raw_survival'))}"
+            f"/block_locked={_flag(_pending.get('block_locked'))}"
+            "（NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_nonlethal_unavailable_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the non-lethal terminal join after a policy reload."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_nonlethal_unavailable_terminal_outcome_reported", False))
+        marker = "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._nonlethal_unavailable_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_nonlethal_unavailable_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
+        if marker_at < 0:
+            return
+        prefix = "非致死资源耗尽空过观测："
+        audit_at = reason.rfind(prefix, 0, marker_at)
+        if audit_at < 0:
+            return
+        audit = reason[audit_at + len(prefix):marker_at]
+
+        def _token(name: str):
+            match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", audit)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        try:
+            _pending = {
+                "terminal_round": row.get("turn", row.get("round")),
+                "source_action": row.get("action") or "end_turn",
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _number("energy"),
+                "cards": _token("cards") or "?",
+                "energy_locked": _token("energy_locked") or "?",
+                "hook_locked": _token("hook_locked") or "?",
+                "hook_ids": _token("hook_ids") or "?",
+                "hand_block_candidates": (
+                    _token("hand_block_candidates") or "?"),
+                "hand_affordable_block_candidates": (
+                    _token("hand_affordable_block_candidates") or "?"),
+                "hand_max_block": _number("hand_max_block"),
+                "hand_post_gap": _number("hand_post_gap"),
+                "hand_raw_survival": _token("hand_raw_survival") or "unknown",
+                "block_locked": _token("block_locked") or "unknown",
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._nonlethal_unavailable_terminal_outcome_pending = _pending
+        self._nonlethal_unavailable_terminal_outcome_reported = False
+
     def _consume_waterfall_about_to_blow_terminal_outcome_note(
             self, pol, victory, floor=None, final_hp=None) -> str:
         """Join a persisted Waterfall self-destruct turn to GAME_OVER.
@@ -7982,6 +8127,8 @@ class Policy:
             self._lethal_playable_reject_outcome_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
+            self._nonlethal_unavailable_terminal_outcome_pending = None
+            self._nonlethal_unavailable_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
@@ -16664,6 +16811,11 @@ class Policy:
         _lethal_unavailable_terminal_outcome_note = (
             self._consume_lethal_unavailable_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_nonlethal_unavailable_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _nonlethal_unavailable_terminal_outcome_note = (
+            self._consume_nonlethal_unavailable_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_waterfall_about_to_blow_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _waterfall_about_to_blow_terminal_outcome_note = (
@@ -16695,6 +16847,7 @@ class Policy:
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
+                            f"{_nonlethal_unavailable_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
@@ -16725,6 +16878,7 @@ class Policy:
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
+                        f"{_nonlethal_unavailable_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
@@ -16740,6 +16894,7 @@ class Policy:
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
+                                f"{_nonlethal_unavailable_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
