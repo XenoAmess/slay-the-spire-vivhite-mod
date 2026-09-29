@@ -18861,3 +18861,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.3686799284170634局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.49210928553008局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/23.463771083981428局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1711 胜，当前目标进阶 4
+
+## 第 1712 局复盘（2026-09-29 20:07）
+- 结果：💀 失败｜进阶 4｜到达层数 9｜当局评分 9
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_COMPOSITE_COLOR_WHEEL, VIVHITE_CARD_EVENT_LOOP
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血10｜自损8（可行动段8/非行动段14，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血24｜自损6（可行动段6/非行动段16，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血61｜自损22（可行动段22/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=120/dpt=15.6175/ttk=7.68371/tsurv=5.11111（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=7.68371/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.37（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/10.521551211330749局)，REND(38分/2.3345827958887884局)，THINKING_AHEAD(37分/3.93807909204924局)，MAYHEM(37分/3.2163465508187747局)，ROLLING_BOULDER(36分/3.9628553973338927局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.360389548667604局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/22.413386903030727局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(23分/23.381647885187494局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1712 胜，当前目标进阶 4
