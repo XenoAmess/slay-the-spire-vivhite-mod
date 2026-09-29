@@ -14230,3 +14230,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.600311915465213局)，BASH(14分/2.200263928470565局)，STOKE(16分/2.504199177058711局)
 - 策略进化：elite_grey_safety_mult: 2.30 → 2.50（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.41 → 0.44（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.02 → 2.01（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.50 → 2.45（行至 F25——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1694 胜，当前目标进阶 0
+
+## 第 1695 局复盘（2026-09-29 14:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：TAUNT, ANGER, DISMANTLE, VICIOUS, INFLAME, SHRUG_IT_OFF, POMMEL_STRIKE, CONFLAGRATION, BREAKTHROUGH, TAUNT, TWIN_STRIKE, IRON_WAVE, COLOSSUS, BLUDGEON, TRUE_GRIT, PACTS_END
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F8 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血18｜自损1（可行动段1/非行动段23，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血10; F14 Unknown战 掉血12; F15 Monster战 掉血3｜自损1（可行动段1/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血71｜自损1（可行动段1/非行动段66，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=172/dpt=15.525/ttk=11.0789/tsurv=8.35294（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=11.0789/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.20（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1108666431007235局)，HELLRAISER(26分/4.375312293169362局)，PROWESS(25分/6.714982281258835局)，FEED(24分/31.248957199306883局)，OFFERING(24分/16.332178288057435局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.591210823761085局)，BASH(14分/2.192563004720918局)，STOKE(16分/2.495434479939006局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.43（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1695 胜，当前目标进阶 0
