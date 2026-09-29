@@ -14274,3 +14274,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.564098226011203局)，BASH(14分/2.1696215758556336局)，STOKE(16分/2.469324018125031局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1698 胜，当前目标进阶 0
+
+## 第 1699 局复盘（2026-09-29 15:56）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：STOMP, UNMOVABLE, UPPERCUT, UNRELENTING, DISMANTLE, UNRELENTING, CINDER, HEMOKINESIS, PROWESS, JUGGERNAUT, FEED, RUPTURE, UPPERCUT, EXPECT_A_FIGHT, CALAMITY, CINDER, SHRUG_IT_OFF, HEMOKINESIS, CINDER, FIGHT_ME
+- 本局遗物：PEAR, STRAWBERRY, SHOVEL
+- 战斗记录：F20 Monster战 掉血15; F21 Monster战 掉血27; F22 Monster战 掉血19; F25 Elite战 掉血33｜竞速投影审计：pool=137/dpt=5.4/ttk=25.3704/tsurv=11.2121（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=25.3704/actual_over_projected=0.28（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战7回合获胜; F31 Monster战 掉血32｜自损5（可行动段5/非行动段32，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血50｜竞速投影审计：pool=296/dpt=24.975/ttk=11.8519/tsurv=3.125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.8519/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.92（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0814692970987143局)，PROWESS(26分/7.6214649299070905局)，HELLRAISER(26分/4.3143787568090515局)，FEED(25分/31.813763242363876局)，OFFERING(24分/16.10472540861108局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.555123882220164局)，BASH(14分/2.162027900340139局)，STOKE(16分/2.4606813840615938局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.01 → 2.00（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.45 → 2.40（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1699 胜，当前目标进阶 0
