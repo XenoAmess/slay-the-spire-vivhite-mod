@@ -231,7 +231,7 @@ DEFAULT_POLICY = {
     "play_threshold": 0.4,        # min score to bother playing a card
     "kill_race_lethal_free_energy_function_obs": True,  # Audit-only lethal kill-race free-energy observation; False disables the marker.
     "lethal_unavailable_end_turn_obs": True,  # Audit-only marker for a lethal end-turn with no affordable/playable card; includes raw/affordable hand block capacity and counterfactual post-block survival; False removes only the marker.
-    "lethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a lethal no-card end-turn to the next GAME_OVER/Victory result, including a bounded same-combat non-lethal precursor chain; False removes only the outcome marker.
+    "lethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a lethal no-card end-turn to the next GAME_OVER/Victory result; False removes only the outcome marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; includes native hook_locked/hook_ids plus raw hand block capacity and counterfactual post-block survival; False removes only the marker.
     "nonlethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a non-lethal no-card end-turn to a nearby GAME_OVER/Victory result, including a bounded same-combat chain; False removes only the outcome marker.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
