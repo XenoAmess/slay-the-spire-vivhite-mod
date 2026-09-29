@@ -14494,3 +14494,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.390455805637241局)，BASH(14分/2.0226933740007436局)，STOKE(16分/2.302099769519777局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1718 胜，当前目标进阶 0
+
+## 第 1719 局复盘（2026-09-29 22:05）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：HEADBUTT, BREAKTHROUGH, DISMANTLE, CINDER, HEMOKINESIS, SECOND_WIND, HEADBUTT, STONE_ARMOR, DEMON_FORM, ROLLING_BOULDER, UPPERCUT, TAUNT, ANGER
+- 本局遗物：HAPPY_FLOWER, JUZU_BRACELET
+- 战斗记录：F5 Monster战 掉血3; F8 Monster战 掉血0｜自损2（可行动段2/非行动段1，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血24｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血18; F15 Monster战 掉血18; F17 Boss战 掉血43｜自损5（可行动段5/非行动段23，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=196/dpt=10.125/ttk=19.358/tsurv=2.6875（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=19.358/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.98（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=17.4/projected_dpt=18.7586/ratio=0.97/min_ratio=0.10（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=17.4/projected_dpt=18.7586/ratio=0.97/min_ratio=0.10（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/7.1053343059710965局)，HELLRAISER(25分/5.977385161199556局)，FEED(24分/30.60808119075223局)，OFFERING(24分/15.014102798665458局)，MANGLE(24分/50.639070342522295局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.382089210317511局)，BASH(14分/2.015613947191741局)，STOKE(16分/2.2940424203264578局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1719 胜，当前目标进阶 0
