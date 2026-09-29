@@ -17836,6 +17836,84 @@ def main() -> int:
             and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
                 in d_nonlethal_waterfall_overlap.reason), \
         f"非致死链与瀑布自爆相重叠观测缺失或动作漂移: {d_nonlethal_waterfall_overlap}"
+    # A lethal card can be intercepted on play_card and leave only the
+    # persisted invulnerable-pool phase before the terminal end_turn.  The
+    # Waterfall/Steam identity must be present in the same bounded tail.
+    nonlethal_waterfall_phase_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_waterfall_phase_ctx = _SettleCtx()
+    nonlethal_waterfall_phase_ctx.decisions = [
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 48,
+            "turn": 6, "reason": d_nonlethal_empty.reason,
+        },
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 48,
+            "turn": 7,
+            "reason": "Boss state WATERFALL_GIANT powers="
+                       "STEAM_ERUPTION_POWERx45",
+        },
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 48,
+            "turn": 7,
+            "reason": "native invulnerable phase "
+                       "(RACE_INVULNERABLE_POOL_OBS)",
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 48,
+            "turn": 7,
+            "reason": "lethal resource exhaustion "
+                       "(LETHAL_UNAVAILABLE_END_TURN_OBS)",
+        },
+    ]
+    d_nonlethal_waterfall_phase = nonlethal_waterfall_phase_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_waterfall_phase_ctx)
+    assert (d_nonlethal_waterfall_phase.action
+            == d_nonlethal_chain.action
+            and d_nonlethal_waterfall_phase.params
+            == d_nonlethal_chain.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_waterfall_phase.reason
+            and "/terminal_overlap=waterfall_about_to_blow"
+                in d_nonlethal_waterfall_phase.reason), \
+        f"Waterfall play_card phase did not join overlap or drifted action: {d_nonlethal_waterfall_phase}"
+    nonlethal_generic_invuln_pol = policy.Policy(knowledge.Knowledge(tmp))
+    nonlethal_generic_invuln_ctx = _SettleCtx()
+    nonlethal_generic_invuln_ctx.decisions = [
+        dict(row) for row in nonlethal_waterfall_phase_ctx.decisions]
+    nonlethal_generic_invuln_ctx.decisions[1]["reason"] = (
+        "Boss state OTHER_BOSS powers=OTHER_POWERx45")
+    d_nonlethal_generic_invuln = nonlethal_generic_invuln_pol.decide(
+        nonlethal_unavailable_outcome_state,
+        nonlethal_generic_invuln_ctx)
+    assert ("/terminal_overlap=none" in d_nonlethal_generic_invuln.reason
+            and d_nonlethal_generic_invuln.action
+            == d_nonlethal_waterfall_phase.action
+            and d_nonlethal_generic_invuln.params
+            == d_nonlethal_waterfall_phase.params), \
+        f"Generic invulnerable phase was misclassified as Waterfall: {d_nonlethal_generic_invuln}"
+    nonlethal_waterfall_phase_off_know = knowledge.Knowledge(tmp)
+    nonlethal_waterfall_phase_off_know.policy[
+        "nonlethal_unavailable_terminal_overlap_obs"] = False
+    nonlethal_waterfall_phase_off_pol = policy.Policy(
+        nonlethal_waterfall_phase_off_know)
+    nonlethal_waterfall_phase_off_ctx = _SettleCtx()
+    nonlethal_waterfall_phase_off_ctx.decisions = list(
+        nonlethal_waterfall_phase_ctx.decisions)
+    d_nonlethal_waterfall_phase_off = (
+        nonlethal_waterfall_phase_off_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_waterfall_phase_off_ctx))
+    assert (d_nonlethal_waterfall_phase_off.action
+            == d_nonlethal_waterfall_phase.action
+            and d_nonlethal_waterfall_phase_off.params
+            == d_nonlethal_waterfall_phase.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_waterfall_phase_off.reason
+            and "NONLETHAL_UNAVAILABLE_TERMINAL_OVERLAP_OBS"
+                not in d_nonlethal_waterfall_phase_off.reason), \
+        f"Waterfall phase overlap rollback drifted action or prior marker: {d_nonlethal_waterfall_phase_off}"
+
     nonlethal_overlap_off_know = knowledge.Knowledge(tmp)
     nonlethal_overlap_off_know.policy[
         "nonlethal_unavailable_terminal_overlap_obs"] = False

@@ -13826,3 +13826,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现固定256槽入口的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 内用进程级临时目录适配运行同一入口，退出码0并输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay。
 
 - `retry_resolution: 20260930-004932-1790700572589486100-3a8e2966 integrated`
+
+## 2026-09-30 第1727—1728局复盘（WATERFALL_STEAM_TERMINAL_OVERLAP_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1727, 1728`
+production_code_commit: `767e0df6b9038d220357af2402eaea7aac765444`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1728局 F17 的 Waterfall 自爆相被低报：Steam Eruption 在 `play_card` 决策中先把瀑布推进到原生无敌血池相，随后才出现终端 `end_turn`；因此现有只扫描 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS` 的 join 会把真实重叠记成 `terminal_overlap=none`。若该解释错误，后续同尾部会缺少 Waterfall/Steam 身份或无敌血池 marker，新增字段不应命中。
+- **EVIDENCE**：完整读取第1728局 `sts2-ascend/knowledge/runs/20260930-011111_32T4YGQKHNUV.json`：F17 的 224—225 决策含 `WATERFALL_GIANT`/`STEAM_ERUPTION_POWER`，227 为 `RACE_INVULNERABLE_POOL_OBS`，228 为来袭45的终端空过，229 的 `terminal_overlap=none` 与最终 HP 0 同时出现。原生 v0.111.0 知识确认 Steam Eruption “When killed, deals damage at end of your next turn”，Waterfall 的 `TriggerAboutToBlowState` 将 HP 设为 999999999。
+- **EXPECTED_SIGNAL**：未来 3—10 个同楼层、同 `COMBAT` 的有界终局尾部，只有同时含 Waterfall/Steam 身份和 `RACE_INVULNERABLE_POOL_OBS` 时追加 `terminal_overlap=waterfall_about_to_blow`；泛化无敌相、跨战斗或缺任一身份不得命中。评分、候选、目标、action 与 params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：扩展既有 `nonlethal_unavailable_terminal_overlap_obs` 注释，明确覆盖 Waterfall/Steam 身份与无敌血池相的有界 join。
+- `sts2-ascend/brain/policy.py`：在既有最多12条、同楼层同 `COMBAT` 尾部中，复用专用 Waterfall end-turn marker，并新增“Waterfall/Steam 身份 + 原生无敌血池相”双条件；仍只写终局 reason 的 overlap 字段。
+- `sts2-ascend/brain/selfcheck.py`：加入正例、泛化无敌相负例和关闭开关夹具，严格断言既有链 marker 及 action/params 等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集 3—10 个 Waterfall/Steam 终局窗口，按真实 boss 身份、Steam 时序、无敌相 marker、终端原因和胜负分层；证据成熟前不改变出牌、end_turn 或竞速策略。
+- **调整**：若真实 payload 的 identity、Steam 时序或 `RACE_INVULNERABLE_POOL_OBS` 与夹具不一致，收紧字段契约并保留失败样本，不把 overlap 升级为行为门。
+- **回滚**：将 `nonlethal_unavailable_terminal_overlap_obs` 设为 `False`；预期只移除 overlap 字段，既有非致死链、其他终局 marker、action 和 params 不变。
+- **验证**：完整 selfcheck 使用 clone 内 `.review-cache/selfcheck-pool` 的进程级 `tempfile.mkdtemp` 适配，退出码0并输出 `SELFCHECK OK`；目标三文件最终 diff 与 staged diff `--check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

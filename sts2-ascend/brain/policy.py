@@ -6178,13 +6178,35 @@ class Policy:
             return
         row = _source_row
         _source_pos = len(_lookback) - 1 - _source_offset
-        _waterfall_overlap = any(
+        _overlap_tail_rows = _lookback[_source_pos:]
+        _waterfall_marker_overlap = any(
             isinstance(_candidate, dict)
             and (_candidate.get("screen") in (None, "COMBAT"))
             and (_candidate.get("action") == "end_turn")
             and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS"
             in str(_candidate.get("reason") or "")
-            for _candidate in _lookback[_source_pos:])
+            for _candidate in _overlap_tail_rows)
+        # Steam Eruption can intercept the lethal card on a play_card decision,
+        # move Waterfall Giant to its HP=999999999 phase, and only then leave
+        # an end_turn without the dedicated waterfall end-turn marker.  Join
+        # that persisted phase only when the same bounded tail carries both a
+        # Waterfall/Steam identity and the native invulnerable-pool marker.
+        _waterfall_identity_seen = any(
+            isinstance(_candidate, dict)
+            and (_candidate.get("screen") in (None, "COMBAT"))
+            and ("WATERFALL_GIANT" in str(_candidate.get("reason") or "")
+                 or "STEAM_ERUPTION_POWER"
+                 in str(_candidate.get("reason") or ""))
+            for _candidate in _overlap_tail_rows)
+        _waterfall_phase_seen = any(
+            isinstance(_candidate, dict)
+            and (_candidate.get("screen") in (None, "COMBAT"))
+            and "RACE_INVULNERABLE_POOL_OBS"
+            in str(_candidate.get("reason") or "")
+            for _candidate in _overlap_tail_rows)
+        _waterfall_overlap = (
+            _waterfall_marker_overlap
+            or (_waterfall_identity_seen and _waterfall_phase_seen))
         _sandpit_overlap = any(
             isinstance(_candidate, dict)
             and (_candidate.get("screen") in (None, "COMBAT"))
