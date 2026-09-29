@@ -17640,6 +17640,19 @@ def main() -> int:
     assert race_terminal_pol.decide(
         _lethal_unavailable_state(True), race_terminal_ctx).action == "play_card", \
         "竞速终端对账夹具热身帧未进入出牌状态"
+    # 同一竞速窗口可能连续留下多条容量帧。终局首末对账必须保留窗口
+    # 内最早的已持久化来源，不能把最近的零容量帧误当作 source。
+    race_terminal_later_output_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 6,
+        "reason":
+            "; race-allin lethal output capacity: hp=9/block=0"
+            "/incoming=20/energy=1/target_hp=44/target_block=0"
+            "/attack_candidates=0/raw_damage_cap=0/cards=none"
+            " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)",
+    }
+    race_terminal_ctx.decisions.append(
+        race_terminal_later_output_source_row)
     race_terminal_pol._krace_latch = True
     race_terminal_pol._krace_latch_round = 5
     race_terminal_pol._race_terminal_projection = {
@@ -17896,6 +17909,7 @@ def main() -> int:
     race_terminal_replay_ctx = _SettleCtx()
     race_terminal_replay_ctx.decisions = [
         dict(race_terminal_output_source_row),
+        dict(race_terminal_later_output_source_row),
         {
             "action": "end_turn", "floor": 33,
             "reason": d_race_terminal.reason,

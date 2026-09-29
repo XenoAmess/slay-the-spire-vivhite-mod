@@ -5344,11 +5344,13 @@ class Policy:
     @staticmethod
     def _find_race_output_capacity_transition_source(
             decisions, floor=None, before_index=None) -> dict | None:
-        """Find a bounded same-combat race output-capacity source row.
+        """Find the earliest bounded same-combat output-capacity source row.
 
         The source is an already persisted observation, never a recomputed
         combat snapshot.  Stop at an explicit floor or screen boundary so a
-        same-floor later combat cannot borrow an earlier capacity sample.
+        same-floor later combat cannot borrow an earlier capacity sample.  Keep
+        the earliest valid row in that bounded window so a sequence of
+        shrinking capacity frames cannot make the terminal row its own source.
         """
         if not isinstance(decisions, list) or not decisions:
             return None
@@ -5367,6 +5369,7 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return str(left) == str(right)
 
+        _source = None
         for _index in range(_stop - 1, max(-1, _stop - 24), -1):
             _row = decisions[_index]
             if not isinstance(_row, dict):
@@ -5412,8 +5415,11 @@ class Policy:
                                       "raw_damage_cap"))
                     or _source["attack_candidates"] < 0):
                 continue
-            return _source
-        return None
+            # The scan is newest-to-oldest so the combat boundary can stop the
+            # search without borrowing from an earlier room.  Do not return
+            # here: the last valid row encountered is the earliest source in
+            # the bounded same-combat window.
+        return _source
 
     def _restore_kill_race_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
