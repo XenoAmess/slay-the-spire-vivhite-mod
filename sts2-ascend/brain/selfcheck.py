@@ -8925,12 +8925,14 @@ def main() -> int:
     # 复盘）：784-F21 棘刺蟾蜍（SpikesMove 自挂 5 层荆棘）T5 我方 8 血打出
     # 「可击杀」终止条件（实付 4 血），斩杀命中的 5 点反伤把我方打到 0 阵亡——
     # 反伤是敌方来源伤害，不受原生自付禁致死 hook 保护，评分侧却记成纯收益。
-    # ① 自杀式斩杀（5 血打 4 血荆棘 5 目标）：击杀口径撤销，why 不以「可击杀」
-    # 开场且显形 THORNS_REFLECT_PRICING，攻击面仍中标（按实际移除参选）；
+    # ① 关闭新闸时，自杀式斩杀（5 血打 4 血荆棘 5 目标）保持旧口径：击杀口径
+    # 撤销，why 不以「可击杀」开场且显形 THORNS_REFLECT_PRICING，攻击面仍中标；
     # ② 非致死攻击进荆棘（80 血打 80 血荆棘目标）：攻击照常中标、附
     # THORNS_REFLECT_OBS 未计价注记（评分零改动）；③ 健康血量斩杀荆棘目标
     # （80 血打 4 血）：击杀口径保留并附 OBS 注记；④ thorns_reflect_pricing=0
     # 严格回滚：自杀式斩杀恢复「可击杀」口径、双注记消失。
+    # ⑤ 反伤足以致死（5 血打 80 血，及 5 血斩杀 4 血）：默认由
+    # THORNS_REFLECT_LETHAL_GUARD 压到禁玩线；关闭新键恢复旧动作/目标。
     def sl_thorny(hp=80, thorns=5, *, index=0, intent=0, name="棘刺蟾蜍"):
         _te = sl_enemy(hp=hp, layers=None, index=index, intent=intent, name=name)
         _te["powers"] = [{"power_id": "THORNS_POWER", "name": "荆棘",
@@ -8938,12 +8940,54 @@ def main() -> int:
         return _te
 
     tr_card = dict(sl_strike, valid_target_indices=[0])
-    _, tr_t1, tr_why1 = sl_pol._score_play(
-        dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2, sl_pol.know.policy,
-        my_hp=5, my_max_hp=80, cur_energy=3, run_deck=[])
-    assert tr_t1 == 0 and not tr_why1.startswith("可击杀") \
-            and "THORNS_REFLECT_PRICING" in tr_why1, \
-        f"自杀式斩杀未撤销击杀口径: target={tr_t1} why={tr_why1}"
+    sl_pol.know.policy["thorns_reflect_lethal_guard"] = False
+    try:
+        _, tr_t1, tr_why1 = sl_pol._score_play(
+            dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2,
+            sl_pol.know.policy, my_hp=5, my_max_hp=80, cur_energy=3,
+            run_deck=[])
+        assert tr_t1 == 0 and not tr_why1.startswith("可击杀") \
+                and "THORNS_REFLECT_PRICING" in tr_why1, \
+            f"旧口径未保留自杀式斩杀: target={tr_t1} why={tr_why1}"
+    finally:
+        sl_pol.know.policy["thorns_reflect_lethal_guard"] = True
+    assert bool(sl_pol.know.policy.get("thorns_reflect_lethal_guard")) is True, \
+        "荆棘反伤直死闸默认键缺失或未开启"
+    _, tr_tkill, tr_whykill = sl_pol._score_play(
+        dict(tr_card), [sl_thorny(hp=4, thorns=5)], 0, 0, 2,
+        sl_pol.know.policy, my_hp=5, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert tr_tkill is None \
+        and "THORNS_REFLECT_LETHAL_GUARD" in tr_whykill, \
+        f"默认荆棘斩杀直死未被拦截: target={tr_tkill} why={tr_whykill}"
+    _, tr_tlethal, tr_whylethal = sl_pol._score_play(
+        dict(tr_card), [sl_thorny(hp=80, thorns=5)], 0, 0, 2,
+        sl_pol.know.policy, my_hp=5, my_max_hp=80, cur_energy=3, run_deck=[])
+    assert tr_tlethal is None \
+        and "THORNS_REFLECT_LETHAL_GUARD" in tr_whylethal, \
+        f"非击杀荆棘反伤直死未被拦截: target={tr_tlethal} why={tr_whylethal}"
+    _, tr_tmix, tr_whymix = sl_pol._score_play(
+        dict(tr_card, valid_target_indices=[0, 1]),
+        [sl_thorny(hp=80, thorns=5, index=0),
+         sl_enemy(hp=80, index=1, name="普通目标")],
+        0, 0, 2, sl_pol.know.policy, my_hp=5, my_max_hp=80,
+        cur_energy=3, run_deck=[])
+    assert tr_tmix == 1 \
+        and "普通目标" in tr_whymix \
+        and "THORNS_REFLECT_LETHAL_GUARD" in tr_whymix, \
+        f"混合目标未跳过直死荆棘目标: target={tr_tmix} why={tr_whymix}"
+    sl_pol.know.policy["thorns_reflect_lethal_guard"] = False
+    try:
+        _, tr_tlethal_off, tr_whylethal_off = sl_pol._score_play(
+            dict(tr_card), [sl_thorny(hp=80, thorns=5)], 0, 0, 2,
+            sl_pol.know.policy, my_hp=5, my_max_hp=80, cur_energy=3,
+            run_deck=[])
+        assert tr_tlethal_off == 0 \
+            and "THORNS_REFLECT_LETHAL_GUARD" not in tr_whylethal_off \
+            and "THORNS_REFLECT_OBS" in tr_whylethal_off, \
+            (f"thorns_reflect_lethal_guard=False 未恢复旧口径: "
+             f"target={tr_tlethal_off} why={tr_whylethal_off}")
+    finally:
+        sl_pol.know.policy["thorns_reflect_lethal_guard"] = True
     _, tr_t2, tr_why2 = sl_pol._score_play(
         dict(tr_card), [sl_thorny(hp=80, thorns=5)], 0, 0, 2, sl_pol.know.policy,
         my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])

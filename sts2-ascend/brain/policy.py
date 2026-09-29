@@ -11907,6 +11907,11 @@ class Policy:
                     pol.get("thorns_reflect_pricing", 1) or 0) > 0
             except (TypeError, ValueError):
                 _thorns_pricing = False
+            try:
+                _thorns_lethal_guard = float(
+                    pol.get("thorns_reflect_lethal_guard", 1) or 0) > 0
+            except (TypeError, ValueError):
+                _thorns_lethal_guard = False
             _thorns_hp_pay = 0.0
             if _thorns_pricing:
                 if self._strategy_card(card) is not None:
@@ -12031,6 +12036,7 @@ class Policy:
             _winner_damp = 0.0
             _cf_best_i, _cf_best_s = None, -1.0
             _support_debuff_gate_targets = []
+            _thorns_lethal_veto_notes = []
             for e in enemies:
                 if (not (self._is_respawn_add(e) and not all_respawn)
                         and len(enemies) > 1
@@ -12063,6 +12069,19 @@ class Policy:
                         # 随之失效），攻击面仍按实际移除参选
                         killed = False
                         _thorns_suicide = True
+                    if bool(
+                        _thorns_lethal_guard
+                        and _thorns_reflect > 0.0
+                        and float(my_hp) - _thorns_hp_pay
+                        <= _thorns_reflect):
+                        _thorns_lethal_veto_notes.append((
+                            e.get("name") or e.get("enemy_id") or "敌人",
+                            _thorns_reflect,
+                            max(0.0, float(my_hp) - _thorns_hp_pay)))
+                        # 直死反伤目标不能只是与其他候选并列拿到最低分：当
+                        # 候选池只有它时，best_t 仍会被首次候选写入。把它从
+                        # 目标池移除，混合池仍可继续评估其他安全目标。
+                        continue
                 # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，第1452~1458局批
                 # 复盘）：WATERFALL_GIANT 的 SteamEruptionPower（zhs「被击杀时，
                 # 在你的下一回合结束时造成伤害」）原生 ShouldStopCombatFromEnding
@@ -12483,6 +12502,17 @@ class Policy:
                     why += (f"｜火线翻线锁：本场已翻线{self._focus_drift_flips}次，"
                             f"阻尼升级+{_drift_lock_step * self._focus_drift_flips:.1f}"
                             "（FOCUS_DRIFT_LOCK）")
+            if _thorns_lethal_veto_notes:
+                _thorns_veto_name, _thorns_veto_damage, _thorns_veto_hp = (
+                    _thorns_lethal_veto_notes[0])
+                _thorns_veto_note = (
+                    f"荆棘目标{_thorns_veto_name}反伤≈{_thorns_veto_damage:g}"
+                    f"≥支付后余血{_thorns_veto_hp:g}"
+                    "（THORNS_REFLECT_LETHAL_GUARD）")
+                if best_t is None:
+                    why = _thorns_veto_note + "，攻击禁玩"
+                else:
+                    why += "｜" + _thorns_veto_note + "，目标已剔除"
             # 火线漂移观测（FOCUS_DRIFT_OBS，第772~783局批复盘，纯观测不改分）：
             # 783 局 F35 CRUSHER+ROCKET 双自我强化体战，逐张定向火线
             # 碾碎爪→火箭→碾碎爪→…横跳（tgt 0→1→0→0→1），双方力量+2/回合

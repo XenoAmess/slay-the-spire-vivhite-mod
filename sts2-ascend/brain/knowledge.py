@@ -1208,6 +1208,12 @@ DEFAULT_POLICY = {
                                         # 攻击面仍按实际移除参选），其余反伤暴露纯留痕
                                         # （THORNS_REFLECT_OBS）不改分；0=关闭（一键回滚，反伤零
                                         # 感知、注记消失，旧行为零差异）
+    "thorns_reflect_lethal_guard": 1, # 荆棘反伤直死闸（THORNS_REFLECT_LETHAL_GUARD，
+                                        # 第1693局 F30 复盘新增，静态键）：现有
+                                        # THORNS_REFLECT_PRICING 只撤销「斩杀即自杀」的击杀口径，
+                                        # 仍可能让单体攻击在支付后余血≤反伤时被选中；该键将这类
+                                        # 攻击压到禁玩线并保留显式理由，覆盖击杀与非击杀目标。
+                                        # 0=严格关闭本批闸门，恢复旧评分与动作。
     "vivhite_hp_gate_rescue_block": 1,  # 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，
                                         # 第 355~360 局批复盘新增，静态键）：余量门拦下的謦欬牌
                                        # 全部退出残能救场本意是断「付血换不空过」死循环，但救场

@@ -13428,3 +13428,29 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：固定宿主256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行原始 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；目标文件 `git diff --check` 通过。已直接回读1690完整 run 验证来源扫描命中 D237；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy.json、lessons.md 或 replay，`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1693局复盘（THORNS_REFLECT_LETHAL_GUARD）
+
+profile_id: `ironclad`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `THORNS_REFLECT_PRICING` 只撤销“斩杀即自杀”的击杀口径，却仍可能把荆棘反伤足以致死的单体攻击选为动作。若把“支付后余血≤估算反伤”的单体攻击从目标候选中剔除，1693-F30 型的攻击自杀应停止；该假设可被后续同条件仍选中攻击、marker 缺失/错算、混合目标误弃安全目标或关闭键不能恢复旧动作证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-133850_E01RVBVHDVC7.json`（第1693局，361条决策）中，F30 决策索引359以 HP=1 打出【重锤】32伤攻击【棘刺蟾蜍】，理由明确记录荆棘反伤≈5、支付后余血1、`THORNS_REFLECT_PRICING`，随后索引360 为 `GAME_OVER`、HP=0。原生知识 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 记录 `SPINY_TOAD` 的 `SpikesMove` 施加 5 层 Thorns；`powers.jsonl` 的 `ThornsPower.BeforeDamageReceived` 记录被攻击时反伤。
+- **EXPECTED_SIGNAL**：未来3—10个独立荆棘窗口按 `run_id/floor/target/hp_after_payment/reflect` 对账；只要估算反伤足以致死，单体候选不得成为 selected target，并在理由出现 `THORNS_REFLECT_LETHAL_GUARD`。反伤不足以致死、健康血量斩杀、非荆棘目标及关闭键路径应分别保持既有行为；字段、目标或 action/params 违约即停止并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可独立关闭的 `thorns_reflect_lethal_guard` 静态键。
+- `sts2-ascend/brain/policy.py`：在既有单体荆棘估算与自付血计算后，将“支付后余血≤反伤”的击杀/非击杀目标从候选池剔除；混合目标继续评估安全目标，并记录目标、反伤和余血 marker。不改 AoE 路径，关闭键严格恢复旧 `THORNS_REFLECT_PRICING` 评分/目标语义。
+- `sts2-ascend/brain/selfcheck.py`：新增默认拦截斩杀式自杀、非击杀直死、混合目标安全转火和关闭键回滚断言；保留原有非致死、健康斩杀及 `thorns_reflect_pricing=0` 覆盖。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个独立荆棘窗口，按是否击杀、支付后余血、反伤层×命中数、是否存在安全替代目标及最终存活/终局分层；证据成熟前不扩大到 AoE 或其他反伤机制。
+- **调整**：若真实运行时原生反伤不是“层数×命中数”、单体候选仍穿透或安全替代目标被误剔除，先修正消费/字段契约，不直接放宽闸门。
+- **回滚**：将 `thorns_reflect_lethal_guard` 设为 `False`；预期仅移除新闸门及 marker，1693 前的旧 `THORNS_REFLECT_PRICING` 自杀式斩杀路径恢复。
+- **验证**：直接受管入口因既有256槽临时池上限报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 内用继承 ACL 槽位的进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay，`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
