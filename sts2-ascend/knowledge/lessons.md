@@ -14395,3 +14395,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4670899924528986局)，BASH(14分/2.087537685921684局)，STOKE(16分/2.3759014032457064局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1709 胜，当前目标进阶 0
+
+## 第 1710 局复盘（2026-09-29 19:28）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：FLAME_BARRIER, CINDER, SWORD_BOOMERANG, BLUDGEON, TREMBLE, BREAKTHROUGH, HEADBUTT, TAUNT, HOWL_FROM_BEYOND, HEMOKINESIS, TRUE_GRIT, FIGHT_ME
+- 本局遗物：GAME_PIECE
+- 战斗记录：F6 Monster战 掉血0; F11 Monster战 掉血14; F13 Monster战 掉血26; F14 Monster战 掉血7; F15 Monster战 掉血7｜自损2（可行动段2/非行动段5，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血61｜自损1（可行动段1/非行动段56，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=265/dpt=2.7/ttk=98.1481/tsurv=60（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=98.1481/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.10（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=31.8/projected_dpt=12.8263/ratio=3.61/min_ratio=0.89（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=31.8/projected_dpt=12.8263/ratio=3.61/min_ratio=0.89（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.002720496577329局)，HELLRAISER(26分/5.144163928433587局)，PROWESS(26分/7.33311995057804局)，FEED(24分/31.589327280518628局)，OFFERING(24分/15.495430901878684局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.4584551774793137局)，BASH(14分/2.080231304020958局)，STOKE(16分/2.3675857483343465局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1710 胜，当前目标进阶 0
