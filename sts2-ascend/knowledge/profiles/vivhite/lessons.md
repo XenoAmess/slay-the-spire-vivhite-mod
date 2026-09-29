@@ -18564,3 +18564,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.603869400396215局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/21.62362032304969局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/23.70769633905178局)
 - 策略进化：block_safety: 1.92 → 1.97（高速失血爆毙（5回合掉血78，每回合16≥14）——按「没挡住」证据上调防御权重）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1684 胜，当前目标进阶 4
+
+## 第 1685 局复盘（2026-09-29 11:37）
+- 结果：💀 失败｜进阶 4｜到达层数 13｜当局评分 13
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CLOSED_PROJECTION, VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：ICE_CREAM, JOSS_PAPER
+- 战斗记录：F2 Monster战 掉血6｜自损18（可行动段18/非行动段2，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血56｜自损28（可行动段28/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：JACKPOT(38分/11.566250431393032局)，REND(38分/2.56638671691227局)，THINKING_AHEAD(37分/4.329096354938849局)，MAYHEM(37分/3.5357020018925525局)，ROLLING_BOULDER(36分/4.356332733485231局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(20分/2.594755857494828局)，VIVHITE_CARD_COMPLEMENTARY_AFTERIMAGE(22分/21.547937651919018局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/23.6247194018651局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Elite战实测自损28/掉血56（50%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1685 胜，当前目标进阶 4
