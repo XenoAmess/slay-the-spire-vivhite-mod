@@ -13664,3 +13664,30 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：`py -3 -B sts2-ascend/brain/selfcheck.py` 在 clone 内继承 ACL 临时池执行，退出码0并输出 `SELFCHECK OK`；目标源码 `git diff --check` 通过。未写入 `.runtime/`、正式 `runs/archive`、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1716局复盘（EXHAUST_CAP_SKIP_PRESSURE_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1716`
+production_code_commit: `011a056b33da4511526c91890754c091c3cca367`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：消耗上限已满时，非致死回合会跳过高输出的 CINDER/余烬；既有 `EXHAUST_CAP_SKIP_OBS` 只证明“被拦截”，不能证明本次来袭后已经落入低血压力带。若 F5-T5 形态确实是后续掉血/终局的可重复前兆，则在同一候选 trace 补记受击后血量与牌面值，未来应能把跳过与后续结果对账；若 marker 在非上限或致死窗口出现，或 `pressure=yes/no` 与受击后 HP 阈值不一致，则假设被证伪。
+- **EVIDENCE**：精确 run `sts2-ascend/knowledge/runs/20260929-210915_FSDU1ANMS1NJ.json`（第1716局）F5-T5 为 CINDER/余烬、消耗上限 `1/1`、HP `32/80`、格挡 `0`、来袭 `22`，当前缺口 `22<32` 尚未致死，但本次受击后只剩 `10`；既有链随后 F5 继续降至7，F8 因29点战损终局。原生知识确认 CINDER 为18伤、随机消耗1张牌，故该样本同时满足“高输出牌被上限跳过”和“低血压力”两个可核验条件。
+- **EXPECTED_SIGNAL**：未来3—10个独立窗口按 `run_id/floor/turn/card/hp/block/incoming/gap/post/pressure/dmg/cblk/floor` 对账；上限拦截且 `post <= max(1, max_hp*0.25)` 时必须出现 `EXHAUST_CAP_SKIP_PRESSURE_OBS` 且 `pressure=yes`，高于阈值为 `no`，非拦截/致死/跨战斗样本不得出现。action、params、评分、目标与候选拦截状态必须不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `exhaust_cap_pressure_obs`；设为 `False` 只移除压力尾缀。
+- `sts2-ascend/brain/policy.py`：在既有 `EXHAUST_CAP_SKIP_OBS` 候选留痕中追加紧凑的 HP/格挡/来袭/缺口/受击后 HP/压力判定/伤害/牌面格挡/阈值字段；不改变评分、候选选择、目标或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：加入 CINDER F5-T5 形状，断言默认 trace 字段完整；关闭键断言既有 marker、action 和 params 严格保持不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：保持只读，收集3—10个独立消耗上限拦截窗口，按 `pressure`、被跳过牌伤害、后续 HP 变化和胜负分层；证据成熟前不把压力观测升级为行为闸门。
+- **调整**：若真实 trace 的伤害/格挡字段、最大生命或意图时序与夹具不一致，先修正观测契约并保留失败样本，不改出牌策略。
+- **回滚**：将 `exhaust_cap_pressure_obs` 设为 `False`；预期仅移除 `EXHAUST_CAP_SKIP_PRESSURE_OBS` 尾缀，既有 `EXHAUST_CAP_SKIP_OBS`、action、params 和评分保持不变。
+- **验证**：宿主固定256槽入口先报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在同一 clone 的 `.review-cache/selfcheck-pool` 继承 ACL 槽位中用进程级 `tempfile.mkdtemp` 适配运行完整 selfcheck，退出码0并输出 `SELFCHECK OK`（274次临时分配）；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

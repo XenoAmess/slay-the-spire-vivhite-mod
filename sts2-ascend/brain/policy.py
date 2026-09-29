@@ -10011,13 +10011,33 @@ class Policy:
                 # 上限拦截此前是静默 continue（trace 候选里凭空消失）——1382 局
                 # F17 T6 痛殴被跳过时零留痕，复盘只能靠候选缺席反推。拦截改显式
                 # 候选留痕（EXHAUST_CAP_SKIP_OBS，纯观测），拦截行为本身不变。
+                _exhaust_skip_why = (
+                    f"消耗上限已满（本场{self._exhaust_plays}/"
+                    f"{max_exhaust_plays}），非致死回合跳过"
+                    "（EXHAUST_CAP_SKIP_OBS）")
+                if bool(pol.get("exhaust_cap_pressure_obs", True)):
+                    try:
+                        _skip_damage, _skip_block, _skip_hits = card_numbers(c)
+                        _skip_gap = max(0, incoming - my_block)
+                        _skip_post_hp = max(0, my_hp - _skip_gap)
+                        _skip_pressure_floor = max(1.0, my_max_hp * 0.25)
+                        _skip_pressure = (
+                            "yes" if _skip_post_hp <= _skip_pressure_floor
+                            else "no")
+                        _exhaust_skip_why += (
+                            f"；压力观测：hp={my_hp:g}/blk={my_block:g}/"
+                            f"in={incoming:g}/gap={_skip_gap:g}/post="
+                            f"{_skip_post_hp:g}/pressure={_skip_pressure}/"
+                            f"dmg={_skip_damage:g}/cblk={_skip_block:g}/"
+                            f"floor={_skip_pressure_floor:g}"
+                            "（EXHAUST_CAP_SKIP_PRESSURE_OBS）")
+                    except (TypeError, ValueError, OverflowError):
+                        pass
                 self._trace_candidate(
                     c.get("name") or c.get("card_id") or f"手牌 {c.get('index')}",
                     None, index=c.get("index"), action="play_card",
                     status="skipped",
-                    why=(f"消耗上限已满（本场{self._exhaust_plays}/"
-                         f"{max_exhaust_plays}），非致死回合跳过"
-                         "（EXHAUST_CAP_SKIP_OBS）"))
+                    why=_exhaust_skip_why)
                 continue
             # 需要目标但载荷里的有效目标列表为空/过期（击杀敌人后刷新延迟时常见）：
             # 不再静默跳过——第 44 局 F6 上勾拳斩杀后，剩余 4 张可出攻击被整体跳过、

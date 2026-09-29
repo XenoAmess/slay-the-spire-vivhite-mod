@@ -20221,6 +20221,87 @@ def main() -> int:
                 and d_mandatory_low_energy.params.get("card_index") == 1), \
         f"能量不足时错误强打原生强制牌: {d_mandatory_low_energy.action}/{d_mandatory_low_energy.params}"
 
+    # 3exhaust_pressure) 第1716-F5-T5 的生产形态：CINDER/余烬原生造成18伤并
+    #      随机消耗1张牌；本场消耗上限已满时，当前22点来袭对32血尚未被当前
+    #      致死闸命中，但本次受击后只剩10血。新增尾缀只披露压力，不改变
+    #      EXHAUST_CAP_SKIP_OBS 的拦截、end_turn 动作或参数；关闭键必须严格回滚。
+    exhaust_pressure_ctx = type(
+        "ExhaustPressureCtx", (), {
+            "combat": {"comp_id": "EXHAUST_PRESSURE_COMP", "node_type": "Monster"},
+            "current_combat_is_hard": False,
+            "credit_tags": [],
+        })()
+    exhaust_pressure_state = {
+        "screen": "COMBAT",
+        "available_actions": ["play_card", "end_turn"],
+        "turn": 5,
+        "combat": {
+            "player": {
+                "current_hp": 32, "max_hp": 80, "block": 0, "energy": 3,
+            },
+            "hand": [{
+                "index": 0, "card_id": "CINDER", "name": "余烬",
+                "playable": True, "energy_cost": 2, "requires_target": True,
+                "valid_target_indices": [0],
+                "resolved_rules_text": "造成18点伤害。随机消耗1张牌。",
+                "dynamic_values": [{"name": "Damage", "current_value": 18}],
+            }],
+            "enemies": [{
+                "index": 0, "enemy_id": "SNAPPING_JAXFRUIT",
+                "name": "闪光贾克斯果", "current_hp": 40, "max_hp": 40,
+                "block": 0, "is_alive": True, "is_hittable": True,
+                "intents": [{"total_damage": 22}],
+            }],
+        },
+        "run": {
+            "current_hp": 32, "max_hp": 80, "gold": 0, "floor": 5,
+            "deck": [{"card_id": "CINDER"} for _ in range(8)],
+        },
+    }
+    exhaust_pressure_on = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-exhaust-pressure-"))),
+        random.Random(13))
+    exhaust_pressure_on._stall_combat = exhaust_pressure_ctx.combat
+    exhaust_pressure_on._exhaust_plays = 1
+    d_exhaust_pressure = exhaust_pressure_on.decide(
+        exhaust_pressure_state, exhaust_pressure_ctx)
+    exhaust_pressure_candidate = next(
+        (candidate for candidate in (
+            (d_exhaust_pressure.trace or {}).get("candidates") or [])
+         if candidate.get("index") == 0
+         and candidate.get("action") == "play_card"), {})
+    assert d_exhaust_pressure.action == "end_turn" \
+        and d_exhaust_pressure.params == {} \
+        and exhaust_pressure_candidate.get("status") == "skipped" \
+        and "EXHAUST_CAP_SKIP_OBS" in exhaust_pressure_candidate.get("why", "") \
+        and "EXHAUST_CAP_SKIP_PRESSURE_OBS" in exhaust_pressure_candidate.get("why", "") \
+        and "hp=32/blk=0/in=22/gap=22/post=10" \
+            in exhaust_pressure_candidate.get("why", "") \
+        and "pressure=yes/dmg=18/cblk=0/floor=20" \
+            in exhaust_pressure_candidate.get("why", ""), \
+        f"消耗上限低血压力观测未命中: {d_exhaust_pressure.action}/" \
+        f"{d_exhaust_pressure.params}/{d_exhaust_pressure.trace}"
+    exhaust_pressure_off = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(prefix="sts2-selfcheck-exhaust-pressure-off-"))),
+        random.Random(13))
+    exhaust_pressure_off.know.policy["exhaust_cap_pressure_obs"] = False
+    exhaust_pressure_off._stall_combat = exhaust_pressure_ctx.combat
+    exhaust_pressure_off._exhaust_plays = 1
+    d_exhaust_pressure_off = exhaust_pressure_off.decide(
+        exhaust_pressure_state, exhaust_pressure_ctx)
+    exhaust_pressure_off_candidate = next(
+        (candidate for candidate in (
+            (d_exhaust_pressure_off.trace or {}).get("candidates") or [])
+         if candidate.get("index") == 0
+         and candidate.get("action") == "play_card"), {})
+    assert d_exhaust_pressure_off.action == d_exhaust_pressure.action \
+        and d_exhaust_pressure_off.params == d_exhaust_pressure.params \
+        and "EXHAUST_CAP_SKIP_OBS" in exhaust_pressure_off_candidate.get("why", "") \
+        and "EXHAUST_CAP_SKIP_PRESSURE_OBS" not in exhaust_pressure_off_candidate.get("why", ""), \
+        f"消耗上限压力观测关闭后动作或既有标记漂移: " \
+        f"{d_exhaust_pressure_off.action}/{d_exhaust_pressure_off.params}/" \
+        f"{d_exhaust_pressure_off.trace}"
+
     # 3hshell) Native HARDENED_SHELL_POWER caps HP loss at 20 per turn.  The
     #          F11/1629 SKULKING_COLONY trace had 32 damage marked lethal while
     #          the target survived and dealt 18 on the next enemy turn.  Check

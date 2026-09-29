@@ -1575,6 +1575,11 @@ DEFAULT_POLICY = {
                                   # Boss攻坚提速在场，上限占满（3/3）把零代价痛殴静默跳过、带能空过
                                   # 后 T7 阵亡。豁免只越过上限/罚分，commit 计数照旧累加（保守）；
                                   # 上限真拦截改显式候选留痕（EXHAUST_CAP_SKIP_OBS）。0=严格回滚旧口径。
+    "exhaust_cap_pressure_obs": True,  # 消耗上限低血压力旁观（EXHAUST_CAP_SKIP_PRESSURE_OBS）：
+                                       # 当前未达致死线但本次来袭后会落入低血带时，补记
+                                       # hp/block/incoming/gap/post_intent_hp 与被跳过牌面值；
+                                       # 只扩展 EXHAUST_CAP_SKIP_OBS 的审计字段，不改变评分、
+                                       # 候选、目标、动作或参数；False 严格移除新增压力尾缀。
     # --- 多敌战斗辅助体转火（第 136~137 批复盘） ---
     "support_target_bonus": 8.0,  # 多敌战斗中本回合零伤害意图敌人（治疗/增益/蓄力）的定向转火加分：
                                   # 威胁分成使其永远排最后——头号杀手同族双子（生涯46战24死）的
