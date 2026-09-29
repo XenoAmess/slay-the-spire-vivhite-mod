@@ -12377,6 +12377,7 @@ def main() -> int:
                           boss_block_obs=True, boss_block_start=0,
                           boss_block_next=None,
                           boss_intent_ramp_obs=True, boss_intent_next=None,
+                          race_latch_intent_obs=True,
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
@@ -12473,6 +12474,8 @@ def main() -> int:
         cap_pol.know.policy[
             "boss_race_intent_ramp_obs"] = boss_intent_ramp_obs
         cap_pol.know.policy[
+            "race_projection_latch_intent_obs"] = race_latch_intent_obs
+        cap_pol.know.policy[
             "longfight_race_effective_dpt_obs"] = longfight_effective_dpt_obs
         cap_pol.know.policy[
             "longfight_joint_survival_margin_obs"] = longfight_joint_survival_obs
@@ -12531,6 +12534,34 @@ def main() -> int:
         f"滑溜在账时竞速投影缺少破层期观测: {d_combat_slippery.reason}"
     assert "SLIPPERY_TTK_OBS" not in d_combat_cap.reason, \
         f"无滑溜目标误挂破层期观测: {d_combat_cap.reason}"
+
+    # 3br-latch-intent-pressure：首次 live Boss 入锁必须保留当前意图、EMA、
+    # 蒸汽喷发层与投影端点，作为后续动态火力区间的可证伪连接点；只追加理由，
+    # 关闭开关时 action/params 严格不变。
+    d_combat_latch_pressure = combat_flip_probe(
+        1.5, latched=False, joint_incoming=12,
+        boss_state_powers=[{"id": "STEAM_ERUPTION_POWER", "amount": 3}])
+    assert ("RACE_PROJ_LATCH_INTENT_PRESSURE_OBS"
+            in d_combat_latch_pressure.reason
+            and "round=1,intent=12,intent_ema=20,loss_rate=20"
+            in d_combat_latch_pressure.reason
+            and "steam_eruption=3" in d_combat_latch_pressure.reason
+            and "pool=185" in d_combat_latch_pressure.reason
+            and "dpt=" in d_combat_latch_pressure.reason
+            and "ttk=" in d_combat_latch_pressure.reason
+            and "tsurv=" in d_combat_latch_pressure.reason), \
+        f"首次 Boss 竞速入锁压力观测缺失: {d_combat_latch_pressure.reason}"
+    d_combat_latch_pressure_off = combat_flip_probe(
+        1.5, latched=False, joint_incoming=12,
+        boss_state_powers=[{"id": "STEAM_ERUPTION_POWER", "amount": 3}],
+        race_latch_intent_obs=False)
+    assert (d_combat_latch_pressure_off.action
+            == d_combat_latch_pressure.action
+            and d_combat_latch_pressure_off.params
+            == d_combat_latch_pressure.params
+            and "RACE_PROJ_LATCH_INTENT_PRESSURE_OBS"
+            not in d_combat_latch_pressure_off.reason), \
+        f"首次 Boss 竞速入锁压力观测关闭后动作或理由漂移: {d_combat_latch_pressure_off}"
     assert "SLIPPERY_TTK_OBS" in d_combat_slippery_rb.reason \
         and "SLIPPERY_RACE_GUARD" not in d_combat_slippery_rb.reason, \
         f"滑溜观测应独立于守卫开关留痕: {d_combat_slippery_rb.reason}"

@@ -13351,3 +13351,28 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **验证**：按规定 `py -3 -B sts2-ascend/brain/selfcheck.py` 完整运行并输出 `SELFCHECK OK`、退出码0；临时 Windows DACL bootstrap 已在自检后删除，目标三文件 `git diff --check` 通过。`failed_review_replay.requested_packages=[]`，未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1686—1687局复盘（RACE_PROJ_LATCH_INTENT_PRESSURE_OBS）
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速首次 live latch 的现场压力缺少与后续动态意图/蒸汽喷发区间的直接连接；首锁的 TSURV 可能因此无法解释终局漂移，但在证据成熟前不改变抢斩杀行为。
+- **EVIDENCE**：1686（`BJYC27F4KAVY`）F17 SOUL_FYSH 的首锁快照为 `round=6/pool=50/dpt=18.4/ttk=2.71739/tsurv=0.958333`，后续有效 DPT 比为 `2.91/2.14/0.00`，并伴随易伤、无实体状态变化，说明上下文必须保留。1687（`JAAH6X0XP5P6`）F17 WATERFALL_GIANT 在终端回接的首锁快照为 `round=2/pool=204/dpt=24.3/ttk=8.39506/tsurv=4.06667`；随后有效 DPT 比为 `0.83/0.39/0.51/0.11/1.11/0.20/0.53`，蒸汽喷发由区间起始15层增长至39层，意图观测出现 `10→20`、`13→15`、`0→25`，终端为 `pool=74/dpt=32.8/ttk=2.2561/tsurv=0.32` 并在 F17 阵亡。原有终端漂移 marker 能证明结果，不能保留首次锁定时的压力端点。
+- **EXPECTED_SIGNAL**：未来3—10个独立 Boss 竞速锁定样本中，每场首次锁定恰有一条 `RACE_PROJ_LATCH_INTENT_PRESSURE_OBS`，字段可解析并能与同场后续 `BOSS_RACE_INTENT_RAMP_OBS`、有效 DPT 比和终局漂移关联；缺失、重复、跨场错配或 action/params 改变即证伪。若首锁压力与漂移无关，只保留观测，不升级为行为修改。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_projection_latch_intent_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：仅在 Boss 首次实测入锁时追加当前意图、EMA、竞速损失率、意图趋势、蒸汽喷发层、血池、DPT、TTK、TSURV；不改评分、投影、门控、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增 Boss 首锁压力夹具，并验证关闭开关后 action/params 不变且 marker 消失。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集3—10个独立 Boss 锁定样本，按首锁压力、后续意图/蒸汽增长、有效 DPT 比、终局胜负和遭遇 ID 分层；证据成熟前保持只读观测。
+- **调整**：若字段持久化或区间归属不正确，先修证据链；只有首锁压力与漂移出现稳定关系时，才另开行为假设。
+- **回滚**：将 `race_projection_latch_intent_obs` 设为 `False`；预期只移除该首次入锁尾缀，既有终端审计、action 与 params 保持不变。
+- **验证**：固定受管池直接运行先因既有256槽上限报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用 clone 内进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码0并输出 `SELFCHECK OK`；目标 diff `git diff --check` 通过。未写入`.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md`或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

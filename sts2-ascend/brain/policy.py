@@ -8111,6 +8111,33 @@ class Policy:
                             # 误判可被下一 tick 自然纠正）
                             if not self._krace_latch:
                                 self._krace_latch_round = round_no
+                                # 首次 live latch 压力快照（RACE_PROJ_LATCH_INTENT_PRESSURE_OBS）：
+                                # 终端首末投影对账只能在结局时告诉复盘「已经漂移」，
+                                # 不能把首次入锁时的当前意图、EMA、蒸汽喷发层与
+                                # 后续 Boss 有效火力区间直接接起来。只记录首次 Boss
+                                # 入锁现场，不参与 ttk/tsurv、评分或动作；关闭键严格
+                                # 回滚为无该尾缀的旧理由。
+                                if (bool(pol.get(
+                                        "race_projection_latch_intent_obs", True))
+                                        and cctx.get("node_type") == "Boss"):
+                                    _latch_steam = sum(
+                                        self._enemy_steam_eruption_stack(_e)
+                                        for _e in enemies
+                                        if isinstance(_e, dict))
+                                    _latch_intent_ema = float(
+                                        getattr(self, "_incoming_ema", 0.0) or 0.0)
+                                    _latch_intent_trend = float(
+                                        getattr(self, "_intent_trend", 0.0) or 0.0)
+                                    danger_note += (
+                                        f"；竞速首次入锁压力：round={round_no},"
+                                        f"intent={float(incoming):g},"
+                                        f"intent_ema={_latch_intent_ema:g},"
+                                        f"loss_rate={float(loss_rate):g},"
+                                        f"intent_trend={_latch_intent_trend:+g},"
+                                        f"steam_eruption={_latch_steam:g},"
+                                        f"pool={enemy_hp_total:g},dpt={dpt:g},"
+                                        f"ttk={ttk:.2f},tsurv={tsurv:.2f}"
+                                        "（RACE_PROJ_LATCH_INTENT_PRESSURE_OBS）")
                             self._krace_latch = True
                             _ra_audit = getattr(self, "_race_audit", None)
                             if isinstance(_ra_audit, dict):
