@@ -17482,6 +17482,11 @@ def main() -> int:
         "round": 6, "enemy_hp": 46.0, "dpt": 21.0,
         "ttk": 2.2, "tsurv": 0.5,
     }
+    race_terminal_pol._race_audit = {
+        "latched": True, "latch_round": 5, "esc": False,
+        "projection_pool": 200.0, "projection_dpt": 10.0,
+        "projection_ttk": 20.0, "projection_tsurv": 8.0,
+    }
     race_terminal_pol._race_same_round_loss = 31.0
     race_terminal_pol._race_same_round_loss_own = 31.0
     race_terminal_pol._race_same_round_loss_enemy = 41.0
@@ -17504,6 +17509,10 @@ def main() -> int:
         and "/kill_race=yes/race_allin=no" \
             in d_race_terminal.reason, \
         f"竞速终端对账观测缺失: {d_race_terminal and d_race_terminal.reason}"
+    assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
+            "/latch_tsurv=8（RACE_PROJ_LATCH_SNAPSHOT_OBS）"
+            in d_race_terminal.reason), \
+        f"竞速入锁投影快照缺失: {d_race_terminal and d_race_terminal.reason}"
 
     assert knowledge.DEFAULT_POLICY[
         "kill_race_lethal_output_capacity_obs"] is True, \
@@ -17569,6 +17578,9 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "kill_race_terminal_latch_hold_obs"] is True, \
         "DEFAULT_POLICY 缺少 kill_race_terminal_latch_hold_obs 默认开关"
+    assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_latch_drift_obs"] is True, \
+        "DEFAULT_POLICY 缺少 race_audit_projection_latch_drift_obs 默认开关"
 
     race_terminal_output_off_know = knowledge.Knowledge(tmp)
     race_terminal_output_off_know.policy[
@@ -17667,6 +17679,12 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局未继承输出容量: {d_race_terminal_outcome}"
+    assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
+            "/latch_tsurv=8/latest_round=6/latest_pool=46/latest_dpt=21"
+            "/latest_ttk=2.2/latest_tsurv=0.5/drift=yes"
+            "（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）"
+            in d_race_terminal_outcome.reason), \
+        f"竞速首末投影漂移对账缺失: {d_race_terminal_outcome}"
 
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
@@ -17718,6 +17736,12 @@ def main() -> int:
             " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
             in d_race_terminal_replay.reason), \
         f"进程重载后未恢复终端输出容量: {d_race_terminal_replay}"
+    assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
+            "/latch_tsurv=8/latest_round=6/latest_pool=46/latest_dpt=21"
+            "/latest_ttk=2.2/latest_tsurv=0.5/drift=yes"
+            "（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复竞速首末投影对账: {d_race_terminal_replay}"
 
     assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_replay.reason, \
@@ -17741,6 +17765,29 @@ def main() -> int:
             and "KILL_RACE_TERMINAL_OUTCOME_OBS"
             not in d_race_terminal_replay_off.reason), \
         f"进程重载恢复关闭后 action/marker 漂移: {d_race_terminal_replay_off}"
+
+    race_terminal_drift_off_know = knowledge.Knowledge(tmp)
+    race_terminal_drift_off_know.policy[
+        "race_audit_projection_latch_drift_obs"] = False
+    race_terminal_drift_off_pol = policy.Policy(race_terminal_drift_off_know)
+    race_terminal_drift_off_ctx = _SettleCtx()
+    race_terminal_drift_off_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }]
+    d_race_terminal_drift_off = race_terminal_drift_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_drift_off_ctx)
+    assert (d_race_terminal_drift_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_drift_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_drift_off.reason
+            and "RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS"
+            not in d_race_terminal_drift_off.reason
+            and "RACE_PROJ_LATCH_SNAPSHOT_OBS"
+            not in d_race_terminal_drift_off.reason), \
+        f"竞速首末投影观测关闭后 action/marker 漂移: {d_race_terminal_drift_off}"
 
     # 3z-5d) 结局观测的动作提交边界：第一次 GAME_OVER 决策若在 POST
     #        成功前丢失，瞬时 reported 位不能吞掉下一次重试；一旦带 marker

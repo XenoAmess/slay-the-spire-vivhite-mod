@@ -13301,3 +13301,28 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 - **撤回**：将 `nonlethal_unavailable_terminal_outcome_obs` 设为 `False`；预期只移除终局 marker，既有非致死空过观测以及 action/params 保持不变。
 - **验证**：宿主固定 256 槽 selfcheck 入口先报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用 clone 内继承 ACL 槽的进程级 `tempfile.mkdtemp` 适配运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，退出码 0、输出 `SELFCHECK OK`；目标三文件 `git diff --check` 通过。未写入在线状态、学习账本或本任务书。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-29 第1680局复盘（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）
+
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速判死投影在首次入锁与终局重算之间可能发生状态漂移；若只保留终局最新值，会把“首次判死口径”和“终局资源口径”混成一个不可证伪的数字。若同时记录首锁快照与终局最新投影，未来可区分投影漂移与稳定偏差，且不改变 action/params。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20260929-094322_F9LGVRU3GQHW.json`（第1680局）F17 Boss 的战斗收官审计为首段 `pool=166/dpt=6.075/ttk=27.3251/tsurv=18`，实际 6 回合阵亡、`actual_over_projected_survival=0.33`；同一楼层致死 `end_turn` 的终局重算却为 `pool=55/dpt=20.8333/ttk=2.64/tsurv=0.625`，两者缺少首末关联字段。
+- **EXPECTED_SIGNAL**：未来 3–10 个独立竞速终局按 `run_id/floor/latch_round/latest_round` 对账；每个有效样本应在 end-turn 记录 `RACE_PROJ_LATCH_SNAPSHOT_OBS`，并在 `GAME_OVER`/重载恢复记录两组投影与 `drift=yes|no`。无首锁来源、跨战斗串线、字段错配或 action/params 漂移即证伪并回滚。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可单独关闭的 `race_audit_projection_latch_drift_obs` 只读开关。
+- `sts2-ascend/brain/policy.py`：保存首次竞速入锁投影，贯穿 end-turn pending 与持久化重载，在终局追加首末投影对账；仅增加 `RACE_PROJ_LATCH_SNAPSHOT_OBS`、`RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS`，不进入评分、候选、门控或 action/params。
+- `sts2-ascend/brain/selfcheck.py`：覆盖同进程终局、Policy 重载和关闭开关；验证首末字段可恢复且动作/参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **继续**：收集 3–10 个独立竞速终局，按首锁/终局投影、实际存活回合与胜负分层；证据成熟前保持只读观测，不调整抢斩杀或防守策略。
+- **调整**：若漂移只出现在特定回合/状态变化，另开投影刷新或 round 锚点假设；若首锁字段无法持久化或与来源错配，先修复证据链，不升级为行为闸门。
+- **回滚**：将 `race_audit_projection_latch_drift_obs` 设为 `False`；预期只移除两个新观测尾部，既有终端审计、action 与 params 保持不变。
+- **验证**：受控完整 selfcheck 输出 `SELFCHECK OK`（退出码 0）；目标 diff `git diff --check` 通过。未写入 `.runtime/`、在线运行态、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 replay；`failed_review_replay.requested_packages=[]`，本批无 replay 目标。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

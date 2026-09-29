@@ -4282,6 +4282,36 @@ class Policy:
             f"{self._race_output_capacity_availability_tail(snapshot)}"
             f" ({marker})")
 
+    def _race_latch_projection_snapshot(self, pol) -> dict | None:
+        """Return the first latched projection for terminal drift auditing."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_audit_projection_latch_drift_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return None
+        _audit = getattr(self, "_race_audit", None)
+        if not isinstance(_audit, dict):
+            return None
+        try:
+            _round = int(float(_audit["latch_round"]))
+            _snapshot = {
+                "round": _round,
+                "pool": float(_audit["projection_pool"]),
+                "dpt": float(_audit["projection_dpt"]),
+                "ttk": float(_audit["projection_ttk"]),
+                "tsurv": float(_audit["projection_tsurv"]),
+            }
+        except (KeyError, TypeError, ValueError, OverflowError):
+            return None
+        if (_round < 0
+                or any(not math.isfinite(_value) or _value < 0.0
+                       for _key, _value in _snapshot.items()
+                       if _key != "round")):
+            return None
+        return _snapshot
+
     def _kill_race_terminal_audit_note(
             self, pol, my_hp, my_block, incoming, energy, *,
             kill_race=True, race_allin=False) -> str:
@@ -4337,6 +4367,17 @@ class Policy:
                 f"/esc_latch_hold={'yes' if _hold_count > 0 else 'no'}"
                 " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)")
 
+        _latch_snapshot_tail = ""
+        _latch_snapshot = self._race_latch_projection_snapshot(pol)
+        if isinstance(_latch_snapshot, dict):
+            _latch_snapshot_tail = (
+                f"；竞速投影入锁快照：latch_round={_latch_snapshot['round']}"
+                f"/latch_pool={_latch_snapshot['pool']:g}"
+                f"/latch_dpt={_latch_snapshot['dpt']:g}"
+                f"/latch_ttk={_latch_snapshot['ttk']:g}"
+                f"/latch_tsurv={_latch_snapshot['tsurv']:g}"
+                "（RACE_PROJ_LATCH_SNAPSHOT_OBS）")
+
         return (
             f"；竞速终端对账：lock_round={_round_text(getattr(self, '_krace_latch_round', None))}"
             f"/last_round={_round_text(_projection.get('round'))}"
@@ -4349,6 +4390,7 @@ class Policy:
             f"/kill_race={'yes' if _kill_race_state else 'no'}"
             f"/race_allin={'yes' if race_allin else 'no'}"
             f"{_latch_hold_tail}"
+            f"{_latch_snapshot_tail}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
     def _race_mode_flip_observation_note(
@@ -4865,6 +4907,50 @@ class Policy:
                 _capacity_tail += self._race_output_capacity_availability_tail(
                     _capacity)
 
+        _latch_projection_tail = ""
+        try:
+            _latch_projection_obs = bool(int(float(pol.get(
+                "race_audit_projection_latch_drift_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _latch_projection_obs = False
+        _latch_projection = _pending.get("latch_projection")
+        if _latch_projection_obs and isinstance(_latch_projection, dict):
+            try:
+                _latch_values = {
+                    _key: float(_latch_projection[_key])
+                    for _key in ("pool", "dpt", "ttk", "tsurv")
+                }
+                _latest_values = {
+                    "pool": float(_projection["enemy_hp"]),
+                    "dpt": float(_projection["dpt"]),
+                    "ttk": float(_projection["ttk"]),
+                    "tsurv": float(_projection["tsurv"]),
+                }
+                if (all(math.isfinite(_value) and _value >= 0.0
+                        for _value in _latch_values.values())
+                        and all(math.isfinite(_value) and _value >= 0.0
+                                for _value in _latest_values.values())):
+                    _drift = any(
+                        abs(_latch_values[_key] - _latest_values[_key])
+                        > 1e-9
+                        for _key in ("pool", "dpt", "ttk", "tsurv"))
+                    _latch_projection_tail = (
+                        f"；竞速投影首末对账：latch_round="
+                        f"{_round(_latch_projection.get('round'))}"
+                        f"/latch_pool={_latch_values['pool']:g}"
+                        f"/latch_dpt={_latch_values['dpt']:g}"
+                        f"/latch_ttk={_latch_values['ttk']:g}"
+                        f"/latch_tsurv={_latch_values['tsurv']:g}"
+                        f"/latest_round={_round(_projection.get('round'))}"
+                        f"/latest_pool={_latest_values['pool']:g}"
+                        f"/latest_dpt={_latest_values['dpt']:g}"
+                        f"/latest_ttk={_latest_values['ttk']:g}"
+                        f"/latest_tsurv={_latest_values['tsurv']:g}"
+                        f"/drift={'yes' if _drift else 'no'}"
+                        "（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                pass
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -4883,6 +4969,7 @@ class Policy:
             f"/race_allin={_flag(_pending.get('race_allin'))}"
             f"{_latch_hold_tail}"
             f"{_capacity_tail}"
+            f"{_latch_projection_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -5245,6 +5332,21 @@ class Policy:
                 "kill_race": _token("kill_race") or "unknown",
                 "race_allin": _token("race_allin") or "unknown",
             }
+            try:
+                _latch_projection = {
+                    "round": int(_number("latch_round")),
+                    "pool": _number("latch_pool"),
+                    "dpt": _number("latch_dpt"),
+                    "ttk": _number("latch_ttk"),
+                    "tsurv": _number("latch_tsurv"),
+                }
+                if (_latch_projection["round"] >= 0
+                        and all(math.isfinite(_value) and _value >= 0.0
+                                for _key, _value in _latch_projection.items()
+                                if _key != "round")):
+                    _pending["latch_projection"] = _latch_projection
+            except (KeyError, TypeError, ValueError, OverflowError):
+                pass
             _hold_token = _token("esc_latch_hold_count")
             try:
                 _pending["esc_latch_hold_count"] = max(
@@ -6535,6 +6637,13 @@ class Policy:
                                 if _key in _terminal_output_capacity
                             }
                         self._race_terminal_outcome_reported = False
+                _latch_projection = self._race_latch_projection_snapshot(pol)
+                if (isinstance(_latch_projection, dict)
+                        and isinstance(
+                            getattr(self, "_race_terminal_outcome_pending", None),
+                            dict)):
+                    self._race_terminal_outcome_pending[
+                        "latch_projection"] = dict(_latch_projection)
             non_curse_cards = [
                 card for card in hand
                 if str(card.get("card_type") or card.get("rarity") or "").casefold()
