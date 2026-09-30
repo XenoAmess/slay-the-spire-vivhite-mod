@@ -19343,6 +19343,107 @@ def main() -> int:
                 not in d_boss_dpt_boundary.reason), \
         f"Boss有效火力终局桥接越过 REWARD 边界: {d_boss_dpt_boundary}"
 
+    # 3z-5d) KIN 领袖闸减员对账终局桥接：1765-F17 的逐张
+    # KIN_LEADER_REMOVAL_TRADEOFF_OBS 只说明被压制随从的闸前分数，必须在
+    # 同楼层 GAME_OVER 连接胜负与终局血量；动作/参数不变，进程重载、重复提交、
+    # 开关关闭和 REWARD 边界均保持可证伪。
+    kin_tradeoff_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 4, "hp": 5,
+        "reason":
+            "战斗：打出【拆卸】→同族神官｜领袖闸减员对账："
+            "leader=KIN_PRIEST#2/leader_pool=120/"
+            "blocked_follower=KIN_FOLLOWER#0/follower_pool=58/"
+            "pre_gate_score=51.72/removal_bonus=3.10"
+            "（KIN_LEADER_REMOVAL_TRADEOFF_OBS）",
+    }
+    kin_tradeoff_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 4, "hp": 5, "reason": "终端空过",
+    }
+    kin_tradeoff_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    kin_tradeoff_know = knowledge.Knowledge(tmp)
+    kin_tradeoff_pol = policy.Policy(kin_tradeoff_know)
+    kin_tradeoff_ctx = _SettleCtx()
+    kin_tradeoff_ctx.decisions = [
+        dict(kin_tradeoff_source_row), dict(kin_tradeoff_terminal_row)]
+    d_kin_tradeoff_terminal = kin_tradeoff_pol.decide(
+        kin_tradeoff_terminal_state, kin_tradeoff_ctx)
+    assert (d_kin_tradeoff_terminal.action == "continue_game_over"
+            and d_kin_tradeoff_terminal.params == {}
+            and "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+                in d_kin_tradeoff_terminal.reason
+            and "outcome=defeat/floor=17/source_round=4"
+                "/source_action=play_card/leader=KIN_PRIEST#2"
+                "/leader_pool=120/blocked_follower=KIN_FOLLOWER#0"
+                "/follower_pool=58/pre_gate_score=51.72/removal_bonus=3.1"
+                "/terminal_round=4/terminal_action=end_turn/terminal_hp=5"
+                "/final_hp=0"
+                in d_kin_tradeoff_terminal.reason), \
+        f"KIN 领袖闸终局桥接缺失或动作漂移: {d_kin_tradeoff_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "kin_leader_removal_tradeoff_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 KIN 领袖闸终局观测开关"
+
+    kin_tradeoff_replay_ctx = _SettleCtx()
+    kin_tradeoff_replay_ctx.decisions = [
+        dict(kin_tradeoff_source_row), dict(kin_tradeoff_terminal_row)]
+    d_kin_tradeoff_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            kin_tradeoff_terminal_state, kin_tradeoff_replay_ctx)
+    assert (d_kin_tradeoff_replay.action == d_kin_tradeoff_terminal.action
+            and d_kin_tradeoff_replay.params == d_kin_tradeoff_terminal.params
+            and "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+                in d_kin_tradeoff_replay.reason), \
+        f"进程重载后未恢复 KIN 领袖闸终局桥接: {d_kin_tradeoff_replay}"
+
+    kin_tradeoff_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_kin_tradeoff_terminal.action,
+        "floor": 17, "reason": d_kin_tradeoff_terminal.reason})
+    d_kin_tradeoff_duplicate = kin_tradeoff_pol.decide(
+        kin_tradeoff_terminal_state, kin_tradeoff_ctx)
+    assert (d_kin_tradeoff_duplicate.action == d_kin_tradeoff_terminal.action
+            and d_kin_tradeoff_duplicate.params == d_kin_tradeoff_terminal.params
+            and "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+                not in d_kin_tradeoff_duplicate.reason), \
+        f"KIN 领袖闸终局桥接重复提交: {d_kin_tradeoff_duplicate}"
+
+    kin_tradeoff_off_know = knowledge.Knowledge(tmp)
+    kin_tradeoff_off_know.policy[
+        "kin_leader_removal_tradeoff_terminal_outcome_obs"] = False
+    kin_tradeoff_off_ctx = _SettleCtx()
+    kin_tradeoff_off_ctx.decisions = [
+        dict(kin_tradeoff_source_row), dict(kin_tradeoff_terminal_row)]
+    d_kin_tradeoff_off = policy.Policy(kin_tradeoff_off_know).decide(
+        kin_tradeoff_terminal_state, kin_tradeoff_off_ctx)
+    assert (d_kin_tradeoff_off.action == d_kin_tradeoff_terminal.action
+            and d_kin_tradeoff_off.params == d_kin_tradeoff_terminal.params
+            and "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+                not in d_kin_tradeoff_off.reason), \
+        f"KIN 领袖闸终局开关关闭后动作或 marker 漂移: {d_kin_tradeoff_off}"
+
+    kin_tradeoff_boundary_ctx = _SettleCtx()
+    kin_tradeoff_boundary_ctx.decisions = [
+        dict(kin_tradeoff_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(kin_tradeoff_terminal_row),
+    ]
+    d_kin_tradeoff_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            kin_tradeoff_terminal_state, kin_tradeoff_boundary_ctx)
+    assert (d_kin_tradeoff_boundary.action == d_kin_tradeoff_terminal.action
+            and d_kin_tradeoff_boundary.params == d_kin_tradeoff_terminal.params
+            and "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+                not in d_kin_tradeoff_boundary.reason), \
+        f"KIN 领袖闸终局桥接越过 REWARD 边界: {d_kin_tradeoff_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{

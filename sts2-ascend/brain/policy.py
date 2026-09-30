@@ -935,6 +935,8 @@ class Policy:
         self._boss_effective_dpt_samples = []
         self._boss_effective_dpt_terminal_outcome_pending = None
         self._boss_effective_dpt_terminal_outcome_reported = False
+        self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
+        self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
         # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
         self._longfight_effective_dpt_combat = None
@@ -2486,6 +2488,8 @@ class Policy:
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
+            self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
+            self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -5436,6 +5440,162 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the latest same-floor Kin leader-gate tradeoff.
+
+        The per-card tradeoff observation is durable before the native terminal
+        result arrives.  Join only the contiguous COMBAT/CARD_SELECTION tail so
+        a later room cannot borrow an older Kin target comparison.  This is
+        observation-only and never participates in target selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kin_leader_removal_tradeoff_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_kin_leader_removal_tradeoff_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            # The GAME_OVER action may have been lost before persistence.
+            # Durable marker presence, not this transient bit, is the commit
+            # proof for the next retry.
+            self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_kin_leader_removal_tradeoff_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _source = None
+        for _row in reversed(decisions):
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            if "KIN_LEADER_REMOVAL_TRADEOFF_OBS" not in _reason:
+                continue
+            _match = re.search(
+                r"领袖闸减员对账：leader=(?P<leader>[^/]+)"
+                r"/leader_pool=(?P<leader_pool>-?\d+(?:\.\d+)?)"
+                r"/blocked_follower=(?P<follower>[^/]+)"
+                r"/follower_pool=(?P<follower_pool>-?\d+(?:\.\d+)?)"
+                r"/pre_gate_score=(?P<pre_gate>-?\d+(?:\.\d+)?)"
+                r"/removal_bonus=(?P<removal_bonus>-?\d+(?:\.\d+)?)",
+                _reason)
+            if _match is None:
+                continue
+            try:
+                _values = {
+                    _key: float(_match.group(_key))
+                    for _key in ("leader_pool", "follower_pool",
+                                 "pre_gate", "removal_bonus")}
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_value) for _value in _values.values())
+                    or _values["leader_pool"] < 0.0
+                    or _values["follower_pool"] < 0.0):
+                continue
+            _source = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "leader": _match.group("leader").strip(),
+                "leader_pool": _values["leader_pool"],
+                "follower": _match.group("follower").strip(),
+                "follower_pool": _values["follower_pool"],
+                "pre_gate": _values["pre_gate"],
+                "removal_bonus": _values["removal_bonus"],
+            }
+            break
+        if _source is None:
+            return
+
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            _terminal = {}
+        self._kin_leader_removal_tradeoff_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal.get(
+                "turn", _terminal.get("round")),
+            "terminal_action": _terminal.get("action") or "?",
+            "terminal_hp": _terminal.get("hp"),
+        }
+        self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
+
+    def _consume_kin_leader_removal_tradeoff_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the latest Kin leader-gate tradeoff to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kin_leader_removal_tradeoff_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_kin_leader_removal_tradeoff_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_kin_leader_removal_tradeoff_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._kin_leader_removal_tradeoff_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；KIN领袖闸终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/leader={_pending.get('leader') or '?'}"
+            f"/leader_pool={_num(_pending.get('leader_pool'))}"
+            f"/blocked_follower={_pending.get('follower') or '?'}"
+            f"/follower_pool={_num(_pending.get('follower_pool'))}"
+            f"/pre_gate_score={_num(_pending.get('pre_gate'))}"
+            f"/removal_bonus={_num(_pending.get('removal_bonus'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -19248,6 +19408,11 @@ class Policy:
         _boss_effective_dpt_terminal_outcome_note = (
             self._consume_boss_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _kin_leader_removal_tradeoff_terminal_outcome_note = (
+            self._consume_kin_leader_removal_tradeoff_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_race_prelock_defense_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _race_prelock_defense_terminal_outcome_note = (
@@ -19310,6 +19475,7 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
+                            f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"

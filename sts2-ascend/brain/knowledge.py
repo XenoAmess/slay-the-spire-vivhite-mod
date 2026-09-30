@@ -672,6 +672,10 @@ DEFAULT_POLICY = {
                                                 # 之池值、闸前分数与减员加分；不改变
                                                 # 目标、评分、动作或参数，False 仅移除
                                                 # KIN_LEADER_REMOVAL_TRADEOFF_OBS。
+    "kin_leader_removal_tradeoff_terminal_outcome_obs": True,  # 将同楼层最近一次
+                                                                  # 领袖闸减员对账连接到
+                                                                  # GAME_OVER；只读、可关闭，
+                                                                  # 不改变目标或动作。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的

@@ -14295,3 +14295,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the direct selfcheck first hit the host's fixed 256-slot bootstrap limit; the clone-local process-level adapter using `.review-cache/selfcheck-pool` with 512 inherited-ACL slots exited 0 and printed `SELFCHECK OK`. Read-only production-chain replay emitted `1761: ratio=0.96` and `1762: ratio=0.61`, both with `continue_game_over` and `{}`. Targeted diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+## 2026-09-30 runs 1764-1765: bridge KIN leader-gate tradeoff to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1764, 1765`
+production_code_commit: `5b70d6895914bc6b497aeb35d5df6e9b23f0daa9` (local, no push)
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1765局 F17 的 `KIN_LEADER_FOCUS_GATE` 把连续攻击留在高血 `KIN_PRIEST`，尽管被压制的 `KIN_FOLLOWER` 只有 58 血；已有 `KIN_LEADER_REMOVAL_TRADEOFF_OBS` 只出现在逐张出牌理由，D208 `GAME_OVER` 无法说明这次领袖闸是否参与了败局。该假设可证伪：终局桥必须只接入同楼层、同战斗尾部的最新闸前对账，并记录胜负与终局生命；关闭开关或跨屏边界不得命中。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-135221_Q39KSND4WL5V.json`（1765，209 条 decisions）。F17 的 D191—D207 为连续战斗链；D204/D205 含领袖闸对账，最新 D205 为 `source_round=4/leader_pool=93/blocked_follower=KIN_FOLLOWER#0/follower_pool=58/pre_gate_score=43.47/removal_bonus=0`；D207 为 `hp=5` 的 `end_turn`，D208 为 `hp=0` 的 `GAME_OVER`，原记录没有新的终局桥。原生 knowledge 同时确认 `KIN_FOLLOWER` 最低血量 58、`KIN_PRIEST` 最低血量 190，`MINION_POWER` 说明领袖死亡后随从放弃战斗。`failed_review_replay.requested_packages=[]`。
+- **EXPECTED_SIGNAL**：未来 3—10 个同族终局窗口中，仅当最近的同楼层 `COMBAT/CARD_SELECTION` 尾部含有效 `KIN_LEADER_REMOVAL_TRADEOFF_OBS` 时追加 `KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS`，保留来源回合、领袖/随从血池、闸前分数、减员加分、终局回合、胜负和终局生命；`REWARD/SHOP/REST`、跨楼层、缺来源及关闭开关均无该标记，`continue_game_over` 与 `{}` 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kin_leader_removal_tradeoff_terminal_outcome_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有 `GAME_OVER` 收口处恢复同楼层连续战斗尾部的最新 KIN 领袖闸对账，并追加一次只读终局观测；状态在初始化和新 run 边界清空，不进入评分、目标、门控、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增正例、Policy 重载、重复提交、关闭开关和 `REWARD` 边界断言，均要求动作/参数不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集 3—10 个同族终局，比较来源/终局回合、同楼层边界、领袖/随从池值、闸前分数、减员加分、outcome、final_hp 与 action/params。
+- **Adjust**：若真实链出现跨战斗、跨屏或跨楼层误接，来源字段词形漂移，或最新来源不是终局前尾部，保留失败样本并收紧解析边界；不把该观测升级为行为门。
+- **Rollback**：将 `kin_leader_removal_tradeoff_terminal_outcome_obs` 设为 `False`；预期只移除 `KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS`，既有逐张对账、动作和参数保持不变。
+- **Validation**：直接 selfcheck 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。1765 只读生产链回放恢复了 `source_round=4/leader_pool=93/follower_pool=58/terminal_round=4/final_hp=0`，并保持 `continue_game_over` 与 `{}`；AST、目标 staged `git diff --check` 和最终三文件 diff 复核通过。本地 commit 为 `5b70d6895914bc6b497aeb35d5df6e9b23f0daa9`；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy/lessons 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
