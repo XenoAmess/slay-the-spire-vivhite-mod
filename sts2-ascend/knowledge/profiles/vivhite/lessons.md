@@ -19433,3 +19433,14 @@
 - 当前低价值卡牌：FASTEN(21分/4.627040653076963局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.53858130996414局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/28.18113708433456局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.38（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：4/1763 胜，当前目标进阶 4
+
+## 第 1764 局复盘（2026-09-30 13:51）
+- 结果：💀 失败｜进阶 4｜到达层数 7｜当局评分 7
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血42｜自损56（可行动段56/非行动段0，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=12/dpt=2.24/ttk=5.35714/tsurv=0.692308（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=17/projected_ttk=5.35714/actual_over_projected=3.17（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T17判死→实战17回合获胜; F6 Unknown战 掉血4｜自损14（可行动段14/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血39｜自损20（可行动段20/非行动段28，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=64/dpt=13.6374/ttk=4.69299/tsurv=3.13333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=4.69299/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.87（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：JACKPOT(37分/10.549459795262413局)，ENTROPY(37分/2.297630359036845局)，THINKING_AHEAD(37分/3.2817401630024947局)，MAYHEM(36分/3.6560507429181834局)，ROLLING_BOULDER(36分/3.302387131801983局)
+- 当前低价值卡牌：FASTEN(21分/4.610846010791194局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.463196275379268局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/28.082503104539388局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1764 胜，当前目标进阶 4
