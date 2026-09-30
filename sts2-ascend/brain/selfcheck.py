@@ -19343,6 +19343,116 @@ def main() -> int:
                 not in d_boss_dpt_boundary.reason), \
         f"Boss有效火力终局桥接越过 REWARD 边界: {d_boss_dpt_boundary}"
 
+    # 3z-5c-b) Boss 意图斜坡终局桥接：1769-F17-T5 的
+    # BOSS_RACE_INTENT_RAMP_OBS 记录了 7→27 的突增，但原生 GAME_OVER
+    # 只保留终端意图。仅连接同楼层连续战斗尾部，动作/参数必须不变；
+    # 进程重载、重复提交、关闭开关和 REWARD 边界都要可证伪。
+    boss_intent_ramp_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 5, "hp": 18,
+        "reason":
+            "Boss竞速有效火力对账：采样4→5回合，敌血净降33.0/回合"
+            " vs 投影61.8/回合（差-28.8，BOSS_RACE_EFFECTIVE_DPT_OBS）；"
+            "Boss intent=7->27 (+20)"
+            " (BOSS_RACE_INTENT_RAMP_OBS)",
+    }
+    boss_intent_ramp_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 6, "hp": 3, "reason": "终端致死空过",
+    }
+    boss_intent_ramp_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    boss_intent_ramp_know = knowledge.Knowledge(tmp)
+    boss_intent_ramp_pol = policy.Policy(boss_intent_ramp_know)
+    boss_intent_ramp_ctx = _SettleCtx()
+    boss_intent_ramp_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        dict(boss_intent_ramp_terminal_row)]
+    d_boss_intent_ramp_terminal = boss_intent_ramp_pol.decide(
+        boss_intent_ramp_terminal_state, boss_intent_ramp_ctx)
+    assert (d_boss_intent_ramp_terminal.action == "continue_game_over"
+            and d_boss_intent_ramp_terminal.params == {}
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_terminal.reason
+            and "outcome=defeat/floor=17/source_round=5"
+                "/source_action=play_card/intent=7->27/delta=+20"
+                "/terminal_round=6/terminal_action=end_turn/terminal_hp=3"
+                "/final_hp=0/bridge_decisions=1/bridge_rounds=1"
+                in d_boss_intent_ramp_terminal.reason), \
+        f"Boss 意图斜坡终局桥接缺失或动作漂移: {d_boss_intent_ramp_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "boss_race_intent_ramp_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 Boss 意图斜坡终局观测开关"
+
+    boss_intent_ramp_replay_ctx = _SettleCtx()
+    boss_intent_ramp_replay_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        dict(boss_intent_ramp_terminal_row)]
+    d_boss_intent_ramp_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state, boss_intent_ramp_replay_ctx)
+    assert (d_boss_intent_ramp_replay.action
+            == d_boss_intent_ramp_terminal.action
+            and d_boss_intent_ramp_replay.params
+            == d_boss_intent_ramp_terminal.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_replay.reason), \
+        f"进程重载后未恢复 Boss 意图斜坡终局桥接: {d_boss_intent_ramp_replay}"
+
+    boss_intent_ramp_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_boss_intent_ramp_terminal.action,
+        "floor": 17, "reason": d_boss_intent_ramp_terminal.reason})
+    d_boss_intent_ramp_duplicate = boss_intent_ramp_pol.decide(
+        boss_intent_ramp_terminal_state, boss_intent_ramp_ctx)
+    assert (d_boss_intent_ramp_duplicate.action
+            == d_boss_intent_ramp_terminal.action
+            and d_boss_intent_ramp_duplicate.params
+            == d_boss_intent_ramp_terminal.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_duplicate.reason), \
+        f"Boss 意图斜坡终局桥接重复提交: {d_boss_intent_ramp_duplicate}"
+
+    boss_intent_ramp_off_know = knowledge.Knowledge(tmp)
+    boss_intent_ramp_off_know.policy[
+        "boss_race_intent_ramp_terminal_outcome_obs"] = False
+    boss_intent_ramp_off_ctx = _SettleCtx()
+    boss_intent_ramp_off_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        dict(boss_intent_ramp_terminal_row)]
+    d_boss_intent_ramp_off = policy.Policy(
+        boss_intent_ramp_off_know).decide(
+            boss_intent_ramp_terminal_state, boss_intent_ramp_off_ctx)
+    assert (d_boss_intent_ramp_off.action
+            == d_boss_intent_ramp_terminal.action
+            and d_boss_intent_ramp_off.params
+            == d_boss_intent_ramp_terminal.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_off.reason), \
+        f"Boss 意图斜坡终局开关关闭后动作或 marker 漂移: {d_boss_intent_ramp_off}"
+
+    boss_intent_ramp_boundary_ctx = _SettleCtx()
+    boss_intent_ramp_boundary_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(boss_intent_ramp_terminal_row),
+    ]
+    d_boss_intent_ramp_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state, boss_intent_ramp_boundary_ctx)
+    assert (d_boss_intent_ramp_boundary.action
+            == d_boss_intent_ramp_terminal.action
+            and d_boss_intent_ramp_boundary.params
+            == d_boss_intent_ramp_terminal.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_boundary.reason), \
+        f"Boss 意图斜坡终局桥接越过 REWARD 边界: {d_boss_intent_ramp_boundary}"
+
     # 3z-5d) KIN 领袖闸减员对账终局桥接：1765-F17 的逐张
     # KIN_LEADER_REMOVAL_TRADEOFF_OBS 只说明被压制随从的闸前分数，必须在
     # 同楼层 GAME_OVER 连接胜负与终局血量；动作/参数不变，进程重载、重复提交、

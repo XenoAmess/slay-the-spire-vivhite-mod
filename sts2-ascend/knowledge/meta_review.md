@@ -14377,3 +14377,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level ACL adapter exited 0 with `SELFCHECK OK`. AST parsing, targeted `git diff --check`, and the actual 1768 read-only replay passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1769: bridge Boss intent ramp to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1769`
+production_code_commit: `80a69d8d8` (local, no push; report finalized in amended commit)
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1769 records a Boss intent ramp of `7->27 (+20)` in the F17/T5 `BOSS_RACE_INTENT_RAMP_OBS` source row, but the authoritative `GAME_OVER` row does not connect that pressure change to the defeat. This is falsifiable: a bounded same-floor COMBAT/CARD_SELECTION tail should emit one terminal marker with the source/terminal fields, while a REWARD boundary, another floor, missing source, or disabled key must remain silent; action and params must not change.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-151000_V9P5C0ZVJERH.json` contains 225 decisions. D215 is F17/T5 `play_card`, HP 18, with `BOSS_RACE_EFFECTIVE_DPT_OBS` followed by `Boss intent=7->27 (+20) (BOSS_RACE_INTENT_RAMP_OBS)`; D224 is F17/T6 `end_turn`, HP 3, and D225 is the defeat `GAME_OVER` at final HP 0 without this terminal bridge. A current-policy read-only replay of the chain emitted `BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS`, `source_round=5/source_action=play_card/intent=7->27/delta=+20`, `terminal_round=6/terminal_action=end_turn/terminal_hp=3/final_hp=0`, and `bridge_decisions=9/bridge_rounds=1`, while returning `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching Boss terminal windows, emit `BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS` only from the latest same-floor contiguous combat tail, preserving source/terminal rounds, intent delta, outcome, final HP, and bridge length. REWARD/SHOP/REST, cross-floor, missing-source, and off-switch cases remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `boss_race_intent_ramp_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest same-floor COMBAT/CARD_SELECTION intent-ramp row before `GAME_OVER`, parse only finite non-negative rising deltas, and append one observation-only terminal note. Run/combat boundaries reset the transient state; scoring, candidate choice, gating, action, and params are untouched.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate-persistence, off-switch, and REWARD-boundary assertions, including exact source/terminal fields and unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-combat Boss terminal windows and compare independently counted source-to-terminal rows, source/terminal rounds, intent delta, outcome, final HP, and action/params.
+- **Adjust**: if real traces show a screen/floor crossing, stale source, token drift, or bridge-count mismatch, retain the failure and tighten only the bounded observation parser; do not promote this marker into behavior.
+- **Rollback**: set `boss_race_intent_ramp_terminal_outcome_obs` to `False`; only the new terminal marker should disappear, while existing terminal audits, action, and params remain unchanged.
+- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the clone-local process-level ACL-preserving adapter ran the final code and exited 0 with `SELFCHECK OK`. The actual 1769 read-only replay matched all source/terminal/bridge fields above. Final targeted `git diff --check` and complete three-file diff review passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

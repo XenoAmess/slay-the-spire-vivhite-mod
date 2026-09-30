@@ -844,6 +844,7 @@ DEFAULT_POLICY = {
     # --- 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地） ---
     "kill_race_enabled": True,
     "boss_race_intent_ramp_obs": True,  # read-only raw intent delta between Boss DPT windows
+    "boss_race_intent_ramp_terminal_outcome_obs": True,  # Audit-only same-combat join from a Boss intent ramp to GAME_OVER; False removes only this terminal marker.
     "race_audit_effective_dpt_obs": True,  # aggregate existing Boss effective-DPT windows at combat close; observation only
     "race_audit_effective_dpt_phase_obs": True,  # split the close-time Boss DPT audit by live Slippery phase; observation only
     "race_audit_projection_obs": True,  # 竞速判死审计的投影快照观测位：把入锁时

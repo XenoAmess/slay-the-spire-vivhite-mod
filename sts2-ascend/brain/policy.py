@@ -937,6 +937,8 @@ class Policy:
         self._boss_effective_dpt_samples = []
         self._boss_effective_dpt_terminal_outcome_pending = None
         self._boss_effective_dpt_terminal_outcome_reported = False
+        self._boss_intent_ramp_terminal_outcome_pending = None
+        self._boss_intent_ramp_terminal_outcome_reported = False
         self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
         self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
@@ -2494,6 +2496,8 @@ class Policy:
             self._race_prelock_defense_terminal_outcome_reported = False
             self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
             self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
+            self._boss_intent_ramp_terminal_outcome_pending = None
+            self._boss_intent_ramp_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
         # 态及测试桩，避免 state/ctx 暂时跨局时重放旧 credit_tags、吃掉新局配额。
         ctx_run_key = getattr(ctx, "run_id", None)
@@ -5444,6 +5448,164 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_boss_intent_ramp_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the latest Boss intent ramp before GAME_OVER.
+
+        ``BOSS_RACE_INTENT_RAMP_OBS`` is emitted on a persisted effective-DPT
+        row, but the native terminal row does not retain that intermediate
+        incoming-intent jump.  Join only the contiguous same-floor combat tail
+        so the result remains an audit and cannot borrow another room's ramp.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "boss_race_intent_ramp_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        _decisions = getattr(ctx, "decisions", None)
+        _marker = "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_boss_intent_ramp_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            # The terminal action may have been lost before persistence.  A
+            # durable marker, not this transient bit, is the commit proof.
+            self._boss_intent_ramp_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_boss_intent_ramp_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _source = None
+        _source_index = -1
+        for _index in range(len(_decisions) - 1, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind("BOSS_RACE_INTENT_RAMP_OBS")
+            if _marker_at < 0:
+                continue
+            _prefix = _reason[:_marker_at]
+            if "BOSS_RACE_EFFECTIVE_DPT_OBS" not in _prefix:
+                continue
+            _match = re.search(
+                r"Boss intent=(?P<start>-?\d+(?:\.\d+)?)(?:→|->)"
+                r"(?P<end>-?\d+(?:\.\d+)?)\s*"
+                r"\(\+(?P<delta>\d+(?:\.\d+)?)\)",
+                _prefix)
+            if _match is None:
+                continue
+            try:
+                _start = float(_match.group("start"))
+                _end = float(_match.group("end"))
+                _delta = float(_match.group("delta"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_value) and _value >= 0.0
+                         for _value in (_start, _end, _delta))
+                    or _end < _start or _delta <= 0.0):
+                continue
+            _source = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "intent_start": _start,
+                "intent_end": _end,
+                "intent_delta": _delta,
+            }
+            _source_index = _index
+            break
+        if _source is None:
+            return
+
+        _terminal = _decisions[-1]
+        if not isinstance(_terminal, dict):
+            _terminal = {}
+        _source["terminal_round"] = _terminal.get(
+            "turn", _terminal.get("round"))
+        _source["terminal_action"] = _terminal.get("action") or "?"
+        _source["terminal_hp"] = _terminal.get("hp")
+        _source["bridge_decisions"] = max(
+            0, len(_decisions) - 1 - _source_index)
+        try:
+            _source["bridge_rounds"] = (
+                int(float(_source["terminal_round"]))
+                - int(float(_source["source_round"])))
+        except (TypeError, ValueError, OverflowError):
+            _source["bridge_rounds"] = "?"
+        self._boss_intent_ramp_terminal_outcome_pending = _source
+        self._boss_intent_ramp_terminal_outcome_reported = False
+
+    def _consume_boss_intent_ramp_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Attach the latest Boss intent ramp to the native terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "boss_race_intent_ramp_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_boss_intent_ramp_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_boss_intent_ramp_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._boss_intent_ramp_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；Boss意图斜坡终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/intent={_num(_pending.get('intent_start'))}->"
+            f"{_num(_pending.get('intent_end'))}"
+            f"/delta=+{_num(_pending.get('intent_delta'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS）")
 
     def _restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -10761,6 +10923,8 @@ class Policy:
             self._boss_effective_dpt_samples = []
             self._boss_effective_dpt_terminal_outcome_pending = None
             self._boss_effective_dpt_terminal_outcome_reported = False
+            self._boss_intent_ramp_terminal_outcome_pending = None
+            self._boss_intent_ramp_terminal_outcome_reported = False
             self._longfight_effective_dpt_combat = ctx.combat
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
@@ -19635,6 +19799,11 @@ class Policy:
         _boss_effective_dpt_terminal_outcome_note = (
             self._consume_boss_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_boss_intent_ramp_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _boss_intent_ramp_terminal_outcome_note = (
+            self._consume_boss_intent_ramp_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
@@ -19707,6 +19876,7 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
+                            f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
@@ -19743,6 +19913,7 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
+                        f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
@@ -19764,6 +19935,7 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
+                                f"{_boss_intent_ramp_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
