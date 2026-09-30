@@ -14267,3 +14267,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct selfcheck reproduced the host's fixed 256-directory bootstrap limit; the clone-local process-level ACL-preserving temp adapter then exited 0 with `SELFCHECK OK`. The actual 1759 chain probe emitted the D374 source fields and `bridge_decisions=2`, while the terminal action remained `continue_game_over` with `{}`. Targeted diff checks passed; no `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1760-1762: bridge BOSS_RACE_EFFECTIVE_DPT_OBS to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1760, 1761, 1762`
+production_code_commit: `pending local commit after report closeout`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Runs 1761/1762 persist a same-Boss-combat `BOSS_RACE_EFFECTIVE_DPT_OBS` sample, but the authoritative `GAME_OVER` row does not connect the latest effective actual/projected DPT ratio to the outcome. The falsifiable prediction is that a bounded same-floor COMBAT/CARD_SELECTION tail will recover the newest sample, while a screen boundary, another floor, or no sample will remain silent; terminal action and params will not change.
+- **EVIDENCE**: The complete chains for runs 1760 (`20260930-122104_DUAF1UK77FAF.json`), 1761 (`20260930-123304_ZHJAEFNFKXG2.json`), and 1762 (`20260930-124857_53MR0MTYJ0B8.json`) were read. Run 1760 is a negative control with no Boss effective-DPT sample. In run 1761, the final same-floor sample is `source_round=5`, `sample=4→5`, `actual_dpt=23`, `projected_dpt=24`, `ratio=0.96`, encounter `KIN_FOLLOWER+KIN_PRIEST`, while the pre-change terminal row had no bridge. In run 1762, D198 records `sample=7→8`, `actual_dpt=14`, `projected_dpt=23`, `ratio=0.61`, encounter `LAGAVULIN_MATRIARCH`; D201 had terminal audits but no effective-DPT outcome bridge. A read-only production replay after the patch emitted the marker for 1761 and 1762 with `continue_game_over` and `{}` unchanged.
+- **EXPECTED_SIGNAL**: Over the next 3—10 matching Boss terminal windows, emit `BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS` only from the latest same-floor bounded combat tail, preserving source round/action, sample window, actual/projected DPT, ratio, encounter, terminal row, final HP, and outcome. Cross-floor, REWARD/SHOP/REST, missing-source, and non-Boss cases remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `boss_race_effective_dpt_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest same-floor COMBAT/CARD_SELECTION effective-DPT source immediately before `GAME_OVER`, then append a single terminal outcome observation. State is reset at Policy initialization and new combat boundaries; the path is observation-only and does not enter scoring, candidate choice, gating, action, or params.
+- `sts2-ascend/brain/selfcheck.py`: add positive, process-reload, duplicate-persistence, switch-off, and REWARD-boundary assertions, including exact ratio/source fields and unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3—10 same-combat Boss terminal windows and compare source/terminal round, floor, encounter, actual/projected DPT, ratio, outcome, and action/params.
+- **Adjust**: if a real trace crosses a screen/floor boundary, joins an older combat, or exposes token/field drift, retain the failure and tighten only the bounded parser; do not promote this audit into behavior.
+- **Rollback**: set `boss_race_effective_dpt_terminal_outcome_obs` to `False`; expected result is removal of only the new terminal marker, with existing audits, action, and params unchanged.
+- **Validation**: the direct selfcheck first hit the host's fixed 256-slot bootstrap limit; the clone-local process-level adapter using `.review-cache/selfcheck-pool` with 512 inherited-ACL slots exited 0 and printed `SELFCHECK OK`. Read-only production-chain replay emitted `1761: ratio=0.96` and `1762: ratio=0.61`, both with `continue_game_over` and `{}`. Targeted diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

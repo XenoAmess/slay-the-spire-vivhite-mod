@@ -573,6 +573,8 @@ DEFAULT_POLICY = {
                                                  # 格挡吸收还是投影高估造成；纯观测不改评分、判决或动作；False=严格回滚
     "boss_race_effective_dpt_roster_obs": True,  # Boss 有效火力对账的敌方编制端点（BOSS_RACE_EFFECTIVE_DPT_ROSTER_OBS）：
                                                   # 追加存活/可命中敌方 ID、数量及敌方总血池变化，识别随从/编制变化污染；纯观测不改评分、判决或动作；False=严格回滚
+    "boss_race_effective_dpt_terminal_outcome_obs": True,  # 将同一 Boss 战最后一段有效火力对账接回权威 GAME_OVER；
+                                                           # 记录实际/投影比、来源回合与终局结果，纯观测不改评分、判决或动作；False=严格回滚
     "longfight_race_effective_dpt_obs": True,  # 非 Boss 大血池长战回合首对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                                                # F21 OVICOPTER 暴露长战投影有 TTK、无实测敌血净降；
                                                # 仅在既有 power_commit_pool_min 门槛上追加实际/投影比，
