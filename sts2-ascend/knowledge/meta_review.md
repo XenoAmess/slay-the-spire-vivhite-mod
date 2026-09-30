@@ -13034,7 +13034,6 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
-
 ## 2026-09-29 第1722局复盘（NONLETHAL_CHAIN_PRESSURE_TREND_OBS）
 
 profile_id: `ironclad`
@@ -14184,3 +14183,31 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**: the required direct selfcheck hit the host's fixed 256-directory bootstrap limit; a process-level adapter rooted in the existing clone `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. Actual 1752 replay restored `source_card=武装`, `source_round=1`, `terminal_action=end_turn`, `terminal_round=6`; an inserted REST boundary returned no pending source. `git diff --check` and final targeted diff review passed. No prohibited state, formal run/archive, learning memory, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1753: RACE_PROJ_LATCH_INTENT_NONLETHAL_TERMINAL_OBS
+
+profile_id: `ironclad`
+requested_runs: `1753`
+production_code_commit: pending local commit after report closeout (final SHA in delivery receipt)
+failed_review_replay: `20260930-101331-1790734411903560800-c5d89832`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速首次入锁的 `RACE_PROJ_LATCH_INTENT_PRESSURE_OBS` 若随后通过非致死无牌资源耗尽和沙坑末格终局收口，现有终局桥只保留非致死/沙坑字段，丢失首次意图与终局来源意图的首尾关系。该假设可证伪：新 marker 只能在同一楼层、同一有界 COMBAT 前缀中出现；跨屏、跨楼层、缺来源或回合逆序必须不命中，终局 `action/params` 必须不变。
+- **EVIDENCE**：完整读取 run `sts2-ascend/knowledge/runs/20260930-093040_7XTYSDMKD6Y5.json`（1753，342 条 decisions）。F33 D327 首次入锁为 `round=2/intent=12`；D340 非致死终局来源为 `round=5/incoming=22`，并带 `SANDPIT_EAT_END_TURN_OBS`；D341 原终局没有首尾意图桥。当前代码用持久 D327—D340 回放命中 `latch_intent=12/source_incoming=22/intent_delta=10/bridge_rounds=3/terminal_overlap=sandpit_eat_end_turn`，同时保持 `continue_game_over` 与 `{}`。
+- **EXPECTED_SIGNAL**：未来 3—10 个 Boss 终局窗口统计桥命中数、跨屏/跨楼层误命中数、首尾意图 delta 可解析率，以及 `action/params` 漂移数；预期有效同战斗命中、误接 0、动作参数漂移 0。无匹配窗口时保持无 marker，不把缺失当作失败。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_projection_latch_intent_nonlethal_terminal_obs` 只读回滚开关。按写入边界未修改在线 `knowledge/policy.json`；代码对缺失键回落为开启。
+- `sts2-ascend/brain/policy.py`：在既有非致死终局恢复链的同楼层、连续 COMBAT 段内最多扫描 64 条持久决策，只读取终局来源之前的首次竞速入锁 marker，解析有限非负 `round/intent/incoming`，追加首尾桥观测；不进入评分、候选、门控或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：加入 1753 形态正例、关闭开关对照和 MAP 边界负例，验证既有终局 marker、`continue_game_over` 与空参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集 3—10 个同类 Boss 终局，按 `latch_round/source_round`、首尾 intent、`terminal_overlap`、同战斗边界和最终 outcome 分层；证据成熟前不调整竞速、空过或沙坑行为。
+- **Adjust**：若真实链出现合法战斗内 modal，先保留样本并核对相邻 COMBAT 证据；若出现 REST/SHOP/REWARD、跨楼层、旧 combat 或词形漂移误接，收紧扫描边界，不把观测桥升级为行为闸门。
+- **Rollback**：将 `race_projection_latch_intent_nonlethal_terminal_obs` 设为 `False`；预期仅移除 `RACE_PROJ_LATCH_INTENT_NONLETHAL_TERMINAL_OBS`，既有非致死/沙坑 marker、action 和 params 不变。
+- **Validation**：失败包索引 `complete=true` 的 311 个文件逐项字节数/SHA-256 核验通过，候选有效文件仅为三个源码和两份报告；`policy.json` 与任务书保持只读。直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，随后使用 clone 内现有池的进程级临时目录适配运行同一 selfcheck，退出码 0 并输出 **SELFCHECK OK**。限定目标 `git diff --check` 通过；完整持久链回放命中新桥并保持 `continue_game_over {}`，未写入 `.runtime/`、正式 runs/archive、stats、progression、lessons 或在线进程。
+
+- `retry_resolution: 20260930-101331-1790734411903560800-c5d89832 integrated`
