@@ -23232,6 +23232,121 @@ def main() -> int:
                 not in _d_hp_cost_terminal_boundary.reason), \
         f"HP-cost terminal bridge crossed a REWARD boundary: {_d_hp_cost_terminal_boundary}"
 
+    # 3z-5f) Join the native OVICOPTER CanLay pressure observation to the
+    # same-floor terminal roster.  The bridge is audit-only: it must preserve
+    # continue_game_over/{}, survive Policy reload, deduplicate on retry, and
+    # refuse both a disabled switch and a REWARD boundary.
+    _ovicopter_terminal_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 24,
+        "turn": 4, "hp": 53,
+        "reason": (
+            "target=OVICOPTER#2 "
+            "OVICOPTER_SUMMON_PRESSURE_OBS "
+            "alive_teammates=2/tough_eggs=2/can_lay=yes"),
+    }
+    _ovicopter_terminal_roster = (
+        "OVICOPTER#4,TOUGH_EGG#0,TOUGH_EGG#1,"
+        "TOUGH_EGG#2,TOUGH_EGG#3")
+    _ovicopter_terminal_tail_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 24,
+        "turn": 6, "hp": 5,
+        "reason": (
+            f"terminal_roster={_ovicopter_terminal_roster}"
+            "/terminal_roster_count=5"),
+    }
+    _ovicopter_terminal_state = {
+        "screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 24},
+        "run": {"current_hp": 0, "floor": 24},
+    }
+    _ovicopter_terminal_dir = Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-ovicopter-terminal-"))
+    _ovicopter_terminal_pol = policy.Policy(
+        knowledge.Knowledge(_ovicopter_terminal_dir))
+    assert knowledge.DEFAULT_POLICY[
+        "ovicopter_summon_pressure_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing OVICOPTER terminal observation switch"
+    _ovicopter_terminal_ctx_live = _projection_ratio_ctx(
+        [], [_ovicopter_terminal_source_row, _ovicopter_terminal_tail_row])
+    _d_ovicopter_terminal = _ovicopter_terminal_pol.decide(
+        _ovicopter_terminal_state, _ovicopter_terminal_ctx_live)
+    assert (_d_ovicopter_terminal.action == "continue_game_over"
+            and _d_ovicopter_terminal.params == {}
+            and _d_ovicopter_terminal.reason.count(
+                "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=24/source_round=4"
+                "/source_action=play_card/alive_teammates=2/tough_eggs=2"
+                "/can_lay=yes/terminal_round=6/terminal_action=end_turn"
+                "/terminal_hp=5/terminal_roster="
+                f"{_ovicopter_terminal_roster}/terminal_roster_count=5"
+                "/terminal_tough_eggs=4/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=2"
+                in _d_ovicopter_terminal.reason), \
+        f"OVICOPTER summon-pressure terminal bridge missing or drifting: {_d_ovicopter_terminal}"
+
+    _d_ovicopter_terminal_reload = policy.Policy(
+        knowledge.Knowledge(_ovicopter_terminal_dir)).decide(
+            _ovicopter_terminal_state,
+            _projection_ratio_ctx(
+                [], [_ovicopter_terminal_source_row,
+                     _ovicopter_terminal_tail_row]))
+    assert (_d_ovicopter_terminal_reload.action
+            == _d_ovicopter_terminal.action
+            and _d_ovicopter_terminal_reload.params
+            == _d_ovicopter_terminal.params
+            and "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS"
+                in _d_ovicopter_terminal_reload.reason), \
+        f"OVICOPTER terminal bridge was not recoverable after Policy reload: {_d_ovicopter_terminal_reload}"
+
+    _ovicopter_terminal_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_ovicopter_terminal.action,
+        "floor": 24, "reason": _d_ovicopter_terminal.reason})
+    _d_ovicopter_terminal_duplicate = _ovicopter_terminal_pol.decide(
+        _ovicopter_terminal_state, _ovicopter_terminal_ctx_live)
+    assert (_d_ovicopter_terminal_duplicate.action
+            == _d_ovicopter_terminal.action
+            and _d_ovicopter_terminal_duplicate.params
+            == _d_ovicopter_terminal.params
+            and "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in _d_ovicopter_terminal_duplicate.reason), \
+        f"OVICOPTER terminal bridge duplicated on GAME_OVER retry: {_d_ovicopter_terminal_duplicate}"
+
+    _ovicopter_terminal_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-ovicopter-terminal-off-")))
+    _ovicopter_terminal_off_know.policy[
+        "ovicopter_summon_pressure_terminal_outcome_obs"] = False
+    _d_ovicopter_terminal_off = policy.Policy(
+        _ovicopter_terminal_off_know).decide(
+            _ovicopter_terminal_state,
+            _projection_ratio_ctx(
+                [], [_ovicopter_terminal_source_row,
+                     _ovicopter_terminal_tail_row]))
+    assert (_d_ovicopter_terminal_off.action
+            == _d_ovicopter_terminal.action
+            and _d_ovicopter_terminal_off.params
+            == _d_ovicopter_terminal.params
+            and "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in _d_ovicopter_terminal_off.reason), \
+        f"OVICOPTER terminal switch-off changed action/params or left marker: {_d_ovicopter_terminal_off}"
+
+    _d_ovicopter_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-ovicopter-terminal-boundary-")))).decide(
+                _ovicopter_terminal_state,
+                _projection_ratio_ctx(
+                    [], [_ovicopter_terminal_source_row,
+                         {"screen": "REWARD", "action": "proceed",
+                          "floor": 24, "reason": "reward boundary"},
+                         _ovicopter_terminal_tail_row]))
+    assert (_d_ovicopter_terminal_boundary.action
+            == _d_ovicopter_terminal.action
+            and _d_ovicopter_terminal_boundary.params
+            == _d_ovicopter_terminal.params
+            and "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in _d_ovicopter_terminal_boundary.reason), \
+        f"OVICOPTER terminal bridge crossed a REWARD boundary: {_d_ovicopter_terminal_boundary}"
+
     print("SELFCHECK OK")
     return 0
 

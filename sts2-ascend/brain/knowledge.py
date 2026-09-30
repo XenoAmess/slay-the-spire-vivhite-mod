@@ -1667,6 +1667,8 @@ DEFAULT_POLICY = {
                                          # 该观测尾缀。
     "ovicopter_summon_pressure_obs": True,  # Read-only native CanLay observation; no scoring/target/action change.
                                             # False strictly removes the marker for same-batch equivalence checks.
+    "ovicopter_summon_pressure_terminal_outcome_obs": True,  # Same-floor read-only join from CanLay pressure to terminal roster/outcome; no action or scoring change.
+                                                              # False strictly removes only this terminal marker.
     "support_target_summon_obs": True,  # 原生 SummonIntent 的零伤害目标观测分类（SUPPORT_TARGET_INTENT_OBS）：
                                          # 仅把 role 从 unknown 细分为 summon，不改变评分、目标或动作；
                                          # False 严格回滚为 unknown，供同一批次做行为等价核验。

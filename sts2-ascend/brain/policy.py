@@ -951,6 +951,8 @@ class Policy:
         self._boss_race_joint_flip_terminal_outcome_reported = False
         self._race_projection_latch_intent_terminal_outcome_pending = None
         self._race_projection_latch_intent_terminal_outcome_reported = False
+        self._ovicopter_summon_pressure_terminal_outcome_pending = None
+        self._ovicopter_summon_pressure_terminal_outcome_reported = False
         self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
         self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
@@ -6216,6 +6218,191 @@ class Policy:
             f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_ovicopter_summon_pressure_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Join a native CanLay pressure row to the same-floor terminal roster.
+
+        This is an audit-only bridge.  It deliberately requires a bounded
+        combat tail and an already-persisted terminal roster, so it cannot
+        infer causality across rooms or from an incomplete terminal payload.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "ovicopter_summon_pressure_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        _decisions = getattr(ctx, "decisions", None)
+        _marker = "OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_ovicopter_summon_pressure_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            # The first GAME_OVER action may be lost before persistence.  A
+            # durable marker is the commit proof, so permit one retry.
+            self._ovicopter_summon_pressure_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_ovicopter_summon_pressure_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _token(text: str, name: str):
+            match = re.search(
+                rf"{re.escape(name)}=([^/；|（）()\s]+)", text)
+            return match.group(1) if match else None
+
+        _source = None
+        _source_index = -1
+        _source_marker = "OVICOPTER_SUMMON_PRESSURE_OBS"
+        for _index in range(len(_decisions) - 1, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(_source_marker)
+            if _marker_at < 0 or str(_row.get("action") or "") != "play_card":
+                continue
+            _payload = _reason[_marker_at + len(_source_marker):]
+            _raw = {
+                name: _token(_payload, name)
+                for name in ("alive_teammates", "tough_eggs", "can_lay")
+            }
+            if any(value is None for value in _raw.values()):
+                continue
+            if str(_raw["can_lay"]).lower() != "yes":
+                continue
+            try:
+                _alive_teammates = int(float(_raw["alive_teammates"]))
+                _tough_eggs = int(float(_raw["tough_eggs"]))
+                _source_round = int(float(
+                    _row.get("turn", _row.get("round"))))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if _alive_teammates < 0 or _tough_eggs < 0 or _source_round < 0:
+                continue
+            _source = {
+                "source_round": _source_round,
+                "source_action": _row.get("action") or "?",
+                "alive_teammates": _alive_teammates,
+                "tough_eggs": _tough_eggs,
+                "can_lay": "yes",
+            }
+            _source_index = _index
+            break
+        if _source is None:
+            return
+
+        _terminal = _decisions[-1]
+        if not isinstance(_terminal, dict):
+            return
+        if str(_terminal.get("action") or "") != "end_turn":
+            return
+        _terminal_reason = str(_terminal.get("reason") or "")
+        _roster_match = re.search(
+            r"terminal_roster=([^/；|（）()\s]+)", _terminal_reason)
+        _roster_count_match = re.search(
+            r"terminal_roster_count=([0-9]+)", _terminal_reason)
+        if not _roster_match or not _roster_count_match:
+            return
+        try:
+            _terminal_roster_count = int(_roster_count_match.group(1))
+        except (TypeError, ValueError, OverflowError):
+            return
+        if _terminal_roster_count < 0:
+            return
+        _terminal_roster = _roster_match.group(1)
+        _source["terminal_round"] = _terminal.get(
+            "turn", _terminal.get("round"))
+        _source["terminal_action"] = _terminal.get("action") or "?"
+        _source["terminal_hp"] = _terminal.get("hp")
+        _source["terminal_roster"] = _terminal_roster
+        _source["terminal_roster_count"] = _terminal_roster_count
+        _source["terminal_tough_eggs"] = _terminal_roster.count("TOUGH_EGG#")
+        _source["bridge_decisions"] = max(
+            0, len(_decisions) - 1 - _source_index)
+        try:
+            _source["bridge_rounds"] = (
+                int(float(_source["terminal_round"]))
+                - int(float(_source["source_round"])))
+        except (TypeError, ValueError, OverflowError):
+            _source["bridge_rounds"] = "?"
+        self._ovicopter_summon_pressure_terminal_outcome_pending = _source
+        self._ovicopter_summon_pressure_terminal_outcome_reported = False
+
+    def _consume_ovicopter_summon_pressure_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Attach the bounded CanLay-to-terminal roster audit to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "ovicopter_summon_pressure_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_ovicopter_summon_pressure_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_ovicopter_summon_pressure_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._ovicopter_summon_pressure_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；OVICOPTER召唤压力终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/alive_teammates={_round(_pending.get('alive_teammates'))}"
+            f"/tough_eggs={_round(_pending.get('tough_eggs'))}"
+            f"/can_lay={_pending.get('can_lay') or '?'}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/terminal_roster={_pending.get('terminal_roster') or '?'}"
+            f"/terminal_roster_count={_round(_pending.get('terminal_roster_count'))}"
+            f"/terminal_tough_eggs={_round(_pending.get('terminal_tough_eggs'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS）")
 
     def _restore_boss_intent_ramp_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -12963,6 +13150,8 @@ class Policy:
             self._boss_race_joint_flip_terminal_outcome_reported = False
             self._race_projection_latch_intent_terminal_outcome_pending = None
             self._race_projection_latch_intent_terminal_outcome_reported = False
+            self._ovicopter_summon_pressure_terminal_outcome_pending = None
+            self._ovicopter_summon_pressure_terminal_outcome_reported = False
             self._longfight_effective_dpt_combat = ctx.combat
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
@@ -21928,6 +22117,11 @@ class Policy:
         _race_projection_latch_intent_terminal_outcome_note = (
             self._consume_race_projection_latch_intent_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_ovicopter_summon_pressure_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _ovicopter_summon_pressure_terminal_outcome_note = (
+            self._consume_ovicopter_summon_pressure_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         _race_projection_ratio_terminal_outcome_note = (
             self._consume_race_projection_ratio_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -22036,6 +22230,7 @@ class Policy:
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_boss_race_joint_flip_terminal_outcome_note}"
                             f"{_race_projection_latch_intent_terminal_outcome_note}"
+                            f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
@@ -22083,6 +22278,7 @@ class Policy:
                         f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_boss_race_joint_flip_terminal_outcome_note}"
                         f"{_race_projection_latch_intent_terminal_outcome_note}"
+                        f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                         f"{_race_projection_ratio_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
@@ -22114,6 +22310,7 @@ class Policy:
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
                                 f"{_boss_race_joint_flip_terminal_outcome_note}"
                                 f"{_race_projection_latch_intent_terminal_outcome_note}"
+                                f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                                 f"{_race_projection_ratio_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"
@@ -22132,7 +22329,9 @@ class Policy:
                                 f"{_sandpit_terminal_outcome_note}"
                                 f"{_low_pool_burst_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
-            return Decision("return_to_main_menu", {}, "结算：返回主菜单，备战下一局",
+            return Decision("return_to_main_menu", {},
+                            "结算：返回主菜单，备战下一局"
+                            f"{_ovicopter_summon_pressure_terminal_outcome_note}",
                             tags=[("timeline_check", True)], wait=1.5)
         if phase == "summary_animating" or go.get("showing_summary"):
             return Decision(None, {}, "结算：原生分数、解锁与存档动画进行中，等待", wait=0.8)

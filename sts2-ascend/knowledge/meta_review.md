@@ -14800,3 +14800,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1802: bridge OVICOPTER CanLay pressure to terminal roster/outcome
+
+profile_id: `ironclad`
+requested_runs: `1802`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1802's F24 OVICOPTER combat persists a native `CanLay` pressure source (`alive_teammates=2/tough_eggs=2/can_lay=yes`) and a later terminal roster separately, but the authoritative GAME_OVER row does not join them. A bounded same-floor `COMBAT`/`CARD_SELECTION` tail join from that source to the terminal `end_turn` should add one audit-only marker. This is falsifiable: a floor or screen boundary, non-`play_card` source, `can_lay=no`, missing roster/count, duplicate retry, or disabled switch must remain silent; action and parameters must not change.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20261001-013445_ZRBSZEBPL1H2.json` contains 281 decisions. Decision 268 is the F24 source with `alive_teammates=2/tough_eggs=2/can_lay=yes`; decision 279 is the same-floor terminal `end_turn` at HP5 with `terminal_roster_count=5` and four `TOUGH_EGG` entries; decision 280 is the defeat GAME_OVER at final HP0. The native OVICOPTER mechanics snapshot defines `CanLay` as at most three living teammates. The read-only production replay emitted one `OVICOPTER_SUMMON_PRESSURE_TERMINAL_OUTCOME_OBS` with `source_round=4/source_action=play_card/alive_teammates=2/tough_eggs=2/can_lay=yes/terminal_round=6/terminal_action=end_turn/terminal_hp=5/terminal_roster_count=5/terminal_tough_eggs=4/final_hp=0/bridge_decisions=8/bridge_rounds=2`, preserving `continue_game_over` and `{}` parameters.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching OVICOPTER terminals, emit the marker exactly once with source pressure, terminal roster/outcome, and bounded bridge length. Cross-screen/floor, malformed, duplicate, `can_lay=no`, and off-switch cases remain silent; scoring, ranking, gates, targeting, action selection, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `ovicopter_summon_pressure_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover only a same-floor source with the native `OVICOPTER_SUMMON_PRESSURE_OBS` fields, a contiguous combat tail, and a persisted terminal roster/count; append the observation in every existing terminal-return branch. The marker is not read by scoring, ranking, gates, targeting, action selection, or parameters; combat resets clear its pending/reported state.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions for the 1802-shaped tail.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare source teammate/egg counts, `CanLay`, terminal roster/count/egg count, outcome/final HP, marker count, and action/params.
+- **Adjust**: if real traces show roster token drift, stale source selection, incomplete terminal payloads, screen/floor crossing, or duplicate persistence, retain the evidence and tighten only this observation parser; do not promote it into targeting or defense behavior.
+- **Rollback**: set `ovicopter_summon_pressure_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the existing source marker, audits, action, and parameters remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full selfcheck completed through a clone-local inherited-ACL process adapter with exit code 0 and `SELFCHECK OK`. The read-only 1802 replay passed with one marker and unchanged `continue_game_over {}`; targeted `git diff --check` returned 0. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
