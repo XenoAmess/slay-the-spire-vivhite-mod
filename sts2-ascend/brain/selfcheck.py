@@ -22226,6 +22226,11 @@ def main() -> int:
                                              "node_type": "Boss"},
                                   "current_combat_is_hard": False,
                                   "credit_tags": []})()
+    rallc_monster_ctx = type(
+        "RALLCMONSTERCTX", (), {"combat": {"comp_id": "RALLC_MONSTER",
+                                             "node_type": "Monster"},
+                                 "current_combat_is_hard": False,
+                                 "credit_tags": []})()
 
     def lsl_state(hp_now, incoming, energy_now, hand):
         return {
@@ -22346,15 +22351,25 @@ def main() -> int:
         return pol_r
 
     def rallc_decide(pol_r, hp_now, incoming, energy_now, hand,
-                     measured_damage=40.0, measured_turns=2):
+                     measured_damage=40.0, measured_turns=2, enemy_hp=253,
+                     escalating=False, latched=False, decision_ctx=None):
         # 首 tick 绑定 _race_combat（同回合无回合边界采样，注入值不被覆盖）
-        pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand), lsl_ctx)
+        decision_ctx = decision_ctx or lsl_ctx
+        first_state = lsl_state(hp_now, incoming, energy_now, hand)
+        first_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        first_state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
+        pol_r.decide(first_state, decision_ctx)
         pol_r._race_rounds = 2
         pol_r._race_loss_rate = 15.0
         pol_r._krace_turns = measured_turns
         pol_r._krace_dmg = pol_r._krace_dmg_sustained = measured_damage
-        return pol_r.decide(lsl_state(hp_now, incoming, energy_now, hand),
-                            lsl_ctx)
+        pol_r._esc_rounds = 2 if escalating else 0
+        pol_r._krace_latch = latched
+        pol_r._krace_latch_round = 1 if latched else None
+        second_state = lsl_state(hp_now, incoming, energy_now, hand)
+        second_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
+        second_state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
+        return pol_r.decide(second_state, decision_ctx)
 
     d_rallc1 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld])
     assert d_rallc1.action == "play_card" \
@@ -22370,6 +22385,58 @@ def main() -> int:
         and "RACE_ALLIN_BUYBACK_MARGIN_OBS" in d_rallc1.reason \
         and "买活余量：严格-12.5/宽松-11.5回合→严格仍必败" in d_rallc1.reason, \
         f"败局竞速致死覆盖旁观缺失、买活对账缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
+    # 3rallc-lethal) 1798-F5-T6 形状：14 血对 24 意图、能量 3，单敌剩
+    #      15 血且手牌有 32 伤重锤+15 甲防御。旧覆盖行为会因投影 margin
+    #      =-1.8 选防御；本回合原始输出已经足以击穿当前目标时，必须保留全攻。
+    #      键=False 必须精确回到旧 cover 行为，形成可证伪的行为闸门。
+    assert knowledge.DEFAULT_POLICY.get(
+        "race_allin_current_turn_lethal_override") is True, \
+        "本回合单敌致死覆盖闸默认键缺失或未开启"
+    rallc_lethal_hit = {
+        "index": 1, "card_id": "BLUDGEON", "name": "重锤",
+        "playable": True, "energy_cost": 3,
+        "requires_target": True, "valid_target_indices": [0],
+        "dynamic_values": [{"name": "Damage", "current_value": 32}],
+    }
+    rallc_lethal_block = {
+        "index": 0, "card_id": "EXPECT_A_FIGHT", "name": "跃跃欲试",
+        "playable": True, "energy_cost": 3,
+        "requires_target": False,
+        "rules_text": "获得15点格挡",
+        "dynamic_values": [{"name": "Block", "current_value": 15}],
+    }
+    pol_rallc_current_lethal = rallc_policy()
+    # Isolate the cover gate itself: remove the independent kill reward so the
+    # old cover path must select the 15-block card, while the override path
+    # still wins solely from current-turn lethal output.
+    pol_rallc_current_lethal.know.policy["kill_bonus"] = 0.0
+    d_rallc_current_lethal = rallc_decide(
+        pol_rallc_current_lethal, 14, 24, 3,
+        [rallc_lethal_block, rallc_lethal_hit],
+        measured_damage=14.0, measured_turns=2, enemy_hp=15,
+        escalating=True, latched=True, decision_ctx=rallc_monster_ctx)
+    assert d_rallc_current_lethal.action == "play_card" \
+        and d_rallc_current_lethal.params.get("card_index") == 1 \
+        and "RACE_ALLIN_CURRENT_TURN_LETHAL_OVERRIDE" in d_rallc_current_lethal.reason \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" not in d_rallc_current_lethal.reason \
+        and "decision=all_in" in d_rallc_current_lethal.reason, \
+        (f"本回合可斩杀仍被覆盖行为改成格挡: {d_rallc_current_lethal.action}/"
+         f"{d_rallc_current_lethal.params}（{d_rallc_current_lethal.reason}）")
+    pol_rallc_current_lethal_rb = rallc_policy()
+    pol_rallc_current_lethal_rb.know.policy["kill_bonus"] = 0.0
+    pol_rallc_current_lethal_rb.know.policy[
+        "race_allin_current_turn_lethal_override"] = False
+    d_rallc_current_lethal_rb = rallc_decide(
+        pol_rallc_current_lethal_rb, 14, 24, 3,
+        [rallc_lethal_block, rallc_lethal_hit],
+        measured_damage=14.0, measured_turns=2, enemy_hp=15,
+        escalating=True, latched=True, decision_ctx=rallc_monster_ctx)
+    assert d_rallc_current_lethal_rb.action == "play_card" \
+        and d_rallc_current_lethal_rb.params.get("card_index") == 0 \
+        and "RACE_ALLIN_CURRENT_TURN_LETHAL_OVERRIDE" not in d_rallc_current_lethal_rb.reason \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallc_current_lethal_rb.reason, \
+        (f"本回合致死闸回滚未恢复旧覆盖行为: {d_rallc_current_lethal_rb.action}/"
+         f"{d_rallc_current_lethal_rb.params}（{d_rallc_current_lethal_rb.reason}）")
     # ①a 买活宽松容差的可证伪边界：击杀需1.0回合、买活仅能存0.2回合时，
     #     旧 verdict 仍因 +1 容差写“可翻盘”，严格余量观测必须写“仍必败”。
     d_rallc_margin = rallc_decide(

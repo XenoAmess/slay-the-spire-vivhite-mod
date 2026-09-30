@@ -4188,9 +4188,9 @@ class Policy:
             enabled_key="race_allin_lethal_output_capacity_obs") -> dict | None:
         """Return a one-frame, affordable raw attack-capacity snapshot.
 
-        This is deliberately observation-only.  The capacity is a one-frame
-        upper bound over affordable attack cards; it is never used for scoring,
-        target selection, or the returned action.
+        The capacity is a one-frame upper bound over affordable attack cards.
+        It remains audit data except for the narrow single-target current-turn
+        lethal guard, which may use it to veto a race-allin cover switch.
         """
         try:
             _enabled = bool(int(float(pol.get(
@@ -13633,22 +13633,84 @@ class Policy:
                         _ralc_low_pool_relief = (
                             _ralc_pool <= _ralc_low_pool_cap
                             and _ralc_strict_margin >= _ralc_min_margin)
-                        if (bool(pol.get("race_allin_lethal_cover_behavior", True))
-                                and _ralc_pool > 0
-                                and (_ralc_strict_margin >= 0.0
-                                     or _ralc_low_pool_relief)):
-                            race_lethal_cover = True
-                            _ralc_behavior_mode = (
-                                "low_pool_relief" if _ralc_strict_margin < 0.0
-                                else "strict_margin")
-                            danger_note += (
-                                f"；败局竞速致死生还线：执行覆盖后严格买活余量"
-                                f"{_ralc_strict_margin:+.1f}回合，"
-                                f"mode={_ralc_behavior_mode}"
-                                f"/pool={_ralc_pool:.0f}"
-                                f"/cap={_ralc_low_pool_cap:.0f}"
-                                f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
-                                "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
+                        _ralc_current_turn_lethal = False
+                        _ralc_current_target_hp = 0.0
+                        _ralc_current_target_block = 0.0
+                        _ralc_current_raw_cap = 0.0
+                        try:
+                            _ralc_override_enabled = bool(int(float(
+                                pol.get(
+                                    "race_allin_current_turn_lethal_override",
+                                    1) or 0)))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_override_enabled = False
+                        _ralc_live_targets = []
+                        if _ralc_override_enabled:
+                            for _target in enemies:
+                                if (not isinstance(_target, dict)
+                                        or not _target.get("is_alive", True)):
+                                    continue
+                                try:
+                                    _target_hp = float(
+                                        _target.get("current_hp") or 0.0)
+                                except (TypeError, ValueError, OverflowError):
+                                    continue
+                                if math.isfinite(_target_hp) and _target_hp > 0.0:
+                                    _ralc_live_targets.append((_target, _target_hp))
+                        if len(_ralc_live_targets) == 1:
+                            _ralc_target, _ralc_target_hp = _ralc_live_targets[0]
+                            if (_ralc_target.get("is_hittable") is not False
+                                    and _ralc_target.get("is_invulnerable") is not True):
+                                try:
+                                    _ralc_target_block = max(
+                                        0.0, float(_ralc_target.get("block") or 0.0))
+                                    _ralc_capacity = (
+                                        self._race_allin_lethal_output_capacity_snapshot(
+                                            hand, enemies, energy, pol,
+                                            enabled_key=(
+                                                "race_allin_current_turn_lethal_override")))
+                                    _ralc_raw_cap = float(
+                                        _ralc_capacity["raw_damage_cap"])
+                                    _ralc_attack_candidates = int(
+                                        _ralc_capacity["attack_candidates"])
+                                except (KeyError, TypeError, ValueError,
+                                        OverflowError):
+                                    _ralc_capacity = None
+                                if (_ralc_capacity is not None
+                                        and math.isfinite(_ralc_raw_cap)
+                                        and _ralc_attack_candidates > 0
+                                        and _ralc_raw_cap + 1e-9 >= (
+                                            _ralc_target_hp + _ralc_target_block)):
+                                    _ralc_current_turn_lethal = True
+                                    _ralc_current_target_hp = _ralc_target_hp
+                                    _ralc_current_target_block = _ralc_target_block
+                                    _ralc_current_raw_cap = _ralc_raw_cap
+                        _ralc_behavior_eligible = (
+                            bool(pol.get("race_allin_lethal_cover_behavior", True))
+                            and _ralc_pool > 0
+                            and (_ralc_strict_margin >= 0.0
+                                 or _ralc_low_pool_relief))
+                        if _ralc_behavior_eligible:
+                            if _ralc_current_turn_lethal:
+                                danger_note += (
+                                    f"；本回合单敌致死原始输出：target_hp="
+                                    f"{_ralc_current_target_hp:g}"
+                                    f"/target_block={_ralc_current_target_block:g}"
+                                    f"/raw_damage_cap={_ralc_current_raw_cap:g}，"
+                                    "跳过格挡覆盖（RACE_ALLIN_CURRENT_TURN_LETHAL_OVERRIDE）")
+                            else:
+                                race_lethal_cover = True
+                                _ralc_behavior_mode = (
+                                    "low_pool_relief" if _ralc_strict_margin < 0.0
+                                    else "strict_margin")
+                                danger_note += (
+                                    f"；败局竞速致死生还线：执行覆盖后严格买活余量"
+                                    f"{_ralc_strict_margin:+.1f}回合，"
+                                    f"mode={_ralc_behavior_mode}"
+                                    f"/pool={_ralc_pool:.0f}"
+                                    f"/cap={_ralc_low_pool_cap:.0f}"
+                                    f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
+                                    "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
                         if bool(pol.get(
                                 "race_allin_lethal_cover_decision_obs", True)):
                             _ralc_decision = (

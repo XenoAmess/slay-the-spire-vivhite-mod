@@ -1435,6 +1435,12 @@ DEFAULT_POLICY = {
       "race_allin_lethal_output_capacity_obs": True,
                                         # Audit-only raw attack-capacity snapshot beside the
                                         # all-in lethal defense snapshot; never feeds selection.
+      "race_allin_current_turn_lethal_override": True,
+                                        # Narrow behavior guard: when exactly one live, hittable
+                                        # enemy can be killed by this turn's affordable raw attack
+                                        # capacity, do not let the race-allin cover behavior switch
+                                        # the action to defense. False restores the prior projection
+                                        # and cover behavior for rollback.
       "race_allin_buyback_margin_obs": True,
                                         # 败局竞速买活余量旁观（RACE_ALLIN_BUYBACK_MARGIN_OBS）：
                                         # 现有买活对账为保留一个完整回合的宽松容差；同时披露

@@ -14742,3 +14742,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 runs 1796-1798: preserve a current-turn lethal hit over race-allin cover
+
+profile_id: `ironclad`
+requested_runs: `1796,1797,1798`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1798's F5 Fossil Stalker T6 has one live target at HP15, player HP14, incoming 24, and energy 3. The persisted race-allin evidence already reports `raw_damage_cap=32`, but `RACE_ALLIN_LETHAL_COVER_BEHAVIOR` changes the action to the 15-block card because `strict_margin=-1.8`. When exactly one live, hittable enemy can be killed by the current turn's affordable raw attack capacity, the cover behavior should be vetoed and the all-in attack preserved. This is falsifiable: only matching single-target windows may emit the override; multi-enemy, non-hittable, incomplete, or insufficient-capacity windows must keep the old cover path.
+- **EVIDENCE**: The complete exact-chain file `sts2-ascend/knowledge/runs/20261001-002344_C26VLJKCNSE0.json` records the 1798 F5 T6 choice as a block card despite `target_hp=15/target_block=0/attack_candidates=2/raw_damage_cap=32/cards=重锤:3@32|打击:1@6`, `pool=15`, `strict_margin=-1.8`, and the existing cover marker; T7 has only low output before the final HP0 defeat. Native Fossil Stalker evidence records escalating Tackle/Latch/Lash intent and Suck pressure, so this is a narrow terminal-race behavior correction rather than a general defense preference change.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching windows, emit `RACE_ALLIN_CURRENT_TURN_LETHAL_OVERRIDE` with target HP/block/raw-capacity and select the lethal attack while omitting the cover-behavior marker. The off-switch must restore the prior cover action and marker; non-matching shapes remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `race_allin_current_turn_lethal_override`.
+- `sts2-ascend/brain/policy.py`: inside the existing race-allin cover gate, inspect only one live, hittable, non-invulnerable target and the current affordable raw attack-capacity snapshot. If raw capacity covers current HP plus block, append the override marker and skip only the cover switch; otherwise preserve the prior behavior.
+- `sts2-ascend/brain/selfcheck.py`: add the 1798-shaped positive test and a key-false rollback test with unchanged old cover behavior.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching single-enemy decisions and compare target HP/block, raw capacity, selected attack, marker count, and final outcome against the persisted 1798 shape.
+- **Adjust**: if real traces show stale enemy selection, targetability drift, block semantics not represented by the state, or a false lethal capacity, retain the evidence and tighten only this guard; do not broaden it to multi-enemy or incomplete payloads.
+- **Rollback**: set `race_allin_current_turn_lethal_override` to `False`; this removes only the new veto and restores the existing cover behavior. If the guard worsens outcomes, revert the local commit while retaining the evidence.
+- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the full selfcheck then completed through a clone-local process-level temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Final code diff review and targeted `git diff --check` passed with only Git's existing LF/CRLF notices. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
