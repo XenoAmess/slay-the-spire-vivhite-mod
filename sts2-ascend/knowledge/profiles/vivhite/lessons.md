@@ -19730,3 +19730,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_CONVERGENCE_VERDICT(21分/21.51447066709183局)，FASTEN(21分/4.209112147193511局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/26.55180859148677局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（83%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；block_safety: 1.94 → 1.93（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.25 → 2.20（行至 F33——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1790 胜，当前目标进阶 4
+
+## 第 1791 局复盘（2026-09-30 22:14）
+- 结果：💀 失败｜进阶 4｜到达层数 4｜当局评分 4
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, MASTER_OF_STRATEGY
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血42｜自损48（可行动段48/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=11/dpt=2.1/ttk=5.2381/tsurv=0.615385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=17/projected_ttk=5.2381/actual_over_projected=3.25（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T17判死→实战17回合获胜; F4 Monster战 掉血20｜自损10（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=26/dpt=13.6374/ttk=1.90652/tsurv=0.222222（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=1.90652/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=27.00（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T6判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.590206423457858局)，JACKPOT(37分/9.596600224603637局)，THINKING_AHEAD(37分/2.9853233242809036局)，MAYHEM(36分/3.325825024368293局)，ROLLING_BOULDER(36分/3.004105395520943局)
+- 当前低价值卡牌：VIVHITE_CARD_CONVERGENCE_VERDICT(21分/21.43917001975701局)，FASTEN(21分/4.194380254678334局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/26.458877261416568局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1791 胜，当前目标进阶 4
