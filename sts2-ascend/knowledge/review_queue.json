@@ -1,37 +1,54 @@
 {
- "pending": [
-  {
-   "run": 1786,
-   "time": "2026-09-30 20:44",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "9WAERLJBKV56"
-  },
-  {
-   "run": 1787,
-   "time": "2026-09-30 20:57",
-   "profile_id": "ironclad",
-   "backend_key": "kimi-k3",
-   "priority": 1,
-   "runner": "opencode",
-   "model": "kimi-for-coding/k3",
-   "variant": "",
-   "reasoning_effort": "",
-   "approve_for_me": false,
-   "sandbox": "workspace-write",
-   "every": 5,
-   "source": "queued",
-   "run_id": "3EKS8UNBDR95"
-  }
- ],
- "reviewing": null
+ "pending": [],
+ "reviewing": {
+  "runs": [
+   1786,
+   1787
+  ],
+  "items": [
+   {
+    "run": 1786,
+    "time": "2026-09-30 20:44",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "9WAERLJBKV56",
+    "queue_id": "18020-1790773091389925400-0",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   },
+   {
+    "run": 1787,
+    "time": "2026-09-30 20:57",
+    "profile_id": "ironclad",
+    "backend_key": "luna-max",
+    "priority": 2,
+    "runner": "codex",
+    "model": "gpt-5.6-luna",
+    "variant": "",
+    "reasoning_effort": "max",
+    "approve_for_me": false,
+    "sandbox": "workspace-write",
+    "every": 1,
+    "source": "fallback",
+    "run_id": "3EKS8UNBDR95",
+    "queue_id": "18020-1790773091389925400-1",
+    "retry_same_model": true,
+    "salvage_packages": [],
+    "salvage_attempts": []
+   }
+  ],
+  "profile_id": "ironclad",
+  "retry_group": "",
+  "started": "2026-09-30 20:58:11"
+ }
 }
