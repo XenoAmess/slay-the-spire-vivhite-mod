@@ -15308,3 +15308,14 @@
 - 当前低价值卡牌：BULLY(16分/2.284784062887625局)，BURNING_PACT(17分/13.794637275150613局)，DEFEND_IRONCLAD(18分/3.830200913276141局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；kill_race_prior_eff: 0.39 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.002）；block_safety: 1.89 → 1.88（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1792 胜，当前目标进阶 0
+
+## 第 1793 局复盘（2026-09-30 22:48）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：SWORD_BOOMERANG, BLUDGEON, CINDER, SHRUG_IT_OFF, JUGGLING, TWIN_STRIKE, INFLAME, INFLAME, SHRUG_IT_OFF, IRON_WAVE, TAUNT, UNMOVABLE, MANGLE, SHRUG_IT_OFF, STOMP, BREAKTHROUGH, FIGHT_ME, PACTS_END, RUPTURE, FIGHT_ME, FISTICUFFS, TRUE_GRIT, TAUNT
+- 本局遗物：GAMBLING_CHIP
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血11｜竞速投影审计：pool=145/dpt=10.8/ttk=13.4259/tsurv=3.8125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=13.4259/actual_over_projected=0.52（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战7回合获胜｜竞速Boss有效火力收官对账：samples=1/actual_dpt=16/projected_dpt=10.8/ratio=1.48/min_ratio=1.48（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=1/actual_dpt=16/projected_dpt=10.8/ratio=1.48/min_ratio=1.48（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血30; F21 Monster战 掉血5; F22 Monster战 掉血37｜竞速投影审计：pool=88/dpt=31.2/ttk=2.82051/tsurv=1.13793（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=2.82051/actual_over_projected=2.13（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜; F25 Monster战 掉血32（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.873381032506266局)，MANGLE(25分/45.146248381408036局)，HELLRAISER(25分/4.611388007671677局)，FEED(25分/28.085533657898285局)，PACTS_END(24分/55.62505874267589局)
+- 当前低价值卡牌：BULLY(16分/2.2767873186675183局)，BURNING_PACT(17分/13.746356044687587局)，DEFEND_IRONCLAD(18分/3.8167952100796745局)
+- 策略进化：block_safety: 1.88 → 1.93（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.40 → 0.40（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 1.93 → 1.92（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1793 胜，当前目标进阶 0
