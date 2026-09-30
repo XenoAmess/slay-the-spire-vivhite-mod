@@ -917,6 +917,8 @@ class Policy:
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         self._longfight_joint_flip_terminal_outcome_reported = False
+        self._hp_cost_atk_nonlethal_terminal_outcome_pending = None
+        self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
         self._race_prelock_defense_terminal_outcome_pending = None
         self._race_prelock_defense_terminal_outcome_reported = False
         self._waterfall_about_to_blow_terminal_outcome_pending = None
@@ -2507,6 +2509,8 @@ class Policy:
             self._thorns_reflect_terminal_outcome_reported = False
             self._kill_race_hp_pay_terminal_outcome_pending = None
             self._kill_race_hp_pay_terminal_outcome_reported = False
+            self._hp_cost_atk_nonlethal_terminal_outcome_pending = None
+            self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -7147,6 +7151,174 @@ class Policy:
             f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_hp_cost_atk_nonlethal_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover a bounded same-combat non-lethal HP-cost attack source.
+
+        The source is an observation-only ``HP_COST_ATK_PRICING`` trace on a
+        playable attack.  The native terminal row persists separately, so only
+        a same-floor COMBAT/CARD_SELECTION tail may bridge it to GAME_OVER.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "hp_cost_atk_nonlethal_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS"
+        if bool(getattr(
+                self, "_hp_cost_atk_nonlethal_terminal_outcome_reported",
+                False)):
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_hp_cost_atk_nonlethal_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _number(value):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return parsed if math.isfinite(parsed) else None
+
+        _tail = decisions[-1]
+        if not isinstance(_tail, dict) or _tail.get("action") != "end_turn":
+            return
+        if (floor is not None and _tail.get("floor") is not None
+                and not _same_floor(floor, _tail.get("floor"))):
+            return
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _source = None
+        _lookback_start = max(0, len(decisions) - 16)
+        for _index in range(len(decisions) - 1, _lookback_start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if _screen != "COMBAT" or _row.get("action") != "play_card":
+                continue
+            _reason = str(_row.get("reason") or "")
+            _cost_match = re.search(
+                rf"自残(?P<self_cost>{_number_pattern})非致死未计价"
+                rf"[（(]HP_COST_ATK_PRICING[）)]", _reason)
+            if _cost_match is None:
+                continue
+            _self_cost = _number(_cost_match.group("self_cost"))
+            _source_hp = _number(_row.get("hp"))
+            if (_self_cost is None or _source_hp is None
+                    or _self_cost <= 0.0 or _source_hp <= _self_cost):
+                continue
+            _card_match = re.search(r"【(?P<card>[^】]+)】", _reason)
+            _source = {
+                "source_floor": _row.get("floor"),
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "play_card",
+                "card": (_card_match.group("card").strip()
+                         if _card_match else "?"),
+                "self_cost": _self_cost,
+                "source_hp": _source_hp,
+                "source_index": _index,
+            }
+            break
+        if _source is None:
+            return
+
+        _terminal_round = _tail.get("turn", _tail.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round))
+                - int(float(_source.get("source_round"))))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        self._hp_cost_atk_nonlethal_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal_round,
+            "terminal_action": _tail.get("action") or "end_turn",
+            "terminal_hp": _tail.get("hp"),
+            "bridge_decisions": len(decisions) - _source["source_index"] - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
+
+    def _consume_hp_cost_atk_nonlethal_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the recovered HP-cost attack source to the terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "hp_cost_atk_nonlethal_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_hp_cost_atk_nonlethal_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_hp_cost_atk_nonlethal_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._hp_cost_atk_nonlethal_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace(" ", "_"))
+
+        _result = "victory" if victory else "defeat"
+        return (
+            "| hp_cost_atk_nonlethal_terminal_outcome:"
+            f"outcome={_result}/floor={_round(floor)}"
+            f"/source_floor={_round(_pending.get('source_floor'))}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/card={_text(_pending.get('card'))}"
+            f"/self_cost={_num(_pending.get('self_cost'))}"
+            f"/source_hp={_num(_pending.get('source_hp'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "(HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS)")
 
     def _consume_race_projection_ratio_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -21531,6 +21703,11 @@ class Policy:
         _kill_race_hp_pay_terminal_outcome_note = (
             self._consume_kill_race_hp_pay_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_hp_cost_atk_nonlethal_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _hp_cost_atk_nonlethal_terminal_outcome_note = (
+            self._consume_hp_cost_atk_nonlethal_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_race_prelock_defense_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _race_prelock_defense_terminal_outcome_note = (
@@ -21613,6 +21790,7 @@ class Policy:
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_terminal_outcome_note}"
+                            f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_race_mode_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
@@ -21656,6 +21834,7 @@ class Policy:
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
+                        f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_race_mode_flip_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
@@ -21685,6 +21864,7 @@ class Policy:
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"
+                                f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_race_mode_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"

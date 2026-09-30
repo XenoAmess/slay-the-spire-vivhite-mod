@@ -22931,6 +22931,102 @@ def main() -> int:
             not in _d_projection_phase_boundary.reason), \
         f"竞速 Boss 分相终局桥接越过 REWARD 边界: {_d_projection_phase_boundary}"
 
+    # 3z-5e) Join a same-combat non-lethal HP-cost attack trace to the
+    #         authoritative terminal.  This is observation-only: the source
+    #         is the F25 BREAKTHROUGH trace from run 1793, while the terminal
+    #         remains the existing lethal no-card action with empty params.
+    _hp_cost_terminal_source_reason = (
+        "\u6218\u6597\uff1a\u6253\u51fa\u3010\u7a81\u7834\u3011"
+        "\uff08\u7fa4\u4f53\u4f24\u5bb3\u224810.0\uff5c"
+        "\u81ea\u6b8b1\u975e\u81f4\u6b7b\u672a\u8ba1\u4ef7"
+        "\uff08HP_COST_ATK_PRICING\uff09\uff09")
+    _hp_cost_terminal_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 2, "hp": 32, "reason": _hp_cost_terminal_source_reason,
+    }
+    _hp_cost_terminal_tail_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 25,
+        "turn": 3, "hp": 21, "reason": "terminal combat tail",
+    }
+    _hp_cost_terminal_state = {
+        "screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False, "floor": 25},
+        "run": {"current_hp": 0, "floor": 25},
+    }
+    _hp_cost_terminal_dir = Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-hp-cost-terminal-"))
+    _hp_cost_terminal_pol = policy.Policy(
+        knowledge.Knowledge(_hp_cost_terminal_dir))
+    assert knowledge.DEFAULT_POLICY[
+        "hp_cost_atk_nonlethal_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing hp-cost terminal observation switch"
+    _hp_cost_terminal_ctx_live = _projection_ratio_ctx(
+        [], [_hp_cost_terminal_source_row, _hp_cost_terminal_tail_row])
+    _d_hp_cost_terminal = _hp_cost_terminal_pol.decide(
+        _hp_cost_terminal_state, _hp_cost_terminal_ctx_live)
+    assert (_d_hp_cost_terminal.action == "continue_game_over"
+            and _d_hp_cost_terminal.params == {}
+            and _d_hp_cost_terminal.reason.count(
+                "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS") == 1
+            and ":outcome=defeat/floor=25/source_floor=25/source_round=2"
+                "/source_action=play_card/card=\u7a81\u7834/self_cost=1/source_hp=32"
+                "/terminal_round=3/terminal_action=end_turn/terminal_hp=21"
+                "/final_hp=0" in _d_hp_cost_terminal.reason), \
+        f"HP-cost non-lethal terminal bridge missing or drifting: {_d_hp_cost_terminal}"
+
+    _d_hp_cost_terminal_reload = policy.Policy(
+        knowledge.Knowledge(_hp_cost_terminal_dir)).decide(
+            _hp_cost_terminal_state,
+            _projection_ratio_ctx(
+                [], [_hp_cost_terminal_source_row, _hp_cost_terminal_tail_row]))
+    assert (_d_hp_cost_terminal_reload.action == _d_hp_cost_terminal.action
+            and _d_hp_cost_terminal_reload.params == _d_hp_cost_terminal.params
+            and "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS"
+                in _d_hp_cost_terminal_reload.reason), \
+        f"HP-cost terminal bridge was not recoverable after Policy reload: {_d_hp_cost_terminal_reload}"
+
+    _hp_cost_terminal_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_hp_cost_terminal.action,
+        "floor": 25, "reason": _d_hp_cost_terminal.reason})
+    _d_hp_cost_terminal_duplicate = _hp_cost_terminal_pol.decide(
+        _hp_cost_terminal_state, _hp_cost_terminal_ctx_live)
+    assert (_d_hp_cost_terminal_duplicate.action == _d_hp_cost_terminal.action
+            and _d_hp_cost_terminal_duplicate.params == _d_hp_cost_terminal.params
+            and "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS"
+                not in _d_hp_cost_terminal_duplicate.reason), \
+        f"HP-cost terminal bridge duplicated on GAME_OVER retry: {_d_hp_cost_terminal_duplicate}"
+
+    _hp_cost_terminal_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-hp-cost-terminal-off-")))
+    _hp_cost_terminal_off_know.policy[
+        "hp_cost_atk_nonlethal_terminal_outcome_obs"] = False
+    _d_hp_cost_terminal_off = policy.Policy(
+        _hp_cost_terminal_off_know).decide(
+            _hp_cost_terminal_state,
+            _projection_ratio_ctx(
+                [], [_hp_cost_terminal_source_row, _hp_cost_terminal_tail_row]))
+    assert (_d_hp_cost_terminal_off.action == _d_hp_cost_terminal.action
+            and _d_hp_cost_terminal_off.params == _d_hp_cost_terminal.params
+            and "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS"
+                not in _d_hp_cost_terminal_off.reason), \
+        f"HP-cost terminal switch-off changed action/params or left marker: {_d_hp_cost_terminal_off}"
+
+    _d_hp_cost_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-hp-cost-terminal-boundary-")))).decide(
+                _hp_cost_terminal_state,
+                _projection_ratio_ctx(
+                    [], [_hp_cost_terminal_source_row,
+                         {"screen": "REWARD", "action": "proceed",
+                          "floor": 25, "reason": "reward boundary"},
+                         _hp_cost_terminal_tail_row]))
+    assert (_d_hp_cost_terminal_boundary.action == _d_hp_cost_terminal.action
+            and _d_hp_cost_terminal_boundary.params
+                == _d_hp_cost_terminal.params
+            and "HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS"
+                not in _d_hp_cost_terminal_boundary.reason), \
+        f"HP-cost terminal bridge crossed a REWARD boundary: {_d_hp_cost_terminal_boundary}"
+
     print("SELFCHECK OK")
     return 0
 

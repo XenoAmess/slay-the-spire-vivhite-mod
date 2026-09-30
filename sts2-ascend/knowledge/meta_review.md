@@ -14684,3 +14684,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1793: bridge non-lethal HP-cost attack pricing to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1793`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The complete run 1793 chain records a same-combat non-lethal HP-cost attack at decision index 324, but the later authoritative GAME_OVER decision does not retain that source-to-outcome relationship. A bounded same-floor COMBAT/CARD_SELECTION tail join should emit one audit-only `HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS` marker. This is falsifiable: a screen or floor boundary, malformed/non-positive cost, missing playable-card source, duplicate terminal retry, or disabled switch must remain silent; action and parameters must not change.
+- **EVIDENCE**: `sts2-ascend/knowledge/runs/20260930-223805_ZCA83PA0LUVY.json` contains 330 decisions. Index 324 is F25/T2 `play_card` for BREAKTHROUGH with `HP=32` and `自残1非致死未计价（HP_COST_ATK_PRICING）`; index 325 records the resulting HP 31. Index 328 is the same-floor lethal `end_turn` tail at HP 21 with no usable card or potion, and index 329 is the defeat `GAME_OVER` at final HP 0. The read-only production replay emitted the new marker exactly once, including source round/action/card/cost/HP, terminal round/action/HP, final HP, and bridge length; `continue_game_over` and `{}` were unchanged.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit one bounded same-combat HP-cost source-to-outcome marker with the exact source and terminal fields. Cross-screen/floor, malformed, missing-source, duplicate, and off-switch cases remain silent; scoring, ranking, gates, action selection, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `hp_cost_atk_nonlethal_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover only the bounded same-floor non-lethal `HP_COST_ATK_PRICING` source at `GAME_OVER` and append an observation-only terminal bridge in all existing terminal-return branches. The marker is not consumed by scoring, ranking, gates, action selection, or parameters; run reset clears its pending/reported state.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare the exact source row, same-floor tail, cost/HP fields, terminal action/HP, final HP, marker count, and action/params.
+- **Adjust**: if a real trace shows stale source selection, reason grammar drift, malformed numeric fields, screen/floor crossing, or duplicate persistence, retain the evidence and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `hp_cost_atk_nonlethal_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the original source decisions, action, and parameters remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local process-level temporary-directory adapter with exit code 0 and `SELFCHECK OK`. The read-only 1793 production replay passed with one marker and unchanged action/params. Final targeted diff review and `git diff --check` passed with only the repository's existing LF/CRLF notices. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

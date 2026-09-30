@@ -178,6 +178,7 @@ DEFAULT_POLICY = {
                                      # 第1331~1335局批扩展：孤注/全攻中标时手牌内其他可出单体
                                      # 自残攻击追加「自残旁观」披露（结算豁免疫价零出现归属）；
                                      # 0 = 关闭（留痕整体消失，旧口径逐字不变）
+    "hp_cost_atk_nonlethal_terminal_outcome_obs": True,  # Audit-only same-combat join from a non-lethal HP-cost attack trace to the terminal outcome; False removes only this marker.
     "hp_cost_lethal_guard": True,  # 自残攻击直死保护（HP_COST_LETHAL_GUARD）：原生
                                     # Hemokinesis 先执行生命支付再执行伤害；当自付额将
                                     # 生命降至 0 时，竞速/孤注/单敌击杀豁免也不能放行，
