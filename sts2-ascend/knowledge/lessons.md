@@ -15275,3 +15275,14 @@
 - 当前低价值卡牌：BULLY(16分/2.3089432119459588局)，BURNING_PACT(17分/13.940500818033877局)，DEFEND_IRONCLAD(18分/3.8707011934952935局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.39 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.90 → 1.89（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F22——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1789 胜，当前目标进阶 0
+
+## 第 1790 局复盘（2026-09-30 21:45）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：SWORD_BOOMERANG, HOWL_FROM_BEYOND, HEADBUTT, STONE_ARMOR, CINDER, TAUNT, HOWL_FROM_BEYOND, ARMAMENTS, MOLTEN_FIST
+- 本局遗物：PERMAFROST, FESTIVE_POPPER
+- 战斗记录：F6 Monster战 掉血20; F11 Monster战 掉血21; F13 Monster战 掉血11; F14 Monster战 掉血17; F15 Elite战 掉血17｜竞速投影审计：pool=48/dpt=9.6/ttk=5/tsurv=1.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=5/actual_over_projected=1.00（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战5回合获胜; F17 Boss战 掉血44｜竞速投影审计：pool=199/dpt=12.15/ttk=16.3786/tsurv=2.38462（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=16.3786/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.10（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=36.25/projected_dpt=11.3074/ratio=3.43/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=36.25/projected_dpt=11.3074/ratio=3.43/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.97778148239936局)，MANGLE(25分/44.613047766232484局)，HELLRAISER(25分/4.660148506334448局)，FEED(25分/28.382508153232628局)，PACTS_END(24分/55.20266034534841局)
+- 当前低价值卡牌：BULLY(16分/2.300861910704148局)，BURNING_PACT(17分/13.89170906517076局)，DEFEND_IRONCLAD(18分/3.8571537393180604局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1790 胜，当前目标进阶 0
