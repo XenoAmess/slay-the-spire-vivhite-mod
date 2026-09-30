@@ -650,6 +650,7 @@ DEFAULT_POLICY = {
                                             # 不应让低于牌面一半有效伤害的攻击抢走能量。
                                             # 只作用于非击杀单体攻击、已有缺口且存在合格
                                             # 格挡候选；False 严格回滚旧竞速评分。
+    "intangible_race_output_bypass_obs": True,  # 只记录竞速态下低效无实体攻击未触发闸门的边界；不改评分或动作，False 回滚标记
     "minion_focus_obs": True,  # 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘）：
                                         # 原生 MinionPower（zhs「爪牙会在他们的领导者
                                         # 死亡时放弃战斗」，OwnerIsSecondaryEnemy=true）

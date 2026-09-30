@@ -14858,3 +14858,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1807: expose the intangible race-output guard boundary
+
+profile_id: `ironclad`
+requested_runs: `1807`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1807 F17 Soul Fysh, D169's selected Arrow Rain+ was reduced by native Intangible to roughly 1 effective damage per hit while the reason retained only `ENEMY_INTANGIBLE_CAP_OBS` and no `INTANGIBLE_RACE_OUTPUT_GUARD`. The missing marker is a guard-context boundary rather than a damage-cap failure: a future non-lethal, non-kill, low-effective-output single-target attack in a race context that does not satisfy the existing guard must emit a bypass observation with its gate flags, while score, target, and action remain unchanged. This is falsifiable: a matching window without the marker, or a marker without the cap/low-output predicates, rejects the hypothesis.
+- **EVIDENCE**: The exact persisted chain `sts2-ascend/knowledge/runs/20261001-024923_W3KD74J6KNHA.json` contains 182 decisions. D157-D158 already record Boss race pressure; D169 records the F17 Arrow Rain+ Intangible cap observation at HP40/block5 against incoming13, D170 leaves an 8-point gap, and D182 is GAME_OVER. Native mechanics readback confirms Soul Fysh's Intangible caps each hit at 1. The existing guard requires `kill_race`, non-`race_allin`, non-lethal/non-kill output, a block reserve, an incoming gap, and an above-floor score; D169's reason does not prove which context gate bypassed it, so the new marker records those flags without inferring one.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching selected attacks, emit `INTANGIBLE_RACE_OUTPUT_BYPASS_OBS` only when the enemy cap is enabled, an Intangible layer remains, effective output is below half of declared output, race context exists, and the existing guard did not apply. Normal attacks, lethal/killing attacks, non-race attacks, guarded attacks, malformed targets, and the switch-off case stay silent; score, ranking, target, action, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `intangible_race_output_bypass_obs`.
+- `sts2-ascend/brain/policy.py`: mark whether the existing Intangible race guard actually applied, then append only the bypass predicate flags to `why`; the branch does not write score, target, ranking, gates, or action state.
+- `sts2-ascend/brain/selfcheck.py`: assert guarded silence, positive bypass evidence, switch-off silence, and identical score/target with the observation disabled.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching attacks and compare effective/declared output, Intangible layers, race flags, block reserve, gap, marker count, and actual action.
+- **Adjust**: if a real trace shows the marker on a non-race or lethal path, or if D169-shaped traces still lack the marker despite matching predicates, tighten only the observation predicate and preserve the existing guard behavior.
+- **Rollback**: set `intangible_race_output_bypass_obs` to `False`; only the new bypass suffix disappears, while the existing cap marker, score, target, action, and parameters remain unchanged.
+- **Validation**: direct selfcheck reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same complete selfcheck through a clone-local process-level temp adapter exited 0 with `SELFCHECK OK`. The exact 1807 chain was read-only inspected; `git diff --check` had no target-code whitespace errors. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -17245,6 +17245,7 @@ class Policy:
             # 本回合能量。仅在非致死、非击杀、确有缺口且已有合格格挡候选时
             # 压低该单体攻击；无格挡时仍保留抢斩杀的唯一动作，race_allin、
             # AOE、合法击杀和普通战斗完全不变。False 严格回滚旧评分。
+            _intangible_guard_applied = False
             if (bool(pol.get("intangible_race_output_guard", True))
                     and kill_race and not race_allin
                     and not lethal and not best_kill
@@ -17258,11 +17259,41 @@ class Policy:
                     if (_guard_layers > 0 and not _guard_killed
                             and float(_guard_eff) < float(total) * 0.5):
                         best_s = floor_score
+                        _intangible_guard_applied = True
                         why += (
                             f"｜无实体竞速低效攻击让位格挡：有效伤害"
                             f"{float(_guard_eff):g}/{float(total):g}、"
                             f"无实体{_guard_layers:g}层、缺口{incoming - my_block:g}"
                             "（INTANGIBLE_RACE_OUTPUT_GUARD）")
+            # 竞速态边界观测：同一低效攻击若没有命中上面的闸门，保留触发
+            # 前置条件，便于验证是 kill_race/race_allin/迟滞锁/防守储备哪一项放行。
+            # 这是纯观测；不得改变 best_s、best_t 或任何动作选择。
+            if (bool(pol.get("intangible_race_output_bypass_obs", True))
+                    and bool(pol.get("enemy_intangible_dmg_cap", True))
+                    and not lethal and not best_kill and best_t is not None
+                    and (kill_race or race_allin
+                         or bool(getattr(self, "_krace_latch", False)))
+                    and not _intangible_guard_applied):
+                _bypass_enemy = next(
+                    (e for e in _pool if e.get("index") == best_t), None)
+                if _bypass_enemy is not None:
+                    _bypass_layers = self._enemy_intangible_stack(_bypass_enemy)
+                    _bypass_eff, _bypass_killed, _ = _attack_outcome(_bypass_enemy)
+                    if (_bypass_layers > 0 and not _bypass_killed
+                            and float(_bypass_eff) < float(total) * 0.5):
+                        why += (
+                            "| INTANGIBLE_RACE_OUTPUT_BYPASS_OBS"
+                            f" eff={float(_bypass_eff):g}/{float(total):g}"
+                            f"/layers={_bypass_layers:g}"
+                            f"/kill_race={'yes' if kill_race else 'no'}"
+                            f"/race_allin={'yes' if race_allin else 'no'}"
+                            f"/latch={'yes' if bool(getattr(self, '_krace_latch', False)) else 'no'}"
+                            f"/reserve={'yes' if reserve_for_block else 'no'}"
+                            f"/incoming={float(incoming):g}"
+                            f"/block={float(my_block):g}"
+                            f"/energy={float(cur_energy):g}"
+                            f"/race_blk_floor={'yes' if race_blk_floor else 'no'}"
+                            f"/block_locked={'yes' if block_locked else 'no'}")
             # 沉睡保期禁攻收口：全部打击候选都指向沉睡者时，攻击面压到禁玩线，
             # 混合牌仍可由下方 _hybrid_defense 按格挡面放行（能量让给铺垫）。
             if best_t is None and _sleep_veto is not None:

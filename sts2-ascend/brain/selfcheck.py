@@ -8485,7 +8485,8 @@ def main() -> int:
         my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=True,
         min_blk_cost=1, kill_race=True, run_deck=[])
     assert ir_on[0] < ir_pol.know.policy["play_threshold"] \
-        and "INTANGIBLE_RACE_OUTPUT_GUARD" in ir_on[2], \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" in ir_on[2] \
+        and "INTANGIBLE_RACE_OUTPUT_BYPASS_OBS" not in ir_on[2], \
         f"无实体低效竞速攻击未让位格挡: {ir_on}"
     ir_pol.know.policy["intangible_race_output_guard"] = False
     ir_off = ir_pol._score_play(
@@ -8509,6 +8510,24 @@ def main() -> int:
     assert ir_allin[0] >= ir_pol.know.policy["play_threshold"] \
         and "INTANGIBLE_RACE_OUTPUT_GUARD" not in ir_allin[2], \
         f"race_allin 不应被无实体竞速闸门误拦: {ir_allin}"
+
+    # guard 未覆盖的竞速态低效攻击只增加边界观测；开关关闭必须保留原评分和目标。
+    ir_pol.know.policy["intangible_race_output_guard"] = True
+    ir_bypass = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=False,
+        min_blk_cost=99, kill_race=True, run_deck=[])
+    assert "INTANGIBLE_RACE_OUTPUT_BYPASS_OBS" in ir_bypass[2] \
+        and "INTANGIBLE_RACE_OUTPUT_GUARD" not in ir_bypass[2], \
+        f"无实体竞速未触发闸门时缺少 bypass 观测: {ir_bypass}"
+    ir_pol.know.policy["intangible_race_output_bypass_obs"] = False
+    ir_bypass_off = ir_pol._score_play(
+        dict(sl_strike), [ir_enemy], 16, 0, 4, ir_pol.know.policy,
+        my_hp=40, my_max_hp=80, cur_energy=3, reserve_for_block=False,
+        min_blk_cost=99, kill_race=True, run_deck=[])
+    assert ir_bypass_off[0] == ir_bypass[0] and ir_bypass_off[1] == ir_bypass[1] \
+        and "INTANGIBLE_RACE_OUTPUT_BYPASS_OBS" not in ir_bypass_off[2], \
+        f"bypass 观测开关未保持原评分或未消失: {ir_bypass_off}"
 
     # 现有集火粘性不因结算重构丢失。
     sl_pol._focus_index = 1
