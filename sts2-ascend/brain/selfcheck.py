@@ -18641,6 +18641,15 @@ def main() -> int:
         race_terminal_card_selection_bridge_row)
     race_terminal_ctx.decisions.append(
         race_terminal_later_output_source_row)
+    race_terminal_stale_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 6,
+        "reason":
+            "战斗：入锁已2回合（≥新鲜窗2），实测窗已含全攻换挡，"
+            "上浮+0.20置零，投影维持21伤/回合"
+            "（RACE_UPSHIFT_STALE）",
+    }
+    race_terminal_ctx.decisions.append(race_terminal_stale_row)
     race_terminal_pol._krace_latch = True
     race_terminal_pol._krace_latch_round = 5
     race_terminal_pol._race_terminal_projection = {
@@ -18894,6 +18903,11 @@ def main() -> int:
             "（RACE_PROJ_LATCH_INTENT_DRIFT_OBS）"
             in d_race_terminal_outcome.reason), \
         f"竞速首末意图漂移对账缺失: {d_race_terminal_outcome}"
+    assert ("锁后 stale 终局对账：count=1/first_age=2/last_age=2"
+            "/terminal_round=6/outcome=defeat"
+            "（RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS）"
+            in d_race_terminal_outcome.reason), \
+        f"锁后 stale 终局桥接缺失: {d_race_terminal_outcome}"
 
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
@@ -18931,6 +18945,7 @@ def main() -> int:
     race_terminal_replay_ctx.decisions = [
         dict(race_terminal_output_source_row),
         dict(race_terminal_later_output_source_row),
+        dict(race_terminal_stale_row),
         {
             "action": "end_turn", "floor": 33,
             "reason": d_race_terminal.reason,
@@ -18979,6 +18994,9 @@ def main() -> int:
             "（RACE_PROJ_LATCH_INTENT_DRIFT_OBS）"
             in d_race_terminal_replay.reason), \
         f"进程重载后未恢复竞速首末意图对账: {d_race_terminal_replay}"
+    assert ("RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复锁后 stale 终局桥接: {d_race_terminal_replay}"
 
     assert ("/esc_latch_hold_count=3/esc_latch_hold=yes"
             " (KILL_RACE_TERMINAL_LATCH_HOLD_OBS)") in d_race_terminal_replay.reason, \
@@ -19117,6 +19135,44 @@ def main() -> int:
             and "RACE_PROJ_LATCH_INTENT_DRIFT_OBS"
             not in d_race_terminal_intent_off.reason), \
         f"竞速首末意图观测关闭后 action/marker 漂移: {d_race_terminal_intent_off}"
+
+    race_terminal_stale_off_know = knowledge.Knowledge(tmp)
+    race_terminal_stale_off_know.policy[
+        "race_upshift_stale_terminal_outcome_obs"] = False
+    race_terminal_stale_off_pol = policy.Policy(race_terminal_stale_off_know)
+    race_terminal_stale_off_ctx = _SettleCtx()
+    race_terminal_stale_off_ctx.decisions = list(
+        race_terminal_replay_ctx.decisions)
+    d_race_terminal_stale_off = race_terminal_stale_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_stale_off_ctx)
+    assert (d_race_terminal_stale_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_stale_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+                in d_race_terminal_stale_off.reason
+            and "RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
+                not in d_race_terminal_stale_off.reason), \
+        f"锁后 stale 终局桥接关闭后动作或 marker 漂移: {d_race_terminal_stale_off}"
+
+    race_terminal_stale_boundary_ctx = _SettleCtx()
+    race_terminal_stale_boundary_ctx.decisions = [
+        dict(race_terminal_stale_row),
+        {"screen": "REWARD", "floor": 33, "action": "proceed",
+         "reason": "战斗已结束，边界"},
+        {"action": "end_turn", "floor": 33,
+         "reason": d_race_terminal.reason},
+    ]
+    race_terminal_stale_boundary_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_race_terminal_stale_boundary = race_terminal_stale_boundary_pol.decide(
+        race_terminal_outcome_state, race_terminal_stale_boundary_ctx)
+    assert (d_race_terminal_stale_boundary.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_stale_boundary.params
+            == d_race_terminal_outcome.params
+            and "RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
+                not in d_race_terminal_stale_boundary.reason), \
+        f"锁后 stale 终局桥接越过屏幕边界: {d_race_terminal_stale_boundary}"
 
     # 3z-5d) 结局观测的动作提交边界：第一次 GAME_OVER 决策若在 POST
     #        成功前丢失，瞬时 reported 位不能吞掉下一次重试；一旦带 marker

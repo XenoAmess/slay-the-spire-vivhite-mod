@@ -14211,3 +14211,31 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**: the required direct selfcheck hit the host's fixed 256-directory bootstrap limit; a process-level adapter rooted in the existing clone `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. Actual 1752 replay restored `source_card=武装`, `source_round=1`, `terminal_action=end_turn`, `terminal_round=6`; an inserted REST boundary returned no pending source. `git diff --check` and final targeted diff review passed. No prohibited state, formal run/archive, learning memory, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 第1758局复盘（RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS）
+
+profile_id: `ironclad`
+requested_runs: `1758`
+production_code_commit: `92e980670`（本地 production commit，未 push）
+failed_review_replay: `requested_packages=[]`，无 replay target
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速锁龄保护在 F25 抑制额外 DPT 上浮后，已有终端竞速审计没有把同一战斗的 `RACE_UPSHIFT_STALE` 来源接到权威 `GAME_OVER`；因此无法区分“锁后陈旧上浮被正确抑制”的长战斗与其他终局失败。该假设可证伪：桥接必须只在同楼层同战斗的 COMBAT 尾部出现，且终局 action/params 不变。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20260930-112301_P5ABN462GDP9.json` 共 400 条决策。F25 D395—D398 连续出现 `RACE_UPSHIFT_STALE`（入锁已 2 回合）；D399 为 `hp=12/block=0/incoming=28/energy=0`、4 张牌全部能量锁定的致死 `end_turn`；D400 的既有竞速终局对账没有 stale 来源桥接。
+- **EXPECTED_SIGNAL**：未来 3—10 个同类终局中，仅当最近同楼层 COMBAT 尾部含 `RACE_UPSHIFT_STALE` 时追加 `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS`，记录 count/首末锁龄/terminal round/outcome；跨楼层、REWARD/SHOP/REST 等边界、无来源链不得命中，action/params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_upshift_stale_terminal_outcome_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：在既有竞速终局恢复后，仅向后扫描同楼层 COMBAT 持久尾部，提取 stale 次数和首末锁龄并追加终局 reason；不进入评分、候选、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：覆盖正例、Policy 重载、关闭开关和 `REWARD` 边界负例，断言 `continue_game_over` 与空参数等价。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集 3—10 个同类竞速终局，比较 stale 次数、首末锁龄、run/floor、terminal round/outcome 与 action/params。
+- **Adjust**：若真实链出现跨战斗/跨屏误接、锁龄字段词形漂移或缺失屏幕边界，保留失败样本并收紧扫描契约；不把终局观测升级为行为门。
+- **Rollback**：将 `race_upshift_stale_terminal_outcome_obs` 设为 `False`；预期只移除 `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS`，既有终局审计、action 和 params 不变。
+- **Validation**：规定的直接 selfcheck 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配下退出码 0 并输出 `SELFCHECK OK`。真实 1758 完整链只读回放输出 `behavior_unchanged=True`，桥接为 `count=4/first_age=2/last_age=2/terminal_round=6/outcome=defeat`；AST、最终源码 diff 和 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -5513,6 +5513,27 @@ class Policy:
             except (KeyError, TypeError, ValueError, OverflowError):
                 pass
 
+        _stale_tail = ""
+        try:
+            _stale_obs = bool(int(float(pol.get(
+                "race_upshift_stale_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _stale_obs = False
+        _stale = _pending.get("race_upshift_stale_terminal")
+        if _stale_obs and isinstance(_stale, dict):
+            try:
+                _stale_count = max(1, int(_stale.get("count", 0) or 0))
+                _first_age = str(_stale.get("first_age") or "?")
+                _last_age = str(_stale.get("last_age") or "?")
+                _stale_tail = (
+                    f"；锁后 stale 终局对账：count={_stale_count}"
+                    f"/first_age={_first_age}/last_age={_last_age}"
+                    f"/terminal_round={_round(_pending.get('terminal_round'))}"
+                    f"/outcome={_result}"
+                    "（RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS）")
+            except (TypeError, ValueError, OverflowError):
+                _stale_tail = ""
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5536,6 +5557,7 @@ class Policy:
             f"{_survival_rebase_tail}"
             f"{_roster_drift_tail}"
             f"{_intent_drift_tail}"
+            f"{_stale_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -6095,6 +6117,57 @@ class Policy:
                 _pending["output_capacity_transition"] = _transition_source
         self._race_terminal_outcome_pending = _pending
         self._race_terminal_outcome_reported = False
+
+    def _attach_race_upshift_stale_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Attach a bounded stale-upshift source to the terminal race join.
+
+        ``RACE_UPSHIFT_STALE`` is emitted on the projection decision where the
+        lock-age guard suppresses the extra dpt uplift.  The terminal audit is
+        emitted later, so recover the source from the durable same-floor
+        ``COMBAT`` tail before the GAME_OVER result is committed.  This method
+        is observation-only and deliberately stops at any non-combat boundary.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_upshift_stale_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(self, "_race_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or "race_upshift_stale_terminal" in _pending):
+            return
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        _floor_text = None if floor is None else str(floor)
+        _samples = []
+        for _row in reversed(_decisions):
+            if not isinstance(_row, dict):
+                break
+            _row_floor = _row.get("floor")
+            if (_floor_text is not None and _row_floor is not None
+                    and str(_row_floor) != _floor_text):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen != "COMBAT":
+                break
+            _reason = str(_row.get("reason") or "")
+            if "RACE_UPSHIFT_STALE" not in _reason:
+                continue
+            _age_match = re.search(r"入锁已(\d+)回合", _reason)
+            _age = _age_match.group(1) if _age_match else "?"
+            _samples.append(_age)
+
+        if not _samples:
+            return
+        _samples.reverse()
+        _pending["race_upshift_stale_terminal"] = {
+            "count": len(_samples),
+            "first_age": _samples[0],
+            "last_age": _samples[-1],
+        }
 
     def _consume_lethal_playable_reject_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -18899,6 +18972,8 @@ class Policy:
                 self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
+        self._attach_race_upshift_stale_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
         self._restore_lethal_playable_reject_outcome_from_decisions(
