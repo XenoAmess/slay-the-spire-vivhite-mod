@@ -15352,3 +15352,14 @@
 - 当前低价值卡牌：BULLY(16分/2.2529646261382146局)，BURNING_PACT(17分/13.602523895427996局)，DEFEND_IRONCLAD(18分/3.7768589639527144局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：0/1796 胜，当前目标进阶 0
+
+## 第 1797 局复盘（2026-10-01 00:15）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE
+- 本局拿牌：ANGER, UNRELENTING, BREAKTHROUGH, STONE_ARMOR, CINDER, FLAME_BARRIER, ANGER, UPPERCUT, UNMOVABLE, INFLAME, IMPERVIOUS, RAMPAGE, BLUDGEON, EQUILIBRIUM, TRUE_GRIT, TRUE_GRIT, BLUDGEON, THUNDERCLAP
+- 本局遗物：HAPPY_FLOWER, LASTING_CANDY, MEAL_TICKET
+- 战斗记录：F15 Monster战 掉血0; F17 Boss战 掉血45｜自损2（可行动段2/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=146/dpt=13.5/ttk=10.8148/tsurv=5.83333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=10.8148/actual_over_projected=0.92（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战10回合获胜｜竞速Boss有效火力收官对账：samples=1/actual_dpt=29/projected_dpt=17.55/ratio=1.65/min_ratio=1.65（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=1/actual_dpt=29/projected_dpt=17.55/ratio=1.65/min_ratio=1.65（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血11; F21 Monster战 掉血12; F23 Monster战 掉血54｜自损1（可行动段1/非行动段59，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血19｜竞速投影审计：pool=160/dpt=4.725/ttk=33.8624/tsurv=5.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=33.8624/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.38（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.735877699753848局)，ONE_TWO_PUNCH(25分/2.5842616133584126局)，MANGLE(25分/44.517511417517525局)，HELLRAISER(25分/4.547166722421792局)，FEED(25分/27.69439566095713局)
+- 当前低价值卡牌：BULLY(16分/2.245079249946731局)，BURNING_PACT(17分/13.554915061793999局)，DEFEND_IRONCLAD(18分/3.76363995757888局)
+- 策略进化：block_safety: 1.96 → 2.01（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.40 → 0.40（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.01 → 2.00（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1797 胜，当前目标进阶 0
