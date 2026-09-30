@@ -15176,3 +15176,14 @@
 - 当前低价值卡牌：BULLY(16分/2.3829642354820293局)，BURNING_PACT(17分/14.387410960222532局)，DEFEND_IRONCLAD(18分/3.994789678072331局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.94 → 1.93（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1780 胜，当前目标进阶 0
+
+## 第 1781 局复盘（2026-09-30 18:56）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：FIGHT_ME, CINDER, CRUELTY, SPITE, INFLAME, PROWESS, INFLAME, UPPERCUT, HEADBUTT, SWORD_BOOMERANG, ENTROPY
+- 本局遗物：KUSARIGAMA
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血30; F12 Monster战 掉血2; F13 Monster战 掉血2; F15 Monster战 掉血16; F17 Boss战 掉血54｜竞速投影审计：pool=167/dpt=14.85/ttk=11.2458/tsurv=6.71429（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.2458/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.89（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=21.6/projected_dpt=21.7721/ratio=0.76/min_ratio=0.11（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=3/actual_dpt=2.66667/projected_dpt=15.8868/ratio=0.17/min_ratio=0.11|clear_samples=2/actual_dpt=50/projected_dpt=30.6/ratio=1.64/min_ratio=1.61（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/10.29765318566399局)，MANGLE(25分/46.04327066718334局)，HELLRAISER(25分/4.809545408122364局)，FEED(25分/29.292405933807547局)，PACTS_END(24分/52.89077985469769局)
+- 当前低价值卡牌：BULLY(16分/2.3746238606578425局)，BURNING_PACT(17分/14.337055021861755局)，DEFEND_IRONCLAD(18分/3.980807914199078局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
+- 生涯战绩：0/1781 胜，当前目标进阶 0
