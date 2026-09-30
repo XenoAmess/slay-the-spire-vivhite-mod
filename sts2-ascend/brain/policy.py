@@ -907,8 +907,6 @@ class Policy:
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
         self._exhaust_cap_pressure_terminal_outcome_pending = None  # 最近一次消耗上限压力，等待 GAME_OVER 结局对账
         self._exhaust_cap_pressure_terminal_outcome_reported = False  # 消耗上限压力结局 marker 每场只写一次
-        self._lethal_survivable_line_terminal_outcome_pending = None
-        self._lethal_survivable_line_terminal_outcome_reported = False
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
@@ -2493,8 +2491,6 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
-            self._lethal_survivable_line_terminal_outcome_pending = None
-            self._lethal_survivable_line_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -5195,174 +5191,6 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             f"/bridge_rounds={_bridge_rounds}"
             "（RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS）")
-
-    def _restore_lethal_survivable_line_terminal_outcome_from_decisions(
-            self, pol, ctx, floor=None) -> None:
-        """Recover a lethal-survivable-line source before GAME_OVER.
-
-        The source is an observation attached to a combat card decision.  Keep
-        the join on the trailing same-floor COMBAT segment so a stale source
-        from an earlier room cannot be attributed to the current terminal
-        result.  This never participates in scoring or action selection.
-        """
-        try:
-            enabled = bool(int(float(pol.get(
-                "lethal_survivable_line_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            enabled = False
-        if not enabled:
-            return
-
-        decisions = getattr(ctx, "decisions", None)
-        marker = "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
-        if not isinstance(decisions, list) or not decisions:
-            return
-        reported = bool(getattr(
-            self, "_lethal_survivable_line_terminal_outcome_reported", False))
-        if reported:
-            last = decisions[-1]
-            last_reason = str(last.get("reason") or "") \
-                if isinstance(last, dict) else ""
-            if marker in last_reason:
-                return
-            self._lethal_survivable_line_terminal_outcome_reported = False
-        if isinstance(getattr(
-                self, "_lethal_survivable_line_terminal_outcome_pending", None),
-                dict):
-            return
-
-        terminal = decisions[-1]
-        if not isinstance(terminal, dict) \
-                or terminal.get("action") != "end_turn":
-            return
-        if str(terminal.get("screen") or "").upper() not in {"", "COMBAT"}:
-            return
-        if (floor is not None and terminal.get("floor") is not None
-                and str(terminal.get("floor")) != str(floor)):
-            return
-
-        def _same_floor(left, right) -> bool:
-            if left is None or right is None:
-                return True
-            try:
-                return int(float(left)) == int(float(right))
-            except (TypeError, ValueError, OverflowError):
-                return str(left) == str(right)
-
-        def _number(value):
-            try:
-                value = float(value)
-            except (TypeError, ValueError, OverflowError):
-                return None
-            return value if math.isfinite(value) else None
-
-        def _combat_card_selection(index, row) -> bool:
-            if str(row.get("screen") or "").upper() != "CARD_SELECTION":
-                return False
-            if row.get("action") != "select_deck_card":
-                return False
-            if index <= 0 or index + 1 >= len(decisions):
-                return False
-            previous = decisions[index - 1]
-            following = decisions[index + 1]
-            if (not isinstance(previous, dict)
-                    or not isinstance(following, dict)
-                    or str(previous.get("screen") or "").upper() != "COMBAT"
-                    or str(following.get("screen") or "").upper() != "COMBAT"):
-                return False
-            return (_same_floor(floor, previous.get("floor"))
-                    and _same_floor(floor, following.get("floor")))
-
-        terminal_round = terminal.get("turn", terminal.get("round"))
-        for index in range(len(decisions) - 2,
-                           max(0, len(decisions) - 64) - 1, -1):
-            row = decisions[index]
-            if not isinstance(row, dict):
-                return
-            if (floor is not None and row.get("floor") is not None
-                    and not _same_floor(floor, row.get("floor"))):
-                return
-            row_screen = str(row.get("screen") or "").upper()
-            if row_screen not in {"", "COMBAT"} \
-                    and not _combat_card_selection(index, row):
-                return
-            reason = str(row.get("reason") or "")
-            if marker in reason:
-                return
-            if "LETHAL_SURVIVABLE_LINE" not in reason:
-                continue
-            if row.get("action") != "play_card":
-                continue
-            source_round = row.get("turn", row.get("round"))
-            source_round_value = _number(source_round)
-            terminal_round_value = _number(terminal_round)
-            if (source_round_value is None or source_round_value < 0.0
-                    or terminal_round_value is None
-                    or terminal_round_value < 0.0):
-                continue
-            try:
-                bridge_rounds = max(
-                    0, int(terminal_round_value) - int(source_round_value))
-            except (TypeError, ValueError, OverflowError):
-                bridge_rounds = None
-            self._lethal_survivable_line_terminal_outcome_pending = {
-                "source_round": source_round,
-                "source_action": row.get("action") or "?",
-                "source_hp": row.get("hp"),
-                "terminal_round": terminal_round,
-                "terminal_action": terminal.get("action") or "?",
-                "terminal_hp": terminal.get("hp"),
-                "bridge_decisions": len(decisions) - index - 1,
-                "bridge_rounds": bridge_rounds,
-            }
-            self._lethal_survivable_line_terminal_outcome_reported = False
-            return
-
-    def _consume_lethal_survivable_line_terminal_outcome_note(
-            self, pol, victory, floor=None, final_hp=None) -> str:
-        """Join a survivable-line source to the authoritative terminal result."""
-        try:
-            enabled = bool(int(float(pol.get(
-                "lethal_survivable_line_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            enabled = False
-        pending = getattr(
-            self, "_lethal_survivable_line_terminal_outcome_pending", None)
-        if (not enabled or not isinstance(pending, dict)
-                or bool(getattr(
-                    self, "_lethal_survivable_line_terminal_outcome_reported",
-                    False))):
-            return ""
-        self._lethal_survivable_line_terminal_outcome_reported = True
-
-        def _num(value) -> str:
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        def _round(value) -> str:
-            try:
-                return str(int(float(value)))
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        result = "victory" if victory else "defeat"
-        return (
-            "; lethal survivable-line terminal audit:"
-            f"/outcome={result}"
-            f"/floor={_round(floor)}"
-            f"/source_round={_round(pending.get('source_round'))}"
-            f"/source_action={pending.get('source_action') or '?'}"
-            f"/source_hp={_num(pending.get('source_hp'))}"
-            "/source_verdict=survivable"
-            f"/terminal_round={_round(pending.get('terminal_round'))}"
-            f"/terminal_action={pending.get('terminal_action') or '?'}"
-            f"/terminal_hp={_num(pending.get('terminal_hp'))}"
-            f"/final_hp={_num(final_hp)}"
-            f"/bridge_decisions={pending.get('bridge_decisions', '?')}"
-            f"/bridge_rounds={_round(pending.get('bridge_rounds'))}"
-            " (LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS)")
 
     def _consume_low_pool_burst_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -11073,8 +10901,6 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
-            self._lethal_survivable_line_terminal_outcome_pending = None
-            self._lethal_survivable_line_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -20021,11 +19847,6 @@ class Policy:
         _nonlethal_unavailable_terminal_outcome_note = (
             self._consume_nonlethal_unavailable_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
-        self._restore_lethal_survivable_line_terminal_outcome_from_decisions(
-            self.know.policy, ctx, go.get("floor"))
-        _lethal_survivable_line_terminal_outcome_note = (
-            self._consume_lethal_survivable_line_terminal_outcome_note(
-                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_waterfall_about_to_blow_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _waterfall_about_to_blow_terminal_outcome_note = (
@@ -20064,7 +19885,6 @@ class Policy:
                             f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
-                            f"{_lethal_survivable_line_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
@@ -20101,7 +19921,6 @@ class Policy:
                         f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
                         f"{_nonlethal_unavailable_terminal_outcome_note}"
-                        f"{_lethal_survivable_line_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
@@ -20123,7 +19942,6 @@ class Policy:
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
-                                f"{_lethal_survivable_line_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
