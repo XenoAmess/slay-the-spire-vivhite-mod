@@ -14628,3 +14628,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct selfcheck reached the host's fixed 256-slot bootstrap limit; a clone-local process-level temporary-directory adapter completed the full check with exit code 0 and `SELFCHECK OK`. Targeted 1787/1786 replays passed, final production diff reread passed, and targeted `git diff --check` returned `DIFF_CHECK_OK`. No `.runtime/`, formal run/archive, learning memory, replay package or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1790: preserve lethal-cover source output capacity at terminal
+
+profile_id: `ironclad`
+requested_runs: `1790`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1790's F17 lethal-cover chain has two adjacent source decisions: one-based D203 (zero-based index 202) records output capacity `target_hp=193/attack_candidates=1/raw_damage_cap=4`, while the latest same-floor cover decision D204 (index 203) records `189/0/0`; the authoritative D214 `GAME_OVER` bridge currently keeps the latter cover pool but drops its source output-capacity context. Recovering the four capacity fields from that exact same source row should make the existing terminal observation falsifiable without changing the action or parameters. A floor/screen boundary, missing or malformed source, duplicate consume, or disabled switch must not add the fields.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-213814_FAME0WLH3CGJ.json` contains 214 decisions. The bounded source scan selected index 203, where the cover marker is paired with `target_hp=189/target_block=0/attack_candidates=0/raw_damage_cap=0`; the terminal row is index 213, defeat on F17. The read-only production probe emitted `RUN1790_REPLAY OK` with those four source values exactly once; the negative probe emitted `MALFORMED_CAPACITY_REJECTED OK` for `attack_candidates=-0.5`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS` carries `source_target_hp`, `source_target_block`, `source_attack_candidates`, and `source_raw_damage_cap` from the latest same-floor source row. Missing, malformed, cross-boundary, duplicate, and off-switch cases retain the prior format; `continue_game_over`/`return_to_main_menu` and `{}` parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: extend the existing bounded lethal-cover terminal join to parse only the same source row's existing `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`, validate finite non-negative values and an integral attack count, then append four observation fields to the existing terminal marker. No new knowledge key was added; the existing `race_allin_lethal_cover_terminal_outcome_obs` switch remains the gate. Scoring, ranking, gates, action selection, and parameters do not read this data.
+- `sts2-ascend/brain/selfcheck.py`: add the paired capacity source fixture and assert all four fields survive the terminal bridge.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching lethal-cover terminals and independently compare the exact source row's capacity fields, marker count, outcome, terminal action, final HP, and action/params.
+- **Adjust**: if traces show stale source selection, screen/floor crossing, reason-token drift, non-integral/negative values accepted, or duplicate persistence, retain the trace and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `race_allin_lethal_cover_terminal_outcome_obs` to `False` to suppress the existing cover bridge, or revert only the source-capacity parse/format lines to restore the prior marker text; source decisions and actions remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level adapter rooted in the existing `.review-cache/selfcheck-pool` completed the full check with exit code 0 and `SELFCHECK OK`. The actual read-only 1790 replay and malformed-input probe passed, and the final targeted diff review/`git diff --check` will be performed before the local commit. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

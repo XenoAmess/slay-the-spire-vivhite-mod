@@ -18887,7 +18887,11 @@ def main() -> int:
         "screen": "COMBAT", "action": "play_card", "floor": 33,
         "turn": 6,
         "reason":
-            "race cover decision: coverage=yes/decision=all_in"
+            "; race-allin lethal output capacity: hp=9/block=0"
+            "/incoming=20/energy=2/target_hp=44/target_block=0"
+            "/attack_candidates=0/raw_damage_cap=0/cards=none"
+            " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)"
+            "; race cover decision: coverage=yes/decision=all_in"
             "/strict_margin=-4.3/pool=106/cap=100/margin_floor=-2.0"
             " (RACE_ALLIN_LETHAL_COVER_DECISION_OBS)",
     }
@@ -19156,7 +19160,9 @@ def main() -> int:
 
     assert ("source_round=6/source_action=play_card/coverage=yes"
             "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"
-            "/margin_floor=-2.0/terminal_round=6/outcome=defeat"
+            "/margin_floor=-2.0/source_target_hp=44/source_target_block=0"
+            "/source_attack_candidates=0/source_raw_damage_cap=0"
+            "/terminal_round=6/outcome=defeat"
             "/bridge_decisions=0"
             " (RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS)"
             in d_race_terminal_outcome.reason), \

@@ -7544,6 +7544,16 @@ class Policy:
         _cover = _pending.get("race_allin_lethal_cover_terminal")
         if _cover_obs and isinstance(_cover, dict):
             try:
+                _source_capacity_tail = ""
+                _source_capacity = _cover.get("source_capacity")
+                if isinstance(_source_capacity, dict):
+                    _source_capacity_tail = (
+                        f"/source_target_hp={_num(_source_capacity.get('target_hp'))}"
+                        f"/source_target_block={_num(_source_capacity.get('target_block'))}"
+                        f"/source_attack_candidates="
+                        f"{_source_capacity.get('attack_candidates', '?')}"
+                        f"/source_raw_damage_cap="
+                        f"{_num(_source_capacity.get('raw_damage_cap'))}")
                 _cover_tail = (
                     f"; terminal cover decision audit: source_round="
                     f"{_round(_cover.get('source_round'))}"
@@ -7554,6 +7564,7 @@ class Policy:
                     f"/pool={_cover.get('pool') or '?'}"
                     f"/cap={_cover.get('cap') or '?'}"
                     f"/margin_floor={_cover.get('margin_floor') or '?'}"
+                    f"{_source_capacity_tail}"
                     f"/terminal_round={_round(_pending.get('terminal_round'))}"
                     f"/outcome={_result}"
                     f"/bridge_decisions="
@@ -8393,7 +8404,7 @@ class Policy:
                     or _numeric_values["pool"] < 0.0
                     or _numeric_values["cap"] < 0.0):
                 continue
-            _pending["race_allin_lethal_cover_terminal"] = {
+            _cover_source = {
                 "source_round": _row.get("turn", _row.get("round")),
                 "source_action": _row.get("action") or "?",
                 "coverage": _coverage,
@@ -8401,6 +8412,61 @@ class Policy:
                 **_raw_values,
                 "bridge_decisions": len(_decisions) - _index - 1,
             }
+            _capacity_marker_at = _reason.rfind(
+                "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS", 0, _marker_at)
+            if _capacity_marker_at >= 0:
+                _capacity_label = "race-allin lethal output capacity:"
+                _capacity_at = _reason.rfind(
+                    _capacity_label, 0, _capacity_marker_at)
+                if _capacity_at >= 0:
+                    _capacity_text = _reason[
+                        _capacity_at + len(_capacity_label):
+                        _capacity_marker_at]
+
+                    def _capacity_token(name: str):
+                        _match = re.search(
+                            rf"(?:^|/){re.escape(name)}="
+                            r"([^/\s;；（）()]+)", _capacity_text)
+                        return _match.group(1) if _match else None
+
+                    _capacity_raw = {
+                        _key: _capacity_token(_key)
+                        for _key in (
+                            "target_hp", "target_block",
+                            "attack_candidates", "raw_damage_cap")
+                    }
+                    if all(_value is not None
+                           for _value in _capacity_raw.values()):
+                        try:
+                            _capacity_numbers = {
+                                "target_hp": float(
+                                    _capacity_raw["target_hp"]),
+                                "target_block": float(
+                                    _capacity_raw["target_block"]),
+                                "attack_candidates": float(
+                                    _capacity_raw["attack_candidates"]),
+                                "raw_damage_cap": float(
+                                    _capacity_raw["raw_damage_cap"]),
+                            }
+                        except (TypeError, ValueError, OverflowError):
+                            _capacity_numbers = None
+                        if (isinstance(_capacity_numbers, dict)
+                                and all(math.isfinite(_value)
+                                        for _key, _value
+                                        in _capacity_numbers.items())
+                                and _capacity_numbers[
+                                    "attack_candidates"].is_integer()
+                                and all(_capacity_numbers[_key] >= 0.0
+                                        for _key in (
+                                            "target_hp", "target_block",
+                                            "attack_candidates",
+                                            "raw_damage_cap"))):
+                            _cover_source["source_capacity"] = {
+                                **_capacity_numbers,
+                                "attack_candidates": int(
+                                    _capacity_numbers["attack_candidates"]),
+                            }
+            _pending["race_allin_lethal_cover_terminal"] = _cover_source
             return
 
     def _consume_lethal_playable_reject_outcome_note(
