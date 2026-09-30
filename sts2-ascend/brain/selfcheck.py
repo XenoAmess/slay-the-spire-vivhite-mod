@@ -19868,6 +19868,119 @@ def main() -> int:
                 not in d_boss_joint_flip_boundary.reason), \
         f"Boss 联合翻盘上限终局桥接越过 REWARD 边界: {d_boss_joint_flip_boundary}"
 
+    # 3z-5c-buyback) 1794-F17 的买活余量终局桥接：同场
+    # RACE_ALLIN_BUYBACK_MARGIN_OBS 只落在致死竞速出牌，GAME_OVER 只保留
+    # 竞速终端账。新增尾缀只读、可回滚，覆盖重载、重复提交与 REWARD 边界，
+    # action/params 必须保持不变。
+    buyback_terminal_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 13, "hp": 2,
+        "reason":
+            "战斗：打出【痛击】→墨影幻灵；败局竞速覆盖决策："
+            "coverage=yes/decision=all_in；买活对账：击杀约需4回合"
+            "（实测13伤/回合），买活后约可存活0.3回合（净损4/回合）"
+            "→买活仍必败；买活余量：严格-3.7/宽松-2.7回合"
+            "→严格仍必败（RACE_ALLIN_BUYBACK_MARGIN_OBS）",
+    }
+    buyback_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 4, "hp": 2,
+        "reason":
+            "竞速终端对账：lock_round=2/last_round=4/pool=47/dpt=12"
+            "/ttk=3.7716/tsurv=0.153846/hp=2/block=0/incoming=13"
+            "/energy=0/kill_race=yes/race_allin=yes/"
+            "esc_latch_hold_count=1/esc_latch_hold=yes"
+            "（KILL_RACE_TERMINAL_AUDIT_OBS）",
+    }
+    buyback_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    buyback_terminal_know = knowledge.Knowledge(tmp)
+    buyback_terminal_pol = policy.Policy(buyback_terminal_know)
+    buyback_terminal_ctx = _SettleCtx()
+    buyback_terminal_ctx.decisions = [
+        dict(buyback_terminal_source_row), dict(buyback_terminal_row)]
+    d_buyback_terminal = buyback_terminal_pol.decide(
+        buyback_terminal_state, buyback_terminal_ctx)
+    assert (d_buyback_terminal.action == "continue_game_over"
+            and d_buyback_terminal.params == {}
+            and knowledge.DEFAULT_POLICY[
+                "race_allin_buyback_terminal_outcome_obs"] is True
+            and "RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS"
+                in d_buyback_terminal.reason
+            and "outcome=defeat/floor=17/source_round=13"
+                "/source_action=play_card/ttk=4/dpt=13/surv=0.3/loss=4"
+                "/strict_margin=-3.7/tolerant_margin=-2.7"
+                "/verdict=买活仍必败/strict_verdict=仍必败"
+                "/terminal_round=4/terminal_action=end_turn/terminal_hp=2"
+                "/final_hp=0/bridge_decisions=1"
+                in d_buyback_terminal.reason), \
+        f"买活余量终局桥接缺失或动作漂移: {d_buyback_terminal}"
+
+    buyback_terminal_replay_ctx = _SettleCtx()
+    buyback_terminal_replay_ctx.decisions = [
+        dict(buyback_terminal_source_row), dict(buyback_terminal_row)]
+    d_buyback_terminal_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            buyback_terminal_state, buyback_terminal_replay_ctx)
+    assert (d_buyback_terminal_replay.action == d_buyback_terminal.action
+            and d_buyback_terminal_replay.params
+            == d_buyback_terminal.params
+            and "RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS"
+                in d_buyback_terminal_replay.reason), \
+        f"进程重载后未恢复买活余量终局桥接: {d_buyback_terminal_replay}"
+
+    buyback_terminal_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_buyback_terminal.action,
+        "floor": 17, "reason": d_buyback_terminal.reason,
+    })
+    d_buyback_terminal_duplicate = buyback_terminal_pol.decide(
+        buyback_terminal_state, buyback_terminal_ctx)
+    assert (d_buyback_terminal_duplicate.action
+            == d_buyback_terminal.action
+            and d_buyback_terminal_duplicate.params
+            == d_buyback_terminal.params
+            and "RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS"
+                not in d_buyback_terminal_duplicate.reason), \
+        f"买活余量终局桥接重复提交: {d_buyback_terminal_duplicate}"
+
+    buyback_terminal_off_know = knowledge.Knowledge(tmp)
+    buyback_terminal_off_know.policy[
+        "race_allin_buyback_terminal_outcome_obs"] = False
+    buyback_terminal_off_ctx = _SettleCtx()
+    buyback_terminal_off_ctx.decisions = [
+        dict(buyback_terminal_source_row), dict(buyback_terminal_row)]
+    d_buyback_terminal_off = policy.Policy(
+        buyback_terminal_off_know).decide(
+            buyback_terminal_state, buyback_terminal_off_ctx)
+    assert (d_buyback_terminal_off.action == d_buyback_terminal.action
+            and d_buyback_terminal_off.params == d_buyback_terminal.params
+            and "RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS"
+                not in d_buyback_terminal_off.reason), \
+        f"买活余量终局开关关闭后动作或 marker 漂移: {d_buyback_terminal_off}"
+
+    buyback_terminal_boundary_ctx = _SettleCtx()
+    buyback_terminal_boundary_ctx.decisions = [
+        dict(buyback_terminal_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(buyback_terminal_row),
+    ]
+    d_buyback_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            buyback_terminal_state, buyback_terminal_boundary_ctx)
+    assert (d_buyback_terminal_boundary.action
+            == d_buyback_terminal.action
+            and d_buyback_terminal_boundary.params
+            == d_buyback_terminal.params
+            and "RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS"
+                not in d_buyback_terminal_boundary.reason), \
+        f"买活余量终局桥接越过 REWARD 边界: {d_buyback_terminal_boundary}"
+
     # 3z-5c-d) 首次竞速入锁压力终局桥接：1792-F33 的 D427
     # RACE_PROJ_LATCH_INTENT_PRESSURE_OBS 保留了首锁现场，但 GAME_OVER
     # 只分别保留投影漂移/终端意图/DPT 尾缀。仅连接同楼层连续 COMBAT 尾部，
