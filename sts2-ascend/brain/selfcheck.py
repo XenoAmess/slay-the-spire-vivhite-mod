@@ -19135,6 +19135,27 @@ def main() -> int:
         "game_over": {"can_continue": True, "is_victory": False,
                        "floor": 33},
     }
+    # 生产持久尾部可能已经把 GAME_OVER 行写入 decisions；覆盖这一形态
+    # 的 stale 专用夹具，避免改变共享夹具中其他终端桥接的边界断言。
+    stale_terminal_game_over_pol = policy.Policy(knowledge.Knowledge(tmp))
+    stale_terminal_game_over_pol._race_terminal_outcome_pending = dict(
+        race_terminal_pol._race_terminal_outcome_pending or {})
+    stale_terminal_game_over_ctx = _SettleCtx()
+    stale_terminal_game_over_ctx.decisions = [
+        dict(row) for row in race_terminal_ctx.decisions
+    ] + [{
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 33, "reason": "持久终局结果行",
+    }]
+    d_stale_terminal_game_over = stale_terminal_game_over_pol.decide(
+        race_terminal_outcome_state, stale_terminal_game_over_ctx)
+    assert (d_stale_terminal_game_over.action == "continue_game_over"
+            and d_stale_terminal_game_over.params == {}
+            and "锁后 stale 终局对账：count=1/first_age=2/last_age=2"
+                in d_stale_terminal_game_over.reason
+            and "RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
+                in d_stale_terminal_game_over.reason), \
+        f"已持久 GAME_OVER 行未恢复 stale 终局桥接: {d_stale_terminal_game_over}"
     d_race_terminal_outcome = race_terminal_pol.decide(
         race_terminal_outcome_state, race_terminal_ctx)
     assert (d_race_terminal_outcome.action == "continue_game_over"

@@ -14829,3 +14829,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 runs 1803-1804: recover stale race-upshift terminal observation after durable GAME_OVER
+
+profile_id: `ironclad`
+requested_runs: `1803,1804`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The stale race-upshift terminal bridge stops too early when the authoritative `GAME_OVER` row is already persisted at the end of `ctx.decisions`, treating that result row as a combat boundary. Skipping exactly one trailing `GAME_OVER`/`VICTORY` row before the existing same-floor `COMBAT` scan should restore the observation without changing behavior.
+- **EVIDENCE**: The complete exact-chain file `sts2-ascend/knowledge/runs/20261001-020601_YXYEK8J0KK3G.json` records run 1804's F17 Waterfall Giant defeat. Its same-floor stale source rows include D198, D200, D204, D205, D208, D210, D212, D213, D214, D217, and D219; the final D222 `GAME_OVER` reason contains the other terminal joins but omits `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS`. The pre-change reverse scan broke immediately on that durable non-`COMBAT` tail row.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit exactly one `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS` from the bounded same-floor stale tail. Floor/screen boundaries, duplicate calls, and the switch-off case stay silent; action and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: in the existing observation-only terminal join, skip only one trailing persisted `GAME_OVER`/`VICTORY` result row, then retain the existing same-floor `COMBAT` stop rules. No score, gate, ranking, action, or parameter path changed.
+- `sts2-ascend/brain/selfcheck.py`: add an isolated fixture whose durable decisions end with `GAME_OVER`, asserting the recovered marker and unchanged `continue_game_over {}` action/params. The existing shared terminal fixtures remain unchanged.
+- No new knowledge key was needed; `race_upshift_stale_terminal_outcome_obs` already provides the rollback switch.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare stale source count/ages, marker count, floor/screen boundary, terminal action, and parameters.
+- **Adjust**: if a real trace shows a stale cross-floor tail, terminal-row duplication, malformed source, or `VICTORY` semantics that differ from `GAME_OVER`, retain the evidence and tighten only this bounded observation bridge.
+- **Rollback**: set `race_upshift_stale_terminal_outcome_obs` to `False`; only the new terminal observation should disappear while source decisions, action, and parameters remain unchanged.
+- **Validation**: direct selfcheck reached the host's fixed 256-slot bootstrap limit; the same complete selfcheck completed through a clone-local process-level temporary-directory adapter with exit code 0 and `SELFCHECK OK` (284 allocations). Final diff review covered only the two intended production files plus the two requested report files and found no code whitespace errors. Existing unrelated asset deletions and `.review-cache/` were preserved and not staged. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

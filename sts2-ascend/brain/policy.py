@@ -9025,7 +9025,16 @@ class Policy:
 
         _floor_text = None if floor is None else str(floor)
         _samples = []
-        for _row in reversed(_decisions):
+        _scan_rows = list(reversed(_decisions))
+        # The durable decision tail may already contain the authoritative
+        # GAME_OVER row when this join runs.  That row is the result boundary,
+        # not a combat boundary; skip only that one terminal row and keep the
+        # existing same-floor COMBAT stop rules for everything behind it.
+        if _scan_rows and isinstance(_scan_rows[0], dict):
+            _tail_screen = str(_scan_rows[0].get("screen") or "").upper()
+            if _tail_screen in {"GAME_OVER", "VICTORY"}:
+                _scan_rows = _scan_rows[1:]
+        for _row in _scan_rows:
             if not isinstance(_row, dict):
                 break
             _row_floor = _row.get("floor")
