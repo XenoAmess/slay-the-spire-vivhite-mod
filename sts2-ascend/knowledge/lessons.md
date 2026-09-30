@@ -15033,3 +15033,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.0131149206651107局)，BULLY(16分/2.4940926633892997局)，BURNING_PACT(17分/15.058361173347299局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1767 胜，当前目标进阶 0
+
+## 第 1768 局复盘（2026-09-30 15:01）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：MOLTEN_FIST, CINDER, TRUE_GRIT, TRUE_GRIT, CINDER, UPPERCUT, RUPTURE, IMPERVIOUS, STOMP, INFLAME
+- 本局遗物：JUZU_BRACELET
+- 战斗记录：F6 Monster战 掉血2; F7 Monster战 掉血19; F8 Monster战 掉血2; F9 Monster战 掉血14; F14 Monster战 掉血4; F17 Boss战 掉血58｜竞速投影审计：pool=175/dpt=18.225/ttk=9.60219/tsurv=3.22222（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=9.60219/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.79（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=17.9167/projected_dpt=19.2919/ratio=0.92/min_ratio=0.05（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=17.9167/projected_dpt=19.2919/ratio=0.92/min_ratio=0.05（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/9.731244914136093局)，HELLRAISER(25分/5.03383631949861局)，PACTS_END(25分/53.33254479072683局)，MANGLE(25分/46.162230437112186局)，FEED(24分/28.63374635580313局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.006069018442783局)，BULLY(16分/2.4853633390674372局)，BURNING_PACT(17分/15.005656909240583局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（67%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1768 胜，当前目标进阶 0
