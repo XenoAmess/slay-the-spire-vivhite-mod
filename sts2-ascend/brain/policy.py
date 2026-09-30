@@ -6716,6 +6716,185 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             "（RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_lethal_survivable_line_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a same-floor ``LETHAL_SURVIVABLE_LINE`` source to GAME_OVER.
+
+        The source explains that an affordable block line existed before a
+        lethal turn, while the terminal row records what actually happened
+        after the bounded combat tail.  This is observation-only: it never
+        changes the line's score, target, action, or parameters.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "lethal_survivable_line_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        marker = "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        _last = decisions[-1]
+        if isinstance(_last, dict) and marker in str(_last.get("reason") or ""):
+            return ""
+        _terminal = _last
+        if not isinstance(_terminal, dict):
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if _terminal_screen not in {"COMBAT", "CARD_SELECTION"}:
+            return ""
+        if (_terminal.get("action") or "") != "end_turn":
+            return ""
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        if (floor is not None and _terminal.get("floor") is not None
+                and not _same_floor(floor, _terminal.get("floor"))):
+            return ""
+
+        def _number(value):
+            try:
+                _value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return _value if math.isfinite(_value) else None
+
+        def _is_combat_card_selection(row_index, row) -> bool:
+            if row.get("screen") != "CARD_SELECTION":
+                return False
+            if row.get("action") != "select_deck_card":
+                return False
+            if row_index <= 0 or row_index + 1 >= len(decisions):
+                return False
+            _previous = decisions[row_index - 1]
+            _following = decisions[row_index + 1]
+            if (not isinstance(_previous, dict)
+                    or not isinstance(_following, dict)
+                    or _previous.get("screen") != "COMBAT"
+                    or _following.get("screen") != "COMBAT"):
+                return False
+            if floor is not None:
+                for _neighbor in (_previous, _following):
+                    if (_neighbor.get("floor") is not None
+                            and not _same_floor(floor, _neighbor.get("floor"))):
+                        return False
+            return True
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _start = max(0, len(decisions) - 48)
+        _source = None
+        for _row_index in range(len(decisions) - 2, _start - 1, -1):
+            _row = decisions[_row_index]
+            if not isinstance(_row, dict):
+                continue
+            if (_row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                return ""
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen != "COMBAT":
+                if _is_combat_card_selection(_row_index, _row):
+                    continue
+                return ""
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind("LETHAL_SURVIVABLE_LINE")
+            if _marker_at < 0:
+                continue
+            _prefix_at = _reason.rfind("致死生还线：", 0, _marker_at)
+            if _prefix_at < 0:
+                continue
+            _source_text = _reason[:_marker_at]
+            _block_match = re.search(
+                rf"格挡(?P<block>{_number_pattern})", _source_text)
+            _impact_match = re.search(
+                rf"敌意图总伤(?P<incoming>{_number_pattern})"
+                rf".*?我方(?P<hp>{_number_pattern})血", _source_text)
+            _line_match = re.search(
+                rf"覆盖缺口(?P<incoming>{_number_pattern})"
+                rf"-生命(?P<hp>{_number_pattern})", _source_text[_prefix_at:])
+            if _block_match is None or _impact_match is None or _line_match is None:
+                continue
+            _source_round = _number(
+                _row.get("turn", _row.get("round")))
+            _source_block = _number(_block_match.group("block"))
+            _source_incoming = _number(_impact_match.group("incoming"))
+            _source_hp = _number(_impact_match.group("hp"))
+            _line_incoming = _number(_line_match.group("incoming"))
+            _line_hp = _number(_line_match.group("hp"))
+            _terminal_round = _number(
+                _terminal.get("turn", _terminal.get("round")))
+            _terminal_hp = _number(_terminal.get("hp"))
+            if any(value is None for value in (
+                    _source_round, _source_block, _source_incoming, _source_hp,
+                    _line_incoming, _line_hp, _terminal_round, _terminal_hp)):
+                continue
+            if (_source_round < 0.0 or _source_block <= 0.0
+                    or _source_incoming < 0.0 or _source_hp < 0.0
+                    or _line_incoming < 0.0 or _line_hp < 0.0
+                    or _terminal_round < _source_round
+                    or abs(_source_incoming - _line_incoming) > 1e-6
+                    or abs(_source_hp - _line_hp) > 1e-6):
+                continue
+            _card_match = re.search(r"打出【(?P<card>[^】]+)】", _source_text)
+            _source = {
+                "source_round": _source_round,
+                "source_action": _row.get("action") or "?",
+                "source_card": (_card_match.group("card").strip()
+                                 if _card_match else "?"),
+                "source_block": _source_block,
+                "source_incoming": _source_incoming,
+                "source_hp": _source_hp,
+                "terminal_round": _terminal_round,
+                "terminal_action": _terminal.get("action") or "?",
+                "terminal_hp": _terminal_hp,
+                "bridge_decisions": len(decisions) - 1 - _row_index,
+            }
+            break
+        if _source is None:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _card = re.sub(r"[/；（）()\s]+", "_",
+                       str(_source.get("source_card") or "?"))
+        _bridge_rounds = max(0, int(float(_source["terminal_round"]))
+                             - int(float(_source["source_round"])))
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；致死生还线终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source['source_round'])}"
+            f"/source_action={_source['source_action']}"
+            f"/card={_card or '?'}"
+            f"/source_block={_num(_source['source_block'])}"
+            f"/source_hp={_num(_source['source_hp'])}"
+            f"/source_incoming={_num(_source['source_incoming'])}"
+            f"/terminal_round={_round(_source['terminal_round'])}"
+            f"/terminal_action={_source['terminal_action']}"
+            f"/terminal_hp={_num(_source['terminal_hp'])}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_source['bridge_decisions']}"
+            f"/bridge_rounds={_bridge_rounds}"
+            "（LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS）")
+
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
@@ -20546,6 +20725,9 @@ class Policy:
         _race_projection_effective_dpt_phase_terminal_outcome_note = (
             self._consume_race_projection_effective_dpt_phase_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _lethal_survivable_line_terminal_outcome_note = (
+            self._consume_lethal_survivable_line_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
@@ -20631,6 +20813,7 @@ class Policy:
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
+                            f"{_lethal_survivable_line_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"

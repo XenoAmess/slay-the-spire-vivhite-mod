@@ -1397,6 +1397,10 @@ DEFAULT_POLICY = {
                                         # 被选中的单体目标可击杀，不等于本回合已消除全部敌意图。
                                         # 仅记录仍有多个存活敌人的单体击杀候选，不改变评分、
                                         # 目标、动作或参数；置 False 严格回滚观测尾缀。
+      "lethal_survivable_line_terminal_outcome_obs": True,
+                                        # 将同楼层致死生还线来源接回权威 GAME_OVER；
+                                        # 只记录来源/终局字段与有界桥接距离，不改变评分、
+                                        # 目标、门控、action 或 params；置 False 严格回滚。
       "race_allin_lethal_cover_obs": True,
                                         # 败局竞速致死回合生还覆盖旁观（RACE_ALLIN_LETHAL_COVER_OBS，
                                         # 第1500~1504局批复盘新增，静态键）：LETHAL_SURVIVABLE_LINE
