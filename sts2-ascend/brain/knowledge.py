@@ -599,10 +599,6 @@ DEFAULT_POLICY = {
                                                    # 手牌在现有能量下的最大可得格挡、剩余受击缺口
                                                    # 与是否能撑过本次意图；只观测，不改评分、判决、目标或动作；
                                                    # False=严格回滚该注记
-    "longfight_joint_survival_margin_terminal_outcome_obs": True,  # 将同楼层
-                                                                    # LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS
-                                                                    # 接回权威 GAME_OVER，记录来源即时生还余量与终局结果；
-                                                                    # 只读观测，False=严格回滚终局尾缀
     "vivhite_race_self_loss_obs": True,  # 白绮竞速自付速率观测位：按回合记录可行动段
                                          # 的实际生命支付，并在它达到敌方净损速率时留痕，
                                          # 用来验证 VIVHITE_RACE_SELF_LOSS_EXCLUDE 是否

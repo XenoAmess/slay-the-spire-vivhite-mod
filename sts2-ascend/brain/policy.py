@@ -917,7 +917,6 @@ class Policy:
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         self._longfight_joint_flip_terminal_outcome_reported = False
-        self._longfight_joint_survival_margin_terminal_outcome_reported = False
         self._race_prelock_defense_terminal_outcome_pending = None
         self._race_prelock_defense_terminal_outcome_reported = False
         self._waterfall_about_to_blow_terminal_outcome_pending = None
@@ -5164,152 +5163,6 @@ class Policy:
             f"/cap={_num(source_match.group(2))}"
             f"/final_hp={_num(final_hp)}"
             "（LONGFIGHT_JOINT_FLIP_TERMINAL_OUTCOME_OBS）")
-
-    def _consume_longfight_joint_survival_margin_terminal_outcome_note(
-            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
-        """Join the latest same-floor survival-margin snapshot to GAME_OVER.
-
-        ``LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS`` is emitted on the combat
-        decision that evaluates the current hand and incoming intent.  Keep
-        this terminal audit bounded to the trailing COMBAT/CARD_SELECTION
-        segment so a prior room cannot explain a later death.  The snapshot is
-        observation-only and never participates in action selection.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "longfight_joint_survival_margin_terminal_outcome_obs", 1)
-                or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        if not _enabled:
-            return ""
-
-        decisions = getattr(ctx, "decisions", None)
-        if not isinstance(decisions, list) or not decisions:
-            return ""
-        marker = "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS"
-        if any(marker in str(row.get("reason") or "")
-               for row in decisions if isinstance(row, dict)):
-            return ""
-        if getattr(
-                self, "_longfight_joint_survival_margin_terminal_outcome_reported",
-                False):
-            # A durable marker is the commit proof.  If the GAME_OVER decision
-            # was lost before persistence, allow the next authoritative poll
-            # to rebuild the same audit.
-            self._longfight_joint_survival_margin_terminal_outcome_reported = False
-
-        def _same_floor(left, right) -> bool:
-            if left is None or right is None:
-                return True
-            try:
-                return int(float(left)) == int(float(right))
-            except (TypeError, ValueError, OverflowError):
-                return str(left) == str(right)
-
-        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
-        _source = None
-        for _row in reversed(decisions):
-            if not isinstance(_row, dict):
-                continue
-            if not _same_floor(floor, _row.get("floor")):
-                break
-            _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
-                break
-            _reason = str(_row.get("reason") or "")
-            _marker_at = _reason.rfind(
-                "LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS")
-            if _marker_at < 0:
-                continue
-            _match = re.search(
-                rf"长战联合复核即时生还对账："
-                rf"hp=(?P<hp>{_number_pattern})/"
-                rf"block=(?P<block>{_number_pattern})/"
-                rf"incoming=(?P<incoming>{_number_pattern})/"
-                rf"energy=(?P<energy>{_number_pattern})/"
-                rf"hand_block_cap=(?P<hand_block_cap>{_number_pattern})/"
-                rf"post_block_gap=(?P<post_block_gap>{_number_pattern})/"
-                rf"survives=(?P<survives>yes|no)/"
-                rf"cards=(?P<cards>[^（(]*)",
-                _reason[:_marker_at])
-            if _match is None:
-                # Do not fall back to an older snapshot when the newest
-                # marker is malformed; that would hide source drift.
-                return ""
-            try:
-                _values = {
-                    _key: float(_match.group(_key))
-                    for _key in (
-                        "hp", "block", "incoming", "energy",
-                        "hand_block_cap", "post_block_gap")
-                }
-            except (TypeError, ValueError, OverflowError):
-                return ""
-            if (not all(math.isfinite(_value)
-                        for _value in _values.values())
-                    or any(_value < 0.0 for _value in _values.values())):
-                return ""
-            _cards = (_match.group("cards") or "none").strip() or "none"
-            _cards = (_cards.replace("/", "|")
-                      .replace("（", "[").replace("）", "]"))
-            if len(_cards) > 120:
-                _cards = _cards[:117] + "..."
-            _source = {
-                "source_floor": _row.get("floor"),
-                "source_round": _row.get("turn", _row.get("round")),
-                "source_action": _row.get("action") or "?",
-                "cards": _cards,
-                "survives": _match.group("survives"),
-                **_values,
-            }
-            break
-        if _source is None:
-            return ""
-
-        _terminal = decisions[-1]
-        if not isinstance(_terminal, dict):
-            return ""
-        _terminal_screen = str(_terminal.get("screen") or "").upper()
-        if (_terminal_screen
-                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
-            return ""
-        if not _same_floor(floor, _terminal.get("floor")):
-            return ""
-        self._longfight_joint_survival_margin_terminal_outcome_reported = True
-
-        def _num(value) -> str:
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        def _round(value) -> str:
-            try:
-                return str(int(float(value)))
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        _result = "victory" if victory else "defeat"
-        return (
-            f"；长战即时生还终局对账：outcome={_result}"
-            f"/floor={_round(floor)}"
-            f"/source_floor={_round(_source.get('source_floor'))}"
-            f"/source_round={_round(_source.get('source_round'))}"
-            f"/source_action={_source.get('source_action') or '?'}"
-            f"/source_hp={_num(_source.get('hp'))}"
-            f"/source_block={_num(_source.get('block'))}"
-            f"/incoming={_num(_source.get('incoming'))}"
-            f"/energy={_num(_source.get('energy'))}"
-            f"/hand_block_cap={_num(_source.get('hand_block_cap'))}"
-            f"/post_block_gap={_num(_source.get('post_block_gap'))}"
-            f"/survives={_source.get('survives') or '?'}"
-            f"/cards={_source.get('cards') or 'none'}"
-            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
-            f"/terminal_action={_terminal.get('action') or '?'}"
-            f"/terminal_hp={_num(_terminal.get('hp'))}"
-            f"/final_hp={_num(final_hp)}"
-            "（LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS）")
 
     def _restore_race_prelock_defense_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -12470,7 +12323,6 @@ class Policy:
             self._race_prelock_defense_terminal_outcome_reported = False
             self._waterfall_about_to_blow_terminal_outcome_pending = None
             self._waterfall_about_to_blow_terminal_outcome_reported = False
-            self._longfight_joint_survival_margin_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -21363,9 +21215,6 @@ class Policy:
         _longfight_joint_flip_terminal_outcome_note = (
             self._consume_longfight_joint_flip_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
-        _longfight_joint_survival_margin_terminal_outcome_note = (
-            self._consume_longfight_joint_survival_margin_terminal_outcome_note(
-                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_boss_effective_dpt_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _boss_effective_dpt_terminal_outcome_note = (
@@ -21483,7 +21332,6 @@ class Policy:
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
-                            f"{_longfight_joint_survival_margin_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
@@ -21529,7 +21377,6 @@ class Policy:
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
-                        f"{_longfight_joint_survival_margin_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
@@ -21558,7 +21405,6 @@ class Policy:
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
-                                f"{_longfight_joint_survival_margin_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_self_loss_phase_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
