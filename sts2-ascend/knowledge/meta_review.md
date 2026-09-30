@@ -14517,3 +14517,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the required direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temporary-directory adapter completed the full check with `SELFCHECK OK` and exit code 0. Read-only replays of 1777 and 1778 emitted one phase marker each with the expected fields; targeted `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1781: bridge race-allin output capacity to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1781`
+production_code_commit: `2450921305fcb97f76ffe9a13b4ebb7862d7b3ff`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1781's F17/VANTOM D197-D200 persisted `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`, shrinking from attack capacity `3/57` to `0/0`, but D200 had no `KILL_RACE_TERMINAL_AUDIT_OBS` and D201 had no capacity terminal bridge. A bounded same-floor, same-combat source-to-terminal join should emit one race-allin capacity outcome marker without changing the selected action or parameters. This is falsifiable: a non-combat/floor boundary, missing end-turn predecessor, malformed source, duplicate retry, or disabled switch must remain silent.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-185008_X625W364RP59.json` contains 202 decisions. D197 records `target_hp=65/attack_candidates=3/raw_damage_cap=57`, D198 records `39/1/31`, D199 records `39/0/0`, and D200 is the same-floor F17 `end_turn` with `39/0/0`; D201 is defeat at final HP 0 with no race-allin capacity terminal marker. The read-only post-change replay recovered `source_round=6/source_raw_damage_cap=57` and `terminal_round=6/terminal_raw_damage_cap=0/final_hp=0`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS` once with source/terminal target HP, block, attack candidates, raw capacity, outcome, terminal action and final HP. Cross-floor, non-combat, missing-source, malformed, duplicate and off-switch cases remain silent; `continue_game_over`/`return_to_main_menu` action and `{}` parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: recover the existing race-allin capacity snapshot from the bounded same-floor combat tail when the broader terminal audit is absent, then append one observation-only terminal bridge. It reuses the existing source and transition switches and is not read by scoring, candidate ranking, gates, action selection or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add a positive fallback fixture with exact source/terminal fields and a switch-off assertion for unchanged action/params.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching race-allin terminal windows and independently compare source/terminal capacity fields, round/action, outcome, final HP, marker count and action/params.
+- **Adjust**: if traces show stale source selection, a screen/floor crossing, reason-token drift, malformed numeric fields or duplicate persistence, retain the evidence and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `kill_race_terminal_output_capacity_transition_obs` to `False`; the new terminal marker should disappear while the existing source marker, action and params remain unchanged. Setting `race_allin_lethal_output_capacity_obs` to `False` is the broader rollback that also removes the source observation.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local 512-slot process adapter completed the full check with exit code 0 and `SELFCHECK OK`. The read-only 1781 replay emitted the expected 57-to-0 bridge; final committed diff review and `git diff --check` passed. No `.runtime/`, formal run/archive, learning memory, replay package or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

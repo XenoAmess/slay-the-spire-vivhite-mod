@@ -18929,6 +18929,71 @@ def main() -> int:
             in d_race_terminal_outcome.reason), \
         f"竞速覆盖决策未桥接到终局: {d_race_terminal_outcome}"
 
+    # 3z-5b-fallback) A race-all-in capacity source can survive without the
+    # broader KILL_RACE_TERMINAL_AUDIT_OBS tail.  The dedicated terminal join
+    # must still be same-floor, same-combat, observation-only, and toggleable.
+    race_allin_terminal_fallback_pol = policy.Policy(knowledge.Knowledge(tmp))
+    race_allin_terminal_fallback_ctx = _SettleCtx()
+    race_allin_terminal_fallback_ctx.decisions = [
+        dict(race_terminal_output_source_row),
+        dict(race_terminal_later_output_source_row),
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 33,
+            "turn": 6,
+            "reason":
+                "; race-allin lethal output capacity: hp=3/block=0"
+                "/incoming=14/energy=1/target_hp=39/target_block=0"
+                "/attack_candidates=0/raw_damage_cap=0/cards=none"
+                " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)",
+        },
+    ]
+    race_allin_terminal_fallback_state = dict(race_terminal_outcome_state)
+    race_allin_terminal_fallback_state["run"] = {"current_hp": 0}
+    d_race_allin_terminal_fallback = (
+        race_allin_terminal_fallback_pol.decide(
+            race_allin_terminal_fallback_state,
+            race_allin_terminal_fallback_ctx))
+    assert (d_race_allin_terminal_fallback.action == "continue_game_over"
+            and d_race_allin_terminal_fallback.params == {}
+            and "KILL_RACE_TERMINAL_AUDIT_OBS"
+                not in d_race_allin_terminal_fallback.reason
+            and "/source_round=5/source_action=play_card"
+                "/source_target_hp=48/source_target_block=0"
+                "/source_attack_candidates=1"
+                "/source_raw_damage_cap=16"
+                in d_race_allin_terminal_fallback.reason
+            and "/terminal_round=6/terminal_action=end_turn"
+                "/terminal_target_hp=39/terminal_target_block=0"
+                "/terminal_attack_candidates=0"
+                "/terminal_raw_damage_cap=0/final_hp=0"
+                in d_race_allin_terminal_fallback.reason
+            and "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS"
+                in d_race_allin_terminal_fallback.reason), \
+        f"race-allin ���������������վֶ��˹����ȱʧ: " \
+        f"{d_race_allin_terminal_fallback}"
+
+    race_allin_terminal_fallback_off_know = knowledge.Knowledge(tmp)
+    race_allin_terminal_fallback_off_know.policy[
+        "kill_race_terminal_output_capacity_transition_obs"] = False
+    race_allin_terminal_fallback_off_pol = policy.Policy(
+        race_allin_terminal_fallback_off_know)
+    race_allin_terminal_fallback_off_ctx = _SettleCtx()
+    race_allin_terminal_fallback_off_ctx.decisions = [
+        dict(row) for row in race_allin_terminal_fallback_ctx.decisions]
+    d_race_allin_terminal_fallback_off = (
+        race_allin_terminal_fallback_off_pol.decide(
+            race_allin_terminal_fallback_state,
+            race_allin_terminal_fallback_off_ctx))
+    assert (d_race_allin_terminal_fallback_off.action
+            == d_race_allin_terminal_fallback.action
+            and d_race_allin_terminal_fallback_off.params
+            == d_race_allin_terminal_fallback.params
+            and "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS"
+                not in d_race_allin_terminal_fallback_off.reason), \
+        f"race-allin ���������رպ� action/params/marker Ư��: " \
+        f"on={d_race_allin_terminal_fallback} " \
+        f"off={d_race_allin_terminal_fallback_off}"
+
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
     assert (d_race_terminal_hook_outcome.action == "continue_game_over"

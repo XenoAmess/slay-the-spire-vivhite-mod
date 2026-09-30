@@ -7592,6 +7592,130 @@ class Policy:
         self._race_terminal_outcome_pending = _pending
         self._race_terminal_outcome_reported = False
 
+    def _restore_race_allin_output_capacity_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover a race-all-in capacity source for the terminal join.
+
+        Some lethal race-all-in turns persist the dedicated capacity snapshot
+        but not the broader ``KILL_RACE_TERMINAL_AUDIT_OBS`` tail.  Keep this
+        fallback observation-only: use the latest same-floor end-turn as the
+        terminal row and the bounded persisted race-all-in source before it.
+        """
+        try:
+            _source_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_output_capacity_obs", 1) or 0)))
+            _terminal_enabled = bool(int(float(pol.get(
+                "kill_race_terminal_output_capacity_transition_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _source_enabled = False
+            _terminal_enabled = False
+        if not (_source_enabled and _terminal_enabled):
+            return
+
+        _marker = "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS"
+        _decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_race_allin_output_capacity_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            # GAME_OVER may have been returned before its action was persisted;
+            # the durable marker is the only commit proof.
+            self._race_allin_output_capacity_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_allin_output_capacity_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+        _terminal_index = len(_decisions) - 1
+        _terminal_row = _decisions[_terminal_index]
+        if (not isinstance(_terminal_row, dict)
+                or _terminal_row.get("action") != "end_turn"):
+            return
+        if (floor is not None and _terminal_row.get("floor") is not None
+                and str(_terminal_row.get("floor")) != str(floor)):
+            return
+        _terminal = self._find_race_output_capacity_transition_source(
+            [_terminal_row], floor=floor, before_index=1)
+        if not isinstance(_terminal, dict):
+            return
+        _source = self._find_race_output_capacity_transition_source(
+            _decisions, floor=floor, before_index=_terminal_index)
+        if not isinstance(_source, dict):
+            return
+        self._race_allin_output_capacity_terminal_outcome_pending = {
+            "source": _source,
+            "terminal": _terminal,
+            "terminal_round": _terminal_row.get(
+                "turn", _terminal_row.get("round")),
+            "terminal_action": _terminal_row.get("action") or "?",
+        }
+        self._race_allin_output_capacity_terminal_outcome_reported = False
+
+    def _consume_race_allin_output_capacity_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a race-all-in capacity source to the authoritative terminal."""
+        try:
+            _source_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_output_capacity_obs", 1) or 0)))
+            _terminal_enabled = bool(int(float(pol.get(
+                "kill_race_terminal_output_capacity_transition_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _source_enabled = False
+            _terminal_enabled = False
+        _pending = getattr(
+            self, "_race_allin_output_capacity_terminal_outcome_pending", None)
+        if (not _source_enabled or not _terminal_enabled
+                or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_race_allin_output_capacity_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._race_allin_output_capacity_terminal_outcome_reported = True
+        _source = _pending.get("source") or {}
+        _terminal = _pending.get("terminal") or {}
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；race-allin输出容量终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source.get('source_round'))}"
+            f"/source_action={_source.get('source_action') or '?'}"
+            f"/source_target_hp={_num(_source.get('target_hp'))}"
+            f"/source_target_block={_num(_source.get('target_block'))}"
+            f"/source_attack_candidates={_source.get('attack_candidates', '?')}"
+            f"/source_raw_damage_cap={_num(_source.get('raw_damage_cap'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_target_hp={_num(_terminal.get('target_hp'))}"
+            f"/terminal_target_block={_num(_terminal.get('target_block'))}"
+            f"/terminal_attack_candidates={_terminal.get('attack_candidates', '?')}"
+            f"/terminal_raw_damage_cap={_num(_terminal.get('raw_damage_cap'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS）")
+
     def _attach_race_upshift_stale_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
         """Attach a bounded stale-upshift source to the terminal race join.
@@ -20573,12 +20697,17 @@ class Policy:
                 self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
+        self._restore_race_allin_output_capacity_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
         self._attach_race_upshift_stale_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         self._attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
+        _race_allin_output_capacity_terminal_outcome_note = (
+            self._consume_race_allin_output_capacity_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_lethal_playable_reject_outcome_from_decisions(
             ctx, go.get("floor"))
         _lethal_playable_reject_outcome_note = (
@@ -20637,6 +20766,7 @@ class Policy:
                             f"{_kill_race_hp_pay_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
+                            f"{_race_allin_output_capacity_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
@@ -20676,6 +20806,7 @@ class Policy:
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
+                        f"{_race_allin_output_capacity_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
@@ -20701,6 +20832,7 @@ class Policy:
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
+                                f"{_race_allin_output_capacity_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
