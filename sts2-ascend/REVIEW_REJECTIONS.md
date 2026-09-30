@@ -456,4 +456,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260930-004932-1790700572589486100-3a8e2966 -->
 | 2026-09-30 00:49:32 | 第 1726 局 | `3a8e2966` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `1d17f299` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 1d17f299 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20260930-101331-1790734411903560800-c5d89832 -->
-| 2026-09-30 10:13:31 | 第 1753 局 | `c5d89832` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20260930-101331-1790734411903560800-c5d89832` | 复盘 patch 触碰 deny-only 路径边界：sts2-ascend/knowledge/policy.json (online-runtime) |
+| 2026-09-30 10:13:31 | 第 1753 局 | `c5d89832` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `36c5290d` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 36c5290d 已推送；远端确认后精确清理对应失败包 |
