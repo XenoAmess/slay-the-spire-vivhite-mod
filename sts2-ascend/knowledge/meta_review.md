@@ -14685,35 +14685,6 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
-## 2026-10-01 runs 1794-1795: bridge buyback margin to terminal outcome
-
-profile_id: `ironclad`
-requested_runs: `1794,1795`
-production_code_commit: `pending local commit (SHA in delivery response)`
-failed_review_replay: `requested_packages=[]` (no replay target)
-
-### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
-
-- **HYPOTHESIS**: Run 1794's F17 VANTOM combat records the latest same-floor buyback margin verdict on the lethal-race source decision, but the authoritative `GAME_OVER` audit does not retain that source-to-outcome relationship. A bounded same-floor `COMBAT`/`CARD_SELECTION` join should append one audit-only buyback terminal marker. This is falsifiable: a floor or screen boundary, malformed/non-finite source, duplicate terminal retry, or disabled switch must remain silent; action and parameters must not change.
-- **EVIDENCE**: The complete requested chains are `sts2-ascend/knowledge/runs/20260930-230347_UZ06CP6C6SEU.json` (1794, 328 decisions) and `sts2-ascend/knowledge/runs/20260930-232726_S6LR5JLTW5P2.json` (1795, 403 decisions). In 1794, zero-based index 325 is the latest valid F17 source with `ttk=4/dpt=12/surv=0.3/loss=4/strict_margin=-3.5/tolerant_margin=-2.5`, index 326 is `end_turn` at HP2, and index 327 is defeat `GAME_OVER` at final HP0. The read-only production replay emitted `RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS` once with `bridge_decisions=1` and preserved `continue_game_over` with `{}` parameters.
-- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit the source buyback TTK/DPT/survival/loss and strict/tolerant margins together with terminal floor/round/action/HP, outcome, final HP, and bridge length. Cross-screen/floor, malformed, duplicate, and off-switch cases remain silent; scoring, ranking, gates, action selection, and parameters remain unchanged.
-
-### MINIMUM_CHANGE
-
-- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `race_allin_buyback_terminal_outcome_obs`.
-- `sts2-ascend/brain/policy.py`: recover only the latest bounded same-floor `RACE_ALLIN_BUYBACK_MARGIN_OBS` source in a contiguous `COMBAT`/`CARD_SELECTION` tail, validate finite non-negative fields and positive TTK/DPT, then append the observation-only terminal bridge. The data is not read by scoring, ranking, gates, action selection, or parameters.
-- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions for the 1794-shaped tail.
-
-### CONTINUE / ADJUST / ROLLBACK / VALIDATION
-
-- **Continue**: collect 3-10 matching terminals and compare the exact source row, same-floor tail, buyback values, terminal action/HP, final HP, marker count, bridge length, and action/params.
-- **Adjust**: if real traces show reason-grammar drift, stale source selection, screen/floor crossing, malformed numeric acceptance, or duplicate persistence, retain the evidence and tighten only this observation parser; do not promote it into behavior.
-- **Rollback**: set `race_allin_buyback_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source decision, existing audits, action, and parameters remain unchanged.
-- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full selfcheck completed through a clone-local process-level temporary-directory adapter with exit code 0 and `SELFCHECK OK`. The read-only 1794 replay passed, AST parsing and targeted `git diff --check` passed, and the final three-file diff was reread. Staged diff checking and the local commit follow this report. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
-
-- replay target: none (`failed_review_replay.requested_packages=[]`).
-- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
-
 ## 2026-10-01 runs 1794-1795: bridge Boss JOINT_FLIP_TTK_CAP to terminal outcome
 
 profile_id: `ironclad`

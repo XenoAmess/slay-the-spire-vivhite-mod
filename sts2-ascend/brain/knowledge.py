@@ -1441,10 +1441,6 @@ DEFAULT_POLICY = {
                                         # 严格余量（买活可存活回合-击杀所需回合）与宽松余量，
                                         # 供后续区分“严格可翻盘”和仅靠容差命中的样本。纯观测，
                                         # 不改变 race_allin 判决、评分或动作；置 False 严格回滚。
-      "race_allin_buyback_terminal_outcome_obs": True,
-                                        # Audit-only same-combat join from the buyback
-                                        # margin verdict to the authoritative GAME_OVER;
-                                        # False removes only this terminal marker.
       "race_allin_lethal_cover_behavior": True,
                                         # 败局竞速致死覆盖行为门（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）：
                                         # 仅在謦欬锁链执行模拟已通过、且买活后的严格余量（不含

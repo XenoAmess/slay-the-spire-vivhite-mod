@@ -7803,7 +7803,7 @@ class Policy:
             "（RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
-            self, pol, victory, floor=None, final_hp=None) -> str:
+            self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
         try:
             _enabled = bool(int(float(pol.get(
@@ -8104,37 +8104,6 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 _cover_tail = ""
 
-        _buyback_tail = ""
-        try:
-            _buyback_obs = bool(int(float(pol.get(
-                "race_allin_buyback_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _buyback_obs = False
-        _buyback = _pending.get("race_allin_buyback_terminal")
-        if _buyback_obs and isinstance(_buyback, dict):
-            try:
-                _buyback_tail = (
-                    f"；买活余量终局对账：outcome={_result}"
-                    f"/floor={_round(floor)}"
-                    f"/source_round={_round(_buyback.get('source_round'))}"
-                    f"/source_action={_buyback.get('source_action') or '?'}"
-                    f"/ttk={_num(_buyback.get('ttk'))}"
-                    f"/dpt={_num(_buyback.get('dpt'))}"
-                    f"/surv={_num(_buyback.get('surv'))}"
-                    f"/loss={_num(_buyback.get('loss'))}"
-                    f"/strict_margin={_num(_buyback.get('strict_margin'))}"
-                    f"/tolerant_margin={_num(_buyback.get('tolerant_margin'))}"
-                    f"/verdict={_buyback.get('verdict') or '?'}"
-                    f"/strict_verdict={_buyback.get('strict_verdict') or '?'}"
-                    f"/terminal_round={_round(_pending.get('terminal_round'))}"
-                    f"/terminal_action={_pending.get('terminal_action') or 'end_turn'}"
-                    f"/terminal_hp={_num(_pending.get('hp'))}"
-                    f"/final_hp={_num(final_hp)}"
-                    f"/bridge_decisions={_buyback.get('bridge_decisions', '?')}"
-                    "（RACE_ALLIN_BUYBACK_TERMINAL_OUTCOME_OBS）")
-            except (TypeError, ValueError, OverflowError):
-                _buyback_tail = ""
-
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -8160,7 +8129,6 @@ class Policy:
             f"{_intent_drift_tail}"
             f"{_stale_tail}"
             f"{_cover_tail}"
-            f"{_buyback_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -9031,99 +8999,6 @@ class Policy:
                             }
             _pending["race_allin_lethal_cover_terminal"] = _cover_source
             return
-
-    def _attach_race_allin_buyback_terminal_outcome_from_decisions(
-            self, pol, ctx, floor=None) -> None:
-        """Attach the buyback margin verdict to the terminal race audit.
-
-        ``RACE_ALLIN_BUYBACK_MARGIN_OBS`` is persisted on the lethal-cover
-        source decision, while the authoritative outcome is persisted on the
-        later end-turn/GAME_OVER path.  Join only a contiguous same-floor
-        COMBAT/CARD_SELECTION tail.  The recovered values are observation
-        only and never participate in scoring or action selection.
-        """
-        try:
-            _source_enabled = bool(int(float(pol.get(
-                "race_allin_buyback_margin_obs", 1) or 0)))
-            _terminal_enabled = bool(int(float(pol.get(
-                "race_allin_buyback_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _source_enabled = False
-            _terminal_enabled = False
-        _pending = getattr(self, "_race_terminal_outcome_pending", None)
-        if (not _source_enabled or not _terminal_enabled
-                or not isinstance(_pending, dict)
-                or "race_allin_buyback_terminal" in _pending):
-            return
-        _decisions = getattr(ctx, "decisions", None)
-        if not isinstance(_decisions, list) or not _decisions:
-            return
-
-        _floor_text = None if floor is None else str(floor)
-        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
-        _source = None
-        for _index in range(len(_decisions) - 1, -1, -1):
-            _row = _decisions[_index]
-            if not isinstance(_row, dict):
-                break
-            _row_floor = _row.get("floor")
-            if (_floor_text is not None and _row_floor is not None
-                    and str(_row_floor) != _floor_text):
-                break
-            _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
-                break
-            if (_screen != "COMBAT"
-                    or _row.get("action") != "play_card"):
-                continue
-            _reason = str(_row.get("reason") or "")
-            _marker_at = _reason.rfind("RACE_ALLIN_BUYBACK_MARGIN_OBS")
-            if _marker_at < 0:
-                continue
-            _margin_match = re.search(
-                rf"买活余量：严格(?P<strict>{_number_pattern})/"
-                rf"宽松(?P<tolerant>{_number_pattern})回合→严格"
-                rf"(?P<strict_verdict>可翻盘|仍必败)",
-                _reason[:_marker_at])
-            _buyback_match = re.search(
-                rf"买活对账：击杀约需(?P<ttk>{_number_pattern})回合"
-                rf"（实测(?P<dpt>{_number_pattern})伤/回合），"
-                rf"买活后约可存活(?P<surv>{_number_pattern})回合"
-                rf"（净损(?P<loss>{_number_pattern})/回合）→"
-                rf"(?P<verdict>买活可翻盘|买活仍必败)",
-                _reason[:_marker_at])
-            if _margin_match is None or _buyback_match is None:
-                continue
-            try:
-                _values = {
-                    "ttk": float(_buyback_match.group("ttk")),
-                    "dpt": float(_buyback_match.group("dpt")),
-                    "surv": float(_buyback_match.group("surv")),
-                    "loss": float(_buyback_match.group("loss")),
-                    "strict_margin": float(_margin_match.group("strict")),
-                    "tolerant_margin": float(
-                        _margin_match.group("tolerant")),
-                }
-            except (TypeError, ValueError, OverflowError):
-                continue
-            if (not all(math.isfinite(_value)
-                        for _value in _values.values())
-                    or _values["ttk"] <= 0.0
-                    or _values["dpt"] <= 0.0
-                    or _values["surv"] < 0.0
-                    or _values["loss"] < 0.0):
-                continue
-            _source = {
-                "source_round": _row.get("turn", _row.get("round")),
-                "source_action": _row.get("action") or "play_card",
-                "verdict": _buyback_match.group("verdict"),
-                "strict_verdict": _margin_match.group("strict_verdict"),
-                **_values,
-                "bridge_decisions": len(_decisions) - _index - 1,
-            }
-            break
-        if _source is not None:
-            _pending["race_allin_buyback_terminal"] = _source
 
     def _consume_lethal_playable_reject_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -22020,10 +21895,8 @@ class Policy:
             self.know.policy, ctx, go.get("floor"))
         self._attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
-        self._attach_race_allin_buyback_terminal_outcome_from_decisions(
-            self.know.policy, ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
-            self.know.policy, victory, go.get("floor"), terminal_hp)
+            self.know.policy, victory, go.get("floor"))
         _race_allin_output_capacity_terminal_outcome_note = (
             self._consume_race_allin_output_capacity_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
