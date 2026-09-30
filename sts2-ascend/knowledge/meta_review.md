@@ -14685,6 +14685,35 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-10-01 runs 1794-1795: bridge Boss JOINT_FLIP_TTK_CAP to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1794,1795`
+production_code_commit: `67374f5dd`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1795's F33 Boss combat records the production `JOINT_FLIP_TTK_CAP` veto in the same-floor combat tail, but its authoritative `GAME_OVER` row keeps only the terminal result and omits that source-to-outcome relationship. A bounded same-floor `COMBAT`/`CARD_SELECTION` join from the latest valid source to the terminal `end_turn` should add one audit-only marker. This is falsifiable: a floor or screen boundary, malformed/non-finite ratio, non-`end_turn` tail, duplicate retry, or disabled switch must remain silent; action and parameters must not change.
+- **EVIDENCE**: The exact batch requested runs 1794 and 1795. The complete persisted chain `sts2-ascend/knowledge/runs/20260930-232726_S6LR5JLTW5P2.json` contains 403 decisions. In the F33 Boss tail, the latest valid source is zero-based decision index 396, where the reason states `击杀需7回合＞1.5×可存活4回合` and carries `JOINT_FLIP_TTK_CAP`; zero-based index 401 is the terminal `end_turn` at HP27 and index 402 is the defeat `GAME_OVER` at final HP0. Before this change, the terminal reason had no Boss flip-cap bridge. The read-only production replay emitted `RUN1795_REPLAY OK`, restored `source_round=3/source_action=play_card/ttk=7/tsurv=4/cap=1.5/terminal_round=4/terminal_action=end_turn/terminal_hp=27/final_hp=0/bridge_decisions=5/bridge_rounds=1`, and preserved `continue_game_over` with `{}` parameters.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching Boss terminals, emit `BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS` exactly once with the source ratio, terminal tail, outcome, final HP, and bounded bridge length. Cross-screen/floor, malformed, duplicate, and off-switch cases remain silent; scoring, ranking, gates, action selection, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `boss_race_joint_flip_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover only the bounded same-floor Boss `JOINT_FLIP_TTK_CAP` source at `GAME_OVER`, validate finite positive TTK/cap and non-negative survival values, and append an observation-only bridge in all existing terminal-return branches. Run/combat resets clear its pending/reported state; no policy score, gate, action, or parameter reads this marker.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions for the 1795-shaped tail.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching Boss terminals and compare the exact source row, same-floor tail, ratio fields, terminal action/HP, final HP, marker count, and action/params against the existing Boss audits.
+- **Adjust**: if real traces show source-token drift, stale selection, screen/floor crossing, malformed numeric fields, duplicate persistence, or a non-`end_turn` tail, retain the evidence and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `boss_race_joint_flip_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source decision, existing audits, action, and parameters remain unchanged.
+- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full selfcheck then completed through a clone-local process-level inherited-ACL temporary-directory adapter with exit code 0 and `SELFCHECK OK`. The actual read-only 1795 replay passed, the final targeted diff and staged diff `--check` passed, and production code was committed as `67374f5dd`. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 ## 2026-09-30 run 1793: bridge non-lethal HP-cost attack pricing to terminal outcome
 
 profile_id: `ironclad`

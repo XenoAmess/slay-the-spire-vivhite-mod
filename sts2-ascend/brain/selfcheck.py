@@ -19757,7 +19757,118 @@ def main() -> int:
                 not in d_boss_intent_ramp_boundary.reason), \
         f"Boss 意图斜坡终局桥接越过 REWARD 边界: {d_boss_intent_ramp_boundary}"
 
-    # 3z-5c-c) 首次竞速入锁压力终局桥接：1792-F33 的 D427
+    # 3z-5c-c) Boss 联合翻盘比上限终局桥接：1795-F33 的
+    # JOINT_FLIP_TTK_CAP 只留在战斗决策中，终局必须补回同战斗来源；
+    # 只读、可回滚，覆盖重载、重复提交、关闭开关与 REWARD 边界。
+    boss_joint_flip_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 3, "hp": 45,
+        "reason":
+            "战斗：打出【痛击】→火箭；防守线复核虽报可行但击杀需7回合"
+            "＞1.5×可存活4回合，翻盘比超限不予放行（JOINT_FLIP_TTK_CAP）",
+    }
+    boss_joint_flip_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 4, "hp": 27, "reason": "致死无牌空过",
+    }
+    boss_joint_flip_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+        "run": {"current_hp": 0, "floor": 33},
+    }
+    boss_joint_flip_know = knowledge.Knowledge(tmp)
+    boss_joint_flip_pol = policy.Policy(boss_joint_flip_know)
+    boss_joint_flip_ctx = _SettleCtx()
+    boss_joint_flip_ctx.decisions = [
+        dict(boss_joint_flip_source_row),
+        dict(boss_joint_flip_terminal_row),
+    ]
+    d_boss_joint_flip_terminal = boss_joint_flip_pol.decide(
+        boss_joint_flip_terminal_state, boss_joint_flip_ctx)
+    assert (d_boss_joint_flip_terminal.action == "continue_game_over"
+            and d_boss_joint_flip_terminal.params == {}
+            and "BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+                in d_boss_joint_flip_terminal.reason
+            and "outcome=defeat/floor=33/source_round=3"
+                "/source_action=play_card/ttk=7/tsurv=4/cap=1.5"
+                "/terminal_round=4/terminal_action=end_turn/terminal_hp=27"
+                "/final_hp=0/bridge_decisions=1/bridge_rounds=1"
+                in d_boss_joint_flip_terminal.reason), \
+        f"Boss 联合翻盘上限终局桥接缺失或动作漂移: {d_boss_joint_flip_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "boss_race_joint_flip_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 Boss 联合翻盘上限终局观测开关"
+
+    boss_joint_flip_replay_ctx = _SettleCtx()
+    boss_joint_flip_replay_ctx.decisions = [
+        dict(boss_joint_flip_source_row),
+        dict(boss_joint_flip_terminal_row),
+    ]
+    d_boss_joint_flip_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_joint_flip_terminal_state, boss_joint_flip_replay_ctx)
+    assert (d_boss_joint_flip_replay.action
+            == d_boss_joint_flip_terminal.action
+            and d_boss_joint_flip_replay.params
+            == d_boss_joint_flip_terminal.params
+            and "BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+                in d_boss_joint_flip_replay.reason), \
+        f"进程重载后未恢复 Boss 联合翻盘上限终局桥接: {d_boss_joint_flip_replay}"
+
+    boss_joint_flip_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_boss_joint_flip_terminal.action,
+        "floor": 33, "reason": d_boss_joint_flip_terminal.reason,
+    })
+    d_boss_joint_flip_duplicate = boss_joint_flip_pol.decide(
+        boss_joint_flip_terminal_state, boss_joint_flip_ctx)
+    assert (d_boss_joint_flip_duplicate.action
+            == d_boss_joint_flip_terminal.action
+            and d_boss_joint_flip_duplicate.params
+            == d_boss_joint_flip_terminal.params
+            and "BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_joint_flip_duplicate.reason), \
+        f"Boss 联合翻盘上限终局桥接重复提交: {d_boss_joint_flip_duplicate}"
+
+    boss_joint_flip_off_know = knowledge.Knowledge(tmp)
+    boss_joint_flip_off_know.policy[
+        "boss_race_joint_flip_terminal_outcome_obs"] = False
+    boss_joint_flip_off_ctx = _SettleCtx()
+    boss_joint_flip_off_ctx.decisions = [
+        dict(boss_joint_flip_source_row),
+        dict(boss_joint_flip_terminal_row),
+    ]
+    d_boss_joint_flip_off = policy.Policy(
+        boss_joint_flip_off_know).decide(
+            boss_joint_flip_terminal_state, boss_joint_flip_off_ctx)
+    assert (d_boss_joint_flip_off.action
+            == d_boss_joint_flip_terminal.action
+            and d_boss_joint_flip_off.params
+            == d_boss_joint_flip_terminal.params
+            and "BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_joint_flip_off.reason), \
+        f"Boss 联合翻盘上限终局开关关闭后动作或 marker 漂移: {d_boss_joint_flip_off}"
+
+    boss_joint_flip_boundary_ctx = _SettleCtx()
+    boss_joint_flip_boundary_ctx.decisions = [
+        dict(boss_joint_flip_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 33,
+         "reason": "combat boundary"},
+        dict(boss_joint_flip_terminal_row),
+    ]
+    d_boss_joint_flip_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_joint_flip_terminal_state, boss_joint_flip_boundary_ctx)
+    assert (d_boss_joint_flip_boundary.action
+            == d_boss_joint_flip_terminal.action
+            and d_boss_joint_flip_boundary.params
+            == d_boss_joint_flip_terminal.params
+            and "BOSS_RACE_JOINT_FLIP_TERMINAL_OUTCOME_OBS"
+                not in d_boss_joint_flip_boundary.reason), \
+        f"Boss 联合翻盘上限终局桥接越过 REWARD 边界: {d_boss_joint_flip_boundary}"
+
+    # 3z-5c-d) 首次竞速入锁压力终局桥接：1792-F33 的 D427
     # RACE_PROJ_LATCH_INTENT_PRESSURE_OBS 保留了首锁现场，但 GAME_OVER
     # 只分别保留投影漂移/终端意图/DPT 尾缀。仅连接同楼层连续 COMBAT 尾部，
     # 覆盖重载、重复提交、关闭开关与 REWARD 边界；action/params 不变。
