@@ -23426,6 +23426,148 @@ def main() -> int:
                 not in _d_ovicopter_terminal_boundary.reason), \
         f"OVICOPTER terminal bridge crossed a REWARD boundary: {_d_ovicopter_terminal_boundary}"
 
+    # 3z-5g) Recover explicit race-allin context when the broader kill-race
+    # terminal audit is absent.  This is an observation-only fallback for the
+    # 1809-shaped tail: the preceding play_card says race-allin, the terminal
+    # end_turn says lethal no-card, and the authoritative GAME_OVER still must
+    # retain continue_game_over/{} with no scoring or action change.
+    _race_allin_lethal_terminal_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 34,
+        "turn": 8, "hp": 11,
+        "reason": "战斗：打出【头槌】（败局竞速全攻）",
+    }
+    _race_allin_lethal_terminal_tail_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 34,
+        "turn": 8, "hp": 11,
+        "reason": (
+            "战斗：确认无牌可出；致死无牌空过观测："
+            "hp=11/block=0/incoming=12/energy=0/cards=3"
+            "/energy_locked=3/hand_block_candidates=1"
+            "/hand_affordable_block_candidates=0/hand_max_block=5"
+            "/hand_post_gap=7/hand_raw_survival=yes/block_locked=no"
+            "/forced=yes/gap=yes（LETHAL_UNAVAILABLE_END_TURN_OBS）"),
+    }
+    _race_allin_lethal_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 34},
+        "run": {"current_hp": 0, "floor": 34},
+    }
+    _race_allin_lethal_terminal_dir = Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-race-allin-lethal-terminal-"))
+    _race_allin_lethal_terminal_know = knowledge.Knowledge(
+        _race_allin_lethal_terminal_dir)
+    _race_allin_lethal_terminal_pol = policy.Policy(
+        _race_allin_lethal_terminal_know)
+    _race_allin_lethal_terminal_ctx = _projection_ratio_ctx(
+        [], [_race_allin_lethal_terminal_source_row,
+             _race_allin_lethal_terminal_tail_row])
+    _d_race_allin_lethal_terminal = _race_allin_lethal_terminal_pol.decide(
+        _race_allin_lethal_terminal_state, _race_allin_lethal_terminal_ctx)
+    assert knowledge.DEFAULT_POLICY[
+        "race_allin_lethal_unavailable_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing race-allin lethal no-card terminal observation switch"
+    assert (_d_race_allin_lethal_terminal.action == "continue_game_over"
+            and _d_race_allin_lethal_terminal.params == {}
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in _d_race_allin_lethal_terminal.reason
+            and _d_race_allin_lethal_terminal.reason.count(
+                "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=34/source_round=8"
+                "/source_action=play_card/source_hp=11"
+                "/terminal_round=8/terminal_action=end_turn/terminal_hp=11"
+                "/block=0/incoming=12/energy=0/cards=3/energy_locked=3"
+                "/hand_post_gap=7/final_hp=0/bridge_decisions=1"
+                "/bridge_rounds=0"
+                in _d_race_allin_lethal_terminal.reason), \
+        f"race-allin lethal no-card terminal fallback missing or drifting: {_d_race_allin_lethal_terminal}"
+
+    _d_race_allin_lethal_terminal_reload = policy.Policy(
+        knowledge.Knowledge(_race_allin_lethal_terminal_dir)).decide(
+            _race_allin_lethal_terminal_state,
+            _projection_ratio_ctx(
+                [], [_race_allin_lethal_terminal_source_row,
+                     _race_allin_lethal_terminal_tail_row]))
+    assert (_d_race_allin_lethal_terminal_reload.action
+            == _d_race_allin_lethal_terminal.action
+            and _d_race_allin_lethal_terminal_reload.params
+            == _d_race_allin_lethal_terminal.params
+            and "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in _d_race_allin_lethal_terminal_reload.reason), \
+        f"race-allin lethal terminal fallback not recoverable after Policy reload: {_d_race_allin_lethal_terminal_reload}"
+
+    _race_allin_lethal_terminal_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": _d_race_allin_lethal_terminal.action,
+        "floor": 34, "reason": _d_race_allin_lethal_terminal.reason})
+    _d_race_allin_lethal_terminal_duplicate = (
+        _race_allin_lethal_terminal_pol.decide(
+            _race_allin_lethal_terminal_state,
+            _race_allin_lethal_terminal_ctx))
+    assert (_d_race_allin_lethal_terminal_duplicate.action
+            == _d_race_allin_lethal_terminal.action
+            and _d_race_allin_lethal_terminal_duplicate.params
+            == _d_race_allin_lethal_terminal.params
+            and "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in _d_race_allin_lethal_terminal_duplicate.reason), \
+        f"race-allin lethal terminal fallback duplicated on GAME_OVER retry: {_d_race_allin_lethal_terminal_duplicate}"
+
+    _race_allin_lethal_terminal_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-race-allin-lethal-off-")))
+    _race_allin_lethal_terminal_off_know.policy[
+        "race_allin_lethal_unavailable_terminal_outcome_obs"] = False
+    _d_race_allin_lethal_terminal_off = policy.Policy(
+        _race_allin_lethal_terminal_off_know).decide(
+            _race_allin_lethal_terminal_state,
+            _projection_ratio_ctx(
+                [], [_race_allin_lethal_terminal_source_row,
+                     _race_allin_lethal_terminal_tail_row]))
+    assert (_d_race_allin_lethal_terminal_off.action
+            == _d_race_allin_lethal_terminal.action
+            and _d_race_allin_lethal_terminal_off.params
+            == _d_race_allin_lethal_terminal.params
+            and "LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                in _d_race_allin_lethal_terminal_off.reason
+            and "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in _d_race_allin_lethal_terminal_off.reason), \
+        f"race-allin lethal terminal switch-off changed action/params or left marker: {_d_race_allin_lethal_terminal_off}"
+
+    _d_race_allin_lethal_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-race-allin-lethal-boundary-")))).decide(
+                _race_allin_lethal_terminal_state,
+                _projection_ratio_ctx(
+                    [], [_race_allin_lethal_terminal_source_row,
+                         {"screen": "REWARD", "action": "proceed",
+                          "floor": 34, "reason": "reward boundary"},
+                         _race_allin_lethal_terminal_tail_row]))
+    assert (_d_race_allin_lethal_terminal_boundary.action
+            == _d_race_allin_lethal_terminal.action
+            and _d_race_allin_lethal_terminal_boundary.params
+            == _d_race_allin_lethal_terminal.params
+            and "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in _d_race_allin_lethal_terminal_boundary.reason), \
+        f"race-allin lethal terminal fallback crossed a REWARD boundary: {_d_race_allin_lethal_terminal_boundary}"
+
+    _race_allin_lethal_terminal_audited_tail = dict(
+        _race_allin_lethal_terminal_tail_row)
+    _race_allin_lethal_terminal_audited_tail["reason"] += (
+        "（KILL_RACE_TERMINAL_AUDIT_OBS）")
+    _d_race_allin_lethal_terminal_audited = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-race-allin-lethal-audited-")))).decide(
+                _race_allin_lethal_terminal_state,
+                _projection_ratio_ctx(
+                    [], [_race_allin_lethal_terminal_source_row,
+                         _race_allin_lethal_terminal_audited_tail]))
+    assert (_d_race_allin_lethal_terminal_audited.action
+            == _d_race_allin_lethal_terminal.action
+            and _d_race_allin_lethal_terminal_audited.params
+            == _d_race_allin_lethal_terminal.params
+            and "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+                not in _d_race_allin_lethal_terminal_audited.reason), \
+        f"existing kill-race audit did not suppress fallback duplication: {_d_race_allin_lethal_terminal_audited}"
+
     print("SELFCHECK OK")
     return 0
 

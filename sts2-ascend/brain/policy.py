@@ -905,6 +905,7 @@ class Policy:
         self._kill_race_lethal_free_energy_terminal_outcome_reported = False  # 致死竞速0费回能结局 marker 每场只写一次
         self._lethal_unavailable_terminal_outcome_pending = None  # 最近一次致死无牌空过，等待 GAME_OVER 结局对账
         self._lethal_unavailable_terminal_outcome_reported = False  # 致死无牌空过结局 marker 每场只写一次
+        self._race_allin_lethal_unavailable_terminal_outcome_reported = False  # race-allin 致死无牌补充结局 marker 每场只写一次
         self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
         self._exhaust_cap_pressure_terminal_outcome_pending = None  # 最近一次消耗上限压力，等待 GAME_OVER 结局对账
@@ -2505,6 +2506,7 @@ class Policy:
             self._elite_forced_entry_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
+            self._race_allin_lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
@@ -9709,6 +9711,169 @@ class Policy:
             f"{_transition_tail}"
             f"{_potion_terminal_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
+
+    def _consume_race_allin_lethal_unavailable_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Recover race-allin context when the broader race terminal audit is absent.
+
+        A lethal no-card end-turn already chose ``end_turn``.  This fallback
+        only joins that durable row to the nearest same-floor ``play_card``
+        row carrying the explicit ``败局竞速全攻`` observation.  It is kept
+        separate from the latched kill-race bridge because a run can retain
+        the race-allin execution evidence after the broader projection audit
+        is unavailable.  No scoring, candidate, or action path reads it.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_allin_lethal_unavailable_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        _marker = "RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+        _decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_race_allin_lethal_unavailable_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return ""
+            self._race_allin_lethal_unavailable_terminal_outcome_reported = False
+        if not isinstance(_decisions, list) or not _decisions:
+            return ""
+
+        _terminal_index = len(_decisions) - 1
+        _terminal = _decisions[_terminal_index]
+        if not isinstance(_terminal, dict):
+            return ""
+        if _terminal.get("action") != "end_turn":
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if _terminal_screen and _terminal_screen != "COMBAT":
+            return ""
+        if (floor is not None and _terminal.get("floor") is not None
+                and str(_terminal.get("floor")) != str(floor)):
+            return ""
+
+        _terminal_reason = str(_terminal.get("reason") or "")
+        # The ordinary latch bridge already carries the regime flags.  This
+        # fallback is specifically for the observed gap, not a duplicate
+        # suffix on rows that already have the authoritative audit.
+        if "KILL_RACE_TERMINAL_AUDIT_OBS" in _terminal_reason:
+            return ""
+        _marker_at = _terminal_reason.rfind("LETHAL_UNAVAILABLE_END_TURN_OBS")
+        _prefix = "致死无牌空过观测："
+        _audit_at = _terminal_reason.rfind(_prefix, 0, _marker_at)
+        if _marker_at < 0 or _audit_at < 0:
+            return ""
+        _audit = _terminal_reason[_audit_at + len(_prefix):_marker_at]
+
+        def _token(name: str):
+            _match = re.search(
+                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)",
+                _audit)
+            return _match.group(1) if _match else None
+
+        def _number(name: str):
+            _value = _token(name)
+            if _value is None:
+                raise ValueError(name)
+            _value = float(_value)
+            if not math.isfinite(_value) or _value < 0.0:
+                raise ValueError(name)
+            return _value
+
+        try:
+            _terminal_values = {
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _number("energy"),
+                "hand_post_gap": _number("hand_post_gap"),
+                "cards": int(float(_token("cards"))),
+                "energy_locked": int(float(_token("energy_locked"))),
+            }
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        if (_terminal_values["cards"] < 0
+                or _terminal_values["energy_locked"] < 0
+                or _token("forced") != "yes"
+                or _token("gap") != "yes"):
+            return ""
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _source = None
+        _source_index = None
+        for _index in range(_terminal_index - 1,
+                            max(-1, _terminal_index - 64), -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if (_row.get("action") == "play_card"
+                    and "败局竞速全攻" in str(_row.get("reason") or "")):
+                _source = _row
+                _source_index = _index
+                break
+        if not isinstance(_source, dict) or _source_index is None:
+            return ""
+
+        try:
+            _source_round = int(float(
+                _source.get("turn", _source.get("round"))))
+            _terminal_round = int(float(
+                _terminal.get("turn", _terminal.get("round"))))
+            _source_hp = float(_source.get("hp"))
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        if not math.isfinite(_source_hp) or _source_hp < 0.0:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        self._race_allin_lethal_unavailable_terminal_outcome_reported = True
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；败局竞速无牌终局补充对账：outcome={_result}"
+            f"/floor={int(float(floor)) if floor is not None else '?'}"
+            f"/source_round={_source_round}/source_action="
+            f"{_source.get('action') or '?'}"
+            f"/source_hp={_num(_source_hp)}"
+            f"/terminal_round={_terminal_round}/terminal_action="
+            f"{_terminal.get('action') or '?'}"
+            f"/terminal_hp={_num(_terminal_values['hp'])}"
+            f"/block={_num(_terminal_values['block'])}"
+            f"/incoming={_num(_terminal_values['incoming'])}"
+            f"/energy={_num(_terminal_values['energy'])}"
+            f"/cards={_terminal_values['cards']}"
+            f"/energy_locked={_terminal_values['energy_locked']}"
+            f"/hand_post_gap={_num(_terminal_values['hand_post_gap'])}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_terminal_index - _source_index}"
+            f"/bridge_rounds={max(0, _terminal_round - _source_round)}"
+            f"（{_marker}）")
 
     def _restore_lethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -22266,6 +22431,9 @@ class Policy:
         _lethal_unavailable_terminal_outcome_note = (
             self._consume_lethal_unavailable_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        _race_allin_lethal_unavailable_terminal_outcome_note = (
+            self._consume_race_allin_lethal_unavailable_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_nonlethal_unavailable_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _nonlethal_unavailable_terminal_outcome_note = (
@@ -22320,6 +22488,7 @@ class Policy:
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
+                            f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
@@ -22366,6 +22535,7 @@ class Policy:
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                         f"{_lethal_unavailable_terminal_outcome_note}"
+                        f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                         f"{_nonlethal_unavailable_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
@@ -22397,6 +22567,7 @@ class Policy:
                                 f"{_race_allin_output_capacity_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
+                                f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"

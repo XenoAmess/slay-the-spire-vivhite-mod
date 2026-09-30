@@ -14916,3 +14916,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 runs 1809-1810: recover race-allin context for a lethal no-card terminal
+
+profile_id: `ironclad`
+requested_runs: `1809,1810`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1809's F17 D197-D200 contain explicit `败局竞速全攻` play evidence, and D201 is a forced lethal no-card `end_turn`, but D202's GAME_OVER reason lacks `KILL_RACE_TERMINAL_AUDIT_OBS`. When that exact same-floor bounded chain exists, the terminal should emit one separate race-allin/no-card reconciliation marker without changing the terminal action or parameters. This is falsifiable: a missing explicit source, a boundary, an existing broad audit, a duplicate retry, or a disabled switch must remain silent.
+- **EVIDENCE**: The exact chain `sts2-ascend/knowledge/runs/20261001-032701_YNSEVX0QUKUE.json` has 203 decisions; the read-only parser over its D201 tail emitted `RACE_ALLIN_LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS` with source/terminal round 8, HP11, incoming12, energy0, cards3, energy_locked3, and final HP0. The comparison chain `sts2-ascend/knowledge/runs/20261001-034206_VTVVVD7B4JCU.json` has the same lethal no-card shape at D231 but already carries `KILL_RACE_TERMINAL_AUDIT_OBS`; the parser stayed silent there.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit exactly one fallback marker only for an explicit same-floor race-allin source followed by a forced lethal no-card end turn lacking the broad audit. Action, scoring, ranking, gates, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `race_allin_lethal_unavailable_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: add a bounded reverse scan over at most 64 same-floor `COMBAT`/`CARD_SELECTION` rows, require the existing lethal no-card audit and explicit `败局竞速全攻`, suppress when `KILL_RACE_TERMINAL_AUDIT_OBS` already exists, and append only the new audit suffix to all existing GAME_OVER return branches. The marker is not read by scoring, candidate ranking, gates, action selection, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: cover positive emission, Policy reload, duplicate retry, switch-off, `REWARD` boundary, and suppression by the existing broad audit, with unchanged `continue_game_over {}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent terminals and compare source round/HP, lethal hand fields, bridge length, broad-audit presence, marker count, outcome, and action/parameters.
+- **Adjust**: if a real trace has a cross-screen/floor source, malformed numeric fields, a stale race-allin phrase, or a broad audit outside the terminal tail, retain the evidence and tighten only this observation join.
+- **Rollback**: set `race_allin_lethal_unavailable_terminal_outcome_obs` to `False`; only the new fallback suffix should disappear while the existing lethal no-card audit, action, and parameters remain.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the full selfcheck completed through a clone-local 1024-slot process adapter and printed `SELFCHECK OK`. The exact 1809/1810 tail comparison produced the expected marker/silence pair. Targeted `git diff --check` passed with only existing LF/CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
