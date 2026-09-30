@@ -14349,3 +14349,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-directory bootstrap limit; a process-local adapter using the host-provided `.review-cache/selfcheck-pool` exited 0 and printed `SELFCHECK OK`. Targeted `git diff --check` passed. The final code diff was reread before this report; no `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1768: bridge EXHAUST_CAP_SKIP_PRESSURE_OBS to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1768`
+production_code_commit: `3a4fb024caf41a67fb9493b77af7633c5366f8cb` (local, no push)
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1768's F17 D208/T9 records `EXHAUST_CAP_SKIP_PRESSURE_OBS` only inside the durable `trace.candidates[].why`; the authoritative D209 `GAME_OVER` reason cannot connect that pressure source to the defeat. This is falsifiable: a bounded same-floor COMBAT tail parser should emit one terminal marker for this shape, while a REWARD/other-screen boundary, missing trace, cross-floor row, or disabled key must remain silent; `continue_game_over` and `{}` must not change.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-145451_QGJN7RPAPB4T.json` has 210 decisions. D208 is F17/T9 `end_turn`, HP 5, with candidate `余烬+`, `本场2/2`, `pressure=yes`, `hp=5/blk=0/in=0/gap=0/post=5/dmg=24/cblk=0/floor=21.5`; its canonical reason lacks `EXHAUST_CAP_SKIP_PRESSURE_OBS`. D209 is defeat at HP 0 and has no pressure terminal bridge. The post-change read-only replay recovered `source_round=9`, `terminal_hp=5`, `final_hp=0`, while preserving `action=continue_game_over` and `params={}`. `failed_review_replay.requested_packages=[]`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminal windows, emit `EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS` only from the latest same-floor contiguous COMBAT tail, preserving source fields, terminal fields, outcome, and bridge length. REWARD/SHOP/REST, cross-floor, missing-source, and off-switch cases remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `exhaust_cap_pressure_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover a trace candidate from at most the preceding 12 same-floor COMBAT rows immediately before `GAME_OVER`, then append one observation-only terminal note. State resets at run and combat boundaries; scoring, candidates, gating, action, and params are untouched.
+- `sts2-ascend/brain/selfcheck.py`: add positive, process-reload, duplicate, off-switch, and REWARD-boundary assertions, including exact source fields and unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-floor pressure terminal windows and compare source/terminal round, floor, card, pressure fields, outcome, bridge length, and action/params.
+- **Adjust**: if production traces show a screen/floor crossing, trace-token drift, stale source, or bridge-count mismatch, retain the failure and tighten only the observation parser; do not promote it into behavior.
+- **Rollback**: set `exhaust_cap_pressure_terminal_outcome_obs` to `False`; only the new terminal marker should disappear, while the existing candidate trace, action, and params remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level ACL adapter exited 0 with `SELFCHECK OK`. AST parsing, targeted `git diff --check`, and the actual 1768 read-only replay passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

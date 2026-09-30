@@ -1612,6 +1612,11 @@ DEFAULT_POLICY = {
                                        # hp/block/incoming/gap/post_intent_hp 与被跳过牌面值；
                                        # 只扩展 EXHAUST_CAP_SKIP_OBS 的审计字段，不改变评分、
                                        # 候选、目标、动作或参数；False 严格移除新增压力尾缀。
+    "exhaust_cap_pressure_terminal_outcome_obs": True,  # 将同楼层同战斗的
+                                                         # EXHAUST_CAP_SKIP_PRESSURE_OBS
+                                                         # 来源接回权威 GAME_OVER；只读，
+                                                         # 不改变评分、候选、动作或参数；
+                                                         # False 仅移除终局观测尾缀。
     # --- 多敌战斗辅助体转火（第 136~137 批复盘） ---
     "support_target_bonus": 8.0,  # 多敌战斗中本回合零伤害意图敌人（治疗/增益/蓄力）的定向转火加分：
                                   # 威胁分成使其永远排最后——头号杀手同族双子（生涯46战24死）的

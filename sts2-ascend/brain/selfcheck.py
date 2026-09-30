@@ -19444,6 +19444,117 @@ def main() -> int:
                 not in d_kin_tradeoff_boundary.reason), \
         f"KIN 领袖闸终局桥接越过 REWARD 边界: {d_kin_tradeoff_boundary}"
 
+    # 3z-5e) 消耗上限低血压力终局桥接：1768-F17-T9 的
+    # EXHAUST_CAP_SKIP_PRESSURE_OBS 只存在于 end_turn trace candidate，
+    # 不能从 canonical reason 读取。只允许同楼层 COMBAT 尾部恢复，且动作/参数
+    # 不变；覆盖重载、重复提交、关闭开关和 REWARD 边界。
+    exhaust_pressure_source_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 9, "hp": 5, "energy": 3,
+        "reason": "评估后无值得出的牌（余烬+✓），结束回合",
+        "trace": {
+            "candidates": [{
+                "label": "余烬+", "action": "play_card", "status": "skipped",
+                "why": (
+                    "消耗上限已满（本场2/2），非致死回合跳过"
+                    "（EXHAUST_CAP_SKIP_OBS）；压力观测："
+                    "hp=5/blk=0/in=0/gap=0/post=5/pressure=yes/"
+                    "dmg=24/cblk=0/floor=21.5"
+                    "（EXHAUST_CAP_SKIP_PRESSURE_OBS）"),
+                "index": 0,
+            }],
+        },
+    }
+    exhaust_pressure_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    exhaust_pressure_know = knowledge.Knowledge(tmp)
+    exhaust_pressure_pol = policy.Policy(exhaust_pressure_know)
+    exhaust_pressure_ctx = _SettleCtx()
+    exhaust_pressure_ctx.decisions = [dict(exhaust_pressure_source_row)]
+    d_exhaust_pressure_terminal = exhaust_pressure_pol.decide(
+        exhaust_pressure_terminal_state, exhaust_pressure_ctx)
+    assert (d_exhaust_pressure_terminal.action == "continue_game_over"
+            and d_exhaust_pressure_terminal.params == {}
+            and "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+                in d_exhaust_pressure_terminal.reason
+            and "outcome=defeat/floor=17/source_round=9"
+                "/source_action=end_turn/card=余烬+"
+                "/exhaust_plays=2/exhaust_cap=2/pressure=yes"
+                "/hp=5/block=0/incoming=0/gap=0/post=5"
+                "/damage=24/card_block=0/pressure_floor=21.5"
+                "/terminal_round=9/terminal_action=end_turn/terminal_hp=5"
+                "/final_hp=0/bridge_decisions=0/bridge_rounds=0"
+                in d_exhaust_pressure_terminal.reason), \
+        f"消耗上限压力终局桥接缺失或动作漂移: {d_exhaust_pressure_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "exhaust_cap_pressure_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少消耗上限压力终局观测开关"
+
+    exhaust_pressure_replay_ctx = _SettleCtx()
+    exhaust_pressure_replay_ctx.decisions = [dict(exhaust_pressure_source_row)]
+    d_exhaust_pressure_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            exhaust_pressure_terminal_state, exhaust_pressure_replay_ctx)
+    assert (d_exhaust_pressure_replay.action
+            == d_exhaust_pressure_terminal.action
+            and d_exhaust_pressure_replay.params
+            == d_exhaust_pressure_terminal.params
+            and "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+                in d_exhaust_pressure_replay.reason), \
+        f"进程重载后未恢复消耗上限压力终局桥接: {d_exhaust_pressure_replay}"
+
+    exhaust_pressure_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_exhaust_pressure_terminal.action,
+        "floor": 17, "reason": d_exhaust_pressure_terminal.reason})
+    d_exhaust_pressure_duplicate = exhaust_pressure_pol.decide(
+        exhaust_pressure_terminal_state, exhaust_pressure_ctx)
+    assert (d_exhaust_pressure_duplicate.action
+            == d_exhaust_pressure_terminal.action
+            and d_exhaust_pressure_duplicate.params
+            == d_exhaust_pressure_terminal.params
+            and "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in d_exhaust_pressure_duplicate.reason), \
+        f"消耗上限压力终局桥接重复提交: {d_exhaust_pressure_duplicate}"
+
+    exhaust_pressure_off_know = knowledge.Knowledge(tmp)
+    exhaust_pressure_off_know.policy[
+        "exhaust_cap_pressure_terminal_outcome_obs"] = False
+    exhaust_pressure_off_ctx = _SettleCtx()
+    exhaust_pressure_off_ctx.decisions = [dict(exhaust_pressure_source_row)]
+    d_exhaust_pressure_off = policy.Policy(
+        exhaust_pressure_off_know).decide(
+            exhaust_pressure_terminal_state, exhaust_pressure_off_ctx)
+    assert (d_exhaust_pressure_off.action == d_exhaust_pressure_terminal.action
+            and d_exhaust_pressure_off.params
+            == d_exhaust_pressure_terminal.params
+            and "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in d_exhaust_pressure_off.reason), \
+        f"消耗上限压力终局开关关闭后动作或 marker 漂移: {d_exhaust_pressure_off}"
+
+    exhaust_pressure_boundary_ctx = _SettleCtx()
+    exhaust_pressure_boundary_ctx.decisions = [
+        dict(exhaust_pressure_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 17,
+         "turn": 10, "hp": 4, "reason": "terminal tail without source"},
+    ]
+    d_exhaust_pressure_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            exhaust_pressure_terminal_state, exhaust_pressure_boundary_ctx)
+    assert (d_exhaust_pressure_boundary.action
+            == d_exhaust_pressure_terminal.action
+            and d_exhaust_pressure_boundary.params
+            == d_exhaust_pressure_terminal.params
+            and "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+                not in d_exhaust_pressure_boundary.reason), \
+        f"消耗上限压力终局桥接越过 REWARD 边界: {d_exhaust_pressure_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{

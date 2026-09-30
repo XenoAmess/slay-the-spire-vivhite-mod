@@ -905,6 +905,8 @@ class Policy:
         self._lethal_unavailable_terminal_outcome_reported = False  # 致死无牌空过结局 marker 每场只写一次
         self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
+        self._exhaust_cap_pressure_terminal_outcome_pending = None  # 最近一次消耗上限压力，等待 GAME_OVER 结局对账
+        self._exhaust_cap_pressure_terminal_outcome_reported = False  # 消耗上限压力结局 marker 每场只写一次
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
@@ -2485,6 +2487,8 @@ class Policy:
             self._lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
+            self._exhaust_cap_pressure_terminal_outcome_pending = None
+            self._exhaust_cap_pressure_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -5608,6 +5612,215 @@ class Policy:
             f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
             f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
             "（KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_exhaust_cap_pressure_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover an exhaust-cap pressure candidate before GAME_OVER.
+
+        ``EXHAUST_CAP_SKIP_PRESSURE_OBS`` is persisted in the bounded decision
+        trace candidate rather than in the canonical reason.  Join only a
+        same-floor COMBAT tail so a later room cannot borrow an older skipped
+        card.  This is observation-only and never participates in scoring or
+        action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "exhaust_cap_pressure_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_exhaust_cap_pressure_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            # The GAME_OVER action may have been lost before persistence.
+            # Durable marker presence, not this transient bit, is the retry
+            # proof.
+            self._exhaust_cap_pressure_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_exhaust_cap_pressure_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        _tail = decisions[-1]
+        if not isinstance(_tail, dict) or _tail.get("action") != "end_turn":
+            return
+        if (floor is not None and _tail.get("floor") is not None
+                and str(_tail.get("floor")) != str(floor)):
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _number(audit: str, name: str):
+            match = re.search(
+                rf"(?<![A-Za-z0-9_]){re.escape(name)}="
+                rf"([+-]?(?:\d+(?:\.\d*)?|\.\d+))", audit)
+            if not match:
+                return None
+            try:
+                return float(match.group(1))
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+        _source = None
+        _source_index = None
+        _lookback_start = max(0, len(decisions) - 12)
+        for _index in range(len(decisions) - 1, _lookback_start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                break
+            if str(_row.get("screen") or "").upper() not in {"", "COMBAT"}:
+                break
+            if _row.get("action") != "end_turn":
+                continue
+            _trace = _row.get("trace")
+            _candidates = (_trace.get("candidates")
+                           if isinstance(_trace, dict) else None)
+            if not isinstance(_candidates, list):
+                continue
+            for _candidate in reversed(_candidates):
+                if not isinstance(_candidate, dict):
+                    continue
+                if _candidate.get("action") != "play_card":
+                    continue
+                _why = str(_candidate.get("why") or "")
+                _pressure_at = _why.rfind("EXHAUST_CAP_SKIP_PRESSURE_OBS")
+                if _pressure_at < 0:
+                    continue
+                _audit = _why[:_pressure_at]
+                if "EXHAUST_CAP_SKIP_OBS" not in _audit:
+                    continue
+                _count_match = re.search(
+                    r"本场(?P<used>\d+)/(?P<cap>\d+)", _audit)
+                _pressure_match = re.search(
+                    r"(?<![A-Za-z0-9_])pressure=(?P<pressure>yes|no)",
+                    _audit)
+                if _count_match is None or _pressure_match is None:
+                    continue
+                _names = ("hp", "blk", "in", "gap", "post", "dmg",
+                          "cblk", "floor")
+                _values = {name: _number(_audit, name) for name in _names}
+                if any(value is None or not math.isfinite(value)
+                       for value in _values.values()):
+                    continue
+                try:
+                    _used = int(_count_match.group("used"))
+                    _cap = int(_count_match.group("cap"))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if _used < 0 or _cap <= 0 or _used != _cap:
+                    continue
+                if any(_values[name] < 0.0 for name in _names):
+                    continue
+                _source = {
+                    "source_round": _row.get("turn", _row.get("round")),
+                    "source_action": _row.get("action") or "end_turn",
+                    "card": str(_candidate.get("label")
+                                 or _candidate.get("name") or "?"),
+                    "exhaust_plays": _used,
+                    "exhaust_cap": _cap,
+                    "pressure": _pressure_match.group("pressure"),
+                    **_values,
+                }
+                _source_index = _index
+                break
+            if _source is not None:
+                break
+        if _source is None or _source_index is None:
+            return
+
+        _terminal_round = _tail.get("turn", _tail.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round))
+                - int(float(_source.get("source_round"))))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        self._exhaust_cap_pressure_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal_round,
+            "terminal_action": _tail.get("action") or "end_turn",
+            "terminal_hp": _tail.get("hp"),
+            "bridge_decisions": len(decisions) - _source_index - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._exhaust_cap_pressure_terminal_outcome_reported = False
+
+    def _consume_exhaust_cap_pressure_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join an exhaust-cap pressure candidate to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "exhaust_cap_pressure_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_exhaust_cap_pressure_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_exhaust_cap_pressure_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._exhaust_cap_pressure_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；消耗上限压力终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/card={_pending.get('card') or '?'}"
+            f"/exhaust_plays={_pending.get('exhaust_plays', '?')}"
+            f"/exhaust_cap={_pending.get('exhaust_cap', '?')}"
+            f"/pressure={_pending.get('pressure') or '?'}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('blk'))}"
+            f"/incoming={_num(_pending.get('in'))}"
+            f"/gap={_num(_pending.get('gap'))}"
+            f"/post={_num(_pending.get('post'))}"
+            f"/damage={_num(_pending.get('dmg'))}"
+            f"/card_block={_num(_pending.get('cblk'))}"
+            f"/pressure_floor={_num(_pending.get('floor'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -10524,6 +10737,8 @@ class Policy:
             self._lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
+            self._exhaust_cap_pressure_terminal_outcome_pending = None
+            self._exhaust_cap_pressure_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -19425,6 +19640,11 @@ class Policy:
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
             self._consume_kin_leader_removal_tradeoff_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_exhaust_cap_pressure_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _exhaust_cap_pressure_terminal_outcome_note = (
+            self._consume_exhaust_cap_pressure_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_race_prelock_defense_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _race_prelock_defense_terminal_outcome_note = (
@@ -19488,6 +19708,7 @@ class Policy:
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
+                            f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
@@ -19522,6 +19743,7 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
+                        f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
@@ -19542,6 +19764,7 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
+                                f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
