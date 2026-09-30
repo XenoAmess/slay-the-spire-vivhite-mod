@@ -15297,3 +15297,14 @@
 - 当前低价值卡牌：BULLY(16分/2.2928088940166833局)，BURNING_PACT(17分/13.843088083442662局)，DEFEND_IRONCLAD(18分/3.8436537012304473局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1791 胜，当前目标进阶 0
+
+## 第 1792 局复盘（2026-09-30 22:29）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：SWORD_BOOMERANG, VICIOUS, SWORD_BOOMERANG, MOLTEN_FIST, TAUNT, POMMEL_STRIKE, RAMPAGE, SALVO, FLAME_BARRIER, HEADBUTT, CONFLAGRATION, FEEL_NO_PAIN, TAUNT, CRUELTY, PILLAGE, IRON_WAVE, COLOSSUS, RAMPAGE, UNRELENTING, UNRELENTING, INFLAME, CINDER
+- 本局遗物：POTION_BELT, WHETSTONE, HAPPY_FLOWER, PENDULUM, STRAWBERRY, REGAL_PILLOW
+- 战斗记录：F23 Monster战 掉血15; F24 Monster战 掉血6; F28 Monster战 掉血23; F30 Monster战 掉血12; F31 Monster战 掉血43; F33 Boss战 掉血81｜竞速投影审计：pool=313/dpt=17.55/ttk=17.8348/tsurv=4.76471（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=17.8348/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.68（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=28/projected_dpt=30.0563/ratio=0.91/min_ratio=0.20（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=28/projected_dpt=30.0563/ratio=0.91/min_ratio=0.20（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.908059239845725局)，MANGLE(25分/44.301302941703995局)，HELLRAISER(25分/4.62758455360931局)，FEED(25分/28.18417828188488局)，PACTS_END(24分/54.81691795552021局)
+- 当前低价值卡牌：BULLY(16分/2.284784062887625局)，BURNING_PACT(17分/13.794637275150613局)，DEFEND_IRONCLAD(18分/3.830200913276141局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）；kill_race_prior_eff: 0.39 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.002）；block_safety: 1.89 → 1.88（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1792 胜，当前目标进阶 0
