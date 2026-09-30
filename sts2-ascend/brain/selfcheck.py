@@ -19343,6 +19343,111 @@ def main() -> int:
                 not in d_boss_dpt_boundary.reason), \
         f"Boss有效火力终局桥接越过 REWARD 边界: {d_boss_dpt_boundary}"
 
+    # 3z-5e) 非 Boss 长战有效火力终局对账
+    #       （LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）：
+    #       1763-F23 的 OVICOPTER 长战已经记录 0.0/17.2 的实际/投影比，
+    #       但 GAME_OVER 没有结局连接。只允许同楼层 COMBAT 尾部接入，
+    #       动作与参数必须保持不变；进程重载、重复提交和 REWARD 边界都要可证伪。
+    longfight_dpt_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 23,
+        "turn": 4, "hp": 32,
+        "reason":
+            "长战竞速有效火力对账：采样3→4回合，敌血净降0.0/回合"
+            " vs 投影17.2/回合（差-17.2，LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）；"
+            "实际/投影比0.00（LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS）；"
+            "长战遭遇=OVICOPTER+TOUGH_EGG，血池98.0→98.0，"
+            "火线已换线0次至?（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）",
+    }
+    longfight_dpt_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 23,
+        "turn": 8, "hp": 18, "reason": "致死无牌空过",
+    }
+    longfight_dpt_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 23},
+        "run": {"current_hp": 0, "floor": 23},
+    }
+    longfight_dpt_know = knowledge.Knowledge(tmp)
+    longfight_dpt_pol = policy.Policy(longfight_dpt_know)
+    longfight_dpt_ctx = _SettleCtx()
+    longfight_dpt_ctx.decisions = [
+        dict(longfight_dpt_source_row), dict(longfight_dpt_terminal_row)]
+    d_longfight_dpt_terminal = longfight_dpt_pol.decide(
+        longfight_dpt_terminal_state, longfight_dpt_ctx)
+    assert (d_longfight_dpt_terminal.action == "continue_game_over"
+            and d_longfight_dpt_terminal.params == {}
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                in d_longfight_dpt_terminal.reason
+            and "outcome=defeat/floor=23/source_round=4"
+                "/source_action=play_card/sample_start=3/sample_end=4"
+                "/actual_dpt=0/projected_dpt=17.2/ratio=0.00"
+                "/encounter=OVICOPTER+TOUGH_EGG/terminal_round=8"
+                "/terminal_action=end_turn/terminal_hp=18/final_hp=0"
+                in d_longfight_dpt_terminal.reason), \
+        f"非 Boss 长战有效火力终局桥接缺失或动作漂移: {d_longfight_dpt_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "longfight_race_effective_dpt_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少非 Boss 长战有效火力终局观测开关"
+
+    longfight_dpt_replay_ctx = _SettleCtx()
+    longfight_dpt_replay_ctx.decisions = [
+        dict(longfight_dpt_source_row), dict(longfight_dpt_terminal_row)]
+    d_longfight_dpt_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            longfight_dpt_terminal_state, longfight_dpt_replay_ctx)
+    assert (d_longfight_dpt_replay.action == d_longfight_dpt_terminal.action
+            and d_longfight_dpt_replay.params
+            == d_longfight_dpt_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                in d_longfight_dpt_replay.reason), \
+        f"进程重载后未恢复非 Boss 长战有效火力终局桥接: {d_longfight_dpt_replay}"
+
+    longfight_dpt_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_longfight_dpt_terminal.action,
+        "floor": 23, "reason": d_longfight_dpt_terminal.reason})
+    d_longfight_dpt_duplicate = longfight_dpt_pol.decide(
+        longfight_dpt_terminal_state, longfight_dpt_ctx)
+    assert (d_longfight_dpt_duplicate.action == d_longfight_dpt_terminal.action
+            and d_longfight_dpt_duplicate.params
+            == d_longfight_dpt_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in d_longfight_dpt_duplicate.reason), \
+        f"非 Boss 长战有效火力终局桥接重复提交: {d_longfight_dpt_duplicate}"
+
+    longfight_dpt_off_know = knowledge.Knowledge(tmp)
+    longfight_dpt_off_know.policy[
+        "longfight_race_effective_dpt_terminal_outcome_obs"] = False
+    longfight_dpt_off_ctx = _SettleCtx()
+    longfight_dpt_off_ctx.decisions = [
+        dict(longfight_dpt_source_row), dict(longfight_dpt_terminal_row)]
+    d_longfight_dpt_off = policy.Policy(longfight_dpt_off_know).decide(
+        longfight_dpt_terminal_state, longfight_dpt_off_ctx)
+    assert (d_longfight_dpt_off.action == d_longfight_dpt_terminal.action
+            and d_longfight_dpt_off.params == d_longfight_dpt_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in d_longfight_dpt_off.reason), \
+        f"非 Boss 长战有效火力终局开关关闭后动作或 marker 漂移: {d_longfight_dpt_off}"
+
+    longfight_dpt_boundary_ctx = _SettleCtx()
+    longfight_dpt_boundary_ctx.decisions = [
+        dict(longfight_dpt_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 23,
+         "reason": "combat boundary"},
+        dict(longfight_dpt_terminal_row),
+    ]
+    d_longfight_dpt_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            longfight_dpt_terminal_state, longfight_dpt_boundary_ctx)
+    assert (d_longfight_dpt_boundary.action
+            == d_longfight_dpt_terminal.action
+            and d_longfight_dpt_boundary.params
+            == d_longfight_dpt_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in d_longfight_dpt_boundary.reason), \
+        f"非 Boss 长战有效火力终局桥接越过 REWARD 边界: {d_longfight_dpt_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{

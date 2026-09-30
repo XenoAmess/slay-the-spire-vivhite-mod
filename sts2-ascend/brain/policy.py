@@ -941,6 +941,8 @@ class Policy:
         self._longfight_effective_dpt_round = None
         self._longfight_effective_dpt_start_hp = None
         self._longfight_effective_dpt_projected = 0.0
+        self._longfight_effective_dpt_terminal_outcome_pending = None
+        self._longfight_effective_dpt_terminal_outcome_reported = False
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # Boss 意图0生命支付链只消费服务端成功回执；用于把首击前的多张
         # 白绮生命支付与后续终端锁收口拼成同一场战斗的可证伪观测。
@@ -5436,6 +5438,171 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_longfight_effective_dpt_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the latest non-Boss longfight DPT sample before GAME_OVER.
+
+        The per-round sample is durable before the native terminal result
+        arrives.  Join only a bounded same-floor COMBAT/CARD_SELECTION tail so
+        an older longfight cannot be borrowed by a later room.  This is
+        observation-only and never participates in scoring or action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "longfight_race_effective_dpt_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_longfight_effective_dpt_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._longfight_effective_dpt_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_longfight_effective_dpt_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _source = None
+        for _row in reversed(decisions):
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind("LONGFIGHT_RACE_EFFECTIVE_DPT_OBS")
+            if _marker_at < 0:
+                continue
+            _match = re.search(
+                r"长战竞速有效火力对账：采样"
+                r"(?P<sample_start>-?\d+(?:\.\d+)?)(?:→|->)"
+                r"(?P<sample_end>-?\d+(?:\.\d+)?)回合，敌血净降"
+                r"(?P<actual>-?\d+(?:\.\d+)?)/回合 vs 投影"
+                r"(?P<projected>-?\d+(?:\.\d+)?)/回合",
+                _reason[:_marker_at])
+            if _match is None:
+                continue
+            try:
+                _sample_start = float(_match.group("sample_start"))
+                _sample_end = float(_match.group("sample_end"))
+                _actual = float(_match.group("actual"))
+                _projected = float(_match.group("projected"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_value) for _value in (
+                    _sample_start, _sample_end, _actual, _projected))
+                    or _sample_start < 0.0
+                    or _sample_end < _sample_start
+                    or _projected <= 0.0):
+                continue
+            _encounter = ""
+            _encounter_match = re.search(
+                r"长战遭遇=([^，；]+)，血池", _reason)
+            if _encounter_match is not None:
+                _encounter = _encounter_match.group(1).strip()
+            _source = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "sample_start": _sample_start,
+                "sample_end": _sample_end,
+                "actual_dpt": _actual,
+                "projected_dpt": _projected,
+                "ratio": _actual / _projected,
+                "encounter": _encounter or "?",
+            }
+            break
+        if _source is None:
+            return
+
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            _terminal = {}
+        self._longfight_effective_dpt_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal.get(
+                "turn", _terminal.get("round")),
+            "terminal_action": _terminal.get("action") or "?",
+            "terminal_hp": _terminal.get("hp"),
+        }
+        self._longfight_effective_dpt_terminal_outcome_reported = False
+
+    def _consume_longfight_effective_dpt_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the latest non-Boss longfight DPT sample to the outcome."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "longfight_race_effective_dpt_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_longfight_effective_dpt_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_longfight_effective_dpt_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._longfight_effective_dpt_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        try:
+            _ratio = f"{float(_pending.get('ratio')):.2f}"
+        except (TypeError, ValueError, OverflowError):
+            _ratio = "?"
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；长战竞速有效火力终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/sample_start={_round(_pending.get('sample_start'))}"
+            f"/sample_end={_round(_pending.get('sample_end'))}"
+            f"/actual_dpt={_num(_pending.get('actual_dpt'))}"
+            f"/projected_dpt={_num(_pending.get('projected_dpt'))}"
+            f"/ratio={_ratio}"
+            f"/encounter={_pending.get('encounter') or '?'}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -10378,6 +10545,8 @@ class Policy:
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
             self._longfight_effective_dpt_projected = 0.0
+            self._longfight_effective_dpt_terminal_outcome_pending = None
+            self._longfight_effective_dpt_terminal_outcome_reported = False
             self._self_harm_potion_paid = 0.0
             self._boss_free_turn_hp_pay_total = 0.0
             self._boss_free_turn_hp_pay_count = 0
@@ -19248,6 +19417,11 @@ class Policy:
         _boss_effective_dpt_terminal_outcome_note = (
             self._consume_boss_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_longfight_effective_dpt_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _longfight_effective_dpt_terminal_outcome_note = (
+            self._consume_longfight_effective_dpt_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_race_prelock_defense_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _race_prelock_defense_terminal_outcome_note = (
@@ -19310,6 +19484,7 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
+                            f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
@@ -19344,6 +19519,7 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
+                        f"{_longfight_effective_dpt_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
@@ -19364,6 +19540,7 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
+                                f"{_longfight_effective_dpt_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
