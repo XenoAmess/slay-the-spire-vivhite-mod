@@ -15440,3 +15440,14 @@
 - 当前低价值卡牌：BULLY(16分/2.19064899770488局)，BURNING_PACT(17分/13.226286374878908局)，DEFEND_IRONCLAD(18分/3.6723933469109546局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1804 胜，当前目标进阶 0
+
+## 第 1805 局复盘（2026-10-01 02:25）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：STOMP, TWIN_STRIKE, THUNDERCLAP, MOLTEN_FIST, MOLTEN_FIST, DISMANTLE, ARMAMENTS, PACTS_END, VICIOUS, EXPECT_A_FIGHT, FISTICUFFS, COLOSSUS, UNRELENTING, SWORD_BOOMERANG
+- 本局遗物：OLD_COIN, BLOOD_VIAL
+- 战斗记录：F5 Monster战 掉血16; F6 Monster战 掉血20; F9 Monster战 掉血15｜竞速投影审计：pool=41/dpt=9.3/ttk=4.4086/tsurv=2.53333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=4.4086/actual_over_projected=1.36（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战6回合获胜; F12 Elite战 掉血26｜竞速投影审计：pool=69/dpt=16.2/ttk=4.25926/tsurv=2.26667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.25926/actual_over_projected=1.64（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战7回合获胜; F15 Monster战 掉血0; F17 Boss战 掉血57｜竞速投影审计：pool=171/dpt=9/ttk=19/tsurv=2.15385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=19/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.64（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=14/projected_dpt=17.5043/ratio=0.81/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=1/actual_dpt=6/projected_dpt=7.6/ratio=0.79/min_ratio=0.79|clear_samples=6/actual_dpt=15.3333/projected_dpt=19.155/ratio=0.81/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.46658925635286局)，ONE_TWO_PUNCH(25分/2.512782512175803局)，HELLRAISER(25分/4.421394862264108局)，MANGLE(24分/46.24794040741776局)，VOLLEY(24分/7.4221562388803815局)
+- 当前低价值卡牌：BULLY(16分/2.182981726212913局)，BURNING_PACT(17分/13.179994372566833局)，DEFEND_IRONCLAD(18分/3.6595399701967666局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.42 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1805 胜，当前目标进阶 0
