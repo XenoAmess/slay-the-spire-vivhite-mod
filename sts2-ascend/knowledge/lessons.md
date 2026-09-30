@@ -15220,3 +15220,14 @@
 - 当前低价值卡牌：BULLY(16分/2.3497774757358165局)，BURNING_PACT(17分/14.187042216203027局)，DEFEND_IRONCLAD(18分/3.9391555551136963局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.002）
 - 生涯战绩：0/1784 胜，当前目标进阶 0
+
+## 第 1785 局复盘（2026-09-30 20:24）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：RAMPAGE, POMMEL_STRIKE, CINDER, CINDER, FASTEN, EXPECT_A_FIGHT, TAUNT, SHRUG_IT_OFF, BREAKTHROUGH, SPITE, STONE_ARMOR, TRUE_GRIT, IMPERVIOUS, STOMP, FIGHT_ME, TRUE_GRIT, HEADBUTT, SPITE, SHRUG_IT_OFF
+- 本局遗物：VAJRA, FESTIVE_POPPER
+- 战斗记录：F17 Boss战 掉血61｜竞速投影审计：pool=130/dpt=8.775/ttk=14.8148/tsurv=4.5625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=13/projected_ttk=14.8148/actual_over_projected=0.88（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战13回合获胜｜竞速Boss有效火力收官对账：samples=8/actual_dpt=9.59375/projected_dpt=16.1067/ratio=0.66/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=8/actual_dpt=9.59375/projected_dpt=16.1067/ratio=0.66/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血0; F21 Monster战 掉血5; F22 Monster战 掉血16｜自损1（可行动段1/非行动段21，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血4｜自损1（可行动段1/非行动段3，SELF_LOSS_PHASE_OBS）; F25 Elite战 掉血86｜竞速投影审计：pool=83/dpt=9.9/ttk=8.38384/tsurv=2.31429（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=8.38384/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.02（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/10.154241154071611局)，MANGLE(25分/45.40204116872527局)，HELLRAISER(25分/4.742564449880844局)，FEED(25分/28.884460223318456局)，PACTS_END(24分/53.14719959621943局)
+- 当前低价值卡牌：BULLY(16分/2.341553254570741局)，BURNING_PACT(17分/14.137387568446318局)，DEFEND_IRONCLAD(18分/3.9253685106707987局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.37 → 0.38（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.001）；block_safety: 1.92 → 1.91（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1785 胜，当前目标进阶 0
