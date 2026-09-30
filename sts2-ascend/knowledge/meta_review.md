@@ -14489,3 +14489,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct selfcheck reproduced the host's fixed 256-slot bootstrap limit; a clone-local process-local temp adapter completed the full check with `SELFCHECK OK`. The actual 1776 replay, targeted diff check, and complete production-code diff reread passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1777-1778: bridge RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1777,1778`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Runs 1777 and 1778 persist a same-floor Boss `RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS` close-time audit, but their authoritative `GAME_OVER` rows only retain the overall effective-DPT bridge. A bounded same-floor terminal join should preserve the latest `clear`/`slippery` phase fields without changing the selected action or parameters. This is falsifiable: missing or malformed phases, a screen/floor boundary, duplicate retry, or a disabled switch must produce no new marker.
+- **EVIDENCE**: The complete chains `sts2-ascend/knowledge/runs/20260930-174520_11VJRY3YDGPP.json` (1777, 194 decisions) and `sts2-ascend/knowledge/runs/20260930-180034_6BCW8L8BHHZ2.json` (1778, 207 decisions) were read. Run 1777's F17 durable combat note records `clear_samples=6/actual_dpt=26.6667/projected_dpt=18.0257/ratio=1.53/min_ratio=0.94`; run 1778 records `clear_samples=1/actual_dpt=30/projected_dpt=16.2/ratio=1.85/min_ratio=1.85`. Their terminal predecessors are same-floor F17 `end_turn` rows at HP 16 and HP 5 respectively, followed by `GAME_OVER` at final HP 0, with no phase-specific terminal marker. The read-only replay after the patch recovered both phase payloads and retained `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3—10 matching Boss terminals, emit `RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS` once from the latest same-floor durable phase note, preserving each present phase's samples, actual/projected DPT, ratio and minimum ratio together with terminal round/action/HP, outcome and final HP. `REWARD`/other-screen, cross-floor, missing-source, malformed-source and off-switch cases remain silent; scoring, gates, action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `race_audit_projection_effective_dpt_phase_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: parse the latest same-floor `RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS` note at `GAME_OVER` and append one observation-only terminal bridge. No scoring, target, gate, action or parameter path reads the new fields.
+- `sts2-ascend/brain/selfcheck.py`: cover positive clear-phase replay, Policy reload, duplicate persistence, switch-off and `REWARD` boundary cases while asserting unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3—10 same-combat phase-split terminals and independently compare present phase names, sample counts, actual/projected DPT, ratios, terminal fields, marker count and action/params.
+- **Adjust**: if a real trace shows phase-token drift, stale source selection, cross-screen/floor joining, duplicate phases or non-finite values, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `race_audit_projection_effective_dpt_phase_terminal_outcome_obs` to `False`; only `RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS` should disappear while existing overall-DPT audits, action and params remain unchanged.
+- **Validation**: the required direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temporary-directory adapter completed the full check with `SELFCHECK OK` and exit code 0. Read-only replays of 1777 and 1778 emitted one phase marker each with the expected fields; targeted `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

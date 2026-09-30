@@ -22306,6 +22306,102 @@ def main() -> int:
             not in _d_projection_ratio_boundary.reason), \
         f"竞速 TTK 比值终局桥接越过楼层边界: {_d_projection_ratio_boundary}"
 
+    # 3z-5e) 竞速 Boss 有效火力分相终局对账：1777/1778 的 F17 记录了
+    # clear phase 的实际/投影 DPT，但 GAME_OVER 只保留总体 DPT 桥；新增字段
+    # 只读恢复分相来源，且不得改变结算动作或参数。
+    _projection_phase_note = (
+        "F17 Boss战 掉血74｜竞速Boss有效火力分相："
+        "clear_samples=1/actual_dpt=30/projected_dpt=16.2/ratio=1.85/min_ratio=1.85"
+        "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）")
+    _projection_phase_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 10, "hp": 5, "reason": "终端战斗尾部",
+    }
+    _projection_phase_pol = policy.Policy(knowledge.Knowledge(tmp))
+    _projection_phase_ctx_live = _projection_ratio_ctx(
+        [_projection_phase_note], [_projection_phase_terminal_row])
+    _d_projection_phase = _projection_phase_pol.decide(
+        {"screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+         "game_over": {"can_continue": True, "is_victory": False, "floor": 17},
+         "run": {"current_hp": 0, "floor": 17}},
+        _projection_phase_ctx_live)
+    assert (_d_projection_phase.action == "continue_game_over"
+            and _d_projection_phase.params == {}
+            and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+                in _d_projection_phase.reason
+            and "outcome=defeat/floor=17"
+                "/source_clear_samples=1/source_clear_actual_dpt=30"
+                "/source_clear_projected_dpt=16.2/source_clear_ratio=1.85"
+                "/source_clear_min_ratio=1.85"
+                "/terminal_round=10/terminal_action=end_turn/terminal_hp=5"
+                "/final_hp=0"
+                in _d_projection_phase.reason), \
+        f"竞速 Boss 分相火力终局桥接缺失或动作漂移: {_d_projection_phase}"
+    assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_effective_dpt_phase_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速 Boss 分相火力终局观测开关"
+
+    _d_projection_phase_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            {"screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+             "game_over": {"can_continue": True, "is_victory": False, "floor": 17},
+             "run": {"current_hp": 0, "floor": 17}},
+            _projection_ratio_ctx([_projection_phase_note],
+                                  [_projection_phase_terminal_row]))
+    assert (_d_projection_phase_reload.action == _d_projection_phase.action
+            and _d_projection_phase_reload.params
+            == _d_projection_phase.params
+            and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+            in _d_projection_phase_reload.reason), \
+        f"进程重载后未恢复竞速 Boss 分相终局桥接: {_d_projection_phase_reload}"
+
+    _projection_phase_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_projection_phase.action,
+        "floor": 17, "reason": _d_projection_phase.reason})
+    _d_projection_phase_duplicate = _projection_phase_pol.decide(
+        {"screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+         "game_over": {"can_continue": True, "is_victory": False, "floor": 17},
+         "run": {"current_hp": 0, "floor": 17}},
+        _projection_phase_ctx_live)
+    assert (_d_projection_phase_duplicate.action == _d_projection_phase.action
+            and _d_projection_phase_duplicate.params
+            == _d_projection_phase.params
+            and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_phase_duplicate.reason), \
+        f"竞速 Boss 分相终局桥接重复提交: {_d_projection_phase_duplicate}"
+
+    _projection_phase_off_know = knowledge.Knowledge(tmp)
+    _projection_phase_off_know.policy[
+        "race_audit_projection_effective_dpt_phase_terminal_outcome_obs"] = False
+    _d_projection_phase_off = policy.Policy(_projection_phase_off_know).decide(
+        {"screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+         "game_over": {"can_continue": True, "is_victory": False, "floor": 17},
+         "run": {"current_hp": 0, "floor": 17}},
+        _projection_ratio_ctx([_projection_phase_note],
+                              [_projection_phase_terminal_row]))
+    assert (_d_projection_phase_off.action == _d_projection_phase.action
+            and _d_projection_phase_off.params == _d_projection_phase.params
+            and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_phase_off.reason), \
+        f"竞速 Boss 分相终局开关关闭后动作或 marker 漂移: {_d_projection_phase_off}"
+
+    _d_projection_phase_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            {"screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+             "game_over": {"can_continue": True, "is_victory": False, "floor": 17},
+             "run": {"current_hp": 0, "floor": 17}},
+            _projection_ratio_ctx(
+                [_projection_phase_note],
+                [_projection_phase_terminal_row,
+                 {"screen": "REWARD", "action": "proceed", "floor": 17,
+                  "reason": "奖励边界"}]))
+    assert (_d_projection_phase_boundary.action == _d_projection_phase.action
+            and _d_projection_phase_boundary.params
+            == _d_projection_phase.params
+            and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_phase_boundary.reason), \
+        f"竞速 Boss 分相终局桥接越过 REWARD 边界: {_d_projection_phase_boundary}"
+
     print("SELFCHECK OK")
     return 0
 

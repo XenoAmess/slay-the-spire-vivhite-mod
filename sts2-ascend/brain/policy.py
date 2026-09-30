@@ -6566,6 +6566,156 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             "（RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_race_projection_effective_dpt_phase_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join the durable phase-split effective-DPT audit to GAME_OVER.
+
+        ``RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS`` is a close-time calibration
+        record.  Keep this bridge observation-only: it recovers the latest
+        same-floor combat note immediately before the terminal row, and never
+        feeds scoring, gates, target choice, action, or parameters.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_audit_projection_effective_dpt_phase_terminal_outcome_obs",
+                1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        marker = "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
+        decisions = getattr(ctx, "decisions", None)
+        if isinstance(decisions, list) and decisions:
+            _last = decisions[-1]
+            if isinstance(_last, dict) and marker in str(
+                    _last.get("reason") or ""):
+                return ""
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if (_terminal_screen
+                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
+            return ""
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        if (floor is not None and _terminal.get("floor") is not None
+                and not _same_floor(floor, _terminal.get("floor"))):
+            return ""
+
+        _notes = getattr(ctx, "combat_notes", None)
+        if not isinstance(_notes, list) or not _notes:
+            return ""
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _label = "竞速Boss有效火力分相："
+        _source = None
+        for _raw_note in reversed(_notes):
+            _note = str(_raw_note or "")
+            if not _note:
+                continue
+            _floor_match = re.search(
+                r"(?:^|[｜|])F(?P<floor>-?\d+(?:\.\d+)?)\s+",
+                _note)
+            if _floor_match is not None:
+                if (floor is not None
+                        and not _same_floor(floor, _floor_match.group("floor"))):
+                    break
+            elif floor is not None:
+                continue
+
+            _marker_at = _note.rfind("RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS")
+            _label_at = _note.rfind(_label, 0, _marker_at)
+            if _marker_at < 0 or _label_at < 0:
+                continue
+            _source_text = _note[_label_at + len(_label):_marker_at]
+            _phase_matches = list(re.finditer(
+                rf"(?P<phase>slippery|clear)_samples=(?P<samples>\d+)"
+                rf"/actual_dpt=(?P<actual>{_number_pattern})"
+                rf"/projected_dpt=(?P<projected>{_number_pattern})"
+                rf"/ratio=(?P<ratio>{_number_pattern})"
+                rf"/min_ratio=(?P<min_ratio>{_number_pattern})",
+                _source_text))
+            if not _phase_matches:
+                continue
+            _phases = []
+            _seen_phases = set()
+            _valid_source = True
+            for _match in _phase_matches:
+                _phase = _match.group("phase")
+                if _phase in _seen_phases:
+                    _valid_source = False
+                    break
+                _seen_phases.add(_phase)
+                try:
+                    _samples = int(_match.group("samples"))
+                    _values = {
+                        "samples": _samples,
+                        "actual_dpt": float(_match.group("actual")),
+                        "projected_dpt": float(_match.group("projected")),
+                        "ratio": float(_match.group("ratio")),
+                        "min_ratio": float(_match.group("min_ratio")),
+                    }
+                except (TypeError, ValueError, OverflowError):
+                    _valid_source = False
+                    break
+                if (_samples <= 0
+                        or not all(math.isfinite(value) for value in (
+                            _values["actual_dpt"], _values["projected_dpt"],
+                            _values["ratio"], _values["min_ratio"]))
+                        or _values["actual_dpt"] < 0.0
+                        or _values["projected_dpt"] <= 0.0
+                        or _values["ratio"] < 0.0
+                        or _values["min_ratio"] < 0.0):
+                    _valid_source = False
+                    break
+                _phases.append((_phase, _values))
+            if _valid_source:
+                _source = _phases
+                break
+        if _source is None:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        _phase_fields = "".join(
+            f"/source_{_phase}_samples={_values['samples']}"
+            f"/source_{_phase}_actual_dpt={_num(_values['actual_dpt'])}"
+            f"/source_{_phase}_projected_dpt={_num(_values['projected_dpt'])}"
+            f"/source_{_phase}_ratio={_num(_values['ratio'])}"
+            f"/source_{_phase}_min_ratio={_num(_values['min_ratio'])}"
+            for _phase, _values in _source)
+        return (
+            f"；竞速Boss有效火力分相终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"{_phase_fields}"
+            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
+            f"/terminal_action={_terminal.get('action') or '?'}"
+            f"/terminal_hp={_num(_terminal.get('hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS）")
+
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
@@ -20393,6 +20543,9 @@ class Policy:
         _race_projection_ratio_terminal_outcome_note = (
             self._consume_race_projection_ratio_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _race_projection_effective_dpt_phase_terminal_outcome_note = (
+            self._consume_race_projection_effective_dpt_phase_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
@@ -20477,6 +20630,7 @@ class Policy:
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
+                            f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
