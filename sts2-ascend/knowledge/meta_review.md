@@ -14887,3 +14887,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1808: join focus drift to the non-Boss longfight terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1808`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: When a same-floor longfight DPT source row records `FOCUS_DRIFT_FLUSH_OBS` but its DPT context still reports the previous focus (`focus_switches=0/focus=寄生惧魔`), the authoritative GAME_OVER row should add one bounded focus-drift audit suffix that preserves both the stale DPT context and the actual transition. This is falsifiable: a missing source marker, malformed transition, floor/screen boundary, duplicate retry, or disabled switch must stay silent; action and parameters must not change.
+- **EVIDENCE**: The exact persisted chain `sts2-ascend/knowledge/runs/20261001-030351_SF0E3HQSFQD1.json` has 305 decisions. F21 D300 (`turn=4`, `play_card`) records `寄生惧魔→胧光怪（FOCUS_DRIFT_FLUSH_OBS）` while the same DPT row says `火线已换线0次至寄生惧魔` and measures `23.0` actual versus `27.4` projected damage per round. D303 is the same-floor terminal `end_turn` at HP17; D304 is defeat at final HP0 and, before this change, has the legacy DPT terminal marker but no focus-drift marker. A read-only replay of the actual chain with D304 withheld emitted `LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS`, `source_focus_switches=0/flush_count=1/transition=寄生惧魔→胧光怪`, and preserved `continue_game_over {}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching non-Boss longfight terminals, emit the new marker exactly once with source/terminal round, action, HP, focus counter, and transition. Cross-floor/screen, malformed, duplicate, and off-switch cases remain silent; scoring, ranking, gates, target, action, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `longfight_focus_drift_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: carry only the transition parsed from the already-selected same-floor DPT source row into the existing terminal bridge, then append an audit-only suffix behind the new switch. No score, gate, target, action, or parameter path reads this field.
+- `sts2-ascend/brain/selfcheck.py`: cover the positive marker, default key, reload, duplicate, parent-off, new-key-off, and `REWARD` boundary cases with unchanged action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare source focus counter, transition, marker count, terminal round/HP, outcome, and action/params.
+- **Adjust**: if real traces show multiple transitions in one source row, stale transition text, cross-floor carry-over, or a marker without the DPT source, retain the evidence and tighten only this observation parser.
+- **Rollback**: set `longfight_focus_drift_terminal_outcome_obs` to `False`; the legacy DPT terminal marker, score, action, and parameters must remain unchanged while only the new suffix disappears.
+- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` command reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full selfcheck completed through a clone-local temp-directory process adapter with exit code 0 and `SELFCHECK OK`. The exact 1808 replay passed with `continue_game_over {}`, both markers present, the transition present, and stale `source_focus_switches=0` preserved. Pre-report production diff review and `git diff --check` passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

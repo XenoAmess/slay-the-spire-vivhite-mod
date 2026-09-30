@@ -5765,6 +5765,15 @@ class Policy:
                 "focus_switches": _focus_switches,
                 "focus": _focus or "?",
             }
+            _focus_flush_match = re.search(
+                r"火线漂移补记：(?P<transition>[^（(]+)"
+                r".*FOCUS_DRIFT_FLUSH_OBS",
+                _reason)
+            if _focus_flush_match is not None:
+                _focus_transition = (
+                    _focus_flush_match.group("transition").strip())
+                if _focus_transition:
+                    _source["focus_drift_flush"] = _focus_transition
             break
         if _source is None:
             return
@@ -5825,6 +5834,31 @@ class Policy:
         _pool_start = _pending.get("pool_start")
         _pool_end = _pending.get("pool_end")
         _focus_switches = _pending.get("focus_switches")
+        _focus_drift_tail = ""
+        try:
+            _focus_drift_enabled = bool(int(float(pol.get(
+                "longfight_focus_drift_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _focus_drift_enabled = False
+        _focus_transition = str(
+            _pending.get("focus_drift_flush") or "").strip()
+        if _focus_drift_enabled and _focus_transition:
+            _focus_transition = re.sub(
+                r"[；()（）\r\n]+", "_", _focus_transition).strip("_")
+            if _focus_transition:
+                _focus_drift_tail = (
+                    f"；长战火线漂移终局对账：outcome={_result}"
+                    f"/floor={_round(floor)}"
+                    f"/source_round={_round(_pending.get('source_round'))}"
+                    f"/source_action={_pending.get('source_action') or '?'}"
+                    f"/source_focus_switches="
+                    f"{_focus_switches if _focus_switches is not None else '?'}"
+                    f"/flush_count=1/transition={_focus_transition}"
+                    f"/terminal_round={_round(_pending.get('terminal_round'))}"
+                    f"/terminal_action={_pending.get('terminal_action') or '?'}"
+                    f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+                    f"/final_hp={_num(final_hp)}"
+                    "（LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS）")
         return (
             f"；长战有效火力终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5844,6 +5878,7 @@ class Policy:
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
+            f"{_focus_drift_tail}"
             "（LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
 
     def _restore_self_loss_phase_terminal_outcome_from_notes(

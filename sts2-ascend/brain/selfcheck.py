@@ -13099,7 +13099,9 @@ def main() -> int:
         "LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）；实际/投影比0.10"
         "（LONGFIGHT_RACE_EFFECTIVE_DPT_RATIO_OBS）；长战遭遇="
         "BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE，血池123.0→121.0，"
-        "火线已换线2次至熟睡甲虫（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）")
+        "火线已换线2次至熟睡甲虫（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）；"
+        "火线漂移补记：寄生惧魔→胧光怪"
+        "（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）")
     _longfight_terminal_row = {
         "screen": "COMBAT", "action": "end_turn", "floor": 24,
         "turn": 4, "hp": 13, "reason": "终端战斗尾部",
@@ -13151,9 +13153,20 @@ def main() -> int:
                 "/final_hp=0"
                 in _d_longfight_terminal.reason), \
         f"非 Boss 长战有效火力终局桥接缺失或动作漂移: {_d_longfight_terminal}"
+    assert ("LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
+            in _d_longfight_terminal.reason
+            and "source_focus_switches=2/flush_count=1/transition=寄生惧魔→胧光怪"
+                in _d_longfight_terminal.reason
+            and "/terminal_round=4/terminal_action=end_turn/terminal_hp=13"
+                "/final_hp=0"
+                in _d_longfight_terminal.reason), \
+        f"长战火线漂移终局桥接缺失: {_d_longfight_terminal}"
     assert knowledge.DEFAULT_POLICY[
         "longfight_race_effective_dpt_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少非 Boss 长战有效火力终局观测开关"
+    assert knowledge.DEFAULT_POLICY[
+        "longfight_focus_drift_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少长战火线漂移终局观测开关"
     _d_longfight_terminal_reload = policy.Policy(
         knowledge.Knowledge(tmp)).decide(
             _longfight_terminal_state,
@@ -13165,7 +13178,9 @@ def main() -> int:
             and _d_longfight_terminal_reload.params
             == _d_longfight_terminal.params
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
-            in _d_longfight_terminal_reload.reason), \
+                in _d_longfight_terminal_reload.reason
+            and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
+                in _d_longfight_terminal_reload.reason), \
         f"进程重载后未恢复非 Boss 长战终局桥接: {_d_longfight_terminal_reload}"
     _longfight_terminal_ctx.decisions.append({
         "screen": "GAME_OVER", "action": _d_longfight_terminal.action,
@@ -13177,6 +13192,8 @@ def main() -> int:
             and _d_longfight_terminal_duplicate.params
             == _d_longfight_terminal.params
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+            not in _d_longfight_terminal_duplicate.reason
+            and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
             not in _d_longfight_terminal_duplicate.reason), \
         f"非 Boss 长战终局桥接重复提交: {_d_longfight_terminal_duplicate}"
     _longfight_terminal_off_know = knowledge.Knowledge(tmp)
@@ -13193,8 +13210,28 @@ def main() -> int:
             and _d_longfight_terminal_off.params
             == _d_longfight_terminal.params
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+            not in _d_longfight_terminal_off.reason
+            and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
             not in _d_longfight_terminal_off.reason), \
         f"非 Boss 长战终局开关关闭后动作或 marker 漂移: {_d_longfight_terminal_off}"
+    _longfight_focus_drift_off_know = knowledge.Knowledge(tmp)
+    _longfight_focus_drift_off_know.policy[
+        "longfight_focus_drift_terminal_outcome_obs"] = False
+    _d_longfight_focus_drift_off = policy.Policy(
+        _longfight_focus_drift_off_know).decide(
+            _longfight_terminal_state,
+            _make_longfight_terminal_ctx([_longfight_terminal_note],
+                                          [_longfight_terminal_source_row,
+                                           _longfight_terminal_row]))
+    assert (_d_longfight_focus_drift_off.action
+            == _d_longfight_terminal.action
+            and _d_longfight_focus_drift_off.params
+            == _d_longfight_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                in _d_longfight_focus_drift_off.reason
+            and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
+                not in _d_longfight_focus_drift_off.reason), \
+        f"长战火线漂移观测关闭未严格回滚: {_d_longfight_focus_drift_off}"
     _d_longfight_terminal_boundary = policy.Policy(
         knowledge.Knowledge(tmp)).decide(
             _longfight_terminal_state,
@@ -13208,6 +13245,8 @@ def main() -> int:
             and _d_longfight_terminal_boundary.params
             == _d_longfight_terminal.params
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+            not in _d_longfight_terminal_boundary.reason
+            and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
             not in _d_longfight_terminal_boundary.reason), \
         f"非 Boss 长战终局桥接越过 REWARD 边界: {_d_longfight_terminal_boundary}"
     # 3br-self-loss-phase-terminal：1787-F15 的战斗记录已经把可行动段/非行动段
