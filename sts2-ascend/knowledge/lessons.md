@@ -15165,3 +15165,14 @@
 - 当前低价值卡牌：BULLY(16分/2.391333904146542局)，BURNING_PACT(17分/14.437943763394411局)，DEFEND_IRONCLAD(18分/4.0088205499973215局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1779 胜，当前目标进阶 0
+
+## 第 1780 局复盘（2026-09-30 18:41）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：BLUDGEON, INFLAME, TRUE_GRIT, SWORD_BOOMERANG, UNRELENTING, IRON_WAVE, TRUE_GRIT, UPPERCUT, IRON_WAVE, STOMP, DEMON_FORM, EVIL_EYE, STONE_ARMOR, BLUDGEON, FLAME_BARRIER, INFLAME, SHRUG_IT_OFF, STONE_ARMOR, TAUNT, ANGER, EXPECT_A_FIGHT
+- 本局遗物：WAR_PAINT, INTIMIDATING_HELMET
+- 战斗记录：F21 Monster战 掉血8; F24 Monster战 掉血0; F27 Monster战 掉血44｜竞速投影审计：pool=169/dpt=3.375/ttk=50.0741/tsurv=23.6667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=50.0741/actual_over_projected=0.14（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战7回合获胜; F30 Monster战 掉血20; F31 Monster战 掉血23｜自损7（可行动段7/非行动段22，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血35｜竞速投影审计：pool=270/dpt=31.05/ttk=8.69565/tsurv=2.05882（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=8.69565/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=5.34（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战11回合阵亡｜竞速Boss有效火力收官对账：samples=9/actual_dpt=21.8889/projected_dpt=25.4576/ratio=0.82/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=9/actual_dpt=21.8889/projected_dpt=25.4576/ratio=0.82/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/9.330309268102347局)，MANGLE(25分/46.20498812562302局)，HELLRAISER(25分/4.826437940915569局)，FEED(25分/29.395289446871598局)，PACTS_END(24分/53.076547771899335局)
+- 当前低价值卡牌：BULLY(16分/2.3829642354820293局)，BURNING_PACT(17分/14.387410960222532局)，DEFEND_IRONCLAD(18分/3.994789678072331局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.37 → 0.38（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.94 → 1.93（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1780 胜，当前目标进阶 0
