@@ -5534,6 +5534,33 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 _stale_tail = ""
 
+        _cover_tail = ""
+        try:
+            _cover_obs = bool(int(float(pol.get(
+                "race_allin_lethal_cover_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _cover_obs = False
+        _cover = _pending.get("race_allin_lethal_cover_terminal")
+        if _cover_obs and isinstance(_cover, dict):
+            try:
+                _cover_tail = (
+                    f"; terminal cover decision audit: source_round="
+                    f"{_round(_cover.get('source_round'))}"
+                    f"/source_action={_cover.get('source_action') or '?'}"
+                    f"/coverage={_cover.get('coverage') or '?'}"
+                    f"/decision={_cover.get('decision') or '?'}"
+                    f"/strict_margin={_cover.get('strict_margin') or '?'}"
+                    f"/pool={_cover.get('pool') or '?'}"
+                    f"/cap={_cover.get('cap') or '?'}"
+                    f"/margin_floor={_cover.get('margin_floor') or '?'}"
+                    f"/terminal_round={_round(_pending.get('terminal_round'))}"
+                    f"/outcome={_result}"
+                    f"/bridge_decisions="
+                    f"{_round(_cover.get('bridge_decisions'))}"
+                    " (RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS)")
+            except (TypeError, ValueError, OverflowError):
+                _cover_tail = ""
+
         return (
             f"；竞速终端结局：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -5558,6 +5585,7 @@ class Policy:
             f"{_roster_drift_tail}"
             f"{_intent_drift_tail}"
             f"{_stale_tail}"
+            f"{_cover_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")
 
     @staticmethod
@@ -6168,6 +6196,87 @@ class Policy:
             "first_age": _samples[0],
             "last_age": _samples[-1],
         }
+
+    def _attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Attach a persisted lethal-cover decision to the terminal race join.
+
+        The cover branch is an audit-only explanation of the preceding combat
+        decision.  Recover its latest same-floor COMBAT/CARD_SELECTION source
+        without letting it cross a room boundary or affect action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_allin_lethal_cover_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(self, "_race_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or "race_allin_lethal_cover_terminal" in _pending):
+            return
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        _floor_text = None if floor is None else str(floor)
+        for _index in range(len(_decisions) - 1, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            _row_floor = _row.get("floor")
+            if (_floor_text is not None and _row_floor is not None
+                    and str(_row_floor) != _floor_text):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(
+                "RACE_ALLIN_LETHAL_COVER_DECISION_OBS")
+            if _marker_at < 0:
+                continue
+
+            def _token(name: str):
+                _prefix = "" if name == "coverage" else r"(?:^|/)"
+                _match = re.search(
+                    rf"{_prefix}{re.escape(name)}=([^/\s;\uFF1B\uFF08\uFF09]+)",
+                    _reason[:_marker_at])
+                return _match.group(1) if _match else None
+
+            _coverage = _token("coverage")
+            _decision = _token("decision")
+            if (_coverage not in {"yes", "no"}
+                    or _decision not in {"cover", "all_in"}):
+                continue
+            _raw_values = {
+                _key: _token(_key)
+                for _key in ("strict_margin", "pool", "cap", "margin_floor")
+            }
+            if any(_value is None for _value in _raw_values.values()):
+                continue
+            try:
+                _numeric_values = {
+                    _key: float(_value)
+                    for _key, _value in _raw_values.items()
+                }
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not math.isfinite(_numeric_values["strict_margin"])
+                    or not math.isfinite(_numeric_values["pool"])
+                    or not math.isfinite(_numeric_values["cap"])
+                    or not math.isfinite(_numeric_values["margin_floor"])
+                    or _numeric_values["pool"] < 0.0
+                    or _numeric_values["cap"] < 0.0):
+                continue
+            _pending["race_allin_lethal_cover_terminal"] = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "coverage": _coverage,
+                "decision": _decision,
+                **_raw_values,
+                "bridge_decisions": len(_decisions) - _index - 1,
+            }
+            return
 
     def _consume_lethal_playable_reject_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -18973,6 +19082,8 @@ class Policy:
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         self._attach_race_upshift_stale_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        self._attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))

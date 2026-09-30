@@ -14239,3 +14239,31 @@ failed_review_replay: `requested_packages=[]`，无 replay target
 - **Validation**：规定的直接 selfcheck 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后在 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配下退出码 0 并输出 `SELFCHECK OK`。真实 1758 完整链只读回放输出 `behavior_unchanged=True`，桥接为 `count=4/first_age=2/last_age=2/terminal_round=6/outcome=defeat`；AST、最终源码 diff 和 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、stats、progression、`policy.json`、`lessons.md` 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1759: bridge RACE_ALLIN_LETHAL_COVER_DECISION_OBS to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1759`
+production_code_commit: `pending local commit after report closeout`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1759, the F22 D373/D374 `RACE_ALLIN_LETHAL_COVER_DECISION_OBS` samples were not joined to the authoritative D377 `GAME_OVER` outcome. If the newest source is recovered only from the same-floor COMBAT/CARD_SELECTION tail, the terminal reason should preserve its exact source fields and leave `continue_game_over` with `{}` unchanged; a REWARD boundary must remain silent.
+- **EVIDENCE**: The complete 377-decision chain was read. D373 recorded `coverage=yes/decision=all_in/strict_margin=-4.5/pool=114/cap=100/margin_floor=-2.0`; D374 recorded `strict_margin=-4.3/pool=106/cap=100/margin_floor=-2.0`; D375 had zero attack output capacity; D376 was the lethal no-card `end_turn`; D377 had no cover terminal join. The run started at 11:47, before current HEAD `e3f1bc7a1` was deployed at 12:12, so the missing marker is treated as an observation gap, not as evidence against the already deployed stale-upshift feature. A read-only production-chain probe restored D374 with `bridge_decisions=2` and the expected `cap=100` field.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminal windows, emit `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS` only for a same-floor bounded COMBAT/CARD_SELECTION tail, preserving source round/action, coverage, decision, strict margin, pool, cap, margin floor, terminal round/outcome, and bridge length. Cross-screen or cross-floor sources remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on, audit-only `race_allin_lethal_cover_terminal_outcome_obs` rollback switch.
+- `sts2-ascend/brain/policy.py`: restore the latest bounded cover-decision source, use exact field boundaries so `cap=` cannot match `raw_damage_cap=`, and append only `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS` to the existing terminal note. No scoring, candidate ordering, action, or params path changed.
+- `sts2-ascend/brain/selfcheck.py`: cover normal, process-reload, switch-off, and REWARD-boundary cases; assert `continue_game_over` and `{}` remain identical.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-combat terminal windows and compare source/terminal round, floor, action, outcome, numeric fields, and bridge length.
+- **Adjust**: if real traces show a screen/floor crossing, source-token drift, or an unrelated cover sample being joined, retain the failure and tighten the bounded parser; do not promote the observation into behavior.
+- **Rollback**: set `race_allin_lethal_cover_terminal_outcome_obs` to `False`; expected result is removal of only the new terminal marker, with existing terminal audit, action, and params unchanged.
+- **Validation**: direct selfcheck reproduced the host's fixed 256-directory bootstrap limit; the clone-local process-level ACL-preserving temp adapter then exited 0 with `SELFCHECK OK`. The actual 1759 chain probe emitted the D374 source fields and `bridge_decisions=2`, while the terminal action remained `continue_game_over` with `{}`. Targeted diff checks passed; no `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

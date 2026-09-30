@@ -18650,6 +18650,15 @@ def main() -> int:
             "（RACE_UPSHIFT_STALE）",
     }
     race_terminal_ctx.decisions.append(race_terminal_stale_row)
+    race_terminal_cover_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 6,
+        "reason":
+            "race cover decision: coverage=yes/decision=all_in"
+            "/strict_margin=-4.3/pool=106/cap=100/margin_floor=-2.0"
+            " (RACE_ALLIN_LETHAL_COVER_DECISION_OBS)",
+    }
+    race_terminal_ctx.decisions.append(race_terminal_cover_row)
     race_terminal_pol._krace_latch = True
     race_terminal_pol._krace_latch_round = 5
     race_terminal_pol._race_terminal_projection = {
@@ -18702,6 +18711,9 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "kill_race_terminal_output_capacity_transition_obs"] is True, \
         "DEFAULT_POLICY 缺少 kill_race_terminal_output_capacity_transition_obs 静态键或默认值被改"
+    assert knowledge.DEFAULT_POLICY[
+        "race_allin_lethal_cover_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 race_allin_lethal_cover_terminal_outcome_obs 默认开关"
     assert knowledge.DEFAULT_POLICY[
         "race_audit_projection_roster_obs"] is True, \
         "DEFAULT_POLICY 缺少 race_audit_projection_roster_obs 静态键或默认值被改"
@@ -18909,6 +18921,14 @@ def main() -> int:
             in d_race_terminal_outcome.reason), \
         f"锁后 stale 终局桥接缺失: {d_race_terminal_outcome}"
 
+    assert ("source_round=6/source_action=play_card/coverage=yes"
+            "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"
+            "/margin_floor=-2.0/terminal_round=6/outcome=defeat"
+            "/bridge_decisions=0"
+            " (RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS)"
+            in d_race_terminal_outcome.reason), \
+        f"竞速覆盖决策未桥接到终局: {d_race_terminal_outcome}"
+
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
     assert (d_race_terminal_hook_outcome.action == "continue_game_over"
@@ -18946,6 +18966,7 @@ def main() -> int:
         dict(race_terminal_output_source_row),
         dict(race_terminal_later_output_source_row),
         dict(race_terminal_stale_row),
+        dict(race_terminal_cover_row),
         {
             "action": "end_turn", "floor": 33,
             "reason": d_race_terminal.reason,
@@ -19177,6 +19198,51 @@ def main() -> int:
     # 3z-5d) 结局观测的动作提交边界：第一次 GAME_OVER 决策若在 POST
     #        成功前丢失，瞬时 reported 位不能吞掉下一次重试；一旦带 marker
     #        的决策已持久化，后续同帧仍必须保持一次性。
+    assert ("RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复竞速覆盖终局桥接: {d_race_terminal_replay}"
+
+    race_terminal_cover_off_know = knowledge.Knowledge(tmp)
+    race_terminal_cover_off_know.policy[
+        "race_allin_lethal_cover_terminal_outcome_obs"] = False
+    race_terminal_cover_off_pol = policy.Policy(race_terminal_cover_off_know)
+    race_terminal_cover_off_ctx = _SettleCtx()
+    race_terminal_cover_off_ctx.decisions = [
+        dict(_row) for _row in race_terminal_replay_ctx.decisions]
+    d_race_terminal_cover_off = race_terminal_cover_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_cover_off_ctx)
+    assert (d_race_terminal_cover_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_cover_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_cover_off.reason
+            and "RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS"
+            not in d_race_terminal_cover_off.reason), \
+        f"竞速覆盖终局桥接关闭后动作或既有 marker 漂移: {d_race_terminal_cover_off}"
+
+    race_terminal_cover_boundary_ctx = _SettleCtx()
+    race_terminal_cover_boundary_ctx.decisions = [
+        dict(race_terminal_cover_row),
+        {"screen": "REWARD", "action": "claim_reward", "floor": 33,
+         "reason": "reward boundary"},
+        {"action": "end_turn", "floor": 33,
+         "reason": d_race_terminal.reason},
+    ]
+    race_terminal_cover_boundary_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_race_terminal_cover_boundary = (
+        race_terminal_cover_boundary_pol.decide(
+            race_terminal_outcome_state, race_terminal_cover_boundary_ctx))
+    assert (d_race_terminal_cover_boundary.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_cover_boundary.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_cover_boundary.reason
+            and "RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS"
+            not in d_race_terminal_cover_boundary.reason), \
+        f"竞速覆盖终局桥接越过屏幕边界: {d_race_terminal_cover_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{

@@ -1424,6 +1424,10 @@ DEFAULT_POLICY = {
                                         # 将该负余量窗口接入格挡优先；大池仍要求严格余量>=0。
                                         # 设为0恢复旧严格口径，行为总开关仍可一键回滚。
       "race_allin_lethal_cover_decision_obs": True,
+      "race_allin_lethal_cover_terminal_outcome_obs": True,
+                                         # Audit-only same-combat join from the persisted
+                                         # cover decision to the authoritative GAME_OVER result;
+                                         # False removes only this terminal marker.
                                          # 败局竞速覆盖分支决策旁观：在可执行覆盖成立且
                                          # 有实测输出速率时，记录严格买活余量、低池上限和
                                          # 最终采用 cover/all_in 的分支；只读，不改评分、
