@@ -15374,3 +15374,14 @@
 - 当前低价值卡牌：BULLY(16分/2.2372214725719175局)，BURNING_PACT(17分/13.50747285907772局)，DEFEND_IRONCLAD(18分/3.7504672177273544局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1798 胜，当前目标进阶 0
+
+## 第 1799 局复盘（2026-10-01 00:45）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：HEADBUTT, INFLAME, RAMPAGE, TWIN_STRIKE, CONFLAGRATION, VICIOUS, FORGOTTEN_RITUAL, TAUNT, FEED, SHRUG_IT_OFF, MANGLE, VICIOUS, TRUE_GRIT, UPPERCUT, STOMP
+- 本局遗物：POTION_BELT
+- 战斗记录：F12 Unknown战 掉血15; F14 Monster战 掉血15; F17 Boss战 掉血39｜竞速投影审计：pool=141/dpt=5.4/ttk=26.1111/tsurv=2.07692（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=26.1111/actual_over_projected=0.27（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战7回合获胜｜竞速Boss有效火力收官对账：samples=5/actual_dpt=24.3/projected_dpt=14.1506/ratio=1.78/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=1/actual_dpt=12.5/projected_dpt=14.2864/ratio=0.87/min_ratio=0.87|clear_samples=4/actual_dpt=27.25/projected_dpt=14.1167/ratio=2.00/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血25; F21 Unknown战 掉血18; F22 Monster战 掉血42｜自损19（可行动段19/非行动段5，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.667845820357394局)，ONE_TWO_PUNCH(25分/2.5662034392696675局)，MANGLE(25分/45.20643417710978局)，HELLRAISER(25分/4.51539225815719局)，FEED(24分/28.50087414767728局)
+- 当前低价值卡牌：BULLY(16分/2.229391197417916局)，BURNING_PACT(17分/13.460196704070949局)，DEFEND_IRONCLAD(18分/3.737340582465309局)
+- 策略进化：block_safety: 2.00 → 2.05（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.40 → 0.43（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1799 胜，当前目标进阶 0
