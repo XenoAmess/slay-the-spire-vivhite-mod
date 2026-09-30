@@ -15286,3 +15286,14 @@
 - 当前低价值卡牌：BULLY(16分/2.300861910704148局)，BURNING_PACT(17分/13.89170906517076局)，DEFEND_IRONCLAD(18分/3.8571537393180604局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1790 胜，当前目标进阶 0
+
+## 第 1791 局复盘（2026-09-30 22:10）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：HEMOKINESIS, INFLAME, TRUE_GRIT, HOWL_FROM_BEYOND, RUPTURE, VICIOUS
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F3 Monster战 掉血3｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血1｜自损4（可行动段4/非行动段1，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血11｜自损2（可行动段2/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=70/dpt=9.6/ttk=7.29167/tsurv=3.31818（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=7.29167/actual_over_projected=0.82（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战6回合获胜; F7 Monster战 掉血0｜自损4（可行动段4/非行动段1，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血20｜自损2（可行动段2/非行动段24，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血46｜自损4（可行动段4/非行动段15，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=51/dpt=15.9/ttk=3.20755/tsurv=1（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=3.20755/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=7.00（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.942859247210963局)，MANGLE(25分/44.45690209905067局)，HELLRAISER(25分/4.643837986562278局)，FEED(25分/28.283169374696314局)，PACTS_END(24分/55.009451034139694局)
+- 当前低价值卡牌：BULLY(16分/2.2928088940166833局)，BURNING_PACT(17分/13.843088083442662局)，DEFEND_IRONCLAD(18分/3.8436537012304473局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1791 胜，当前目标进阶 0
