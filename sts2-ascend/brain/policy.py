@@ -10097,11 +10097,29 @@ class Policy:
             _energy = _pressure_metric(_candidate, "energy")
             _cards = _pressure_metric(_candidate, "cards")
             _energy_locked = _pressure_metric(_candidate, "energy_locked")
+            _energy_eligible = _pressure_metric(
+                _candidate, "energy_eligible_cards")
             _hook_locked = _pressure_metric(_candidate, "hook_locked")
+            _energy_match = False
+            if _energy_locked is not None:
+                if _energy_eligible is not None:
+                    # New rows persist the numerator's own denominator.  A
+                    # native-unplayable card may still be present in `cards`
+                    # without being a competing energy-boundary candidate.
+                    _energy_match = (
+                        abs(_energy_locked - _energy_eligible) < 1e-9)
+                elif _cards is not None:
+                    # Legacy rows did not persist that denominator.  Keep
+                    # exact old rows valid, and accept a positive locked
+                    # subset when the raw hand also contains other blocked
+                    # cards (as in the pre-field 1801 evidence).
+                    _energy_match = (
+                        abs(_energy_locked - _cards) < 1e-9
+                        or (_energy_locked > 0
+                            and _energy_locked <= _cards + 1e-9))
             if (_energy is not None and abs(_energy) < 1e-9
-                    and _cards is not None
                     and _energy_locked is not None
-                    and abs(_energy_locked - _cards) < 1e-9
+                    and _energy_match
                     and _hook_locked is not None
                     and abs(_hook_locked) < 1e-9):
                 _energy_pressure_rows.append(_candidate)
@@ -11044,12 +11062,13 @@ class Policy:
                 _ringing_hook_note = _ringing_hook_lock_observation_note(
                     _hand_post_gap, _hand_raw_survival,
                     _hook_locked, _hook_ids)
+                _energy_locked_cards = _count_energy_locked_cards()
                 _nonlethal_unavailable_note = (
                     f"；非致死资源耗尽空过观测：hp={float(my_hp):g}"
                     f"/block={float(my_block):g}/incoming={float(incoming):g}"
                     f"/gap={_nonlethal_gap:g}/hand_tax={_nonlethal_tax:g}"
                     f"/energy={float(energy):g}/cards={len(hand)}"
-                    f"/energy_locked={_count_energy_locked_cards()}"
+                    f"/energy_locked={_energy_locked_cards}"
                     f"/hook_locked={_hook_locked}/hook_ids={_hook_ids}"
                     f"/hand_block_candidates={_hand_block_candidates}"
                     f"/hand_affordable_block_candidates="
@@ -11059,6 +11078,7 @@ class Policy:
                     f"/hand_raw_survival="
                     f"{'yes' if _hand_raw_survival else 'no'}"
                     f"/block_locked={'yes' if block_locked else 'no'}"
+                    f"/energy_eligible_cards={_energy_locked_cards}"
                     "（NONLETHAL_UNAVAILABLE_END_TURN_OBS）")
                 _nonlethal_unavailable_note += _ringing_hook_note
             if (_lethal_unavailable_obs

@@ -18766,6 +18766,33 @@ def main() -> int:
             and "count=3/first_round=4/last_round=8/energy=0/hook_locked=0"
                 in d_nonlethal_pressure.reason), \
         f"重复非致死能量锁定归因缺失: {d_nonlethal_pressure}"
+    assert "/energy_eligible_cards=2" in d_nonlethal_empty.reason, \
+        f"非致死空过未持久化能量候选计数: {d_nonlethal_empty}"
+
+    # Legacy rows from before the denominator field can contain a native
+    # unplayable card in the raw hand count.  The bounded parser must still
+    # recover the energy-only chain without changing the terminal action.
+    legacy_energy_extra_ctx = _SettleCtx()
+    legacy_energy_extra_ctx.decisions = []
+    for _row in nonlethal_pressure_ctx.decisions:
+        _copy = dict(_row)
+        _reason = str(_copy.get("reason") or "")
+        if "NONLETHAL_UNAVAILABLE_END_TURN_OBS" in _reason:
+            _reason = _reason.replace("/energy_eligible_cards=2", "")
+            _reason = _reason.replace(
+                "/cards=2/energy_locked=2",
+                "/cards=3/energy_locked=2")
+            _copy["reason"] = _reason
+        legacy_energy_extra_ctx.decisions.append(_copy)
+    d_legacy_energy_extra = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        nonlethal_unavailable_outcome_state, legacy_energy_extra_ctx)
+    assert (d_legacy_energy_extra.action == d_nonlethal_pressure.action
+            and d_legacy_energy_extra.params == d_nonlethal_pressure.params
+            and "NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS"
+                in d_legacy_energy_extra.reason
+            and "count=3/first_round=4/last_round=8"
+                in d_legacy_energy_extra.reason), \
+        f"旧格式含额外不可用手牌时能量锁定链未恢复: {d_legacy_energy_extra}"
     energy_pressure_mixed_pol = policy.Policy(knowledge.Knowledge(tmp))
     energy_pressure_mixed_ctx = _SettleCtx()
     energy_pressure_mixed_ctx.decisions = list(

@@ -14771,3 +14771,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-10-01 runs 1799-1801: recover non-lethal energy-lock pressure attribution
+
+profile_id: `ironclad`
+requested_runs: `1799,1800,1801`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1801 F15, six non-lethal no-card end turns are energy-locked among the cards eligible for an energy-boundary audit, but the terminal join compares `energy_locked` with the raw hand count and misses the pure-energy pressure marker when native-unplayable `SPOILS_MAP` remains in hand. Persisting the eligible numerator and accepting a positive locked subset for legacy rows should restore the observation without changing the action.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20261001-011013_SC3L7HMXPLL3.json` has 176 decisions. The six F15 source rows are decisions 153, 157, 160, 165, 167, and 171; each has `energy=0` and `hook_locked=0`, while the raw `cards` count exceeds `energy_locked` at the rows containing the native-unplayable hand card. Before the patch, read-only replay produced `energy_pressure_all=false` and only 4/6 strict matches. After the patch, replay produced `pressure_count=6`, `energy_pressure_all=true`, `energy_pressure_count=6`, `first_round=1`, `last_round=6`, and the energy-pressure marker; the terminal remained `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, the marker appears only when all bounded non-lethal rows have `energy=0`, `hook_locked=0`, and either the persisted eligible count matches `energy_locked` or a legacy positive locked subset is present. Hook-mixed rows, malformed/missing fields, cross-floor tails, and the switch-off case remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: append `energy_eligible_cards` to the existing non-lethal end-turn audit and use it as the terminal join denominator; for pre-field rows, retain exact matches and accept only a positive `energy_locked <= cards` subset with `hook_locked=0`. This is observation-only and does not enter scoring, ranking, gates, action selection, or params.
+- `sts2-ascend/brain/selfcheck.py`: assert the new persisted field, the legacy raw-hand-extra recovery, the existing hook-mixed negative case, the off-switch, and unchanged terminal action/params.
+- No new policy key was needed; the existing `nonlethal_unavailable_energy_pressure_obs` rollback key remains the sole switch.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent terminals and compare `pressure_count`, `energy_pressure_count`, first/last round, hook status, raw hand extras, marker count, and actual outcome. Do not promote this observation into end-turn or defense behavior yet.
+- **Adjust**: if a real row shows a non-hook native blocker that the legacy subset fallback misattributes, retain the evidence and tighten the legacy predicate; if the new field drifts from the eligible numerator, fix the source contract before changing policy behavior.
+- **Rollback**: set `nonlethal_unavailable_energy_pressure_obs` to `False`; this removes only the energy-pressure terminal suffix while preserving the existing chain marker, action, and params.
+- **Validation**: direct selfcheck reached the host's fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local inherited-ACL process adapter with exit code 0 and `SELFCHECK OK`. The targeted diff passed `git diff --check` with only existing LF/CRLF notices. The 1801 read-only replay emitted the six-row energy marker and preserved `continue_game_over {}`. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
