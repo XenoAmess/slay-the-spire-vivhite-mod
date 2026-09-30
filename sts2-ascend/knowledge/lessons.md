@@ -15418,3 +15418,14 @@
 - 当前低价值卡牌：BULLY(16分/2.2060644243863856局)，BURNING_PACT(17分/13.319358723801148局)，DEFEND_IRONCLAD(18分/3.698235693377352局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.41 → 0.42（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.04 → 2.03（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1802 胜，当前目标进阶 0
+
+## 第 1803 局复盘（2026-10-01 01:57）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+BRUTE_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：POMMEL_STRIKE, CINDER, CINDER, BATTLE_TRANCE, HOWL_FROM_BEYOND, DISMANTLE
+- 本局遗物：GORGET
+- 战斗记录：F3 Monster战 掉血0; F6 Monster战 掉血0; F7 Monster战 掉血10; F8 Monster战 掉血29; F9 Monster战 掉血17｜竞速投影审计：pool=42/dpt=9/ttk=4.66667/tsurv=2.92857（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.66667/actual_over_projected=1.50（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战7回合获胜; F12 Monster战 掉血23（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.533204908955412局)，ONE_TWO_PUNCH(25分/2.5304647673538803局)，HELLRAISER(25分/4.452507874161783局)，MANGLE(25分/45.56987127542259局)，PACTS_END(24分/53.70856055496553局)
+- 当前低价值卡牌：BULLY(16分/2.1983431989010334局)，BURNING_PACT(17分/13.272740968267845局)，DEFEND_IRONCLAD(18分/3.6852918684505314局)
+- 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1803 胜，当前目标进阶 0
