@@ -15242,3 +15242,14 @@
 - 当前低价值卡牌：BULLY(16分/2.333357818179744局)，BURNING_PACT(17分/14.087906711956757局)，DEFEND_IRONCLAD(18分/3.911629720883451局)
 - 策略进化：elite_grey_safety_mult: 1.65 → 1.85（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.38 → 0.41（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.91 → 1.90（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.85 → 1.80（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1786 胜，当前目标进阶 0
+
+## 第 1787 局复盘（2026-09-30 20:57）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：ARMAMENTS, PACTS_END, SHRUG_IT_OFF, CINDER, PYRE, DEMON_FORM, HEMOKINESIS, COLOSSUS, TAUNT, SWORD_BOOMERANG, CINDER
+- 本局遗物：PANTOGRAPH
+- 战斗记录：F7 Monster战 掉血6; F9 Monster战 掉血9; F11 Monster战 掉血20｜自损2（可行动段2/非行动段20，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血0｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血38; F15 Monster战 掉血26｜自损2（可行动段2/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/10.083285855447247局)，MANGLE(25分/45.08478305554851局)，HELLRAISER(25分/4.7094245951461895局)，FEED(25分/28.682622836392966局)，PACTS_END(24分/53.775820252240955局)
+- 当前低价值卡牌：BULLY(16分/2.325191065816115局)，BURNING_PACT(17分/14.038599038464909局)，DEFEND_IRONCLAD(18分/3.8979390168603594局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1787 胜，当前目标进阶 0
