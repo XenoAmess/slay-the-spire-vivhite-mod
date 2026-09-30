@@ -21698,6 +21698,121 @@ def main() -> int:
     assert all(note == "" for note in mode_off), \
         f"竞速模式翻转关闭后仍有 marker: {mode_off}"
 
+    # 3rpre-c) 同楼层竞速模式翻转终局对账：1785-F25 在第4回合同回合
+    # 从 kill_race 翻到 normal，随后第7回合阵亡；只读桥接必须保留来源、
+    # 终局与最终 HP，并在重载/重复/关闭/楼层边界下保持动作参数不变。
+    class _ModeFlipTerminalCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        credit_tags: list = []
+        combat = None
+        combat_notes: list = []
+        pending_event = None
+        died_in_combat = None
+
+    _mode_flip_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 25,
+        "turn": 4, "hp": 81,
+        "reason": "竞速模式同回合翻转：round=4/from=kill_race/to=normal"
+                   "/flip=1/race_allin=no（KILL_RACE_MODE_FLIP_OBS）",
+    }
+    _mode_flip_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 25,
+        "turn": 7, "hp": 41, "reason": "终端战斗尾部",
+    }
+    _mode_flip_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 25},
+        "run": {"current_hp": 0, "floor": 25},
+    }
+
+    def _mode_flip_terminal_ctx(decisions=None):
+        _ctx = _ModeFlipTerminalCtx()
+        _ctx.decisions = [dict(row) for row in (decisions or [])]
+        return _ctx
+
+    _mode_flip_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    _mode_flip_terminal_ctx_live = _mode_flip_terminal_ctx(
+        [_mode_flip_source_row, _mode_flip_terminal_row])
+    _d_mode_flip_terminal = _mode_flip_terminal_pol.decide(
+        _mode_flip_terminal_state, _mode_flip_terminal_ctx_live)
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_mode_flip_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速模式翻转终局观测开关"
+    assert (_d_mode_flip_terminal.action == "continue_game_over"
+            and _d_mode_flip_terminal.params == {}
+            and _d_mode_flip_terminal.reason.count(
+                "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=25"
+                "/source_round=4/source_action=play_card"
+                "/from=kill_race/to=normal/flip=1/race_allin=no"
+                "/terminal_round=7/terminal_action=end_turn/terminal_hp=41"
+                "/final_hp=0/bridge_rounds=3"
+                in _d_mode_flip_terminal.reason), \
+        f"竞速模式翻转终局桥接缺失或动作漂移: {_d_mode_flip_terminal}"
+
+    _d_mode_flip_terminal_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _mode_flip_terminal_state,
+            _mode_flip_terminal_ctx(
+                [_mode_flip_source_row, _mode_flip_terminal_row]))
+    assert (_d_mode_flip_terminal_reload.action
+            == _d_mode_flip_terminal.action
+            and _d_mode_flip_terminal_reload.params
+            == _d_mode_flip_terminal.params
+            and "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS"
+                in _d_mode_flip_terminal_reload.reason), \
+        f"进程重载后未恢复竞速模式翻转终局桥接: {_d_mode_flip_terminal_reload}"
+
+    _mode_flip_terminal_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_mode_flip_terminal.action,
+        "floor": 25, "reason": _d_mode_flip_terminal.reason})
+    _d_mode_flip_terminal_duplicate = _mode_flip_terminal_pol.decide(
+        _mode_flip_terminal_state, _mode_flip_terminal_ctx_live)
+    assert (_d_mode_flip_terminal_duplicate.action
+            == _d_mode_flip_terminal.action
+            and _d_mode_flip_terminal_duplicate.params
+            == _d_mode_flip_terminal.params
+            and "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS"
+                not in _d_mode_flip_terminal_duplicate.reason), \
+        f"竞速模式翻转终局桥接重复提交: {_d_mode_flip_terminal_duplicate}"
+
+    _mode_flip_terminal_off_know = knowledge.Knowledge(tmp)
+    _mode_flip_terminal_off_know.policy[
+        "kill_race_mode_flip_terminal_outcome_obs"] = False
+    _d_mode_flip_terminal_off = policy.Policy(
+        _mode_flip_terminal_off_know).decide(
+            _mode_flip_terminal_state,
+            _mode_flip_terminal_ctx(
+                [_mode_flip_source_row, _mode_flip_terminal_row]))
+    assert (_d_mode_flip_terminal_off.action
+            == _d_mode_flip_terminal.action
+            and _d_mode_flip_terminal_off.params
+            == _d_mode_flip_terminal.params
+            and "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS"
+                not in _d_mode_flip_terminal_off.reason), \
+        f"竞速模式翻转终局开关关闭后动作或 marker 漂移: " \
+        f"{_d_mode_flip_terminal_off}"
+
+    _d_mode_flip_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _mode_flip_terminal_state,
+            _mode_flip_terminal_ctx([
+                _mode_flip_source_row,
+                {"screen": "REWARD", "action": "collect_rewards_and_proceed",
+                 "floor": 25, "turn": 5, "reason": "边界"},
+                _mode_flip_terminal_row]))
+    assert (_d_mode_flip_terminal_boundary.action
+            == _d_mode_flip_terminal.action
+            and _d_mode_flip_terminal_boundary.params
+            == _d_mode_flip_terminal.params
+            and "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS"
+                not in _d_mode_flip_terminal_boundary.reason), \
+        f"竞速模式翻转终局桥接越过屏幕边界: {_d_mode_flip_terminal_boundary}"
+
     pol_stale1 = pcap_policy()
     pol_stale1._krace_latch = True
     pol_stale1._krace_latch_round = 1

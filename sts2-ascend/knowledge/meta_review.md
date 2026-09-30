@@ -13034,6 +13034,34 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-09-30 runs 1784-1785: bridge same-floor race-mode flip to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1784,1785`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Runs 1784 and 1785 persist `KILL_RACE_MODE_FLIP_OBS` during combat, but their authoritative `GAME_OVER` rows do not connect the same-floor mode flip to the outcome. In 1785, F25-D372 flips `kill_race` to `normal` in round 4, F25-D383 is the same-floor round-7 `end_turn` at HP41 with incoming42, and D384 ends at final HP0. A bounded terminal join should emit one source-to-outcome observation without changing the selected action or parameters. This is falsifiable: a screen/floor boundary, malformed mode token, missing end-turn predecessor, duplicate retry, or disabled key must remain silent.
+- **EVIDENCE**: The complete 1785 chain `sts2-ascend/knowledge/runs/20260930-201201_8PYNEB2AB07W.json` contains 384 decisions; D372 has `round=4/from=kill_race/to=normal/flip=1/race_allin=no`, D383 is F25/T7 `end_turn` at HP41, and D384 is `GAME_OVER` at final HP0 without the new terminal marker. The 1784 chain `sts2-ascend/knowledge/runs/20260930-195539_DRU5Z6CL49HK.json` also contains the source flip marker without the new terminal marker. The read-only full-chain replay of 1785 emitted the new marker exactly once with `source_round=4`, `source_action=play_card`, `terminal_round=7`, `terminal_action=end_turn`, `terminal_hp=41`, `final_hp=0`, and retained `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS` once with source round/action/from/to/flip, terminal round/action/HP, outcome and final HP. Cross-screen, cross-floor, malformed, missing-source, duplicate and off-switch cases remain silent; scoring, gates, action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `kill_race_mode_flip_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest bounded same-floor COMBAT flip before `GAME_OVER` and append one observation-only terminal bridge. The new fields are not read by scoring, gates, candidate ranking, action selection or params.
+- `sts2-ascend/brain/selfcheck.py`: cover positive replay, Policy reload, duplicate persistence, switch-off, `REWARD` boundary, and unchanged action/params.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare source mode fields, terminal round/action/HP, outcome, final HP, marker count, and action/params.
+- **Adjust**: if a trace shows stale source linkage, mode-token drift, screen/floor crossing, malformed numeric fields or duplicate output, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `kill_race_mode_flip_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source marker, action and params remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot bootstrap limit; a clone-local process-level temporary-directory adapter completed the full check with exit code 0 and `SELFCHECK OK`. Targeted `git diff --check`, complete production diff reread, and the 1785 full-chain replay passed. No `.runtime/`, formal runs/archive, learning memory, replay package or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 ## 2026-09-30 runs 1754-1757: bridge potion hand selection in terminal audit
 
 profile_id: `ironclad`

@@ -897,6 +897,8 @@ class Policy:
         self._race_mode_round = None  # 当前回合的模式基线
         self._race_mode_last = None  # 当前回合上一次已观测模式
         self._race_mode_flip_count = 0  # 当前战斗内同回合翻转次数
+        self._race_mode_flip_terminal_outcome_pending = None  # 最近一次模式翻转，等待 GAME_OVER 结局对账
+        self._race_mode_flip_terminal_outcome_reported = False  # 模式翻转终局 marker 每场只写一次
         self._lethal_playable_reject_outcome_pending = None  # 最近一次致死可牌拒绝，等待 GAME_OVER 结局对账
         self._lethal_playable_reject_outcome_reported = False  # 致死可牌拒绝结局 marker 每场只写一次
         self._kill_race_lethal_free_energy_terminal_outcome_pending = None  # 最近一次致死竞速0费回能拒绝，等待 GAME_OVER 结局对账
@@ -4530,6 +4532,167 @@ class Policy:
             f"/flip={self._race_mode_flip_count}"
             f"/race_allin={'yes' if race_allin else 'no'}"
             "（KILL_RACE_MODE_FLIP_OBS）")
+
+    def _restore_race_mode_flip_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a same-combat race-mode flip before a GAME_OVER join.
+
+        ``KILL_RACE_MODE_FLIP_OBS`` is emitted while the combat projection is
+        recomputed, but the native GAME_OVER row only carries the final
+        result. Keep this source join bounded to the trailing same-floor
+        COMBAT segment so an earlier combat cannot be blamed on a later
+        terminal. This is observation-only and never participates in scoring
+        or action selection.
+        """
+        decisions = getattr(ctx, "decisions", None)
+        marker = "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS"
+        if not isinstance(decisions, list) or not decisions:
+            return
+        _reported = bool(getattr(
+            self, "_race_mode_flip_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            _last = decisions[-1]
+            if isinstance(_last, dict):
+                _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            # The GAME_OVER action may have been lost before persistence;
+            # the durable marker is the only commit proof.
+            self._race_mode_flip_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_mode_flip_terminal_outcome_pending", None), dict):
+            return
+
+        terminal = decisions[-1]
+        if (not isinstance(terminal, dict)
+                or terminal.get("action") != "end_turn"):
+            return
+        if (floor is not None and terminal.get("floor") is not None
+                and str(terminal.get("floor")) != str(floor)):
+            return
+
+        def _number(value):
+            try:
+                value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return value if math.isfinite(value) else None
+
+        _terminal_round = _number(
+            terminal.get("turn", terminal.get("round")))
+        _terminal_hp = _number(terminal.get("hp"))
+        _start = max(0, len(decisions) - 64)
+        for row_index in range(len(decisions) - 2, _start - 1, -1):
+            row = decisions[row_index]
+            if not isinstance(row, dict):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                return
+            if row.get("screen") not in (None, "COMBAT"):
+                return
+            reason = str(row.get("reason") or "")
+            if marker in reason:
+                return
+            marker_at = reason.rfind("KILL_RACE_MODE_FLIP_OBS")
+            if marker_at < 0:
+                continue
+            prefix_at = reason.rfind("竞速模式同回合翻转：", 0, marker_at)
+            if prefix_at < 0:
+                continue
+            match = re.search(
+                r"竞速模式同回合翻转：round=(?P<round>-?[0-9]+)"
+                r"/from=(?P<from>[^/；（）()\s]+)"
+                r"/to=(?P<to>[^/；（）()\s]+)"
+                r"/flip=(?P<flip>-?[0-9]+)"
+                r"/race_allin=(?P<race>yes|no)",
+                reason[prefix_at:marker_at])
+            if match is None:
+                continue
+            _source_round = _number(match.group("round"))
+            _flip = _number(match.group("flip"))
+            _from = match.group("from")
+            _to = match.group("to")
+            if (_source_round is None or _flip is None
+                    or _source_round < 0.0 or _flip < 1.0
+                    or _from not in {"normal", "kill_race", "race_allin"}
+                    or _to not in {"normal", "kill_race", "race_allin"}
+                    or _from == _to):
+                continue
+            self._race_mode_flip_terminal_outcome_pending = {
+                "source_round": _source_round,
+                "source_action": row.get("action") or "?",
+                "source_from": _from,
+                "source_to": _to,
+                "source_flip": _flip,
+                "source_race_allin": match.group("race"),
+                "terminal_round": _terminal_round,
+                "terminal_action": terminal.get("action") or "?",
+                "terminal_hp": _terminal_hp,
+            }
+            self._race_mode_flip_terminal_outcome_reported = False
+            return
+
+    def _consume_race_mode_flip_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a mode-flip audit to the authoritative terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_mode_flip_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_race_mode_flip_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_race_mode_flip_terminal_outcome_reported", False))):
+            return ""
+        self._race_mode_flip_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _source_action = re.sub(
+            r"[/；（）()\s]+", "_",
+            str(_pending.get("source_action") or "?")).strip("_") or "?"
+        _terminal_action = re.sub(
+            r"[/；（）()\s]+", "_",
+            str(_pending.get("terminal_action") or "?")).strip("_") or "?"
+        _bridge_rounds = "?"
+        if (_pending.get("source_round") is not None
+                and _pending.get("terminal_round") is not None):
+            try:
+                _bridge_rounds = str(max(
+                    0, int(float(_pending["terminal_round"])
+                           - float(_pending["source_round"]))))
+            except (TypeError, ValueError, OverflowError):
+                pass
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速模式翻转终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_source_action}"
+            f"/from={_pending.get('source_from') or '?'}"
+            f"/to={_pending.get('source_to') or '?'}"
+            f"/flip={_round(_pending.get('source_flip'))}"
+            f"/race_allin={_pending.get('source_race_allin') or 'unknown'}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_terminal_action}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_rounds={_bridge_rounds}"
+            "（KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS）")
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
         """Expose raw potion slots at a lethal no-card boundary.
@@ -11959,6 +12122,8 @@ class Policy:
             self._race_mode_round = None
             self._race_mode_last = None
             self._race_mode_flip_count = 0
+            self._race_mode_flip_terminal_outcome_pending = None
+            self._race_mode_flip_terminal_outcome_reported = False
             self._lethal_playable_reject_outcome_pending = None
             self._lethal_playable_reject_outcome_reported = False
             self._kill_race_lethal_free_energy_terminal_outcome_pending = None
@@ -20914,6 +21079,11 @@ class Policy:
         _race_prelock_defense_terminal_outcome_note = (
             self._consume_race_prelock_defense_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_race_mode_flip_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _race_mode_flip_terminal_outcome_note = (
+            self._consume_race_mode_flip_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_kill_race_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         self._restore_race_allin_output_capacity_terminal_outcome_from_decisions(
@@ -20985,6 +21155,7 @@ class Policy:
                             f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
+                            f"{_race_mode_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_race_allin_output_capacity_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
@@ -21025,6 +21196,7 @@ class Policy:
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
+                        f"{_race_mode_flip_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_race_allin_output_capacity_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
@@ -21051,6 +21223,7 @@ class Policy:
                                 f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
+                                f"{_race_mode_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_race_allin_output_capacity_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
