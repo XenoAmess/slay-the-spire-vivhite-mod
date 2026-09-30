@@ -14544,3 +14544,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local 512-slot process adapter completed the full check with exit code 0 and `SELFCHECK OK`. The read-only 1781 replay emitted the expected 57-to-0 bridge; final committed diff review and `git diff --check` passed. No `.runtime/`, formal run/archive, learning memory, replay package or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1783: bridge non-Boss longfight effective DPT to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1782,1783`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1783 F24 records three same-floor non-Boss `LONGFIGHT_RACE_EFFECTIVE_DPT_OBS` samples, including D284's actual `2.0` versus projected `20.7` damage per round, but the authoritative D286 `GAME_OVER` row does not connect the latest sample to the defeat. A bounded terminal join should emit one source-to-outcome marker while preserving the selected action and parameters. Missing source, a screen/floor boundary, malformed values, duplicate retry, or a disabled key must remain silent.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-193133_L2MGUYYVKMAR.json` contains 286 decisions. D284 is F24/T4 `play_card`, with sample `3→4`, actual/projected DPT `2.0/20.7`, pool `123→121`, and focus switches `2`; D285 is the same-floor terminal `end_turn` at HP13; D286 is defeat at final HP0. Before this change D286 had no `LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS`. The read-only post-change replay emitted the expected marker once with all fields, and a duplicate consume emitted an empty string.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching non-Boss terminals, emit `LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS` once from the latest same-floor combat sample, preserving source round/action, sample range, actual/projected DPT, ratio, encounter context, terminal action/HP, outcome, and final HP. Cross-floor, non-combat, malformed, missing-source, duplicate, and off-switch cases remain silent; scoring, gates, action, and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `longfight_race_effective_dpt_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest bounded same-floor non-Boss longfight DPT sample at `GAME_OVER` and append one observation-only terminal bridge. It is not read by scoring, candidate ranking, gates, action selection, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching non-Boss longfight terminals and independently compare source values, terminal fields, marker count, and action/params.
+- **Adjust**: if a real trace shows stale source selection, screen/floor crossing, malformed numeric tokens, or context drift, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `longfight_race_effective_dpt_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source audit, action, and params remain unchanged.
+- **Validation**: the direct selfcheck reached the host's fixed 256-slot bootstrap limit; a clone-local process-level temporary-directory adapter completed the full check with exit code 0 and `SELFCHECK OK`. The read-only 1783 replay emitted the expected D284-to-D286 bridge once and suppressed the duplicate. Final diff reread and `git diff --check` passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
