@@ -15561,3 +15561,14 @@
 - 当前低价值卡牌：BULLY(16分/2.1077695715355445局)，BURNING_PACT(17分/12.725892643957282局)，DEFEND_IRONCLAD(18分/3.533454679155897局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1815 胜，当前目标进阶 0
+
+## 第 1816 局复盘（2026-10-01 05:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：ARMAMENTS, SWORD_BOOMERANG, SWORD_BOOMERANG, UNRELENTING, INFLAME, HEADBUTT, SHRUG_IT_OFF, FLAME_BARRIER, SECOND_WIND
+- 本局遗物：VENERABLE_TEA_SET
+- 战斗记录：F6 Monster战 掉血15; F11 Monster战 掉血0; F13 Monster战 掉血11; F14 Monster战 掉血16; F15 Monster战 掉血0; F17 Boss战 掉血63｜竞速投影审计：pool=155/dpt=2.7/ttk=57.4074/tsurv=8（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=57.4074/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.88（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=22/projected_dpt=11.7569/ratio=2.12/min_ratio=0.60（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=1/actual_dpt=18/projected_dpt=12.2915/ratio=1.46/min_ratio=1.46|clear_samples=5/actual_dpt=22.8/projected_dpt=11.65/ratio=2.25/min_ratio=0.60（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：BRAND(26分/2.6430321362286464局)，PROWESS(26分/11.077205185410905局)，ONE_TWO_PUNCH(25分/2.4177157201357904局)，HELLRAISER(25分/4.254119014131242局)，MANGLE(24分/44.498229355352265局)
+- 当前低价值卡牌：BULLY(16分/2.10039237803517局)，BURNING_PACT(17分/12.681352019703432局)，DEFEND_IRONCLAD(18分/3.521087587778852局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（74%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1816 胜，当前目标进阶 0
