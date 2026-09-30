@@ -14322,3 +14322,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直接 selfcheck 先复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。1765 只读生产链回放恢复了 `source_round=4/leader_pool=93/follower_pool=58/terminal_round=4/final_hp=0`，并保持 `continue_game_over` 与 `{}`；AST、目标 staged `git diff --check` 和最终三文件 diff 复核通过。本地 commit 为 `5b70d6895914bc6b497aeb35d5df6e9b23f0daa9`；未写入 `.runtime/`、正式 runs/archive、stats、progression、policy/lessons 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1766-1767: make KIN terminal bridge distance falsifiable
+
+profile_id: `ironclad`
+requested_runs: `1766, 1767`
+production_code_commit: `pending local commit after report closeout`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The existing KIN leader-gate terminal bridge can identify the latest same-floor COMBAT/CARD_SELECTION source, but its persisted reason does not expose how far that source is from the terminal predecessor. For run 1767's F17 tail, the independently countable source-to-terminal-predecessor chain predicts `bridge_decisions=1` and `bridge_rounds=0`. If a future marker's fields disagree with that count, or a source crosses a floor/screen boundary, this hypothesis is falsified and the join must be tightened rather than used for behavior.
+- **EVIDENCE**: The complete files `sts2-ascend/knowledge/runs/20260930-140816_6601QN3RAEFU.json` (run 1766, 188 decisions) and `sts2-ascend/knowledge/runs/20260930-143258_EY291PUNFWK8.json` (run 1767, 202 decisions) were read. Run 1766 has no KIN tradeoff source. Run 1767's latest F17 source is D200/T6 with `leader_pool=64`, `blocked_follower=KIN_FOLLOWER#1`, `follower_pool=44`, `pre_gate_score=64.06`, and `removal_bonus=0.00`; D201/T6 is the terminal `end_turn` predecessor and D202 is `GAME_OVER` with `hp=0`. The persisted run began at 14:32:57, before the prior KIN terminal bridge commit at 14:33:09, so the raw chain is baseline evidence rather than a post-change runtime pass.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching KIN terminal windows, emit the existing `KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS` with `/bridge_decisions=<count after source through terminal predecessor>/bridge_rounds=<terminal round-source round>`. Same-floor contiguous tails remain eligible; REWARD/SHOP/REST, cross-floor, or missing-source cases remain silent. `continue_game_over` and `{}` remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: retain the existing bounded KIN source scan and append only `bridge_decisions` and `bridge_rounds` to its terminal observation. No scoring, target selection, gating, action, or parameter path changed.
+- `sts2-ascend/brain/selfcheck.py`: assert the existing two-row fixture yields `bridge_decisions=1/bridge_rounds=0` while preserving `continue_game_over` and `{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-floor KIN terminal windows and compare an independent persisted-row count with source/terminal rounds, floor, pools, outcome, final HP, and action/params.
+- **Adjust**: if a real trace shows a stale source, a screen/floor crossing, invalid round values, or a count mismatch, keep the failure and tighten only the observation join; do not promote it into behavior.
+- **Rollback**: set the existing `kin_leader_removal_tradeoff_terminal_outcome_obs` switch to `False`; only the KIN terminal marker and its new fields should disappear, with the source audit, action, and params unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-directory bootstrap limit; a process-local adapter using the host-provided `.review-cache/selfcheck-pool` exited 0 and printed `SELFCHECK OK`. Targeted `git diff --check` passed. The final code diff was reread before this report; no `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

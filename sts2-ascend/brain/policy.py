@@ -5491,7 +5491,8 @@ class Policy:
                 return str(left) == str(right)
 
         _source = None
-        for _row in reversed(decisions):
+        for _index in range(len(decisions) - 1, -1, -1):
+            _row = decisions[_index]
             if not isinstance(_row, dict):
                 continue
             if not _same_floor(floor, _row.get("floor")):
@@ -5532,6 +5533,7 @@ class Policy:
                 "follower_pool": _values["follower_pool"],
                 "pre_gate": _values["pre_gate"],
                 "removal_bonus": _values["removal_bonus"],
+                "bridge_decisions": len(decisions) - _index - 1,
             }
             break
         if _source is None:
@@ -5540,12 +5542,20 @@ class Policy:
         _terminal = decisions[-1]
         if not isinstance(_terminal, dict):
             _terminal = {}
+        _source_round = _source.get("source_round")
+        _terminal_round = _terminal.get(
+            "turn", _terminal.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round)) - int(float(_source_round)))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = None
         self._kin_leader_removal_tradeoff_terminal_outcome_pending = {
             **_source,
-            "terminal_round": _terminal.get(
-                "turn", _terminal.get("round")),
+            "terminal_round": _terminal_round,
             "terminal_action": _terminal.get("action") or "?",
             "terminal_hp": _terminal.get("hp"),
+            "bridge_rounds": _bridge_rounds,
         }
         self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
 
@@ -5595,6 +5605,8 @@ class Policy:
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+            f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
             "（KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(

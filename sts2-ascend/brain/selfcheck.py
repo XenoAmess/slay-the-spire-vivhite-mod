@@ -19384,7 +19384,7 @@ def main() -> int:
                 "/leader_pool=120/blocked_follower=KIN_FOLLOWER#0"
                 "/follower_pool=58/pre_gate_score=51.72/removal_bonus=3.1"
                 "/terminal_round=4/terminal_action=end_turn/terminal_hp=5"
-                "/final_hp=0"
+                "/final_hp=0/bridge_decisions=1/bridge_rounds=0"
                 in d_kin_tradeoff_terminal.reason), \
         f"KIN 领袖闸终局桥接缺失或动作漂移: {d_kin_tradeoff_terminal}"
     assert knowledge.DEFAULT_POLICY[
