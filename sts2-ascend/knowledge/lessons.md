@@ -15363,3 +15363,14 @@
 - 当前低价值卡牌：BULLY(16分/2.245079249946731局)，BURNING_PACT(17分/13.554915061793999局)，DEFEND_IRONCLAD(18分/3.76363995757888局)
 - 策略进化：block_safety: 1.96 → 2.01（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.40 → 0.40（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.01 → 2.00（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1797 胜，当前目标进阶 0
+
+## 第 1798 局复盘（2026-10-01 00:27）
+- 结果：💀 失败｜进阶 0｜到达层数 5｜当局评分 5
+- 死因：敌人组合 FOSSIL_STALKER
+- 本局拿牌：EXPECT_A_FIGHT, RAGE, UNRELENTING, BLUDGEON
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血3; F3 Monster战 掉血6; F4 Monster战 掉血8; F5 Monster战 掉血63｜竞速投影审计：pool=35/dpt=5.6/ttk=6.25/tsurv=2.83333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=6.25/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.47（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/9.70180212780471局)，ONE_TWO_PUNCH(25分/2.5752166977116584局)，MANGLE(25分/44.36170012755622局)，HELLRAISER(25分/4.531251638893316局)，FEED(25分/27.597465276143783局)
+- 当前低价值卡牌：BULLY(16分/2.2372214725719175局)，BURNING_PACT(17分/13.50747285907772局)，DEFEND_IRONCLAD(18分/3.7504672177273544局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1798 胜，当前目标进阶 0
