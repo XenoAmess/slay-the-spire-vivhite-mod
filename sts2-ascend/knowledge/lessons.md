@@ -14956,3 +14956,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.0631340488040486局)，BULLY(16分/2.556062469106718局)，BURNING_PACT(17分/15.432510750880216局)
 - 策略进化：elite_grey_safety_mult: 1.90 → 2.10（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1760 胜，当前目标进阶 0
+
+## 第 1761 局复盘（2026-09-30 12:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：CINDER, HEADBUTT, PANIC_BUTTON, FEEL_NO_PAIN, SWORD_BOOMERANG, ANGER, CINDER, FEEL_NO_PAIN, IRON_WAVE, UNRELENTING, DRAMATIC_ENTRANCE, INFLAME
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F8 Monster战 掉血6; F11 Monster战 掉血7; F13 Monster战 掉血12; F14 Monster战 掉血21; F15 Unknown战 掉血0; F17 Boss战 掉血64｜竞速投影审计：pool=265/dpt=28.35/ttk=9.34744/tsurv=3.92308（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=9.34744/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.27（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=24/projected_dpt=25.8844/ratio=1.05/min_ratio=0.46（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=24/projected_dpt=25.8844/ratio=1.05/min_ratio=0.46（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(27分/9.973033587656404局)，HELLRAISER(25分/5.158910204407403局)，PACTS_END(25分/54.657678971830435局)，MANGLE(25分/47.30920644713064局)，FEED(25分/28.33816162804015局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.0559130796332346局)，BULLY(16分/2.547116250464845局)，BURNING_PACT(17分/15.378496963252136局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（80%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.44 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1761 胜，当前目标进阶 0
