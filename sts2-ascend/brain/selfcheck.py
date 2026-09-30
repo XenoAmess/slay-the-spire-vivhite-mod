@@ -22359,6 +22359,31 @@ def main() -> int:
                 in _d_mode_flip_terminal.reason), \
         f"竞速模式翻转终局桥接缺失或动作漂移: {_d_mode_flip_terminal}"
 
+    # 3rpre-c1) 同一战斗中的 CARD_SELECTION 不能截断翻转来源：1816-F17
+    #        D215 的翻转后经过 D223 牌堆顶选择，D240 才进入致死空过。
+    #        该屏幕仍是战斗尾部；REWARD 边界则继续由下方夹具拒绝。
+    _mode_flip_terminal_card_selection_ctx = _mode_flip_terminal_ctx([
+        _mode_flip_source_row,
+        {"screen": "CARD_SELECTION", "action": "select_deck_card",
+         "floor": 25, "turn": 6, "hp": 41,
+         "reason": "牌堆顶选择：无情猛攻"},
+        _mode_flip_terminal_row,
+    ])
+    _d_mode_flip_terminal_card_selection = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _mode_flip_terminal_state,
+            _mode_flip_terminal_card_selection_ctx)
+    assert (_d_mode_flip_terminal_card_selection.action
+            == _d_mode_flip_terminal.action
+            and _d_mode_flip_terminal_card_selection.params
+            == _d_mode_flip_terminal.params
+            and _d_mode_flip_terminal_card_selection.reason.count(
+                "KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS") == 1
+            and "/bridge_rounds=3"
+                in _d_mode_flip_terminal_card_selection.reason), \
+        f"竞速模式翻转桥接错误跨过 CARD_SELECTION: " \
+        f"{_d_mode_flip_terminal_card_selection}"
+
     _d_mode_flip_terminal_reload = policy.Policy(
         knowledge.Knowledge(tmp)).decide(
             _mode_flip_terminal_state,

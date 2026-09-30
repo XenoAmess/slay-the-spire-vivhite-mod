@@ -15001,3 +15001,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot bootstrap limit, and an equivalent clone-local process-level 0777 temp-directory adapter completed the full `selfcheck.py` with exit code 0 and `SELFCHECK OK`. Final target diff review and `git diff --check` passed with only pre-existing long-path/LF-CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - replay target: none (`failed_review_replay.requested_packages=[]`); `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1816: preserve race-mode flip across same-combat card selection
+
+profile_id: `ironclad`
+requested_run: `1816`
+production_code_commit: `97714e9a53bd4d165ba0bbce71a72b5347e98a07`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1816 F17, the same-combat `KILL_RACE_MODE_FLIP_OBS` at decision index 215 is followed by `CARD_SELECTION` at indices 223 and 237 before the lethal `end_turn` at index 240 and `GAME_OVER` at index 241. The terminal bridge currently stops at `CARD_SELECTION`, so it loses the flip outcome. Allowing that screen inside the bounded same-floor combat tail should emit exactly one `KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS` without changing the terminal action or parameters. This is falsifiable: `REWARD`/map boundaries, malformed sources, duplicate retries, and the off switch must remain silent.
+- **EVIDENCE**: The complete on-disk chain `sts2-ascend/knowledge/runs/20261001-052532_Z1597VKWDK6X.json` has 242 decisions and `victory=false`; the source is `play_card`, `round=1`, `from=kill_race`, `to=normal`, `flip=1`, `race_allin=no`. The terminal is `end_turn`, `round=7`, `hp=18`. A read-only exact-chain replay after the patch produced the pending bridge with those source fields and terminal fields; the persisted old GAME_OVER row had the broad terminal marker but not the flip-terminal marker.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit one flip-terminal marker with source/terminal fields and bounded bridge length; preserve action, parameters, scoring, and gates. Existing `REWARD` boundary, reload, duplicate, and disabled-switch fixtures remain negative.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: include `CARD_SELECTION` in the existing reverse scan's same-floor combat-tail allowlist. `REWARD`, `MAP`, and other screens remain hard boundaries. This is observation-only; no selection, score, gate, action, or parameter path consumes the marker.
+- `sts2-ascend/brain/selfcheck.py`: add an 1816-F17-shaped `CARD_SELECTION` bridge fixture and assert exactly one marker, `/bridge_rounds=3`, and unchanged `continue_game_over {}` action/parameters.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare marker count, source `from/to/flip`, source and terminal rounds/HP, bridge length, outcome, and applied action/parameters.
+- **Adjust**: if a real trace shows `CARD_SELECTION` from a distinct non-combat flow without a `REWARD` boundary, retain it and tighten the join with the smallest additional same-combat evidence; do not promote the marker into combat behavior.
+- **Rollback**: remove `CARD_SELECTION` from the allowlist (or set the existing observation switch off); the broad terminal audit, action, parameters, and persisted run semantics must remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then completed with a clone-local 1024-slot process adapter and printed `SELFCHECK OK`. Targeted `git diff --check` and final production diff review passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

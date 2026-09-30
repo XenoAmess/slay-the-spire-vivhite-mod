@@ -4608,7 +4608,10 @@ class Policy:
             if (floor is not None and row.get("floor") is not None
                     and str(row.get("floor")) != str(floor)):
                 return
-            if row.get("screen") not in (None, "COMBAT"):
+            # CARD_SELECTION is still part of the active combat tail for
+            # upgrades/top-deck choices (1816-F17 crossed this screen before
+            # the lethal terminal). Keep REWARD/MAP/etc. as hard boundaries.
+            if row.get("screen") not in (None, "COMBAT", "CARD_SELECTION"):
                 return
             reason = str(row.get("reason") or "")
             if marker in reason:
