@@ -15495,3 +15495,14 @@
 - 当前低价值卡牌：BULLY(16分/2.1525800571490272局)，BURNING_PACT(17分/12.996440922546073局)，DEFEND_IRONCLAD(18分/3.6085747597398767局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.002）
 - 生涯战绩：0/1809 胜，当前目标进阶 0
+
+## 第 1810 局复盘（2026-10-01 03:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：ARMAMENTS, ANGER, HEADBUTT, CINDER, RAMPAGE, CINDER, MOLTEN_FIST, SECOND_WIND, STOMP, HEMOKINESIS, SHRUG_IT_OFF, STOMP, TRUE_GRIT, PACTS_END
+- 本局遗物：VENERABLE_TEA_SET, REPTILE_TRINKET, PERMAFROST
+- 战斗记录：F4 Monster战 掉血0; F5 Unknown战 掉血14; F9 Unknown战 掉血18; F11 Elite战 掉血21; F13 Elite战 掉血30; F17 Boss战 掉血42｜自损2（可行动段2/非行动段38，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=213/dpt=10.125/ttk=21.037/tsurv=2.22222（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=21.037/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.70（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=35/projected_dpt=21.8313/ratio=1.65/min_ratio=1.27（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=35/projected_dpt=21.8313/ratio=1.65/min_ratio=1.27（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：ONE_TWO_PUNCH(25分/2.4691155585990194局)，PROWESS(25分/10.298579549848375局)，HELLRAISER(25分/4.344560180687174局)，MANGLE(24分/45.444247028859536局)，VOLLEY(24分/7.293174542154791局)
+- 当前低价值卡牌：BULLY(16分/2.145046026949006局)，BURNING_PACT(17分/12.950953379317163局)，DEFEND_IRONCLAD(18分/3.5959447480807873局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1810 胜，当前目标进阶 0
