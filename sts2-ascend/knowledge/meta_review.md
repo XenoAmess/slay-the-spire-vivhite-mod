@@ -14600,3 +14600,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the direct selfcheck reached the host's fixed 256-slot bootstrap limit; a clone-local process-level temporary-directory adapter completed the full check with exit code 0 and `SELFCHECK OK`. The read-only 1783 replay emitted the expected D284-to-D286 bridge once and suppressed the duplicate. Final diff reread and `git diff --check` passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1786-1787: bridge same-floor self-loss phase ledger to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1786,1787`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1787's F15 combat note persists the latest self-loss phase ledger (`自损2`, actionable phase `2`, enemy phase `12`), while the authoritative GAME_OVER row only closes the no-card/resource chain. A bounded same-floor join should add one terminal observation without changing the action or parameters. This is falsifiable: a cross-floor source, non-combat boundary, malformed note, duplicate retry, or disabled key must remain silent.
+- **EVIDENCE**: The complete chains `sts2-ascend/knowledge/runs/20260930-205045_3EKS8UNBDR95.json` (1787, 215 decisions) and `sts2-ascend/knowledge/runs/20260930-203259_9WAERLJBKV56.json` (1786, 348 decisions) were read. 1787 D213 is F15 `end_turn` at HP1 and its durable combat note is `F15 Monster战 掉血26｜自损2（可行动段2/非行动段12，SELF_LOSS_PHASE_OBS）（阵亡）`; D214 is GAME_OVER at final HP0 with no self-loss terminal marker. 1786's self-loss source is F22, but its terminal is F24, providing the negative cross-floor case. Read-only replay after the patch emitted one marker for 1787 and none for 1786; both retained `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS` once with source floor/node, HP lost, total self loss, actionable/non-actionable phase amounts, terminal round/action/HP, outcome and final HP. Cross-floor, non-combat, malformed, missing-source, duplicate and off-switch cases remain silent; scoring, gates, action and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `self_loss_phase_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: parse only the latest same-floor durable `SELF_LOSS_PHASE_OBS` combat note at GAME_OVER and append one observation-only terminal bridge. The values are not read by scoring, candidate ranking, gates, action selection or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary and unchanged-action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare the source note, terminal floor/round/action/HP, outcome, final HP, marker count and action/params; separately track actionable versus enemy-phase self loss.
+- **Adjust**: if a real trace shows stale same-floor selection, note grammar drift, malformed numeric fields or source/terminal mismatch, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `self_loss_phase_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the existing combat note, action and params remain unchanged.
+- **Validation**: direct selfcheck reached the host's fixed 256-slot bootstrap limit; a clone-local process-level temporary-directory adapter completed the full check with exit code 0 and `SELFCHECK OK`. Targeted 1787/1786 replays passed, final production diff reread passed, and targeted `git diff --check` returned `DIFF_CHECK_OK`. No `.runtime/`, formal run/archive, learning memory, replay package or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -13191,6 +13191,118 @@ def main() -> int:
             and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
             not in _d_longfight_terminal_boundary.reason), \
         f"非 Boss 长战终局桥接越过 REWARD 边界: {_d_longfight_terminal_boundary}"
+    # 3br-self-loss-phase-terminal：1787-F15 的战斗记录已经把可行动段/非行动段
+    # 自损账落盘，但 GAME_OVER 原先只接回无牌链。终局桥接只读最新同楼层的
+    # SELF_LOSS_PHASE_OBS，不改变 continue_game_over、参数、评分或任何动作路径。
+    _self_loss_phase_terminal_note = (
+        "F15 Monster战 掉血26｜自损2（可行动段2/非行动段12，"
+        "SELF_LOSS_PHASE_OBS）（阵亡）")
+    _self_loss_phase_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 15,
+        "turn": 5, "hp": 1, "reason": "终端战斗尾部",
+    }
+    _self_loss_phase_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 15},
+        "run": {"current_hp": 0, "floor": 15},
+    }
+    class _SelfLossPhaseTerminalCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        credit_tags: list = []
+        combat = None
+        combat_notes: list = []
+        pending_event = None
+        died_in_combat = {"floor": 15}
+
+    def _make_self_loss_phase_terminal_ctx(notes=None, decisions=None):
+        _ctx = _SelfLossPhaseTerminalCtx()
+        _ctx.combat_notes = list(notes or [])
+        _ctx.decisions = [dict(row) for row in (decisions or [])]
+        return _ctx
+
+    _self_loss_phase_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    _self_loss_phase_terminal_ctx = _make_self_loss_phase_terminal_ctx(
+        [_self_loss_phase_terminal_note],
+        [_self_loss_phase_terminal_row])
+    _d_self_loss_phase_terminal = _self_loss_phase_terminal_pol.decide(
+        _self_loss_phase_terminal_state, _self_loss_phase_terminal_ctx)
+    assert knowledge.DEFAULT_POLICY[
+        "self_loss_phase_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少自损相位终局观测开关"
+    assert (_d_self_loss_phase_terminal.action == "continue_game_over"
+            and _d_self_loss_phase_terminal.params == {}
+            and _d_self_loss_phase_terminal.reason.count(
+                "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=15"
+                "/source_floor=15/source_node=Monster"
+                "/hp_lost=26/self_loss=2/own_phase=2/foe_phase=12"
+                "/terminal_round=5/terminal_action=end_turn/terminal_hp=1"
+                "/final_hp=0"
+                in _d_self_loss_phase_terminal.reason), \
+        f"自损相位终局桥接缺失或动作漂移: {_d_self_loss_phase_terminal}"
+    _d_self_loss_phase_terminal_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _self_loss_phase_terminal_state,
+            _make_self_loss_phase_terminal_ctx(
+                [_self_loss_phase_terminal_note],
+                [_self_loss_phase_terminal_row]))
+    assert (_d_self_loss_phase_terminal_reload.action
+            == _d_self_loss_phase_terminal.action
+            and _d_self_loss_phase_terminal_reload.params
+            == _d_self_loss_phase_terminal.params
+            and "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS"
+                in _d_self_loss_phase_terminal_reload.reason), \
+        f"进程重载后未恢复自损相位终局桥接: " \
+        f"{_d_self_loss_phase_terminal_reload}"
+    _self_loss_phase_terminal_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 15, "reason": _d_self_loss_phase_terminal.reason})
+    _d_self_loss_phase_terminal_duplicate = _self_loss_phase_terminal_pol.decide(
+        _self_loss_phase_terminal_state, _self_loss_phase_terminal_ctx)
+    assert (_d_self_loss_phase_terminal_duplicate.action
+            == _d_self_loss_phase_terminal.action
+            and _d_self_loss_phase_terminal_duplicate.params
+            == _d_self_loss_phase_terminal.params
+            and "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS"
+                not in _d_self_loss_phase_terminal_duplicate.reason), \
+        f"自损相位终局桥接重复提交: {_d_self_loss_phase_terminal_duplicate}"
+    _self_loss_phase_terminal_off_know = knowledge.Knowledge(tmp)
+    _self_loss_phase_terminal_off_know.policy[
+        "self_loss_phase_terminal_outcome_obs"] = False
+    _d_self_loss_phase_terminal_off = policy.Policy(
+        _self_loss_phase_terminal_off_know).decide(
+            _self_loss_phase_terminal_state,
+            _make_self_loss_phase_terminal_ctx(
+                [_self_loss_phase_terminal_note],
+                [_self_loss_phase_terminal_row]))
+    assert (_d_self_loss_phase_terminal_off.action
+            == _d_self_loss_phase_terminal.action
+            and _d_self_loss_phase_terminal_off.params
+            == _d_self_loss_phase_terminal.params
+            and "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS"
+                not in _d_self_loss_phase_terminal_off.reason), \
+        f"自损相位终局开关关闭后动作或 marker 漂移: " \
+        f"{_d_self_loss_phase_terminal_off}"
+    _d_self_loss_phase_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _self_loss_phase_terminal_state,
+            _make_self_loss_phase_terminal_ctx(
+                [_self_loss_phase_terminal_note],
+                [_self_loss_phase_terminal_row,
+                 {"screen": "REWARD", "action": "proceed", "floor": 15,
+                  "reason": "奖励边界"}]))
+    assert (_d_self_loss_phase_terminal_boundary.action
+            == _d_self_loss_phase_terminal.action
+            and _d_self_loss_phase_terminal_boundary.params
+            == _d_self_loss_phase_terminal.params
+            and "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS"
+                not in _d_self_loss_phase_terminal_boundary.reason), \
+        f"自损相位终局桥接越过 REWARD 边界: " \
+        f"{_d_self_loss_phase_terminal_boundary}"
     # 3br-longfight-joint-survival：第1592局 F25-T8 的联合复核放行发生在
     # hp=7、incoming=24 的即时致死边界；当前两张1费格挡各8点时，2费上限只能
     # 形成16格挡，故应显式记录 survives=no。该夹具只验证观测尾缀，开关关闭

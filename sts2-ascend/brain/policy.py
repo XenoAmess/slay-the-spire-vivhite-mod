@@ -955,6 +955,8 @@ class Policy:
         self._longfight_effective_dpt_projected = 0.0
         self._longfight_effective_dpt_terminal_outcome_pending = None
         self._longfight_effective_dpt_terminal_outcome_reported = False
+        self._self_loss_phase_terminal_outcome_pending = None
+        self._self_loss_phase_terminal_outcome_reported = False
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # Boss 意图0生命支付链只消费服务端成功回执；用于把首击前的多张
         # 白绮生命支付与后续终端锁收口拼成同一场战斗的可证伪观测。
@@ -5831,6 +5833,184 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             "（LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_self_loss_phase_terminal_outcome_from_notes(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the latest same-floor self-loss phase note before GAME_OVER.
+
+        ``SELF_LOSS_PHASE_OBS`` is emitted when the combat aggregate is
+        flushed, while the native terminal row is persisted separately.  Join
+        only the latest combat note on the terminal floor so this remains an
+        audit of the ending combat rather than a stale cross-room carry-over.
+        The recovered values never participate in scoring or action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "self_loss_phase_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_self_loss_phase_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._self_loss_phase_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_self_loss_phase_terminal_outcome_pending", None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            return
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if (_terminal_screen
+                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
+            return
+        if not _same_floor(floor, _terminal.get("floor")):
+            return
+        _died = getattr(ctx, "died_in_combat", None)
+        if isinstance(_died, dict) and not _same_floor(
+                floor, _died.get("floor")):
+            return
+
+        _notes = getattr(ctx, "combat_notes", None)
+        if not isinstance(_notes, list) or not _notes:
+            return
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _source = None
+        for _raw_note in reversed(_notes):
+            _note = str(_raw_note or "")
+            _floor_match = re.match(r"^F(?P<floor>\d+)\b", _note)
+            if _floor_match is None:
+                continue
+            _note_floor = _floor_match.group("floor")
+            if not _same_floor(floor, _note_floor):
+                break
+            _marker_at = _note.rfind("SELF_LOSS_PHASE_OBS")
+            if _marker_at < 0:
+                # The latest combat on this floor did not produce a phase
+                # ledger; do not borrow an older same-floor combat.
+                return
+            _node_match = re.match(
+                r"^F\d+\s+(?P<node>.+?)战\s+掉血", _note)
+            _damage_match = re.search(
+                rf"掉血(?P<hp_lost>{_number_pattern})", _note[:_marker_at])
+            _phase_match = re.search(
+                rf"自损(?P<self_loss>{_number_pattern})"
+                rf"（可行动段(?P<own>{_number_pattern})"
+                rf"/非行动段(?P<foe>{_number_pattern})，"
+                r"SELF_LOSS_PHASE_OBS）",
+                _note)
+            if _damage_match is None or _phase_match is None:
+                return
+            try:
+                _hp_lost = float(_damage_match.group("hp_lost"))
+                _self_loss = float(_phase_match.group("self_loss"))
+                _own_phase = float(_phase_match.group("own"))
+                _foe_phase = float(_phase_match.group("foe"))
+            except (TypeError, ValueError, OverflowError):
+                return
+            if (not all(math.isfinite(value) for value in (
+                    _hp_lost, _self_loss, _own_phase, _foe_phase))
+                    or _hp_lost < 0.0
+                    or _self_loss <= 0.0
+                    or _own_phase < 0.0
+                    or _foe_phase < 0.0):
+                return
+            _source = {
+                "source_floor": _note_floor,
+                "source_node": (_node_match.group("node").strip()
+                                 if _node_match else "?"),
+                "hp_lost": _hp_lost,
+                "self_loss": _self_loss,
+                "own_phase": _own_phase,
+                "foe_phase": _foe_phase,
+            }
+            break
+        if _source is None:
+            return
+
+        self._self_loss_phase_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal.get(
+                "turn", _terminal.get("round")),
+            "terminal_action": _terminal.get("action") or "?",
+            "terminal_hp": _terminal.get("hp"),
+        }
+        self._self_loss_phase_terminal_outcome_reported = False
+
+    def _consume_self_loss_phase_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a same-floor SELF_LOSS_PHASE_OBS note to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "self_loss_phase_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_self_loss_phase_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_self_loss_phase_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._self_loss_phase_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace("；", "_")
+                    .replace("（", "_")
+                    .replace("）", "_")
+                    .replace(" ", "_"))
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；自损相位终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_floor={_round(_pending.get('source_floor'))}"
+            f"/source_node={_text(_pending.get('source_node'))}"
+            f"/hp_lost={_num(_pending.get('hp_lost'))}"
+            f"/self_loss={_num(_pending.get('self_loss'))}"
+            f"/own_phase={_num(_pending.get('own_phase'))}"
+            f"/foe_phase={_num(_pending.get('foe_phase'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS）")
 
     def _restore_boss_intent_ramp_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -12168,6 +12348,8 @@ class Policy:
             self._longfight_effective_dpt_projected = 0.0
             self._longfight_effective_dpt_terminal_outcome_pending = None
             self._longfight_effective_dpt_terminal_outcome_reported = False
+            self._self_loss_phase_terminal_outcome_pending = None
+            self._self_loss_phase_terminal_outcome_reported = False
             self._self_harm_potion_paid = 0.0
             self._boss_free_turn_hp_pay_total = 0.0
             self._boss_free_turn_hp_pay_count = 0
@@ -21043,6 +21225,11 @@ class Policy:
         _longfight_effective_dpt_terminal_outcome_note = (
             self._consume_longfight_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_self_loss_phase_terminal_outcome_from_notes(
+            self.know.policy, ctx, go.get("floor"))
+        _self_loss_phase_terminal_outcome_note = (
+            self._consume_self_loss_phase_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_boss_intent_ramp_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _boss_intent_ramp_terminal_outcome_note = (
@@ -21147,6 +21334,7 @@ class Policy:
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
+                            f"{_self_loss_phase_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
@@ -21190,6 +21378,7 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
+                        f"{_self_loss_phase_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_race_projection_ratio_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
@@ -21217,6 +21406,7 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
+                                f"{_self_loss_phase_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
                                 f"{_race_projection_ratio_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"

@@ -588,6 +588,10 @@ DEFAULT_POLICY = {
                                                                   # LONGFIGHT_RACE_EFFECTIVE_DPT_OBS
                                                                   # 接回权威 GAME_OVER，记录来源/终端
                                                                   # 火力与结局；纯观测，False=严格回滚
+    "self_loss_phase_terminal_outcome_obs": True,  # 将同楼层战斗记录中的
+                                                    # SELF_LOSS_PHASE_OBS 相位自损账
+                                                    # 接回权威 GAME_OVER；纯观测，
+                                                    # False=严格回滚终局尾缀。
     "longfight_joint_flip_terminal_outcome_obs": True,  # 将同楼层 LONGFIGHT_JOINT_FLIP_TTK_CAP 来源回接权威 GAME_OVER；
                                                          # 记录来源回合、击杀/生还投影上限、胜负与终局生命；纯观测，False=严格回滚
     "longfight_joint_survival_margin_obs": True,  # 长战联合复核即时生还对账（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）：
