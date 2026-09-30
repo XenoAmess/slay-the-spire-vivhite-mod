@@ -22194,6 +22194,118 @@ def main() -> int:
     assert (off_target == 0 and "可击杀" in off_why), \
         f"硬化外壳开关未严格回滚旧口径: {off_score}/{off_target}/{off_why}"
 
+    # 3z-5d) 竞速 TTK/存活比值终局对账：1776-F22 的战斗记录已经保存
+    # actual_rounds_kind=terminal 与 actual_over_projected_survival，但原生
+    # GAME_OVER 行没有把这组来源与 outcome/final_hp 连起来；只读桥接必须
+    # 保持 continue_game_over/{}，且不能越过同楼层战斗记录边界。
+    class _ProjectionRatioCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        credit_tags: list = []
+        combat = None
+        combat_notes: list = []
+        pending_event = None
+        died_in_combat = None
+
+    _projection_ratio_note = (
+        "F22 Monster战 掉血44｜竞速TTK校准比：actual_rounds=5"
+        "/projected_ttk=2.66667/actual_over_projected=NA"
+        "（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal"
+        "/ratio_valid=no/actual_over_projected_survival=6.56"
+        "（RACE_PROJ_SURVIVAL_RATIO_OBS）")
+    _projection_ratio_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 22},
+        "run": {"current_hp": 0, "floor": 22},
+    }
+    _projection_ratio_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 22,
+        "turn": 5, "hp": 5, "reason": "终端战斗尾部",
+    }
+
+    def _projection_ratio_ctx(notes=None, decisions=None):
+        _ctx = _ProjectionRatioCtx()
+        _ctx.combat_notes = list(notes or [])
+        _ctx.decisions = [dict(row) for row in (decisions or [])]
+        return _ctx
+
+    _projection_ratio_know = knowledge.Knowledge(tmp)
+    _projection_ratio_pol = policy.Policy(_projection_ratio_know)
+    _projection_ratio_ctx_live = _projection_ratio_ctx(
+        [_projection_ratio_note], [_projection_ratio_terminal_row])
+    _d_projection_ratio = _projection_ratio_pol.decide(
+        _projection_ratio_terminal_state, _projection_ratio_ctx_live)
+    assert (_d_projection_ratio.action == "continue_game_over"
+            and _d_projection_ratio.params == {}
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+                in _d_projection_ratio.reason
+            and "outcome=defeat/floor=22"
+                "/source_actual_rounds=5/source_projected_ttk=2.66667"
+                "/source_actual_over_projected=NA"
+                "/source_actual_rounds_kind=terminal/source_ratio_valid=no"
+                "/source_actual_over_projected_survival=6.56"
+                "/terminal_round=5/terminal_action=end_turn/terminal_hp=5"
+                "/final_hp=0"
+                in _d_projection_ratio.reason), \
+        f"竞速 TTK/存活比值终局桥接缺失或动作漂移: {_d_projection_ratio}"
+    assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_ratio_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速 TTK 比值终局观测开关"
+
+    _d_projection_ratio_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _projection_ratio_terminal_state,
+            _projection_ratio_ctx([_projection_ratio_note],
+                                  [_projection_ratio_terminal_row]))
+    assert (_d_projection_ratio_reload.action == _d_projection_ratio.action
+            and _d_projection_ratio_reload.params
+            == _d_projection_ratio.params
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+            in _d_projection_ratio_reload.reason), \
+        f"进程重载后未恢复竞速 TTK 比值终局桥接: {_d_projection_ratio_reload}"
+
+    _projection_ratio_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_projection_ratio.action,
+        "floor": 22, "reason": _d_projection_ratio.reason})
+    _d_projection_ratio_duplicate = _projection_ratio_pol.decide(
+        _projection_ratio_terminal_state, _projection_ratio_ctx_live)
+    assert (_d_projection_ratio_duplicate.action
+            == _d_projection_ratio.action
+            and _d_projection_ratio_duplicate.params
+            == _d_projection_ratio.params
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_ratio_duplicate.reason), \
+        f"竞速 TTK 比值终局桥接重复提交: {_d_projection_ratio_duplicate}"
+
+    _projection_ratio_off_know = knowledge.Knowledge(tmp)
+    _projection_ratio_off_know.policy[
+        "race_audit_projection_ratio_terminal_outcome_obs"] = False
+    _d_projection_ratio_off = policy.Policy(_projection_ratio_off_know).decide(
+        _projection_ratio_terminal_state,
+        _projection_ratio_ctx([_projection_ratio_note],
+                              [_projection_ratio_terminal_row]))
+    assert (_d_projection_ratio_off.action == _d_projection_ratio.action
+            and _d_projection_ratio_off.params == _d_projection_ratio.params
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_ratio_off.reason), \
+        f"竞速 TTK 比值终局开关关闭后动作或 marker 漂移: {_d_projection_ratio_off}"
+
+    _d_projection_ratio_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _projection_ratio_terminal_state,
+            _projection_ratio_ctx(
+                [_projection_ratio_note, "F21 Monster战 掉血3"],
+                [_projection_ratio_terminal_row]))
+    assert (_d_projection_ratio_boundary.action == _d_projection_ratio.action
+            and _d_projection_ratio_boundary.params
+            == _d_projection_ratio.params
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+            not in _d_projection_ratio_boundary.reason), \
+        f"竞速 TTK 比值终局桥接越过楼层边界: {_d_projection_ratio_boundary}"
+
     print("SELFCHECK OK")
     return 0
 

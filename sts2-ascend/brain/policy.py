@@ -6396,6 +6396,176 @@ class Policy:
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_race_projection_ratio_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a durable combat-note TTK ratio to the terminal outcome.
+
+        ``_flush_combat_agg`` persists the projection ratio in
+        ``ctx.combat_notes`` before the native GAME_OVER row is available.
+        Keep this join to the latest same-floor combat note and the final
+        same-floor combat decision; it is observation-only and never feeds
+        scoring or action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_audit_projection_ratio_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        marker = "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+        decisions = getattr(ctx, "decisions", None)
+        if isinstance(decisions, list) and decisions:
+            _last = decisions[-1]
+            if isinstance(_last, dict) and marker in str(
+                    _last.get("reason") or ""):
+                return ""
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if (_terminal_screen
+                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
+            return ""
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        if (floor is not None and _terminal.get("floor") is not None
+                and not _same_floor(floor, _terminal.get("floor"))):
+            return ""
+
+        _notes = getattr(ctx, "combat_notes", None)
+        if not isinstance(_notes, list) or not _notes:
+            return ""
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _source = None
+        for _raw_note in reversed(_notes):
+            _note = str(_raw_note or "")
+            if not _note:
+                continue
+            _floor_match = re.search(
+                r"(?:^|[｜|])F(?P<floor>-?\d+(?:\.\d+)?)\s+",
+                _note)
+            if _floor_match is not None:
+                if (floor is not None
+                        and not _same_floor(floor, _floor_match.group("floor"))):
+                    break
+            elif floor is not None:
+                continue
+
+            _marker_at = _note.rfind("RACE_PROJ_TTK_RATIO_OBS")
+            if _marker_at < 0:
+                continue
+            _label_at = _note.rfind("竞速TTK校准比：", 0, _marker_at)
+            if _label_at < 0:
+                continue
+            _source_text = _note[_label_at:_marker_at]
+            _match = re.search(
+                rf"竞速TTK校准比：actual_rounds=(?P<actual>{_number_pattern})"
+                rf"/projected_ttk=(?P<ttk>{_number_pattern})"
+                r"/actual_over_projected=(?P<ratio>[^（|；;]+)",
+                _source_text)
+            if _match is None:
+                continue
+            _suffix = _note[_marker_at + len("RACE_PROJ_TTK_RATIO_OBS"):]
+            _kind_match = re.search(
+                r"/actual_rounds_kind=(?P<kind>[^/；（）()\s]+)",
+                _suffix)
+            _valid_match = re.search(
+                r"/ratio_valid=(?P<valid>[^/；（）()\s]+)",
+                _suffix)
+            if _kind_match is None or _valid_match is None:
+                continue
+            try:
+                _actual = float(_match.group("actual"))
+                _ttk = float(_match.group("ttk"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not math.isfinite(_actual) or not math.isfinite(_ttk)
+                    or _actual <= 0.0 or _ttk <= 0.0):
+                continue
+            _ratio_text = _match.group("ratio").strip()
+            _ratio_value = None
+            if _ratio_text.upper() != "NA":
+                try:
+                    _ratio_value = float(_ratio_text)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if not math.isfinite(_ratio_value) or _ratio_value < 0.0:
+                    continue
+            _kind = _kind_match.group("kind").strip()
+            _valid = _valid_match.group("valid").strip()
+            if _kind not in {"kill", "terminal"} or _valid not in {"yes", "no"}:
+                continue
+            if (_ratio_text.upper() == "NA") != (_valid == "no"):
+                continue
+            _survival_match = re.search(
+                rf"/actual_over_projected_survival=(?P<survival>{_number_pattern})"
+                r"[^｜|]*RACE_PROJ_SURVIVAL_RATIO_OBS",
+                _suffix)
+            _survival = "NA"
+            if _survival_match is not None:
+                try:
+                    _survival_value = float(_survival_match.group("survival"))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if not math.isfinite(_survival_value) or _survival_value < 0.0:
+                    continue
+                _survival = _survival_value
+            _source = {
+                "actual_rounds": _actual,
+                "projected_ttk": _ttk,
+                "actual_over_projected": _ratio_text,
+                "actual_rounds_kind": _kind,
+                "ratio_valid": _valid,
+                "actual_over_projected_survival": _survival,
+            }
+            break
+        if _source is None:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _survival = _source["actual_over_projected_survival"]
+        _survival_text = (
+            _survival if isinstance(_survival, str) else _num(_survival))
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速TTK比值终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_actual_rounds={_num(_source['actual_rounds'])}"
+            f"/source_projected_ttk={_num(_source['projected_ttk'])}"
+            f"/source_actual_over_projected={_source['actual_over_projected']}"
+            f"/source_actual_rounds_kind={_source['actual_rounds_kind']}"
+            f"/source_ratio_valid={_source['ratio_valid']}"
+            f"/source_actual_over_projected_survival={_survival_text}"
+            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
+            f"/terminal_action={_terminal.get('action') or '?'}"
+            f"/terminal_hp={_num(_terminal.get('hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS）")
+
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a terminal race audit to the authoritative GAME_OVER outcome."""
@@ -20220,6 +20390,9 @@ class Policy:
         _boss_intent_ramp_terminal_outcome_note = (
             self._consume_boss_intent_ramp_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        _race_projection_ratio_terminal_outcome_note = (
+            self._consume_race_projection_ratio_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_kin_leader_removal_tradeoff_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
@@ -20303,6 +20476,7 @@ class Policy:
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
+                            f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
@@ -20342,6 +20516,7 @@ class Policy:
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
+                        f"{_race_projection_ratio_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
@@ -20366,6 +20541,7 @@ class Policy:
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
+                                f"{_race_projection_ratio_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"

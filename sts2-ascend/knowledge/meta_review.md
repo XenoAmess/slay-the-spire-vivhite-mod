@@ -14461,3 +14461,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host-injected fixed-256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the process-local ACL-preserving adapter rooted at `.review-cache/selfcheck-pool` ran the complete check and exited 0 with `SELFCHECK OK`. Targeted `git diff --check` and the complete production/selfcheck diff review passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1775-1776: bridge projection TTK/survival ratio to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1775,1776`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1776 F22's durable combat note records `actual_rounds=5`, `projected_ttk=2.66667`, `actual_over_projected=NA`, and `actual_over_projected_survival=6.56`, but the authoritative `GAME_OVER` row does not connect those calibration values to the defeat. This is falsifiable: a same-floor terminal join should emit one source-to-outcome marker while preserving the selected action and parameters; missing source, a floor/screen boundary, duplicate retry, or disabled key must remain silent.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-172656_0K9JKHJLMYMN.json` contains 290 decisions. D289 is F22/T5 `end_turn` at HP5; its combat note carries the TTK and survival ratios above. D290 is the F22 defeat at final HP0 without this source-to-outcome relation. The read-only production replay emitted `RUN1776_REPLAY OK` and `RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS`, including source values, `terminal_round=5`, `terminal_action=end_turn`, `terminal_hp=5`, and `final_hp=0`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS` once from the latest same-floor combat note, preserving ratio validity, outcome, terminal HP, final HP, and action/params. Cross-floor, non-combat, malformed, missing-source, duplicate, and off-switch cases remain silent.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `race_audit_projection_ratio_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: parse the existing durable TTK/survival note, require finite positive source values and consistent `NA`/`ratio_valid=no`, then append one observation-only terminal bridge. It does not enter scoring, candidate ranking, gates, action selection, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, floor-boundary, and unchanged-action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-floor projection-ratio terminal windows and independently compare source fields, terminal round/action/HP, outcome, final HP, marker count, and action/params.
+- **Adjust**: if a real trace shows stale notes, screen/floor crossing, malformed ratio tokens, or source/terminal mismatch, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `race_audit_projection_ratio_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source audit, action, and params remain unchanged.
+- **Validation**: direct selfcheck reproduced the host's fixed 256-slot bootstrap limit; a clone-local process-local temp adapter completed the full check with `SELFCHECK OK`. The actual 1776 replay, targeted diff check, and complete production-code diff reread passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
