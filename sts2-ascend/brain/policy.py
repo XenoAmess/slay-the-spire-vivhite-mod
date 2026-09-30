@@ -15215,11 +15215,14 @@ class Policy:
             eligible_for_best = (not (never_played_dead and trial_already)
                                  and not _hp_gate_hit)
             if lethal_now:
+                _lethal_audit_status = (
+                    "vetoed" if "INVULN_TARGET_VETO_FULL" in why
+                    else "eligible" if eligible_for_best
+                    else "hp_gate" if _hp_gate_hit else "vetoed")
                 _lethal_candidate_audit.append(
                     (c.get("index"), float(score),
                      float(pol["play_threshold"]),
-                     "eligible" if eligible_for_best
-                     else "hp_gate" if _hp_gate_hit else "vetoed"))
+                     _lethal_audit_status))
             # 竞速判死自付越过软门观测（KILL_RACE_HOPELESS_HP_PAY_BYPASS_OBS，
             # 第1194局 F33）：现有 KRH 门带只拦「普通阈值到阈值+门带」的边际
             # 候选，高分生命支付牌仍可越带放行。1194-F33 的 [470~472]、
@@ -16908,7 +16911,9 @@ class Policy:
                     score += pol["free_card_bonus"]
                 if _sleep_veto is not None:
                     score = min(score, floor_score)
-                if _invuln_veto is not None and not killable and eff <= 0:
+                _invuln_full_veto = (
+                    _invuln_veto is not None and not killable and eff <= 0)
+                if _invuln_full_veto:
                     # 全体目标皆无敌帧：AOE 零有效移除，压到禁玩线
                     score = min(score, floor_score)
                 hb = _hybrid_defense()
@@ -16921,6 +16926,8 @@ class Policy:
                     why += (f"｜无敌帧目标不计伤害：{_invuln_veto}HP≥"
                             f"{_invuln_atk_floor:.0f}，不可击杀将自爆"
                             "（INVULN_TARGET_VETO）")
+                    if _invuln_full_veto:
+                        why += "（INVULN_TARGET_VETO_FULL）"
                 if _sleep_veto is not None:
                     why += (f"｜沉睡保期禁攻：{_sleep_veto}沉睡≥{_sg_min:g}层，"
                             "未格挡伤害将提前唤醒（SLEEP_GUARD）")
@@ -17656,7 +17663,8 @@ class Policy:
                 best_s = floor_score
                 why = (f"无敌帧目标禁攻：{_invuln_veto}HP≥"
                        f"{_invuln_atk_floor:.0f}，不可击杀将自爆，伤害纯浪费，"
-                       "能量让给防守/铺垫（INVULN_TARGET_VETO）")
+                       "能量让给防守/铺垫（INVULN_TARGET_VETO）"
+                       "（INVULN_TARGET_VETO_FULL）")
             elif best_t is not None and _invuln_veto is not None:
                 why += "｜无敌帧目标剔出打击候选（INVULN_TARGET_VETO）"
             # 沉睡放行对账（SLEEP_GUARD_PASS_OBS，第 1425~1429 局批复盘新增，

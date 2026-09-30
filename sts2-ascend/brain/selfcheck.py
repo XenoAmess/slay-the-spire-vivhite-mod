@@ -20735,6 +20735,44 @@ def main() -> int:
         and "LETHAL_UNAVAILABLE_END_TURN_OBS" not in d_lethal_playable.reason, \
         f"致死可牌拒绝观测缺失: {d_lethal_playable and d_lethal_playable.reason}"
 
+    # 3z-6a) 无敌帧目标的致死可牌拒绝必须区分为 vetoed：1815-F17-T10
+    #        的 WATERFALL_GIANT 已进入 HP=999999999 自爆相，评分侧已有
+    #        INVULN_TARGET_VETO，但旧候选审计仍把攻击牌写成 status=eligible，
+    #        把「评分拒绝」误报成「仍可执行」。新增 full-veto marker 只改观测
+    #        状态，不改 end_turn/action 或参数。
+    def _lethal_invulnerable_reject_state():
+        state = _lethal_playable_reject_state()
+        state["combat"]["hand"] = [{
+            "index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
+            "playable": True, "energy_cost": 1, "requires_target": True,
+            "valid_target_indices": [0], "card_type": "Attack",
+            "dynamic_values": [{"name": "Damage", "current_value": 6}],
+        }]
+        state["combat"]["enemies"][0].update({
+            "enemy_id": "WATERFALL_GIANT", "name": "瀑布巨兽",
+            "current_hp": 999999999, "max_hp": 240,
+        })
+        state["combat"]["enemies"][0]["intents"] = [{"total_damage": 24}]
+        return state
+
+    invuln_lethal_know = knowledge.Knowledge(tmp)
+    invuln_lethal_pol = policy.Policy(invuln_lethal_know)
+    invuln_lethal_ctx = _SettleCtx()
+    d_invuln_lethal = None
+    for _ in range(6):
+        d_candidate = invuln_lethal_pol.decide(
+            _lethal_invulnerable_reject_state(), invuln_lethal_ctx)
+        if d_candidate.action == "end_turn":
+            d_invuln_lethal = d_candidate
+            break
+    assert d_invuln_lethal is not None \
+        and d_invuln_lethal.action == d_lethal_playable.action \
+        and d_invuln_lethal.params == d_lethal_playable.params \
+        and "INVULN_TARGET_VETO" in d_invuln_lethal.reason \
+        and "/status=vetoed" in d_invuln_lethal.reason \
+        and "/status=eligible" not in d_invuln_lethal.reason, \
+        f"无敌帧致死可牌未被标记为 vetoed: {d_invuln_lethal and d_invuln_lethal.reason}"
+
     lethal_playable_off_know = knowledge.Knowledge(tmp)
     lethal_playable_off_know.policy["lethal_playable_reject_obs"] = False
     lethal_playable_off_pol = policy.Policy(lethal_playable_off_know)

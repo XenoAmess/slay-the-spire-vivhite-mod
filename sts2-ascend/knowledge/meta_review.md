@@ -14974,3 +14974,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1815: distinguish invulnerable lethal-card vetoes in the rejection audit
+
+profile_id: `ironclad`
+requested_run: `1815`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: When a lethal end-turn candidate is rejected because every target is in the Waterfall Giant invulnerable/self-destruct phase, `LETHAL_PLAYABLE_REJECT_OBS` should report `status=vetoed`, not `status=eligible`. This is falsifiable: the candidate must carry the existing full `INVULN_TARGET_VETO` evidence, while a normal low-score candidate remains `eligible`; action and parameters must not change.
+- **EVIDENCE**: The exact on-disk chain `sts2-ascend/knowledge/runs/20261001-051238_F3KZESTQJ8S6.json` contains all 166 decisions. F17 D162 records `STEAM_ERUPTION_KILL_VETO_OBS`; D163/D164 enter the invulnerable phase with enemy HP `999999999`, player HP `1`, and `INVULN_TARGET_VETO`. D164's `LETHAL_PLAYABLE_REJECT_OBS` incorrectly lists all four affordable cards as `status=eligible`, although the same scoring path suppresses attack rescue. The cause is that candidate audit status only considered trial/HP gates and did not consume the full-veto result from the same scoring pass.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching lethal invulnerable terminals, the rejection audit reports `status=vetoed` exactly for full-veto candidates; mixed/ordinary candidates retain their prior status, and action/parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: emit `INVULN_TARGET_VETO_FULL` only when the same score pass proves that all attack targets are vetoed; map that marker to the existing candidate-audit `vetoed` status. No score, ranking, gate, target, action, or parameter path reads the new marker.
+- `sts2-ascend/brain/selfcheck.py`: add an exact 1815-F17-shaped Waterfall fixture and assert unchanged `end_turn {}` plus `status=vetoed`; the existing normal lethal low-score fixture continues to assert `status=eligible`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare full-veto card count, `INVULN_TARGET_VETO` evidence, `status` values, terminal outcome, and unchanged applied action/parameters.
+- **Adjust**: if a mixed target/AOE trace is marked `vetoed` despite retaining effective damage, preserve the trace and narrow the full-veto marker at the scoring boundary; do not alter combat selection in this audit batch.
+- **Rollback**: revert this commit's full-veto marker/status bridge; the legacy `INVULN_TARGET_VETO` audit, scoring, action, and parameters must remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot bootstrap limit, and an equivalent clone-local process-level 0777 temp-directory adapter completed the full `selfcheck.py` with exit code 0 and `SELFCHECK OK`. Final target diff review and `git diff --check` passed with only pre-existing long-path/LF-CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`); `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
