@@ -18329,8 +18329,15 @@ class Policy:
         return current_hp >= 100000.0
 
     def _enemy_asleep_stack(self, enemy: dict) -> float:
-        """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""
-        return self._enemy_power_stack(enemy, "asleep", "沉睡")
+        """读取敌人的沉睡层数，兼容原生两种 power id 与名称载荷。
+
+        Lagavulin uses ``ASLEEP_POWER``/“沉睡”, while Slumbering Beetle
+        uses ``SLUMBER_POWER``/“熟睡”.  Both powers share the same
+        unblocked-damage wake-up contract, so the existing sleep guard must
+        recognize both without changing its thresholds or callers.
+        """
+        return self._enemy_power_stack(
+            enemy, "asleep", "slumber", "沉睡", "熟睡")
 
     def _is_frantic_escape(self, card: dict) -> bool:
         """狂乱逃离（FRANTIC_ESCAPE）识别：无厌沙虫 Liquify 灌注的沙坑续命
