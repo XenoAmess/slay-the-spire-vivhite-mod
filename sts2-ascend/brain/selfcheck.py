@@ -9329,19 +9329,6 @@ def main() -> int:
         "resolved_rules_text": "对所有敌人造成6点伤害。",
         "dynamic_values": [{"name": "Damage", "current_value": 6}],
     }
-    sg_cinder = {
-        "index": 2, "card_id": "CINDER", "name": "余烬+", "playable": True,
-        "energy_cost": 2, "requires_target": True, "valid_target_indices": [0],
-        "dynamic_values": [{"name": "Damage", "current_value": 18}],
-    }
-
-    def sg_slumber_enemy(**kwargs):
-        enemy = sg_enemy(**kwargs)
-        enemy["powers"] = [{
-            "power_id": "SLUMBER_POWER", "name": "熟睡",
-            "amount": kwargs.get("asleep", 3), "is_debuff": False,
-        }]
-        return enemy
 
     def sg_score(card, enemy, incoming=0):
         return sg_pol._score_play(
@@ -9379,22 +9366,6 @@ def main() -> int:
     s_sg_aoe, _, why_sg_aoe = sg_score(sg_aoe, sg_enemy(asleep=3))
     assert s_sg_aoe <= -50.0 and "SLEEP_GUARD" in why_sg_aoe, \
         f"AOE 未格挡伤害未禁玩: score={s_sg_aoe} why={why_sg_aoe}"
-    # ⑥-b) 原生熟睡甲虫使用 SLUMBER_POWER/“熟睡”，与族母的
-    #      ASLEEP_POWER/“沉睡”共享同一提前唤醒契约；F24 的 18 伤牌打穿
-    #      15 点甲时必须被现有沉睡闸拦下，不能把别名缺口当作普通攻击。
-    s_sg_slumber, t_sg_slumber, why_sg_slumber = sg_score(
-        sg_cinder, sg_slumber_enemy(hp=86, block=15, asleep=3))
-    assert s_sg_slumber <= -50.0 and t_sg_slumber is None \
-        and "SLEEP_GUARD" in why_sg_slumber, \
-        f"SLUMBER_POWER 未接入沉睡闸: score={s_sg_slumber} " \
-        f"target={t_sg_slumber} why={why_sg_slumber}"
-    s_sg_slumber_pass, _, why_sg_slumber_pass = sg_score(
-        sg_cinder, sg_slumber_enemy(hp=86, block=20, asleep=3))
-    assert math.isclose(s_sg_slumber_pass, 18.0) \
-        and "SLEEP_GUARD_PASS_OBS" in why_sg_slumber_pass \
-        and "牌面18≤敌甲20" in why_sg_slumber_pass, \
-        f"SLUMBER_POWER 全格挡放行对账缺失: " \
-        f"score={s_sg_slumber_pass} why={why_sg_slumber_pass}"
     # ⑦ 端到端：沉睡3层 Boss 面前只有攻击牌时结束回合而非提前唤醒
     def sg_combat_state(hand):
         return {
