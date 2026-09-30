@@ -911,6 +911,8 @@ class Policy:
         self._longfight_joint_flip_terminal_outcome_reported = False
         self._race_prelock_defense_terminal_outcome_pending = None
         self._race_prelock_defense_terminal_outcome_reported = False
+        self._waterfall_about_to_blow_terminal_outcome_pending = None
+        self._waterfall_about_to_blow_terminal_outcome_reported = False
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -9930,6 +9932,8 @@ class Policy:
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
+            self._waterfall_about_to_blow_terminal_outcome_pending = None
+            self._waterfall_about_to_blow_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None

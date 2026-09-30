@@ -14130,3 +14130,30 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**: direct selfcheck reproduced the host's fixed 256-directory bootstrap limit; a process-level `tempfile.mkdtemp` adapter rooted in the clone's existing `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. The actual 1746 chain replay emitted `source_round=10/terminal_tail_round=11/terminal_tail_hp=5/terminal_tail_block=0/terminal_tail_incoming=0` while preserving `action=continue_game_over` and `params={}`. AST parsing, targeted `git diff --check`, and final diff review passed; no runtime, formal run/archive, learning-memory, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1749-1750: WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS combat reset
+
+profile_id: `ironclad`
+requested_runs: `1749, 1750`
+production_code_commit: `c4695bff4` (production checkpoint; report closeout follows)
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS` 的 pending/reported 状态没有随战斗实例清空，导致第1750局 F17/T13 的 `GAME_OVER` 复用了第1749局 F17/T10 的 `source_round=10/hp=19/incoming=36`。这是可证伪的：新战斗必须只接入本战斗最近的瀑布自爆空过来源，且终局 action/params 不变。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20260930-073501_SJAGNCMBM12V.json`（1749，197条 decisions）和 `sts2-ascend/knowledge/runs/20260930-075242_DZVXNE877HPA.json`（1750，202条 decisions）。1749 D195/F17/T10 的来源为 `hp=19/incoming=36`，D196 接 `GAME_OVER`；1750 D200/F17/T13 的真实来源为 `hp=2/block=5/incoming=45/energy=2`，但 D201 仍报旧的 `source_round=10` 字段，证明跨战斗残留而非当前回合选择变化。`failed_review_replay.requested_packages=[]`。
+- **EXPECTED_SIGNAL**：未来3—10个同类终局中，仅当同一 combat 的最近 `WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS` 紧邻有效终局链时追加终局观测；source round、HP、block、incoming、energy 必须来自当前战斗。跨战斗/跨屏/缺来源不得命中，`continue_game_over` 与 `{}` 参数保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在 `Policy` 初始化和新 combat reset 两处清空 `_waterfall_about_to_blow_terminal_outcome_pending` 与 `_reported`；不改评分、候选、门控、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加复用同一 `Policy` 的跨战斗回归夹具，验证新战斗以 F17/T9、`hp=2/block=5/incoming=45/energy=2` 形成来源并接入终局，且不携带旧来源。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集3—10个瀑布自爆终局，逐项核对 combat 边界、source/terminal round、HP、block、incoming、energy、outcome 与 action/params。
+- **Adjust**：若真实链出现同 combat 旧来源误接、marker 与 GAME_OVER 非同一尾部、字段漂移或跨屏连接，保留失败样本并收紧恢复边界；不把观测升级为行为门。
+- **Rollback**：将已有 `waterfall_about_to_blow_terminal_outcome_obs` 设为 `False`；预期只移除 `WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS`，既有来源 marker、action 与 params 不变。
+- **Validation**：新增夹具断言通过；完整 selfcheck 在 clone 现有 ACL 临时池上经进程级 `tempfile.mkdtemp` 适配退出码0并输出 `SELFCHECK OK`。生产 diff 为 2 个目标文件、46行新增，`git diff --cached --check` 通过并已提交 checkpoint `c4695bff4`；未写入 `.runtime/`、正式 runs/archive、学习记忆或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

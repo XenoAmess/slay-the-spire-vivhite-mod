@@ -7158,6 +7158,48 @@ def main() -> int:
         and d_waterfall_terminal_off.params == d_waterfall_terminal.params \
         and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" not in d_waterfall_terminal_off.reason, \
         f"瀑布自爆终局对账关闭未严格回滚: {d_waterfall_terminal_off.action} {d_waterfall_terminal_off.params}（{d_waterfall_terminal_off.reason}）"
+    itv_waterfall.know.policy[
+        "waterfall_about_to_blow_terminal_outcome_obs"] = True
+    # A completed Waterfall terminal must not leak into the next combat.  The
+    # production loop reuses one Policy across runs, while combat turn numbers
+    # restart; a fresh combat object must therefore discard the prior pending
+    # source before the next GAME_OVER join.
+    waterfall_next_ctx = DummyCtx()
+    waterfall_next_ctx.combat = {}
+    waterfall_next_state = itv_combat_state(
+        [dict(itv_strike)], incoming=45)
+    waterfall_next_state["turn"] = 9
+    waterfall_next_state["combat"]["enemies"][0].update({
+        "enemy_id": "WATERFALL_GIANT",
+        "name": "瀑布巨兽",
+        "current_hp": 999999999,
+    })
+    waterfall_next_state["combat"]["player"].update({
+        "current_hp": 2, "block": 5, "energy": 2,
+    })
+    d_waterfall_next = itv_waterfall.decide(
+        waterfall_next_state, waterfall_next_ctx)
+    assert d_waterfall_next.action == "end_turn" \
+        and "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" in d_waterfall_next.reason, \
+        f"新战斗瀑布自爆来源夹具未形成: {d_waterfall_next}"
+    waterfall_next_source = {
+        "screen": "COMBAT", "floor": 17, "turn": 9,
+        "action": d_waterfall_next.action,
+        "params": d_waterfall_next.params,
+        "reason": d_waterfall_next.reason,
+    }
+    waterfall_next_ctx.decisions = [waterfall_next_source]
+    d_waterfall_next_terminal = itv_waterfall.decide(
+        waterfall_terminal_state, waterfall_next_ctx)
+    assert d_waterfall_next_terminal.action == "continue_game_over" \
+        and d_waterfall_next_terminal.params == {} \
+        and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" \
+            in d_waterfall_next_terminal.reason \
+        and "source_round=9" in d_waterfall_next_terminal.reason \
+        and "/hp=2/block=5/incoming=45/energy=2" \
+            in d_waterfall_next_terminal.reason \
+        and "source_round=4" not in d_waterfall_next_terminal.reason, \
+        f"瀑布自爆终局来源跨战斗泄漏或动作漂移: {d_waterfall_next_terminal}"
     itv_live_obs_off = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-end-turn-off-"))),
         random.Random(7))
