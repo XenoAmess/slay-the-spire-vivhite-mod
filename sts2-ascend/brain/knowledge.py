@@ -206,9 +206,6 @@ DEFAULT_POLICY = {
                                          # 已覆盖生命缺口时，记录 HP/格挡/意图、被过滤攻击数、
                                          # 仍可负担的非攻击牌数与蒸汽喷发层数；纯观测，不改
                                          # 结束回合判决。False = 关闭该尾缀，旧动作与理由恢复。
-    "invuln_lethal_end_turn_terminal_outcome_obs": True,  # 将 generic 无敌帧致死空过与 GAME_OVER 对账；
-                                                           # Waterfall 专用自爆终局已有独立 marker，避免重复；
-                                                           # 纯观测，不改变 end_turn 或终局动作；False=关闭。
     "waterfall_about_to_blow_end_turn_obs": True,  # 瀑布巨兽自爆相终端观测：原生
                                                     # TriggerAboutToBlowState 将
                                                     # WATERFALL_GIANT 的 HP 设为

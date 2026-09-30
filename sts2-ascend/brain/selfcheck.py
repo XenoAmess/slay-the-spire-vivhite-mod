@@ -7066,81 +7066,6 @@ def main() -> int:
         and "vetoed_attacks=1" in d_itv.reason \
         and "non_attack_candidates=0" in d_itv.reason, \
         f"无敌帧致死空过缺少可证伪分层: {d_itv.reason}"
-    assert itv_live.know.policy.get(
-        "invuln_lethal_end_turn_terminal_outcome_obs") is True, \
-        "generic 无敌帧致死终局观测默认键未迁移"
-    # ④f-terminal) 普通无敌帧来源应在同楼层 GAME_OVER 对账；Waterfall
-    # 专用来源在后面的 ④g-terminal 只保留自己的 richer marker，避免重复。
-    generic_invuln_source = {
-        "screen": "COMBAT", "floor": 17, "turn": 4,
-        "action": d_itv.action, "params": d_itv.params,
-        "reason": d_itv.reason,
-    }
-    generic_invuln_terminal_state = {
-        "screen": "GAME_OVER",
-        "available_actions": ["continue_game_over"],
-        "game_over": {"can_continue": True, "is_victory": False,
-                       "floor": 17},
-        "run": {"current_hp": 0, "floor": 17},
-    }
-    generic_invuln_ctx = DummyCtx()
-    generic_invuln_ctx.decisions = [generic_invuln_source]
-    d_generic_invuln_terminal = itv_live.decide(
-        generic_invuln_terminal_state, generic_invuln_ctx)
-    assert d_generic_invuln_terminal.action == "continue_game_over" \
-        and d_generic_invuln_terminal.params == {} \
-        and "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-            in d_generic_invuln_terminal.reason \
-        and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" \
-            not in d_generic_invuln_terminal.reason \
-        and "outcome=defeat" in d_generic_invuln_terminal.reason \
-        and "source_round=4" in d_generic_invuln_terminal.reason \
-        and "final_hp=0" in d_generic_invuln_terminal.reason, \
-        f"generic 无敌帧致死来源未与终局对账或改写动作: {d_generic_invuln_terminal}"
-    # Policy reload must recover the same persisted source, while a durable
-    # GAME_OVER row prevents a second append on the retry.
-    generic_invuln_reload = policy.Policy(itv_live.know, random.Random(7))
-    generic_invuln_reload_ctx = DummyCtx()
-    generic_invuln_reload_ctx.decisions = [generic_invuln_source]
-    d_generic_invuln_reload = generic_invuln_reload.decide(
-        generic_invuln_terminal_state, generic_invuln_reload_ctx)
-    assert "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-        in d_generic_invuln_reload.reason \
-        and "source_round=4" in d_generic_invuln_reload.reason, \
-        f"generic 无敌帧致死终局对账跨 Policy 恢复失败: {d_generic_invuln_reload.reason}"
-    generic_invuln_ctx.decisions.append({
-        "screen": "GAME_OVER", "floor": 17,
-        "action": d_generic_invuln_terminal.action,
-        "params": d_generic_invuln_terminal.params,
-        "reason": d_generic_invuln_terminal.reason,
-    })
-    d_generic_invuln_repeat = itv_live.decide(
-        generic_invuln_terminal_state, generic_invuln_ctx)
-    assert "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-        not in d_generic_invuln_repeat.reason, \
-        f"generic 无敌帧致死终局对账重复追加: {d_generic_invuln_repeat.reason}"
-    generic_invuln_off = policy.Policy(itv_live.know, random.Random(7))
-    generic_invuln_off.know.policy[
-        "invuln_lethal_end_turn_terminal_outcome_obs"] = False
-    generic_invuln_off_ctx = DummyCtx()
-    generic_invuln_off_ctx.decisions = [generic_invuln_source]
-    d_generic_invuln_off = generic_invuln_off.decide(
-        generic_invuln_terminal_state, generic_invuln_off_ctx)
-    assert d_generic_invuln_off.action == d_generic_invuln_terminal.action \
-        and d_generic_invuln_off.params == d_generic_invuln_terminal.params \
-        and "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-            not in d_generic_invuln_off.reason, \
-        f"generic 无敌帧致死终局观测关闭未严格回滚: {d_generic_invuln_off}"
-    generic_invuln_boundary = policy.Policy(itv_live.know, random.Random(7))
-    generic_invuln_boundary_ctx = DummyCtx()
-    generic_invuln_boundary_source = dict(generic_invuln_source)
-    generic_invuln_boundary_source["floor"] = 16
-    generic_invuln_boundary_ctx.decisions = [generic_invuln_boundary_source]
-    d_generic_invuln_boundary = generic_invuln_boundary.decide(
-        generic_invuln_terminal_state, generic_invuln_boundary_ctx)
-    assert "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-        not in d_generic_invuln_boundary.reason, \
-        f"generic 无敌帧终局对账越过楼层边界: {d_generic_invuln_boundary.reason}"
     # ④g) WaterfallGiant 的原生 AboutToBlow 相会在移除 SteamEruptionPower 后
     # 只留下 HP=999999999 哨兵；新增观测必须用实体 ID 把它与普通无敌目标分开，
     # 且不得改写既有 end_turn 动作/参数。
@@ -7196,8 +7121,6 @@ def main() -> int:
     assert d_waterfall_terminal.action == "continue_game_over" \
         and d_waterfall_terminal.params == {} \
         and "WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS" in d_waterfall_terminal.reason \
-        and "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS" \
-            not in d_waterfall_terminal.reason \
         and "outcome=defeat" in d_waterfall_terminal.reason \
         and "floor=17" in d_waterfall_terminal.reason \
         and "source_round=4" in d_waterfall_terminal.reason \
