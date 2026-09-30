@@ -19757,6 +19757,116 @@ def main() -> int:
                 not in d_boss_intent_ramp_boundary.reason), \
         f"Boss 意图斜坡终局桥接越过 REWARD 边界: {d_boss_intent_ramp_boundary}"
 
+    # 3z-5c-c) 首次竞速入锁压力终局桥接：1792-F33 的 D427
+    # RACE_PROJ_LATCH_INTENT_PRESSURE_OBS 保留了首锁现场，但 GAME_OVER
+    # 只分别保留投影漂移/终端意图/DPT 尾缀。仅连接同楼层连续 COMBAT 尾部，
+    # 覆盖重载、重复提交、关闭开关与 REWARD 边界；action/params 不变。
+    latch_pressure_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 2, "hp": 81,
+        "reason":
+            "战斗：打出【无情猛攻+】→知识恶魔；竞速首次入锁压力："
+            "round=2,intent=17,intent_ema=5.1,loss_rate=17,"
+            "intent_trend=+17,steam_eruption=0,pool=313,dpt=17.55,"
+            "ttk=17.83,tsurv=4.76"
+            "（RACE_PROJ_LATCH_INTENT_PRESSURE_OBS）",
+    }
+    latch_pressure_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 8, "hp": 2, "reason": "致死无牌空过",
+    }
+    latch_pressure_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+        "run": {"current_hp": 0, "floor": 33},
+    }
+    latch_pressure_know = knowledge.Knowledge(tmp)
+    latch_pressure_pol = policy.Policy(latch_pressure_know)
+    latch_pressure_ctx = _SettleCtx()
+    latch_pressure_ctx.decisions = [
+        dict(latch_pressure_source_row),
+        dict(latch_pressure_terminal_row)]
+    d_latch_pressure_terminal = latch_pressure_pol.decide(
+        latch_pressure_terminal_state, latch_pressure_ctx)
+    assert (d_latch_pressure_terminal.action == "continue_game_over"
+            and d_latch_pressure_terminal.params == {}
+            and "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+                in d_latch_pressure_terminal.reason
+            and "outcome=defeat/floor=33/source_round=2"
+                "/source_action=play_card/intent=17/intent_ema=5.1"
+                "/loss_rate=17/intent_trend=+17/steam_eruption=0"
+                "/pool=313/dpt=17.55/ttk=17.83/tsurv=4.76"
+                "/terminal_round=8/terminal_action=end_turn/terminal_hp=2"
+                "/final_hp=0/bridge_decisions=1/bridge_rounds=6"
+                in d_latch_pressure_terminal.reason), \
+        f"首次入锁压力终局桥接缺失或动作漂移: {d_latch_pressure_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "race_projection_latch_intent_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少首次入锁压力终局观测开关"
+
+    latch_pressure_replay_ctx = _SettleCtx()
+    latch_pressure_replay_ctx.decisions = [
+        dict(latch_pressure_source_row),
+        dict(latch_pressure_terminal_row)]
+    d_latch_pressure_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            latch_pressure_terminal_state, latch_pressure_replay_ctx)
+    assert (d_latch_pressure_replay.action
+            == d_latch_pressure_terminal.action
+            and d_latch_pressure_replay.params
+            == d_latch_pressure_terminal.params
+            and "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+                in d_latch_pressure_replay.reason), \
+        f"进程重载后未恢复首次入锁压力终局桥接: {d_latch_pressure_replay}"
+
+    latch_pressure_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_latch_pressure_terminal.action,
+        "floor": 33, "reason": d_latch_pressure_terminal.reason})
+    d_latch_pressure_duplicate = latch_pressure_pol.decide(
+        latch_pressure_terminal_state, latch_pressure_ctx)
+    assert (d_latch_pressure_duplicate.action
+            == d_latch_pressure_terminal.action
+            and d_latch_pressure_duplicate.params
+            == d_latch_pressure_terminal.params
+            and "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+                not in d_latch_pressure_duplicate.reason), \
+        f"首次入锁压力终局桥接重复提交: {d_latch_pressure_duplicate}"
+
+    latch_pressure_off_know = knowledge.Knowledge(tmp)
+    latch_pressure_off_know.policy[
+        "race_projection_latch_intent_terminal_outcome_obs"] = False
+    latch_pressure_off_ctx = _SettleCtx()
+    latch_pressure_off_ctx.decisions = [
+        dict(latch_pressure_source_row), dict(latch_pressure_terminal_row)]
+    d_latch_pressure_off = policy.Policy(latch_pressure_off_know).decide(
+        latch_pressure_terminal_state, latch_pressure_off_ctx)
+    assert (d_latch_pressure_off.action == d_latch_pressure_terminal.action
+            and d_latch_pressure_off.params
+            == d_latch_pressure_terminal.params
+            and "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+                not in d_latch_pressure_off.reason), \
+        f"首次入锁压力终局开关关闭后动作或 marker 漂移: {d_latch_pressure_off}"
+
+    latch_pressure_boundary_ctx = _SettleCtx()
+    latch_pressure_boundary_ctx.decisions = [
+        dict(latch_pressure_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 33,
+         "reason": "combat boundary"},
+        dict(latch_pressure_terminal_row),
+    ]
+    d_latch_pressure_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            latch_pressure_terminal_state, latch_pressure_boundary_ctx)
+    assert (d_latch_pressure_boundary.action
+            == d_latch_pressure_terminal.action
+            and d_latch_pressure_boundary.params
+            == d_latch_pressure_terminal.params
+            and "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+                not in d_latch_pressure_boundary.reason), \
+        f"首次入锁压力终局桥接越过 REWARD 边界: {d_latch_pressure_boundary}"
+
     # 3z-5d) KIN 领袖闸减员对账终局桥接：1765-F17 的逐张
     # KIN_LEADER_REMOVAL_TRADEOFF_OBS 只说明被压制随从的闸前分数，必须在
     # 同楼层 GAME_OVER 连接胜负与终局血量；动作/参数不变，进程重载、重复提交、

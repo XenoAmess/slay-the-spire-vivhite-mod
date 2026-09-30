@@ -945,6 +945,8 @@ class Policy:
         self._boss_effective_dpt_terminal_outcome_reported = False
         self._boss_intent_ramp_terminal_outcome_pending = None
         self._boss_intent_ramp_terminal_outcome_reported = False
+        self._race_projection_latch_intent_terminal_outcome_pending = None
+        self._race_projection_latch_intent_terminal_outcome_reported = False
         self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
         self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
@@ -6011,6 +6013,201 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             "（SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_race_projection_latch_intent_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the first Boss latch-pressure snapshot before GAME_OVER.
+
+        The live ``RACE_PROJ_LATCH_INTENT_PRESSURE_OBS`` row contains the
+        first-lock pressure context, while the native terminal row keeps only
+        the later combat tail.  Join only a contiguous same-floor combat tail;
+        this is an observation-only bridge and never feeds scoring or action
+        selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_projection_latch_intent_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        _decisions = getattr(ctx, "decisions", None)
+        _marker = "RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_race_projection_latch_intent_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            # The first GAME_OVER decision may have been lost before the
+            # accepted decision was persisted.  A durable marker is the
+            # commit proof, so permit one retry from the same source tail.
+            self._race_projection_latch_intent_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_projection_latch_intent_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _token(text: str, name: str):
+            match = re.search(
+                rf"{re.escape(name)}=([^,，；|（）()\s]+)", text)
+            return match.group(1) if match else None
+
+        _source = None
+        _source_index = -1
+        for _index in range(len(_decisions) - 1, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(
+                "RACE_PROJ_LATCH_INTENT_PRESSURE_OBS")
+            if _marker_at < 0:
+                continue
+            _pressure_at = _reason.rfind("竞速首次入锁压力：", 0, _marker_at)
+            if _pressure_at < 0:
+                continue
+            _payload = _reason[_pressure_at:_marker_at]
+            _names = (
+                "round", "intent", "intent_ema", "loss_rate",
+                "intent_trend", "steam_eruption", "pool", "dpt",
+                "ttk", "tsurv")
+            _raw = {name: _token(_payload, name) for name in _names}
+            if any(value is None for value in _raw.values()):
+                continue
+            try:
+                _round = int(float(_raw["round"]))
+                _values = {
+                    name: float(_raw[name])
+                    for name in _names if name != "round"}
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (_round < 0
+                    or not all(math.isfinite(value) and value >= 0.0
+                                for name, value in _values.items()
+                                if name != "intent_trend")
+                    or not math.isfinite(_values["intent_trend"])):
+                continue
+            _source = {
+                "source_round": _round,
+                "source_action": _row.get("action") or "?",
+                "intent": _values["intent"],
+                "intent_ema": _values["intent_ema"],
+                "loss_rate": _values["loss_rate"],
+                "intent_trend": _values["intent_trend"],
+                "steam_eruption": _values["steam_eruption"],
+                "pool": _values["pool"],
+                "dpt": _values["dpt"],
+                "ttk": _values["ttk"],
+                "tsurv": _values["tsurv"],
+            }
+            _source_index = _index
+            break
+        if _source is None:
+            return
+
+        _terminal = _decisions[-1]
+        if not isinstance(_terminal, dict):
+            return
+        if str(_terminal.get("action") or "") != "end_turn":
+            return
+        _source["terminal_round"] = _terminal.get(
+            "turn", _terminal.get("round"))
+        _source["terminal_action"] = _terminal.get("action") or "?"
+        _source["terminal_hp"] = _terminal.get("hp")
+        _source["bridge_decisions"] = max(
+            0, len(_decisions) - 1 - _source_index)
+        try:
+            _source["bridge_rounds"] = (
+                int(float(_source["terminal_round"]))
+                - int(float(_source["source_round"])))
+        except (TypeError, ValueError, OverflowError):
+            _source["bridge_rounds"] = "?"
+        self._race_projection_latch_intent_terminal_outcome_pending = _source
+        self._race_projection_latch_intent_terminal_outcome_reported = False
+
+    def _consume_race_projection_latch_intent_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Attach the first latch-pressure snapshot to the terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_projection_latch_intent_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_race_projection_latch_intent_terminal_outcome_pending",
+            None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_race_projection_latch_intent_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._race_projection_latch_intent_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _signed_num(value) -> str:
+            try:
+                return f"{float(value):+g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速首次入锁压力终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/intent={_num(_pending.get('intent'))}"
+            f"/intent_ema={_num(_pending.get('intent_ema'))}"
+            f"/loss_rate={_num(_pending.get('loss_rate'))}"
+            f"/intent_trend={_signed_num(_pending.get('intent_trend'))}"
+            f"/steam_eruption={_num(_pending.get('steam_eruption'))}"
+            f"/pool={_num(_pending.get('pool'))}"
+            f"/dpt={_num(_pending.get('dpt'))}"
+            f"/ttk={_num(_pending.get('ttk'))}"
+            f"/tsurv={_num(_pending.get('tsurv'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS）")
 
     def _restore_boss_intent_ramp_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -12408,6 +12605,8 @@ class Policy:
             self._boss_effective_dpt_terminal_outcome_reported = False
             self._boss_intent_ramp_terminal_outcome_pending = None
             self._boss_intent_ramp_terminal_outcome_reported = False
+            self._race_projection_latch_intent_terminal_outcome_pending = None
+            self._race_projection_latch_intent_terminal_outcome_reported = False
             self._longfight_effective_dpt_combat = ctx.combat
             self._longfight_effective_dpt_round = None
             self._longfight_effective_dpt_start_hp = None
@@ -21301,6 +21500,11 @@ class Policy:
         _boss_intent_ramp_terminal_outcome_note = (
             self._consume_boss_intent_ramp_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_race_projection_latch_intent_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _race_projection_latch_intent_terminal_outcome_note = (
+            self._consume_race_projection_latch_intent_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         _race_projection_ratio_terminal_outcome_note = (
             self._consume_race_projection_ratio_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -21402,6 +21606,7 @@ class Policy:
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
+                            f"{_race_projection_latch_intent_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
@@ -21446,6 +21651,7 @@ class Policy:
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
+                        f"{_race_projection_latch_intent_terminal_outcome_note}"
                         f"{_race_projection_ratio_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
@@ -21474,6 +21680,7 @@ class Policy:
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_self_loss_phase_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
+                                f"{_race_projection_latch_intent_terminal_outcome_note}"
                                 f"{_race_projection_ratio_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"

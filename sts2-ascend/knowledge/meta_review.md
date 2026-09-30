@@ -14655,3 +14655,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level adapter rooted in the existing `.review-cache/selfcheck-pool` completed the full check with exit code 0 and `SELFCHECK OK`. The actual read-only 1790 replay and malformed-input probe passed, and the final targeted diff review/`git diff --check` will be performed before the local commit. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1791-1792: bridge first race-latch pressure to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1791,1792`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1792's F33 Knowledge Demon combat records the first race-latch pressure at decision index D427: `round=2/intent=17/intent_ema=5.1/loss_rate=17/intent_trend=+17/steam_eruption=0/pool=313/dpt=17.55/ttk=17.83/tsurv=4.76`. The later D457 `end_turn` is at T8/HP2 and D458 is `GAME_OVER` at final HP0, but the pre-change terminal tail only preserves separate drift/DPT/output observations. A bounded same-floor `COMBAT`/`CARD_SELECTION` join from D427 to the latest persisted `end_turn` should add one first-latch-pressure outcome marker without changing action or parameters. This is falsifiable: a floor or screen boundary, malformed source, non-`end_turn` tail, duplicate retry, or disabled switch must remain silent.
+- **EVIDENCE**: The complete exact-chain file `sts2-ascend/knowledge/runs/20260930-221439_0J4ZYUWSRDU8.json` contains 459 decisions. D427 is the F33/T2 source snapshot; D457 is F33/T8 `end_turn` at HP2 with incoming 13 and no usable output; D458 is F33 `continue_game_over` at final HP0. Intervening DPT observations swing from above projection to `0.20`, `0.45`, and `0.45` ratios before the terminal, while the existing D458 `RACE_PROJ_LATCH_INTENT_DRIFT_OBS` does not retain the source EMA/loss/Steam fields. Native evidence identifies the encounter as `KNOWLEDGE_DEMON` in `sts2-ascend/knowledge/game/v0.111.0/runtime/monsters.jsonl` and its mechanics record. A read-only replay of the production bridge over the persisted chain emitted the expected fields once with `bridge_decisions=30/bridge_rounds=6`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching same-combat Boss terminals, emit `RACE_PROJ_LATCH_INTENT_TERMINAL_OUTCOME_OBS` once with source pressure, terminal round/action/HP, outcome, final HP, and bridge length. Cross-floor, non-combat, malformed, duplicate, and off-switch cases remain silent; `continue_game_over`/`return_to_main_menu` and `{}` parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `race_projection_latch_intent_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest bounded same-floor first-latch pressure row at `GAME_OVER` and append an observation-only terminal bridge in all existing terminal-return branches. The new fields are not read by scoring, ranking, gates, action selection, or parameters; combat reset clears the pending/reported state.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD` boundary, and unchanged-action/params assertions.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare the exact D427-style source fields, terminal round/action/HP, outcome, final HP, bridge count, marker count, and action/params against the existing DPT/intent-drift tails.
+- **Adjust**: if real traces show source-token drift, stale selection, a screen/floor crossing, duplicate persistence, or non-finite values, retain the trace and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `race_projection_latch_intent_terminal_outcome_obs` to `False`; only the new terminal marker should disappear while the source marker, existing audits, action, and params remain unchanged. If needed, revert the local commit while retaining this evidence.
+- **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same selfcheck then completed through a clone-local process-level inherited-ACL temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted `git diff --check` passed (only Git's existing LF/CRLF notices), and the actual 1792 read-only replay emitted the expected D427-to-D457 bridge. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
