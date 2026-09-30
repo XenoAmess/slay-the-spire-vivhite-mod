@@ -21946,6 +21946,109 @@ def main() -> int:
         f"{d_exhaust_pressure_off.action}/{d_exhaust_pressure_off.params}/" \
         f"{d_exhaust_pressure_off.trace}"
 
+    # 3lsl-terminal) Bridge the observation-only LETHAL_SURVIVABLE_LINE source
+    # to the same-combat terminal result.  This must expose a false-survival
+    # prediction without changing continue_game_over or its empty parameters.
+    lsl_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "run": {"current_hp": 0},
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 22},
+    }
+    lsl_source_row = {
+        "screen": "COMBAT", "floor": 22, "turn": 4, "hp": 18,
+        "action": "play_card", "params": {"card_index": 3},
+        "reason": "combat source (LETHAL_SURVIVABLE_LINE)",
+    }
+    lsl_terminal_row = {
+        "screen": "COMBAT", "floor": 22, "turn": 4, "hp": 18,
+        "action": "end_turn", "params": {},
+        "reason": "combat terminal predecessor",
+    }
+    lsl_terminal_ctx = _SettleCtx()
+    lsl_terminal_ctx.decisions = [dict(lsl_source_row), dict(lsl_terminal_row)]
+    lsl_terminal_pol = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    d_lsl_terminal = lsl_terminal_pol.decide(
+        lsl_terminal_state, lsl_terminal_ctx)
+    assert (d_lsl_terminal.action == "continue_game_over"
+            and d_lsl_terminal.params == {}
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                in d_lsl_terminal.reason
+            and "/outcome=defeat/floor=22/source_round=4"
+                "/source_action=play_card/source_hp=18"
+                "/source_verdict=survivable"
+                in d_lsl_terminal.reason
+            and "/terminal_round=4/terminal_action=end_turn"
+                "/terminal_hp=18/final_hp=0/bridge_decisions=1/bridge_rounds=0"
+                in d_lsl_terminal.reason), \
+        f"LETHAL_SURVIVABLE_LINE 终局桥接缺失或动作漂移: {d_lsl_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "lethal_survivable_line_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 lethal_survivable_line_terminal_outcome_obs"
+
+    lsl_reload_ctx = _SettleCtx()
+    lsl_reload_ctx.decisions = [dict(lsl_source_row), dict(lsl_terminal_row)]
+    lsl_reload_pol = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    d_lsl_reload = lsl_reload_pol.decide(
+        lsl_terminal_state, lsl_reload_ctx)
+    assert (d_lsl_reload.action == d_lsl_terminal.action
+            and d_lsl_reload.params == d_lsl_terminal.params
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                in d_lsl_reload.reason), \
+        f"LETHAL_SURVIVABLE_LINE 终局桥接重载未恢复: {d_lsl_reload}"
+
+    lsl_off_know = knowledge.Knowledge(tmp)
+    lsl_off_know.policy["lethal_survivable_line_terminal_outcome_obs"] = False
+    lsl_off_pol = policy.Policy(lsl_off_know, random.Random(13))
+    lsl_off_ctx = _SettleCtx()
+    lsl_off_ctx.decisions = [dict(lsl_source_row), dict(lsl_terminal_row)]
+    d_lsl_off = lsl_off_pol.decide(lsl_terminal_state, lsl_off_ctx)
+    assert (d_lsl_off.action == d_lsl_terminal.action
+            and d_lsl_off.params == d_lsl_terminal.params
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                not in d_lsl_off.reason), \
+        f"LETHAL_SURVIVABLE_LINE 终局桥接关闭后动作或 marker 漂移: {d_lsl_off}"
+
+    lsl_boundary_ctx = _SettleCtx()
+    lsl_boundary_ctx.decisions = [
+        dict(lsl_source_row),
+        {"screen": "REWARD", "floor": 22,
+         "action": "collect_rewards_and_proceed", "reason": "room boundary"},
+        dict(lsl_terminal_row),
+    ]
+    lsl_boundary_pol = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    d_lsl_boundary = lsl_boundary_pol.decide(
+        lsl_terminal_state, lsl_boundary_ctx)
+    assert "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS" \
+        not in d_lsl_boundary.reason, \
+        f"LETHAL_SURVIVABLE_LINE 终局桥接越过房间边界: {d_lsl_boundary}"
+
+    lsl_card_bridge_ctx = _SettleCtx()
+    lsl_card_bridge_ctx.decisions = [
+        dict(lsl_source_row),
+        {"screen": "CARD_SELECTION", "floor": 22,
+         "action": "select_deck_card", "params": {},
+         "reason": "in-combat card modal"},
+        dict(lsl_terminal_row),
+    ]
+    lsl_card_bridge_pol = policy.Policy(
+        knowledge.Knowledge(tmp),
+        random.Random(13))
+    d_lsl_card_bridge = lsl_card_bridge_pol.decide(
+        lsl_terminal_state, lsl_card_bridge_ctx)
+    assert ("LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+            in d_lsl_card_bridge.reason
+            and "/bridge_decisions=2/bridge_rounds=0"
+            in d_lsl_card_bridge.reason), \
+        f"LETHAL_SURVIVABLE_LINE 战斗内选牌 modal 未正确桥接: {d_lsl_card_bridge}"
+
     # 3hshell) Native HARDENED_SHELL_POWER caps HP loss at 20 per turn.  The
     #          F11/1629 SKULKING_COLONY trace had 32 damage marked lethal while
     #          the target survived and dealt 18 on the next enemy turn.  Check
