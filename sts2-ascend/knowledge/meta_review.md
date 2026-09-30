@@ -13034,6 +13034,33 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-09-30 runs 1754-1757: bridge potion hand selection in terminal audit
+
+profile_id: `ironclad`
+requested_runs: `1754, 1755, 1756, 1757`
+production_code_commit: `2477aa849`
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The terminal prelock-defense audit recognized only `CARD_SELECTION/select_deck_card` as an in-combat modal. In run 1757 F30, the same-combat potion flow persisted D359 as `CARD_SELECTION/confirm_selection` with `combat_hand_select`, so the scan stopped before D347's `RACE_PRELOCK_DEFENSE_OBS`. This is falsifiable: only a same-floor `COMBAT -> CARD_SELECTION/confirm_selection -> COMBAT` row carrying `combat_hand_select` may restore the audit marker; the terminal action and params must remain unchanged.
+- **EVIDENCE**: Full `sts2-ascend/knowledge/runs/20260930-105250_F0U8C4U1CS93.json` was read (366 decisions). D347 is the F30/T1 `坚毅` source (`block=7`, `sample_turns=1`); D358-D360 are the potion/use-selection/COMBAT sequence; D359 is the exact `combat_hand_select` confirmation; D366 is `continue_game_over` with `{}` and lacked the prelock terminal marker. Replaying the 365 pre-GAME_OVER decisions with the patched policy emitted `source_round=1`, `terminal_round=6`, and `RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS`. A generic `confirm_selection` negative fixture remains silent. Runs 1754-1756 supplied the surrounding loss cohort but did not justify changing action selection.
+- **EXPECTED_SIGNAL**: Over the next 3-10 matching terminal windows, the marker appears only for the bounded same-floor combat-hand modal. Generic selection, room transitions, missing neighbors, other floors, and already-marked tails remain hard boundaries; `continue_game_over` and `{}` remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: accept `confirm_selection` only when its reason contains `combat_hand_select`, while retaining the immediate same-floor COMBAT-neighbor checks. This changes observation coverage only; scoring, candidate ordering, action, and params are untouched.
+- `sts2-ascend/brain/selfcheck.py`: add the potion confirmation positive case and a generic-confirmation negative case, both asserting action/params stability.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminal windows and compare source/terminal rounds, floor, marker scope, action, and params.
+- **Adjust**: if a real confirmation crosses a room boundary, lacks adjacent COMBAT rows, or carries ambiguous semantics, retain the sample and tighten the join; do not promote the observation into behavior.
+- **Rollback**: set `race_prelock_defense_terminal_outcome_obs` to `False`; this removes only the terminal observation marker.
+- **Validation**: the direct selfcheck launch hit the host's fixed 256-directory bootstrap limit; a process-level `tempfile.mkdtemp` adapter rooted in the clone's existing `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. Targeted `git diff --check` and final production diff review passed. No runtime, formal run/archive, learning memory, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 
 ## 2026-09-29 第1722局复盘（NONLETHAL_CHAIN_PRESSURE_TREND_OBS）
 

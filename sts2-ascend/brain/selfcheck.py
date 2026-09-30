@@ -20654,6 +20654,49 @@ def main() -> int:
         f"战斗内 CARD_SELECTION 桥接缺失或动作漂移: " \
         f"{d_rpre_terminal_card_bridge}"
 
+    # 3rpre-a2) 药水手牌选择在确认阶段会持久为
+    #          CARD_SELECTION/confirm_selection；仅凭相邻 COMBAT 与
+    #          combat_hand_select 语义跨接，普通确认模态仍是硬边界。
+    rpre_terminal_potion_bridge_ctx = _SettleCtx()
+    rpre_terminal_potion_bridge_ctx.decisions = [
+        dict(rpre_terminal_ctx.decisions[0]),
+        {"screen": "CARD_SELECTION", "floor": 7,
+         "action": "confirm_selection", "params": {},
+         "reason": "选牌界面（combat_hand_select）：已选 0 张，确认"},
+        dict(rpre_terminal_ctx.decisions[1]),
+    ]
+    rpre_terminal_potion_bridge_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal_potion_bridge = rpre_terminal_potion_bridge_pol.decide(
+        rpre_terminal_state, rpre_terminal_potion_bridge_ctx)
+    assert (d_rpre_terminal_potion_bridge.action == d_rpre_terminal.action
+            and d_rpre_terminal_potion_bridge.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_terminal_potion_bridge.reason
+            and "/source_round=2/source_action=play_card"
+                in d_rpre_terminal_potion_bridge.reason), \
+        f"药水手牌确认 CARD_SELECTION 桥接缺失或动作漂移: " \
+        f"{d_rpre_terminal_potion_bridge}"
+
+    # 3rpre-a3) A generic confirm_selection between COMBAT rows remains a
+    # hard boundary; only the combat_hand_select semantic may bridge it.
+    rpre_terminal_generic_confirm_ctx = _SettleCtx()
+    rpre_terminal_generic_confirm_ctx.decisions = [
+        dict(rpre_terminal_ctx.decisions[0]),
+        {"screen": "CARD_SELECTION", "floor": 7,
+         "action": "confirm_selection", "params": {},
+         "reason": "generic selection confirm"},
+        dict(rpre_terminal_ctx.decisions[1]),
+    ]
+    rpre_terminal_generic_confirm_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal_generic_confirm = rpre_terminal_generic_confirm_pol.decide(
+        rpre_terminal_state, rpre_terminal_generic_confirm_ctx)
+    assert (d_rpre_terminal_generic_confirm.action == d_rpre_terminal.action
+            and d_rpre_terminal_generic_confirm.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                not in d_rpre_terminal_generic_confirm.reason), \
+        f"普通确认 CARD_SELECTION 被错误跨接: " \
+        f"{d_rpre_terminal_generic_confirm}"
+
     rpre_terminal_reload_pol = policy.Policy(knowledge.Knowledge(tmp))
     d_rpre_terminal_reload = rpre_terminal_reload_pol.decide(
         rpre_terminal_state, rpre_terminal_ctx)

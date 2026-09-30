@@ -5026,15 +5026,24 @@ class Policy:
         _terminal_hp = _number(terminal.get("hp"))
         _start = max(0, len(decisions) - 64)
         def _is_in_combat_card_selection(row_index, row) -> bool:
-            """Treat an in-combat hand-choice modal as a same-combat row.
+            """Treat a bounded in-combat hand modal as a same-combat row.
 
             Armaments and similar cards temporarily expose CARD_SELECTION
-            between two COMBAT decisions.  It is not a room transition, but
-            a generic CARD_SELECTION from REST/SHOP must remain a hard
-            boundary so an older combat cannot feed this terminal join.
+            between two COMBAT decisions.  Potion hand-selection can expose
+            the same modal with ``confirm_selection`` after the cards have
+            already been chosen.  Neither is a room transition, but a
+            generic selection from REST/SHOP must remain a hard boundary so
+            an older combat cannot feed this terminal join.
             """
-            if (row.get("screen") != "CARD_SELECTION"
-                    or row.get("action") != "select_deck_card"):
+            if row.get("screen") != "CARD_SELECTION":
+                return False
+            _selection_action = row.get("action")
+            if _selection_action == "select_deck_card":
+                pass
+            elif (_selection_action == "confirm_selection"
+                  and "combat_hand_select" in str(row.get("reason") or "")):
+                pass
+            else:
                 return False
             if row_index <= 0 or row_index + 1 >= len(decisions):
                 return False
