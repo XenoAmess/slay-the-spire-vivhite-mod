@@ -907,6 +907,8 @@ class Policy:
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
         self._exhaust_cap_pressure_terminal_outcome_pending = None  # 最近一次消耗上限压力，等待 GAME_OVER 结局对账
         self._exhaust_cap_pressure_terminal_outcome_reported = False  # 消耗上限压力结局 marker 每场只写一次
+        self._thorns_reflect_terminal_outcome_pending = None  # 最近一次荆棘反伤，等待 GAME_OVER 结局对账
+        self._thorns_reflect_terminal_outcome_reported = False  # 荆棘反伤结局 marker 每场只写一次
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
@@ -2491,6 +2493,8 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
+            self._thorns_reflect_terminal_outcome_pending = None
+            self._thorns_reflect_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -5983,6 +5987,191 @@ class Policy:
             f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（EXHAUST_CAP_PRESSURE_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_thorns_reflect_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the latest same-floor Thorns reflection before GAME_OVER.
+
+        ``THORNS_REFLECT_OBS`` is persisted on the attack decision, while the
+        native terminal row only retains the final incoming attack.  Keep this
+        join bounded to the trailing COMBAT/CARD_SELECTION segment so a later
+        room cannot borrow an older reflection.  This is observation-only.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "thorns_reflect_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_thorns_reflect_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            # A GAME_OVER action may have been lost before persistence.  The
+            # durable marker is the retry proof, not this transient bit.
+            self._thorns_reflect_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_thorns_reflect_terminal_outcome_pending", None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        _tail = decisions[-1]
+        if not isinstance(_tail, dict) or _tail.get("action") != "end_turn":
+            return
+        if (floor is not None and _tail.get("floor") is not None
+                and str(_tail.get("floor")) != str(floor)):
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _number(value):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return parsed if math.isfinite(parsed) else None
+
+        _source = None
+        _source_index = None
+        _lookback_start = max(0, len(decisions) - 12)
+        for _index in range(len(decisions) - 1, _lookback_start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind("THORNS_REFLECT_OBS")
+            if _marker_at < 0:
+                continue
+            _prefix = _reason[:_marker_at]
+            _card_match = re.search(r"打出【(?P<card>[^】]+)】", _prefix)
+            _target_match = re.search(
+                r"→(?P<target>[^（｜|；;]+)", _prefix)
+            _damage_match = re.search(
+                r"单体伤害≈(?P<damage>[+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _prefix)
+            _reflect_match = re.search(
+                r"荆棘反伤≈(?P<reflect>[+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _prefix)
+            _context_match = re.search(
+                r"敌意图总伤(?P<incoming>[+-]?(?:\d+(?:\.\d*)?|\.\d+))"
+                r"[，,]\s*我方(?P<hp>[+-]?(?:\d+(?:\.\d*)?|\.\d+))血/"
+                r"(?P<block>[+-]?(?:\d+(?:\.\d*)?|\.\d+))甲",
+                _reason)
+            if (_card_match is None or _target_match is None
+                    or _damage_match is None or _reflect_match is None
+                    or _context_match is None):
+                continue
+            _values = {
+                "damage": _number(_damage_match.group("damage")),
+                "reflect": _number(_reflect_match.group("reflect")),
+                "incoming": _number(_context_match.group("incoming")),
+                "hp": _number(_context_match.group("hp")),
+                "block": _number(_context_match.group("block")),
+            }
+            if (any(value is None or value < 0.0
+                    for value in _values.values())
+                    or _values["reflect"] <= 0.0):
+                continue
+            _source = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "play_card",
+                "card": _card_match.group("card").strip() or "?",
+                "target": _target_match.group("target").strip() or "?",
+                **_values,
+            }
+            _source_index = _index
+            break
+        if _source is None or _source_index is None:
+            return
+
+        _terminal_round = _tail.get("turn", _tail.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round))
+                - int(float(_source.get("source_round"))))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        self._thorns_reflect_terminal_outcome_pending = {
+            **_source,
+            "terminal_round": _terminal_round,
+            "terminal_action": _tail.get("action") or "end_turn",
+            "terminal_hp": _tail.get("hp"),
+            "bridge_decisions": len(decisions) - _source_index - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._thorns_reflect_terminal_outcome_reported = False
+
+    def _consume_thorns_reflect_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the latest Thorns reflection to the native terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "thorns_reflect_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_thorns_reflect_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_thorns_reflect_terminal_outcome_reported", False))):
+            return ""
+        self._thorns_reflect_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；荆棘反伤终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/card={_pending.get('card') or '?'}"
+            f"/target={_pending.get('target') or '?'}"
+            f"/damage={_num(_pending.get('damage'))}"
+            f"/reflect={_num(_pending.get('reflect'))}"
+            f"/source_hp={_num(_pending.get('hp'))}"
+            f"/source_block={_num(_pending.get('block'))}"
+            f"/source_incoming={_num(_pending.get('incoming'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（THORNS_REFLECT_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
@@ -10901,6 +11090,8 @@ class Policy:
             self._nonlethal_unavailable_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
+            self._thorns_reflect_terminal_outcome_pending = None
+            self._thorns_reflect_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -19814,6 +20005,11 @@ class Policy:
         _exhaust_cap_pressure_terminal_outcome_note = (
             self._consume_exhaust_cap_pressure_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_thorns_reflect_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _thorns_reflect_terminal_outcome_note = (
+            self._consume_thorns_reflect_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_race_prelock_defense_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _race_prelock_defense_terminal_outcome_note = (
@@ -19879,6 +20075,7 @@ class Policy:
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
+                            f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
@@ -19915,6 +20112,7 @@ class Policy:
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
+                        f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
@@ -19937,6 +20135,7 @@ class Policy:
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
+                                f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"

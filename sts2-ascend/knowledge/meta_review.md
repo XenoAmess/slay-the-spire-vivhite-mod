@@ -14405,3 +14405,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the clone-local process-level ACL-preserving adapter ran the final code and exited 0 with `SELFCHECK OK`. The actual 1769 read-only replay matched all source/terminal/bridge fields above. Final targeted `git diff --check` and complete three-file diff review passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 run 1772: bridge THORNS_REFLECT_OBS to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1772`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1772's F30/T2 single-target attacks record `THORNS_REFLECT_OBS` with an estimated 5-point reflection, but the authoritative F30 `GAME_OVER` row only records the later 23-point incoming hit. A bounded same-floor combat-tail join should connect the latest reflection source to the terminal predecessor without changing the selected action or parameters. This is falsifiable: a screen/floor boundary, missing `end_turn` predecessor, malformed source, or disabled key must produce no new terminal marker.
+- **EVIDENCE**: The complete chain `sts2-ascend/knowledge/runs/20260930-161324_1GVYBN76HY93.json` contains run 1772's 333 decisions. D330 and D331 are F30/T2 `play_card` rows against `SPINY_TOAD`; the latest D331 (`STRIKE`) carries `单体伤害≈6.0` and `荆棘反伤≈5未计价（THORNS_REFLECT_OBS）`, with HP 14/block 0 and incoming intent 23. D332 is the same-floor `end_turn` at HP 9, and D333 is `GAME_OVER` at final HP 0. Native knowledge identifies `SPINY_TOAD`'s `SpikesMove` as applying 5 Thorns and `THORNS_POWER` as reflecting powered attack damage. The read-only replay recovered `source_round=2`, `damage=6`, `reflect=5`, `terminal_round=2`, and `final_hp=0`.
+- **EXPECTED_SIGNAL**: Across the next 3–10 matching terminal windows, emit `THORNS_REFLECT_TERMINAL_OUTCOME_OBS` only from the latest valid same-floor `COMBAT/CARD_SELECTION` tail within the bounded lookback, preserving source card/target, damage/reflection, source context, outcome, terminal HP, and bridge distance. `REWARD`/other-screen, cross-floor, missing-source, and off-switch cases remain silent; `continue_game_over`/`return_to_main_menu` action and `{}` parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `thorns_reflect_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: recover the latest same-floor Thorns source before the native terminal result and append one observation-only terminal note. State resets at run/combat boundaries; no score, candidate, target, gate, action, or parameter path uses the new fields.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, and `REWARD`-boundary assertions, including exact source/terminal fields and unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3–10 same-floor Thorns terminal windows and compare independently counted source-to-terminal rows, source/terminal rounds, card/target, damage/reflection, outcome, final HP, bridge distance, and action/params.
+- **Adjust**: if real traces show a stale source, screen/floor crossing, reason-token drift, invalid numeric context, or bridge-count mismatch, retain the failure and tighten only the observation parser; do not promote this marker into behavior.
+- **Rollback**: set `thorns_reflect_terminal_outcome_obs` to `False`; only `THORNS_REFLECT_TERMINAL_OUTCOME_OBS` should disappear, while existing Thorns pricing/guard observations, action, and params remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level ACL adapter using `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. The read-only production replay emitted `RUN1772_REPLAY OK` and matched the F30/T2 source/terminal fields. Final targeted diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

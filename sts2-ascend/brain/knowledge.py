@@ -1248,6 +1248,10 @@ DEFAULT_POLICY = {
                                         # 仍可能让单体攻击在支付后余血≤反伤时被选中；该键将这类
                                         # 攻击压到禁玩线并保留显式理由，覆盖击杀与非击杀目标。
                                         # 0=严格关闭本批闸门，恢复旧评分与动作。
+    "thorns_reflect_terminal_outcome_obs": True,  # 将同楼层荆棘反伤来源接回
+                                                   # 权威 GAME_OVER；只读记录来源牌、目标、
+                                                   # 反伤估算、终局与桥接距离，不改评分、目标、
+                                                   # 动作或参数；False 只移除该终局 marker。
     "vivhite_hp_gate_rescue_block": 1,  # 门拦净保命格挡救场放行（VIVHITE_HP_GATE_RESCUE_BLOCK，
                                         # 第 355~360 局批复盘新增，静态键）：余量门拦下的謦欬牌
                                        # 全部退出残能救场本意是断「付血换不空过」死循环，但救场

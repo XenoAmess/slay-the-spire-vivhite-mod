@@ -19665,6 +19665,112 @@ def main() -> int:
                 not in d_exhaust_pressure_boundary.reason), \
         f"消耗上限压力终局桥接越过 REWARD 边界: {d_exhaust_pressure_boundary}"
 
+    # 3z-5f) 荆棘反伤终局桥接：1772-F30 的两次单体攻击在
+    # THORNS_REFLECT_OBS 留下了约5点反伤，但原生 GAME_OVER 只保留下一次
+    # 23点来袭伤害。只恢复同楼层 COMBAT 尾部的最近来源，动作/参数、重载、
+    # 重复提交、关闭开关和 REWARD 边界都必须保持可证伪。
+    thorns_reflect_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 30,
+        "turn": 2, "hp": 14,
+        "reason":
+            "战斗：打出【打击】→棘刺蟾蜍（单体伤害≈6.0｜"
+            "荆棘反伤≈5未计价（THORNS_REFLECT_OBS）｜无甲孤注抢斩杀）；"
+            "敌意图总伤23，我方14血/0甲",
+    }
+    thorns_reflect_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 30,
+        "turn": 2, "hp": 9, "reason": "致死无牌空过",
+    }
+    thorns_reflect_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 30},
+        "run": {"current_hp": 0, "floor": 30},
+    }
+    thorns_reflect_know = knowledge.Knowledge(tmp)
+    thorns_reflect_pol = policy.Policy(thorns_reflect_know)
+    thorns_reflect_ctx = _SettleCtx()
+    thorns_reflect_ctx.decisions = [
+        dict(thorns_reflect_source_row), dict(thorns_reflect_terminal_row)]
+    d_thorns_reflect_terminal = thorns_reflect_pol.decide(
+        thorns_reflect_terminal_state, thorns_reflect_ctx)
+    assert (d_thorns_reflect_terminal.action == "continue_game_over"
+            and d_thorns_reflect_terminal.params == {}
+            and "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+                in d_thorns_reflect_terminal.reason
+            and "outcome=defeat/floor=30/source_round=2"
+                "/source_action=play_card/card=打击/target=棘刺蟾蜍"
+                "/damage=6/reflect=5/source_hp=14/source_block=0"
+                "/source_incoming=23/terminal_round=2"
+                "/terminal_action=end_turn/terminal_hp=9/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=0"
+                in d_thorns_reflect_terminal.reason), \
+        f"荆棘反伤终局桥接缺失或动作漂移: {d_thorns_reflect_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "thorns_reflect_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少荆棘反伤终局观测开关"
+
+    thorns_reflect_replay_ctx = _SettleCtx()
+    thorns_reflect_replay_ctx.decisions = [
+        dict(thorns_reflect_source_row), dict(thorns_reflect_terminal_row)]
+    d_thorns_reflect_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            thorns_reflect_terminal_state, thorns_reflect_replay_ctx)
+    assert (d_thorns_reflect_replay.action
+            == d_thorns_reflect_terminal.action
+            and d_thorns_reflect_replay.params
+            == d_thorns_reflect_terminal.params
+            and "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+                in d_thorns_reflect_replay.reason), \
+        f"进程重载后未恢复荆棘反伤终局桥接: {d_thorns_reflect_replay}"
+
+    thorns_reflect_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_thorns_reflect_terminal.action,
+        "floor": 30, "reason": d_thorns_reflect_terminal.reason})
+    d_thorns_reflect_duplicate = thorns_reflect_pol.decide(
+        thorns_reflect_terminal_state, thorns_reflect_ctx)
+    assert (d_thorns_reflect_duplicate.action
+            == d_thorns_reflect_terminal.action
+            and d_thorns_reflect_duplicate.params
+            == d_thorns_reflect_terminal.params
+            and "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+                not in d_thorns_reflect_duplicate.reason), \
+        f"荆棘反伤终局桥接重复提交: {d_thorns_reflect_duplicate}"
+
+    thorns_reflect_off_know = knowledge.Knowledge(tmp)
+    thorns_reflect_off_know.policy[
+        "thorns_reflect_terminal_outcome_obs"] = False
+    thorns_reflect_off_ctx = _SettleCtx()
+    thorns_reflect_off_ctx.decisions = [
+        dict(thorns_reflect_source_row), dict(thorns_reflect_terminal_row)]
+    d_thorns_reflect_off = policy.Policy(thorns_reflect_off_know).decide(
+        thorns_reflect_terminal_state, thorns_reflect_off_ctx)
+    assert (d_thorns_reflect_off.action == d_thorns_reflect_terminal.action
+            and d_thorns_reflect_off.params
+            == d_thorns_reflect_terminal.params
+            and "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+                not in d_thorns_reflect_off.reason), \
+        f"荆棘反伤终局开关关闭后动作或 marker 漂移: {d_thorns_reflect_off}"
+
+    thorns_reflect_boundary_ctx = _SettleCtx()
+    thorns_reflect_boundary_ctx.decisions = [
+        dict(thorns_reflect_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 30,
+         "reason": "combat boundary"},
+        dict(thorns_reflect_terminal_row),
+    ]
+    d_thorns_reflect_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            thorns_reflect_terminal_state, thorns_reflect_boundary_ctx)
+    assert (d_thorns_reflect_boundary.action
+            == d_thorns_reflect_terminal.action
+            and d_thorns_reflect_boundary.params
+            == d_thorns_reflect_terminal.params
+            and "THORNS_REFLECT_TERMINAL_OUTCOME_OBS"
+                not in d_thorns_reflect_boundary.reason), \
+        f"荆棘反伤终局桥接越过 REWARD 边界: {d_thorns_reflect_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{
