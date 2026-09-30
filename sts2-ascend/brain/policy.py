@@ -16352,8 +16352,9 @@ class Policy:
     def _card_pick_burst_audit(self, deck: list[dict], card: dict,
                                max_hp: int | None = None,
                                act: int | None = None,
-                               offer: list[dict] | None = None) -> str:
-        """Return a side-effect-free burst delta for a picked reward card.
+                               offer: list[dict] | None = None,
+                               forced: bool = False) -> str:
+        """Return a side-effect-free burst delta for a selected card.
 
         第1295~1301局批复盘扩展（供给归属测量）：61 条真机样本显示饥饿恒真
         （starved_after=1 占 61/61），二元饥饿旗标不再携带判别信息，拿牌端的
@@ -16364,7 +16365,9 @@ class Policy:
         已拿满、供给缺口归卡池；频繁 >0 则为拿牌端杠杆提供量化缺口。纯观测，
         候选测量异常时只省略新增字段，落牌侧旧口径逐字不变。
         """
-        if not bool(self.know.policy.get("card_pick_burst_audit", True)):
+        audit_key = ("card_pick_forced_burst_audit" if forced
+                     else "card_pick_burst_audit")
+        if not bool(self.know.policy.get(audit_key, True)):
             return ""
         try:
             base_deck = list(deck or [])
@@ -16374,8 +16377,12 @@ class Policy:
             card_id = str(card.get("card_id") or "").upper().rstrip("+") or "?"
         except (AttributeError, TypeError, ValueError):
             return ""
+        marker = ("CARD_BURST_FORCED_PICK_AUDIT"
+                  if forced else "CARD_BURST_PICK_AUDIT")
+        prefix = f"；{marker}:"
+        forced_field = "forced=1," if forced else ""
         base = (
-            f"；CARD_BURST_PICK_AUDIT:card={card_id},before={before:.1f},"
+            f"{prefix}{forced_field}card={card_id},before={before:.1f},"
             f"after={after:.1f},delta={after - before:+.1f},line={line:.1f},"
             f"starved_before={int(before < line)},starved_after={int(after < line)}"
         )
@@ -17607,13 +17614,21 @@ class Policy:
                 # 只挂在 REWARD/choose_reward_card 路径，而 v0.111.0 实战拿牌全部
                 # 经 CARD_SELECTION/select_deck_card（896 局留痕 choose_reward_card
                 # 零出现、审计零显形）——自愿奖励被接受时同样追加前后有效爆发审计，
-                # 观测位只有在真实消费路径上才产生真机留痕。强制入组/牌堆顶/献祭/
-                # 升级等语义分支照旧不追加。第1295~1301批复盘：同一 offer 的落选
+                # 观测位只有在真实消费路径上才产生真机留痕。牌堆顶/献祭/升级等
+                # 语义分支照旧不追加；强制入组在下方使用独立 marker。第1295~1301批复盘：同一 offer 的落选
                 # 候选一并供给测量（offer_max/supply_left），饥饿恒真后区分
                 # 「offer 无供给」与「供给留在桌上」。
                 explore_note += self._card_pick_burst_audit(
                     deck, pick, max_hp=_mh, act=_sel_act,
                     offer=[c for _v, c in scored])
+            elif not top_of_pile:
+                # Mandatory additions are not voluntary reward offers, so they
+                # use a separate audit key. Keep the same before/after and
+                # offer-max arithmetic without changing the selected card or
+                # the select_deck_card action.
+                explore_note += self._card_pick_burst_audit(
+                    deck, pick, max_hp=_mh, act=_sel_act,
+                    offer=[c for _v, c in scored], forced=True)
             # 余裕稀缺加分真实路径观测（第 307~314 局批复盘）：自愿/强制拿牌
             # 分支都在此处补留痕，评分本体不受影响
             explore_note += self._vivhite_margin_pick_note(pick, deck)

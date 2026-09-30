@@ -5894,3 +5894,39 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ## REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-09-30 第1727~1750局批：强制 CARD_SELECTION 输出供给审计
+
+profile_id: `vivhite`
+production_code_commit: `ec7965a93aa5c68b4157726b43d938f2776d6723`（生产代码与自检提交）
+
+### ATTRIBUTION
+
+- 本批主归因是「强制选牌的输出供给来源不可分辨」这一观测缺口，不把 F48 的 Boss 竞速失败直接归因于高血量、生命支付或某张牌。战斗侧已有输出容量与终局审计，故本批只补选牌侧证据。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1750局 `6U7TS63VCUKB` 的 F48 强制 `CARD_SELECTION/select_deck_card`（包括 `CLOSED_PROJECTION`、`LUMINOUS_PROJECTION+`）已有 `forced=1` 的生命支付选牌留痕，但现有 `CARD_BURST_PICK_AUDIT` 只挂在可跳过的自愿 offer 分支，因此无法区分「强制候选本身没有输出供给」与「供给留在未选候选」。若为强制入组增加独立的前后爆发、候选最大增量和 `supply_left` 观测，后续即可验证该归因而不改变选牌动作。
+- **EVIDENCE**：已完整回读 `sts2-ascend/knowledge/profiles/vivhite/runs/20260930-075953_6U7TS63VCUKB.json`；最新失败链为 785 条 decisions，packet 保留 80 条、裁剪 705 条，完整源文件可用。F48 在回合8已留下竞速输出容量、支付后余量和 `LETHAL_UNAVAILABLE_END_TURN_OBS`，但强制选牌没有 `CARD_BURST_PICK_AUDIT`；证据支持补观测，不单独证明选牌供给是唯一死因。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Vivhite run 中，通用强制 `select_deck_card` 应出现一次 `CARD_BURST_FORCED_PICK_AUDIT`，包含 `forced=1`、`before/after/delta/line`、`offer_max/supply_left`；自愿分支仍保持旧 marker。删除、变化、升级、献祭和牌堆顶语义不得出现该 marker；`action/params`、排序、等待与学习统计必须不变。错语义、重复、候选算术不守恒或动作漂移即证伪。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `card_pick_forced_burst_audit`，仅控制强制入组观测。
+- `sts2-ascend/brain/policy.py`：复用无副作用的爆发差值计算，但强制分支使用独立 key 与 `CARD_BURST_FORCED_PICK_AUDIT` marker；只在非自愿、非牌堆顶的通用 `CARD_SELECTION` 路径追加候选供给对账，不进入评分、排序、目标、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：新增强制选牌 marker、字段、关闭键和 action/params 不漂移回归；既有自愿 marker 回归保持不变。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+### VALIDATION
+
+- 直接 selfcheck 命中宿主固定 256 槽临时池上限；随后使用同一 selfcheck 的进程级继承 ACL 临时目录适配执行，退出码 0，输出 `SELFCHECK OK`。
+- 已回读三处生产/自检 diff；目标源码 `git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续3~10个独立 run，按强制/自愿、选牌语义、`offer_max`、落牌 delta、`supply_left`、同局输出饥饿和最终胜负分层；marker 出现本身不升级为行为闸门。
+- 若 marker 出现在牌堆顶/变化/升级/献祭等语义，或字段与候选不守恒、action/params 漂移，将 `card_pick_forced_burst_audit=False`；必要时回滚本地 commit，保留本批证据并暂停归因升级。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

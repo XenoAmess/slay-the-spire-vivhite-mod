@@ -16832,6 +16832,42 @@ def main() -> int:
             and "CARD_BURST_PICK_AUDIT" not in d_cs_audit_off.reason), \
         f"观测键关闭后 CARD_SELECTION 审计未消失或选择漂移: {d_cs_audit_off.reason}"
 
+    # 3zz-audit-forced) 强制入组也要把输出供给缺口落盘，但使用独立开关和
+    # marker，避免把升级/变化/弃牌/置顶与自愿 offer 的旧口径混在一起；审计
+    # 关闭不得改变强制 select_deck_card 的动作或参数。
+    cs_forced_state = {
+        "screen": "CARD_SELECTION", "run_id": "RUN_BURST_AUDIT_FORCED",
+        "available_actions": ["select_deck_card"],
+        "selection": dict(
+            cs_audit_state["selection"],
+            cards=[
+                dict(offer_card, index=0, card_id="CS_FORCED_ATK"),
+                {"index": 1, "card_id": "CS_FORCED_BLK", "name": "强制格挡",
+                 "card_type": "Skill", "energy_cost": 1,
+                 "dynamic_values": [{"name": "Block", "current_value": 5}]},
+            ]),
+        "run": {"current_hp": 70, "max_hp": 80, "floor": 5, "deck": []}}
+    cs_audit_ctx.run_id = "RUN_BURST_AUDIT_FORCED"
+    cs_audit_know.policy["card_pick_burst_audit"] = True
+    cs_audit_know.policy["card_pick_forced_burst_audit"] = True
+    d_cs_forced = cs_audit_pol.decide(cs_forced_state, cs_audit_ctx)
+    assert (d_cs_forced.action == "select_deck_card"
+            and "CARD_BURST_FORCED_PICK_AUDIT:" in d_cs_forced.reason
+            and "forced=1" in d_cs_forced.reason
+            and "before=" in d_cs_forced.reason
+            and "after=" in d_cs_forced.reason
+            and "delta=" in d_cs_forced.reason
+            and "offer_max=" in d_cs_forced.reason
+            and "supply_left=" in d_cs_forced.reason), \
+        f"强制 CARD_SELECTION 缺少输出供给审计: {d_cs_forced.reason}"
+    cs_audit_know.policy["card_pick_forced_burst_audit"] = False
+    d_cs_forced_off = cs_audit_pol.decide(cs_forced_state, cs_audit_ctx)
+    assert (d_cs_forced_off.action == d_cs_forced.action
+            and d_cs_forced_off.params == d_cs_forced.params
+            and "CARD_BURST_FORCED_PICK_AUDIT" not in d_cs_forced_off.reason), \
+        f"强制输出审计关闭后动作漂移或 marker 未消失: {d_cs_forced_off.reason}"
+    cs_audit_know.policy["card_pick_forced_burst_audit"] = True
+
     # 3zz-audit-supply) CARD_BURST_PICK_AUDIT 落选侧供给测量（第1295~1301批
     # 复盘）：饥饿恒真（61/61 starved_after=1）后，审计必须同时报告同一 offer
     # 的最大有效爆发候选（offer_max）与供给留在桌上的差值（supply_left），

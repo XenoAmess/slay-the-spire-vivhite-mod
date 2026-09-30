@@ -750,6 +750,7 @@ DEFAULT_POLICY = {
                                   # 「税牌旁观HAND_TAX_PLAY_AUDIT：名=参选分含止损/
                                   # 无附加/未参选」段。纯观测不改分，置 False 即关闭
     "card_pick_burst_audit": True,  # reward card selection audit; observation only
+    "card_pick_forced_burst_audit": True,  # mandatory CARD_SELECTION burst supply audit; observation only
     "engine_bias_relief_deficit": 0.30,  # 引擎 learned 负分豁免的缺口深度门槛：DEMON_FORM -3.0 bias
                                   # 来自「必败局拿了也没用」的归因倒置，深缺口局面豁免其负分压制；
                                   # 缺口低于此值（卡组接近成型）恢复全额学习信号
