@@ -6837,28 +6837,6 @@ class Policy:
                 f"/last_round={_round(_pending.get('energy_pressure_last_round'))}"
                 "/energy=0/hook_locked=0"
                 "（NONLETHAL_UNAVAILABLE_ENERGY_PRESSURE_OBS）")
-        _race_latch_intent_terminal_tail = ""
-        try:
-            _race_latch_intent_terminal_enabled = bool(int(float(pol.get(
-                "race_projection_latch_intent_nonlethal_terminal_obs", 1)
-                or 0)))
-        except (TypeError, ValueError, OverflowError):
-            _race_latch_intent_terminal_enabled = False
-        _race_latch_intent_terminal = _pending.get(
-            "race_latch_intent_terminal")
-        if (_race_latch_intent_terminal_enabled
-                and isinstance(_race_latch_intent_terminal, dict)):
-            _race_latch_intent_terminal_tail = (
-                "；竞速首次入锁→非致死终局意图桥："
-                f"outcome={_result}"
-                f"/latch_round={_round(_race_latch_intent_terminal.get('latch_round'))}"
-                f"/latch_intent={_num(_race_latch_intent_terminal.get('latch_intent'))}"
-                f"/source_round={_round(_race_latch_intent_terminal.get('source_round'))}"
-                f"/source_incoming={_num(_race_latch_intent_terminal.get('source_incoming'))}"
-                f"/intent_delta={_num(_race_latch_intent_terminal.get('intent_delta'))}"
-                f"/bridge_rounds={_round(_race_latch_intent_terminal.get('bridge_rounds'))}"
-                f"/terminal_overlap={_text(_race_latch_intent_terminal.get('terminal_overlap'))}"
-                "（RACE_PROJ_LATCH_INTENT_NONLETHAL_TERMINAL_OBS）")
         _terminal_tail_note = ""
         try:
             _terminal_tail_enabled = bool(int(float(pol.get(
@@ -6930,7 +6908,6 @@ class Policy:
                if _chain else "")
             + _pressure_tail
             + _energy_pressure_tail
-            + _race_latch_intent_terminal_tail
             + _terminal_tail_note
             + _overlap_tail
             + _steam_veto_tail
@@ -7225,72 +7202,6 @@ class Policy:
         _energy_pressure_all = bool(
             _pressure_count >= 2
             and len(_energy_pressure_rows) == _pressure_count)
-
-        # The first live race-latch pressure snapshot is persisted on a
-        # play_card row, while the non-lethal terminal source may be several
-        # same-combat rows later.  Join only the chronological prefix ending
-        # at the selected non-lethal source; the bounded COMBAT segment above
-        # prevents a prior room from supplying the latch.
-        _race_latch_intent_terminal = None
-        _source_segment_end = len(_combat_segment)
-        for _segment_index, _candidate in enumerate(_combat_segment):
-            if _candidate is row:
-                _source_segment_end = _segment_index + 1
-                break
-
-        def _race_latch_number(_reason, _name, _marker_required=True):
-            _marker_at = _reason.find("RACE_PROJ_LATCH_INTENT_PRESSURE_OBS")
-            if _marker_required and _marker_at < 0:
-                return None
-            _search_text = (_reason[:_marker_at]
-                            if _marker_at >= 0 else _reason)
-            _match = re.search(
-                rf"(?<![A-Za-z0-9_]){re.escape(_name)}="
-                rf"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
-                _search_text)
-            if not _match:
-                return None
-            try:
-                _value = float(_match.group(1))
-            except (TypeError, ValueError, OverflowError):
-                return None
-            return _value if math.isfinite(_value) else None
-
-        try:
-            _source_round_for_race = int(float(
-                row.get("turn", row.get("round"))))
-        except (TypeError, ValueError, OverflowError):
-            _source_round_for_race = None
-        if _source_round_for_race is not None:
-            for _candidate in _combat_segment[:_source_segment_end]:
-                if not isinstance(_candidate, dict):
-                    continue
-                _candidate_reason = str(_candidate.get("reason") or "")
-                if "RACE_PROJ_LATCH_INTENT_PRESSURE_OBS" not in _candidate_reason:
-                    continue
-                _latch_round = _race_latch_number(_candidate_reason, "round")
-                _latch_intent = _race_latch_number(_candidate_reason, "intent")
-                _source_incoming = _race_latch_number(
-                    str(row.get("reason") or ""), "incoming",
-                    _marker_required=False)
-                if (_latch_round is None or _latch_intent is None
-                        or _source_incoming is None
-                        or _latch_round < 0.0 or _latch_intent < 0.0
-                        or _source_incoming < 0.0
-                        or _latch_round > _source_round_for_race):
-                    continue
-                _race_latch_intent_terminal = {
-                    "latch_round": int(_latch_round),
-                    "latch_intent": _latch_intent,
-                    "source_round": _source_round_for_race,
-                    "source_incoming": _source_incoming,
-                    "intent_delta": _source_incoming - _latch_intent,
-                    "bridge_rounds": max(
-                        0, _source_round_for_race - int(_latch_round)),
-                    "terminal_overlap": _terminal_overlap,
-                }
-                break
-
         reason = str(row.get("reason") or "")
         marker_at = reason.rfind("NONLETHAL_UNAVAILABLE_END_TURN_OBS")
         if marker_at < 0:
@@ -7362,7 +7273,6 @@ class Policy:
                 "hand_raw_survival": _token("hand_raw_survival") or "unknown",
                 "block_locked": _token("block_locked") or "unknown",
                 "steam_veto_bridge": _steam_veto_bridge,
-                "race_latch_intent_terminal": _race_latch_intent_terminal,
             }
         except (TypeError, ValueError, OverflowError):
             return

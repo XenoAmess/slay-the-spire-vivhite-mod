@@ -251,7 +251,6 @@ DEFAULT_POLICY = {
     "race_audit_projection_intent_drift_obs": True,  # Audit-only first-latch versus terminal incoming-intent comparison; False removes only this tail.
     "race_audit_projection_roster_obs": True,  # Audit-only first-latch versus terminal live-enemy roster comparison; False removes only the roster tails.
     "race_projection_latch_intent_obs": True,  # Audit-only first live-latch pressure snapshot (current intent/EMA, loss rate and Steam Eruption); False removes only this marker.
-    "race_projection_latch_intent_nonlethal_terminal_obs": True,  # Audit-only bounded join from a persisted first-latch pressure snapshot to a non-lethal terminal source; False removes only this tail.
     "kill_race_terminal_latch_hold_obs": True,  # Audit-only link for whether RACE_ESC_LATCH_HOLD occurred before the terminal join; False removes only this tail.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
     "lethal_playable_reject_outcome_obs": True,  # Audit-only link from that rejection to the next GAME_OVER result; False removes only the outcome marker.
