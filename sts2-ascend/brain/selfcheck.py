@@ -18761,6 +18761,9 @@ def main() -> int:
         "race_audit_projection_latch_drift_obs"] is True, \
         "DEFAULT_POLICY 缺少 race_audit_projection_latch_drift_obs 默认开关"
     assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_survival_rebase_obs"] is True, \
+        "DEFAULT_POLICY 缺少 race_audit_projection_survival_rebase_obs 默认开关"
+    assert knowledge.DEFAULT_POLICY[
         "race_audit_projection_intent_drift_obs"] is True, \
         "DEFAULT_POLICY 缺少 race_audit_projection_intent_drift_obs 默认开关"
 
@@ -18875,6 +18878,12 @@ def main() -> int:
             "（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）"
             in d_race_terminal_outcome.reason), \
         f"竞速首末投影漂移对账缺失: {d_race_terminal_outcome}"
+    assert ("terminal_round=6/latch_tsurv=8/terminal_tsurv=0.5"
+            "/actual_over_latch=0.75/actual_over_terminal=12.00"
+            "/terminal_over_latch=0.06"
+            "（RACE_PROJ_SURVIVAL_REBASE_OBS）"
+            in d_race_terminal_outcome.reason), \
+        f"竞速首末生存线重基准观测缺失: {d_race_terminal_outcome}"
     assert ("latch_roster=BOSS#0、TWO_TAILED_RAT#1"
             "/latch_roster_count=2/terminal_roster=BOSS#0"
             "/terminal_roster_count=1/roster_changed=yes"
@@ -18954,6 +18963,12 @@ def main() -> int:
             "（RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS）"
             in d_race_terminal_replay.reason), \
         f"进程重载后未恢复竞速首末投影对账: {d_race_terminal_replay}"
+    assert ("terminal_round=6/latch_tsurv=8/terminal_tsurv=0.5"
+            "/actual_over_latch=0.75/actual_over_terminal=12.00"
+            "/terminal_over_latch=0.06"
+            "（RACE_PROJ_SURVIVAL_REBASE_OBS）"
+            in d_race_terminal_replay.reason), \
+        f"进程重载后未恢复首末生存线重基准: {d_race_terminal_replay}"
     assert ("latch_roster=BOSS#0、TWO_TAILED_RAT#1"
             "/latch_roster_count=2/terminal_roster=BOSS#0"
             "/terminal_roster_count=1/roster_changed=yes"
@@ -19033,9 +19048,34 @@ def main() -> int:
             in d_race_terminal_drift_off.reason
             and "RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS"
             not in d_race_terminal_drift_off.reason
+            and "RACE_PROJ_SURVIVAL_REBASE_OBS"
+            not in d_race_terminal_drift_off.reason
             and "RACE_PROJ_LATCH_SNAPSHOT_OBS"
             not in d_race_terminal_drift_off.reason), \
         f"竞速首末投影观测关闭后 action/marker 漂移: {d_race_terminal_drift_off}"
+
+    race_terminal_survival_off_know = knowledge.Knowledge(tmp)
+    race_terminal_survival_off_know.policy[
+        "race_audit_projection_survival_rebase_obs"] = False
+    race_terminal_survival_off_pol = policy.Policy(
+        race_terminal_survival_off_know)
+    race_terminal_survival_off_ctx = _SettleCtx()
+    race_terminal_survival_off_ctx.decisions = [{
+        "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }]
+    d_race_terminal_survival_off = race_terminal_survival_off_pol.decide(
+        race_terminal_outcome_state, race_terminal_survival_off_ctx)
+    assert (d_race_terminal_survival_off.action
+            == d_race_terminal_outcome.action
+            and d_race_terminal_survival_off.params
+            == d_race_terminal_outcome.params
+            and "KILL_RACE_TERMINAL_OUTCOME_OBS"
+            in d_race_terminal_survival_off.reason
+            and "RACE_PROJ_SURVIVAL_REBASE_OBS"
+            not in d_race_terminal_survival_off.reason), \
+        f"竞速首末生存线重基准关闭后 action/marker 漂移: " \
+        f"{d_race_terminal_survival_off}"
 
     race_terminal_roster_off_know = knowledge.Knowledge(tmp)
     race_terminal_roster_off_know.policy[

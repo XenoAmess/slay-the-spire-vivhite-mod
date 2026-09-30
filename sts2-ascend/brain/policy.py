@@ -5412,6 +5412,41 @@ class Policy:
             except (KeyError, TypeError, ValueError, OverflowError):
                 pass
 
+        _survival_rebase_tail = ""
+        try:
+            _survival_rebase_obs = bool(int(float(pol.get(
+                "race_audit_projection_survival_rebase_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _survival_rebase_obs = False
+        if (_survival_rebase_obs and _latch_projection_obs
+                and isinstance(_latch_projection, dict)):
+            try:
+                _terminal_round_value = float(_pending["terminal_round"])
+                _latch_tsurv = float(_latch_projection["tsurv"])
+                _terminal_tsurv = float(_projection["tsurv"])
+                if (math.isfinite(_terminal_round_value)
+                        and math.isfinite(_latch_tsurv)
+                        and math.isfinite(_terminal_tsurv)
+                        and _terminal_round_value > 0.0
+                        and _latch_tsurv > 0.0
+                        and _terminal_tsurv > 0.0):
+                    _actual_over_latch = (
+                        _terminal_round_value / _latch_tsurv)
+                    _actual_over_terminal = (
+                        _terminal_round_value / _terminal_tsurv)
+                    _terminal_over_latch = _terminal_tsurv / _latch_tsurv
+                    _survival_rebase_tail = (
+                        f"；竞速生存线首末重基准：terminal_round="
+                        f"{_round(_terminal_round_value)}"
+                        f"/latch_tsurv={_latch_tsurv:g}"
+                        f"/terminal_tsurv={_terminal_tsurv:g}"
+                        f"/actual_over_latch={_actual_over_latch:.2f}"
+                        f"/actual_over_terminal={_actual_over_terminal:.2f}"
+                        f"/terminal_over_latch={_terminal_over_latch:.2f}"
+                        "（RACE_PROJ_SURVIVAL_REBASE_OBS）")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                pass
+
         _roster_drift_tail = ""
         try:
             _roster_obs = bool(int(float(pol.get(
@@ -5489,6 +5524,7 @@ class Policy:
             f"{_capacity_tail}"
             f"{_capacity_transition_tail}"
             f"{_latch_projection_tail}"
+            f"{_survival_rebase_tail}"
             f"{_roster_drift_tail}"
             f"{_intent_drift_tail}"
             "（KILL_RACE_TERMINAL_OUTCOME_OBS）")

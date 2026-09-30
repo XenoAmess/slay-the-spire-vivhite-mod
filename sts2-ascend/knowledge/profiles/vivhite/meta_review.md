@@ -5930,3 +5930,39 @@ production_code_commit: `ec7965a93aa5c68b4157726b43d938f2776d6723`（生产代�
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-09-30 第1751~1753局批：竞速生存线首末重基准观测
+
+profile_id: `vivhite`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### ATTRIBUTION
+
+- 本批主归因是「首个竞速 latch 的生存线可能过时」这一可观测性缺口，不把 F33 阵亡直接归因于入场血量、生命支付、Boss 意图或某张牌。现有终局首末投影、意图、编制和输出容量审计均保留，因此只补首末生存线的可比比值。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1753局 `JJCJGPRJTAPB` 的 F33 首锁 `tsurv=3` 使现有 `actual_over_projected_survival=3.67` 偏大；终局最新投影若已重估为 `tsurv=5.97658`，实际 11 回合相对终局投影应降至约 `1.84`。同时记录两者，才能区分首锁过时与终局仍乐观。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/profiles/vivhite/runs/20260930-094228_JJCJGPRJTAPB.json`；F33 首次竞速锁定为 T3，终局为 T11、defeat。现有链已记录 `latch pool=281/dpt=57/ttk=4.92982/tsurv=3`、终局 `pool=58/dpt=30.9091/ttk=1.87647/tsurv=5.97658` 和 survival ratio `3.67`，但没有 `actual/terminal_tsurv` 的对照字段。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立、已锁定的 Vivhite Boss 终局，GAME_OVER 竞速对账应追加 `RACE_PROJ_SURVIVAL_REBASE_OBS`，包含 `terminal_round`、`latch_tsurv`、`terminal_tsurv`、`actual_over_latch`、`actual_over_terminal`、`terminal_over_latch`。若终局比持续低于首锁比，支持“首锁过时”；若两者接近、终局比不降或字段与既有首末投影不一致，则证伪。action、params、竞速判定和学习统计必须不变。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_audit_projection_survival_rebase_obs`，只控制该终局观测。
+- `sts2-ascend/brain/policy.py`：在已有 `KILL_RACE_TERMINAL_OUTCOME_OBS` 终局 join 中，复用持久化首锁/终局投影，按正的有限生存线计算首锁比、终局比和终局相对首锁的重基准比；不进入评分、候选、等待、动作、参数或学习统计。
+- `sts2-ascend/brain/selfcheck.py`：覆盖默认开关、GAME_OVER 输出、进程重载恢复、父观测关闭和本观测关闭；关闭时 action/params 与既有终局 marker 保持不变。
+- 未修改 profile `policy.json`、stats、progression、lessons、runs、`.runtime`、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+### VALIDATION
+
+- 直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 已执行；新增夹具断言通过，宿主固定 256 槽临时池随后耗尽。使用同一 selfcheck 的进程级继承 ACL 临时目录适配执行，退出码 0，输出 `SELFCHECK OK`。
+- 已回读三处完整源码/自检 diff；目标 `git diff --check` 通过（exit 0），仅有 Git 的 LF/CRLF 提示。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite Boss 竞速终局，按 run/floor、胜负、latch/terminal 生存线、三种比值、首末投影 drift 和终局回合数分层；marker 出现本身不升级为行为门。
+- 若 marker 缺失、重载后字段改变、非正/非有限值错误显形，或 action/params 漂移，将 `race_audit_projection_survival_rebase_obs=0`；必要时回滚本地 commit，保留既有 `RACE_PROJ_LATCH_TERMINAL_DRIFT_OBS` 与 `RACE_PROJ_SURVIVAL_RATIO_OBS`。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])
