@@ -13303,6 +13303,110 @@ def main() -> int:
                 not in _d_self_loss_phase_terminal_boundary.reason), \
         f"自损相位终局桥接越过 REWARD 边界: " \
         f"{_d_self_loss_phase_terminal_boundary}"
+    # 3br-longfight-joint-survival-terminal：1789-F22 的即时生还余量来源
+    # 在同楼层战斗尾部给出 survives=yes，但 GAME_OVER 原先没有把最后一次
+    # 手牌/能量余量接回终局。桥接只读同楼层 COMBAT/CARD_SELECTION 尾部，
+    # 覆盖重载、重复提交、关闭开关和 REWARD 边界，action/params 必须不变。
+    _joint_margin_terminal_note = (
+        "F22 Monster战｜长战联合复核即时生还对账：hp=25/block=5/"
+        "incoming=13/energy=2/hand_block_cap=0/post_block_gap=8/"
+        "survives=yes/cards=none（LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS）")
+    _joint_margin_terminal_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 22,
+        "turn": 4, "hp": 25, "reason": _joint_margin_terminal_note,
+    }
+    _joint_margin_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 22,
+        "turn": 6, "hp": 1, "reason": "终端战斗尾部",
+    }
+    _joint_margin_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 22},
+        "run": {"current_hp": 0, "floor": 22},
+    }
+    _joint_margin_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    _joint_margin_terminal_ctx = _make_longfight_terminal_ctx(
+        [_joint_margin_terminal_note],
+        [_joint_margin_terminal_source_row, _joint_margin_terminal_row])
+    _d_joint_margin_terminal = _joint_margin_terminal_pol.decide(
+        _joint_margin_terminal_state, _joint_margin_terminal_ctx)
+    assert knowledge.DEFAULT_POLICY[
+        "longfight_joint_survival_margin_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少长战即时生还余量终局观测开关"
+    assert (_d_joint_margin_terminal.action == "continue_game_over"
+            and _d_joint_margin_terminal.params == {}
+            and _d_joint_margin_terminal.reason.count(
+                "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=22"
+                "/source_floor=22/source_round=4/source_action=play_card"
+                "/source_hp=25/source_block=5/incoming=13/energy=2"
+                "/hand_block_cap=0/post_block_gap=8/survives=yes/cards=none"
+                "/terminal_round=6/terminal_action=end_turn/terminal_hp=1"
+                "/final_hp=0"
+                in _d_joint_margin_terminal.reason), \
+        f"长战即时生还余量终局桥接缺失或动作漂移: {_d_joint_margin_terminal}"
+    _d_joint_margin_terminal_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _joint_margin_terminal_state,
+            _make_longfight_terminal_ctx(
+                [_joint_margin_terminal_note],
+                [_joint_margin_terminal_source_row, _joint_margin_terminal_row]))
+    assert (_d_joint_margin_terminal_reload.action
+            == _d_joint_margin_terminal.action
+            and _d_joint_margin_terminal_reload.params
+            == _d_joint_margin_terminal.params
+            and "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS"
+                in _d_joint_margin_terminal_reload.reason), \
+        f"进程重载后未恢复长战即时生还余量终局桥接: " \
+        f"{_d_joint_margin_terminal_reload}"
+    _joint_margin_terminal_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 22, "reason": _d_joint_margin_terminal.reason})
+    _d_joint_margin_terminal_duplicate = _joint_margin_terminal_pol.decide(
+        _joint_margin_terminal_state, _joint_margin_terminal_ctx)
+    assert (_d_joint_margin_terminal_duplicate.action
+            == _d_joint_margin_terminal.action
+            and _d_joint_margin_terminal_duplicate.params
+            == _d_joint_margin_terminal.params
+            and "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS"
+                not in _d_joint_margin_terminal_duplicate.reason), \
+        f"长战即时生还余量终局桥接重复提交: " \
+        f"{_d_joint_margin_terminal_duplicate}"
+    _joint_margin_terminal_off_know = knowledge.Knowledge(tmp)
+    _joint_margin_terminal_off_know.policy[
+        "longfight_joint_survival_margin_terminal_outcome_obs"] = False
+    _d_joint_margin_terminal_off = policy.Policy(
+        _joint_margin_terminal_off_know).decide(
+            _joint_margin_terminal_state,
+            _make_longfight_terminal_ctx(
+                [_joint_margin_terminal_note],
+                [_joint_margin_terminal_source_row, _joint_margin_terminal_row]))
+    assert (_d_joint_margin_terminal_off.action
+            == _d_joint_margin_terminal.action
+            and _d_joint_margin_terminal_off.params
+            == _d_joint_margin_terminal.params
+            and "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS"
+                not in _d_joint_margin_terminal_off.reason), \
+        f"长战即时生还余量终局开关关闭后动作或 marker 漂移: " \
+        f"{_d_joint_margin_terminal_off}"
+    _d_joint_margin_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _joint_margin_terminal_state,
+            _make_longfight_terminal_ctx(
+                [_joint_margin_terminal_note],
+                [_joint_margin_terminal_source_row, _joint_margin_terminal_row,
+                 {"screen": "REWARD", "action": "proceed", "floor": 22,
+                  "reason": "奖励边界"}]))
+    assert (_d_joint_margin_terminal_boundary.action
+            == _d_joint_margin_terminal.action
+            and _d_joint_margin_terminal_boundary.params
+            == _d_joint_margin_terminal.params
+            and "LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS"
+                not in _d_joint_margin_terminal_boundary.reason), \
+        f"长战即时生还余量终局桥接越过 REWARD 边界: " \
+        f"{_d_joint_margin_terminal_boundary}"
     # 3br-longfight-joint-survival：第1592局 F25-T8 的联合复核放行发生在
     # hp=7、incoming=24 的即时致死边界；当前两张1费格挡各8点时，2费上限只能
     # 形成16格挡，故应显式记录 survives=no。该夹具只验证观测尾缀，开关关闭

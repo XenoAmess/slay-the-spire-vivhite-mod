@@ -13034,6 +13034,34 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-09-30 runs 1788-1789: bridge longfight joint survival margin to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1788,1789`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1789 F22 D323/D324 records `LONGFIGHT_JOINT_SURVIVAL_MARGIN_OBS` with `survives=yes`, but the authoritative D335 `GAME_OVER` row has no terminal bridge to the latest same-floor survival margin. A bounded same-floor COMBAT/CARD_SELECTION join should emit exactly one terminal observation while preserving the selected action and parameters. This is falsifiable: a floor/screen boundary, malformed or stale source, duplicate retry, or disabled switch must remain silent.
+- **EVIDENCE**: The complete `sts2-ascend/knowledge/runs/20260930-212048_EEH7KN5QDQ3M.json` chain contains 336 decisions. D323 is F22/T4 `hp=25/block=0/incoming=13/energy=3/hand_block_cap=5/post_block_gap=8/survives=yes`; D324 is the latest source at `hp=25/block=5/incoming=13/energy=2/hand_block_cap=0/post_block_gap=8/survives=yes`; D334 is the same-floor T6 `end_turn` predecessor and D335 is defeat at final HP 0. The read-only post-change replay emitted one bridge with `source_round=4`, `terminal_round=6`, `terminal_action=end_turn`, `terminal_hp=1`, `final_hp=0`, while the authoritative action remained `continue_game_over` with `{}`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `LONGFIGHT_JOINT_SURVIVAL_MARGIN_TERMINAL_OUTCOME_OBS` once with source HP/block/incoming/energy, hand block cap, post-block gap, survives flag, source/terminal round and action, outcome and final HP. Cross-floor, non-combat, malformed, missing-source, duplicate and off-switch cases remain silent; scoring, gates, action and parameters remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on `longfight_joint_survival_margin_terminal_outcome_obs` rollback key.
+- `sts2-ascend/brain/policy.py`: parse only the newest bounded same-floor COMBAT/CARD_SELECTION survival-margin note before GAME_OVER and append one observation-only terminal bridge. The parsed values are not read by scoring, ranking, gates, action selection or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate, off-switch, `REWARD`-boundary and unchanged-action/params assertions with exact fields.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare source/terminal fields, marker count, outcome, final HP and action/params against the raw run chain.
+- **Adjust**: if a real trace shows source drift, screen/floor crossing, grammar or numeric-token drift, retain the failure and tighten only this observation parser; do not promote it into behavior.
+- **Rollback**: set `longfight_joint_survival_margin_terminal_outcome_obs` to `False`; the new marker must disappear while the source note, action and params remain unchanged.
+- **Validation**: direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temporary-directory adapter rooted at `.review-cache/selfcheck-pool` completed with exit code 0 and `SELFCHECK OK`. AST parsing and targeted `git diff --check` passed. The actual 1789 read-only replay emitted one exact bridge and preserved `continue_game_over`/`{}`. No `.runtime/`, formal runs/archive, learning memory, replay package or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 ## 2026-09-30 runs 1784-1785: bridge same-floor race-mode flip to terminal outcome
 
 profile_id: `ironclad`
