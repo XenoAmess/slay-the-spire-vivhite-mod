@@ -14433,3 +14433,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the clone-local process-level ACL adapter using `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. The read-only production replay emitted `RUN1772_REPLAY OK` and matched the F30/T2 source/terminal fields. Final targeted diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1773-1774: bridge kill-race HP payment to terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1773,1774`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1774 F23 records two kill-race HP payments before defeat, but the authoritative terminal row does not connect that self-cost to the outcome. A bounded same-floor tail join should emit one HP-payment terminal marker while preserving the selected action and parameters. This is falsifiable: a malformed source, screen/floor boundary, invalid HP arithmetic, or disabled switch must emit no marker.
+- **EVIDENCE**: The complete persisted chain `sts2-ascend/knowledge/runs/20260930-165310_2RHKS6D4EMAA.json` contains 327 decisions. D321/F23/T4 `BREAKTHROUGH` records `竞速判死自付1血，hp=11->10，incoming=0` with `damage_est=12`, `target_hp=none`, `net=+11`, `post_pay_margin=+10`; D324/F23/T4 `HEMOKINESIS` records `自付2血，hp=10->8，incoming=25`, `damage_est=17`, `target_hp=58`, `target_after_est=41`, `net=+15`, `post_pay_margin=-14`. D325 is the same-floor lethal `end_turn` at HP8 and D326 is defeat at final HP0, without an HP-payment terminal bridge. Run 1773's F17 terminal already has a separate Boss-DPT bridge, so it is control evidence rather than a second HP-pay source.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit `KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS` once from the latest valid source in the bounded same-floor `COMBAT/CARD_SELECTION` tail, preserving card, damage/target estimates, net, payment, HP transition, incoming damage, terminal HP, final HP, outcome, and bridge distance. Other-screen/cross-floor/malformed/off-switch cases remain silent; action and params remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `kill_race_hp_pay_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: add transient state reset at run/combat boundaries; recover only the latest source carrying both existing HP-pay markers from at most 16 same-floor `COMBAT/CARD_SELECTION` rows before a persisted `end_turn`; require finite numeric fields and `hp_before-hp_after=pay`; append one observation-only terminal note at `GAME_OVER`. No scoring, candidate ranking, gating, action, or parameter path reads this state.
+- `sts2-ascend/brain/selfcheck.py`: add positive, Policy-reload, duplicate-persistence, off-switch, and `REWARD`-boundary assertions with exact source/terminal fields and unchanged `continue_game_over`/`{}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 same-floor HP-payment terminal windows and independently compare source card/round, payment and HP arithmetic, value fields, terminal round/HP, final HP, outcome, bridge length, and action/params.
+- **Adjust**: if a real trace shows stale source selection, reason-token drift, screen/floor crossing, invalid target tokens, or bridge mismatch, retain the failure and tighten only this observation join; do not promote it into behavior.
+- **Rollback**: set `kill_race_hp_pay_terminal_outcome_obs` to `False`; only `KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS` should disappear while the existing source audits, action, and params remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host-injected fixed-256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the process-local ACL-preserving adapter rooted at `.review-cache/selfcheck-pool` ran the complete check and exited 0 with `SELFCHECK OK`. Targeted `git diff --check` and the complete production/selfcheck diff review passed. No `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

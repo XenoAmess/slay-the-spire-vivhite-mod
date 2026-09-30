@@ -19771,6 +19771,103 @@ def main() -> int:
                 not in d_thorns_reflect_boundary.reason), \
         f"荆棘反伤终局桥接越过 REWARD 边界: {d_thorns_reflect_boundary}"
 
+    # 3z-5g) 竞速自付 HP 终局桥接：1774-F23 的同战斗尾部把
+    # KILL_RACE_HOPELESS_HP_PAY_OBS + KILL_RACE_HP_PAY_VALUE_OBS 接回
+    # GAME_OVER；只增加可关闭、可重试且不改变动作/参数的观测。
+    hp_pay_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 23,
+        "turn": 4, "hp": 10,
+        "reason":
+            "战斗：打出【御血术+】；竞速判死自付2血，hp=10->8，incoming=25"
+            "（KILL_RACE_HOPELESS_HP_PAY_OBS）；"
+            "竞速自付价值对账 card=HEMOKINESIS/damage_est=17"
+            "/target_hp=58/target_after_est=41/net=+15/post_pay_margin=-14"
+            "（KILL_RACE_HP_PAY_VALUE_OBS）",
+    }
+    hp_pay_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 23,
+        "turn": 4, "hp": 8, "reason": "致死无牌空过",
+    }
+    hp_pay_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 23},
+        "run": {"current_hp": 0, "floor": 23},
+    }
+    hp_pay_know = knowledge.Knowledge(tmp)
+    hp_pay_pol = policy.Policy(hp_pay_know)
+    hp_pay_ctx = _SettleCtx()
+    hp_pay_ctx.decisions = [dict(hp_pay_source_row), dict(hp_pay_terminal_row)]
+    d_hp_pay_terminal = hp_pay_pol.decide(
+        hp_pay_terminal_state, hp_pay_ctx)
+    assert (d_hp_pay_terminal.action == "continue_game_over"
+            and d_hp_pay_terminal.params == {}
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                in d_hp_pay_terminal.reason
+            and "outcome=defeat/floor=23/source_round=4"
+                "/source_action=play_card/card=HEMOKINESIS"
+                "/damage_est=17/target_hp=58/target_after_est=41/net=15"
+                "/pay=2/hp_before=10/hp_after=8/incoming=25"
+                "/post_pay_margin=-14/terminal_round=4"
+                "/terminal_action=end_turn/terminal_hp=8/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=0"
+                in d_hp_pay_terminal.reason), \
+        f"竞速自付 HP 终局桥接缺失或动作漂移: {d_hp_pay_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_hp_pay_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速自付 HP 终局观测开关"
+
+    hp_pay_replay_ctx = _SettleCtx()
+    hp_pay_replay_ctx.decisions = [
+        dict(hp_pay_source_row), dict(hp_pay_terminal_row)]
+    d_hp_pay_replay = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        hp_pay_terminal_state, hp_pay_replay_ctx)
+    assert (d_hp_pay_replay.action == d_hp_pay_terminal.action
+            and d_hp_pay_replay.params == d_hp_pay_terminal.params
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                in d_hp_pay_replay.reason), \
+        f"重载后未恢复竞速自付 HP 终局桥接: {d_hp_pay_replay}"
+
+    hp_pay_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_hp_pay_terminal.action,
+        "floor": 23, "reason": d_hp_pay_terminal.reason})
+    d_hp_pay_duplicate = hp_pay_pol.decide(
+        hp_pay_terminal_state, hp_pay_ctx)
+    assert (d_hp_pay_duplicate.action == d_hp_pay_terminal.action
+            and d_hp_pay_duplicate.params == d_hp_pay_terminal.params
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_duplicate.reason), \
+        f"竞速自付 HP 终局桥接重复提交: {d_hp_pay_duplicate}"
+
+    hp_pay_off_know = knowledge.Knowledge(tmp)
+    hp_pay_off_know.policy["kill_race_hp_pay_terminal_outcome_obs"] = False
+    hp_pay_off_ctx = _SettleCtx()
+    hp_pay_off_ctx.decisions = [
+        dict(hp_pay_source_row), dict(hp_pay_terminal_row)]
+    d_hp_pay_off = policy.Policy(hp_pay_off_know).decide(
+        hp_pay_terminal_state, hp_pay_off_ctx)
+    assert (d_hp_pay_off.action == d_hp_pay_terminal.action
+            and d_hp_pay_off.params == d_hp_pay_terminal.params
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_off.reason), \
+        f"竞速自付 HP 终局开关关闭后动作或 marker 漂移: {d_hp_pay_off}"
+
+    hp_pay_boundary_ctx = _SettleCtx()
+    hp_pay_boundary_ctx.decisions = [
+        dict(hp_pay_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 23,
+         "reason": "combat boundary"},
+        dict(hp_pay_terminal_row),
+    ]
+    d_hp_pay_boundary = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        hp_pay_terminal_state, hp_pay_boundary_ctx)
+    assert (d_hp_pay_boundary.action == d_hp_pay_terminal.action
+            and d_hp_pay_boundary.params == d_hp_pay_terminal.params
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_boundary.reason), \
+        f"竞速自付 HP 终局桥接越过 REWARD 边界: {d_hp_pay_boundary}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{
