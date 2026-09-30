@@ -14923,3 +14923,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.0849494859046493局)，STOKE(16分/2.0078855754800125局)，BULLY(16分/2.583090097317463局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.38（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.98 → 1.97（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F30——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1757 胜，当前目标进阶 0
+
+## 第 1758 局复盘（2026-09-30 11:38）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：FLAME_BARRIER, JUGGLING, TWIN_STRIKE, JUGGLING, RAMPAGE, COLOSSUS, REND, UPPERCUT, CINDER, CINDER, BATTLE_TRANCE, JACKPOT, JUGGLING, DEMON_FORM, THUNDERCLAP, PANIC_BUTTON, FEEL_NO_PAIN, STOMP, PILLAGE, HEMOKINESIS
+- 本局遗物：STRAWBERRY
+- 战斗记录：F17 Boss战 掉血0; F19 Monster战 掉血10｜自损6（可行动段6/非行动段10，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血23; F22 Monster战 掉血16｜竞速投影审计：pool=101/dpt=20.25/ttk=4.98765/tsurv=2.65217（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=4.98765/actual_over_projected=1.00（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战5回合获胜; F23 Monster战 掉血37｜竞速投影审计：pool=104/dpt=12.825/ttk=8.10916/tsurv=3.45455（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=8.10916/actual_over_projected=0.74（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T2判死→实战6回合获胜; F25 Monster战 掉血41｜竞速投影审计：pool=94/dpt=29.6/ttk=3.17568/tsurv=0.892857（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.17568/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.72（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(27分/10.078487756792828局)，HELLRAISER(25分/5.213460165006006局)，PACTS_END(25分/55.23562549855563局)，MANGLE(25分/47.80945073233595局)，FEED(25分/28.63780739410248局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.0776521627039832局)，STOKE(16分/2.0008579759658325局)，BULLY(16分/2.5740492819768517局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.38 → 0.41（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.97 → 1.96（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1758 胜，当前目标进阶 0
