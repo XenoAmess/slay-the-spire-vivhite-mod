@@ -925,6 +925,8 @@ class Policy:
         self._race_prelock_defense_terminal_outcome_reported = False
         self._waterfall_about_to_blow_terminal_outcome_pending = None
         self._waterfall_about_to_blow_terminal_outcome_reported = False
+        self._invuln_lethal_end_turn_terminal_outcome_pending = None
+        self._invuln_lethal_end_turn_terminal_outcome_reported = False
         # 滑溜有效火力对账（SLIPPERY_TTK_EFFECTIVE_DPT_OBS）：只记录
         # 回合首敌方总血量的净下降，不回写竞速 dpt/判决/评分。
         self._slippery_effective_dpt_combat = None
@@ -10978,6 +10980,143 @@ class Policy:
         self._waterfall_about_to_blow_terminal_outcome_pending = _pending
         self._waterfall_about_to_blow_terminal_outcome_reported = False
 
+    def _consume_invuln_lethal_end_turn_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join a generic invulnerable lethal end-turn to GAME_OVER.
+
+        Waterfall's AboutToBlow phase has a more specific terminal join.  This
+        companion only reports other invulnerable-pool end-turns, so the
+        source remains countable without duplicating the Waterfall marker.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "invuln_lethal_end_turn_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        _pending = getattr(
+            self, "_invuln_lethal_end_turn_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_invuln_lethal_end_turn_terminal_outcome_reported",
+                    False))):
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _flag(value) -> str:
+            if isinstance(value, bool):
+                return "yes" if value else "no"
+            text = str(value or "unknown").casefold()
+            return text if text in {"yes", "no", "unknown"} else "unknown"
+
+        def _text(value) -> str:
+            return (str(value or "?").replace("/", "_")
+                    .replace("；", "_").replace("（", "_")
+                    .replace("）", "_").replace(" ", "_"))
+
+        self._invuln_lethal_end_turn_terminal_outcome_reported = True
+        _result = "victory" if victory else "defeat"
+        return (
+            "；无敌帧致死空过终局对账："
+            f"outcome={_result}/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('terminal_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/final_hp={_num(final_hp)}"
+            f"/enemy={_text(_pending.get('enemy'))}"
+            f"/hp={_num(_pending.get('hp'))}"
+            f"/block={_num(_pending.get('block'))}"
+            f"/incoming={_num(_pending.get('incoming'))}"
+            f"/energy={_num(_pending.get('energy'))}"
+            f"/vetoed_attacks={_text(_pending.get('vetoed_attacks'))}"
+            f"/non_attack_candidates="
+            f"{_text(_pending.get('non_attack_candidates'))}"
+            f"/steam={_text(_pending.get('steam'))}"
+            f"/forced={_flag(_pending.get('forced'))}"
+            "（INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_invuln_lethal_end_turn_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a generic invulnerable terminal join after a reload."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_invuln_lethal_end_turn_terminal_outcome_reported", False))
+        marker = "INVULN_LETHAL_END_TURN_TERMINAL_OUTCOME_OBS"
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._invuln_lethal_end_turn_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_invuln_lethal_end_turn_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+        row = decisions[-1]
+        if not isinstance(row, dict) or row.get("action") != "end_turn":
+            return
+        if (floor is not None and row.get("floor") is not None
+                and str(row.get("floor")) != str(floor)):
+            return
+        reason = str(row.get("reason") or "")
+        marker_at = reason.rfind("INVULN_LETHAL_END_TURN_OBS")
+        if marker_at < 0:
+            return
+        # The Waterfall-specific source has its own richer terminal marker.
+        # Do not emit a second generic row for that same end_turn.
+        if "WATERFALL_ABOUT_TO_BLOW_END_TURN_OBS" in reason:
+            return
+        audit_at = reason.rfind("无敌帧致死空过观测：", 0, marker_at)
+        if audit_at < 0:
+            return
+        audit = reason[audit_at + len("无敌帧致死空过观测："):marker_at]
+
+        def _token(name: str):
+            match = re.search(
+                rf"(?:^|/|,|：){re.escape(name)}=([^/,；（）()\s]+)",
+                audit)
+            return match.group(1) if match else None
+
+        def _number(name: str):
+            value = _token(name)
+            if value is None:
+                raise ValueError(name)
+            return float(value)
+
+        try:
+            _pending = {
+                "terminal_round": row.get("turn", row.get("round")),
+                "source_action": row.get("action") or "end_turn",
+                "enemy": _token("enemy") or "?",
+                "hp": _number("hp"),
+                "block": _number("block"),
+                "incoming": _number("incoming"),
+                "energy": _token("energy") or "?",
+                "vetoed_attacks": _token("vetoed_attacks") or "?",
+                "non_attack_candidates": (
+                    _token("non_attack_candidates") or "?"),
+                "steam": _token("steam") or "?",
+                "forced": _token("forced") or "unknown",
+            }
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._invuln_lethal_end_turn_terminal_outcome_pending = _pending
+        self._invuln_lethal_end_turn_terminal_outcome_reported = False
+
     def _consume_vivhite_hp_terminal_lock_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join a persisted Vivhite terminal life-lock audit to GAME_OVER."""
@@ -13484,6 +13623,8 @@ class Policy:
             self._race_prelock_defense_terminal_outcome_reported = False
             self._waterfall_about_to_blow_terminal_outcome_pending = None
             self._waterfall_about_to_blow_terminal_outcome_reported = False
+            self._invuln_lethal_end_turn_terminal_outcome_pending = None
+            self._invuln_lethal_end_turn_terminal_outcome_reported = False
             self._slippery_effective_dpt_combat = ctx.combat
             self._slippery_effective_dpt_round = None
             self._slippery_effective_dpt_start_hp = None
@@ -22592,6 +22733,11 @@ class Policy:
         _waterfall_about_to_blow_terminal_outcome_note = (
             self._consume_waterfall_about_to_blow_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_invuln_lethal_end_turn_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _invuln_lethal_end_turn_terminal_outcome_note = (
+            self._consume_invuln_lethal_end_turn_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         _terminal_lock_outcome_note = (
             self._consume_vivhite_hp_terminal_lock_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -22642,6 +22788,7 @@ class Policy:
                             f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
+                            f"{_invuln_lethal_end_turn_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}"
@@ -22690,6 +22837,7 @@ class Policy:
                         f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                         f"{_nonlethal_unavailable_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
+                        f"{_invuln_lethal_end_turn_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}"
@@ -22723,6 +22871,7 @@ class Policy:
                                 f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
+                                f"{_invuln_lethal_end_turn_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
                                 f"{_sandpit_terminal_outcome_note}"
