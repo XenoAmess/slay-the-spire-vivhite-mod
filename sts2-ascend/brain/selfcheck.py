@@ -13810,6 +13810,128 @@ def main() -> int:
             not in d_low_pool_terminal_off.reason), \
         f"low-pool terminal rollback changed action or kept marker: {d_low_pool_terminal_off}"
 
+    # 3br-card-burst-terminal) Connect the latest forced card-burst supply
+    # audit to the same-floor GAME_OVER result.  This is an observation-only
+    # bridge: the selected card, terminal action, and parameters must remain
+    # stable across reload, retry, floor boundary, and rollback.
+    card_burst_terminal_source = (
+        "选择卡牌：【御血术+】；"
+        "CARD_BURST_FORCED_PICK_AUDIT:forced=1,card=HEMOKINESIS,"
+        "before=45.0,after=56.0,delta=+11.0,line=87.6,"
+        "starved_before=1,starved_after=1,offer_max=HEMOKINESIS(+11.0),"
+        "supply_left=+0.0；饥饿供给纠偏+6.0")
+
+    class _CardBurstTerminalCtx:
+        current_combat_is_hard = False
+        run_finalized = True
+        finalize_requested = False
+        combat_notes = []
+        pending_event = None
+        died_in_combat = None
+
+    card_burst_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "run": {"current_hp": 0},
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+    }
+    card_burst_terminal_know = knowledge.Knowledge(tmp)
+    card_burst_terminal_pol = policy.Policy(card_burst_terminal_know)
+    card_burst_terminal_ctx = _CardBurstTerminalCtx()
+    card_burst_terminal_ctx.decisions = [
+        {"screen": "CARD_SELECTION", "action": "select_deck_card",
+         "floor": 17, "reason": card_burst_terminal_source},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 17,
+         "turn": 9, "hp": 4, "reason": "终端回合"},
+    ]
+    d_card_burst_terminal = card_burst_terminal_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_ctx)
+    assert (d_card_burst_terminal.action == "continue_game_over"
+            and d_card_burst_terminal.params == {}
+            and "CARD_BURST_TERMINAL_OUTCOME_OBS"
+            in d_card_burst_terminal.reason
+            and "/kind=forced" in d_card_burst_terminal.reason
+            and "/card=HEMOKINESIS" in d_card_burst_terminal.reason
+            and "/before=45" in d_card_burst_terminal.reason
+            and "/after=56" in d_card_burst_terminal.reason
+            and "/starved_after=1" in d_card_burst_terminal.reason
+            and "/supply_left=+0.0" in d_card_burst_terminal.reason
+            and "/terminal_round=9" in d_card_burst_terminal.reason
+            and "/final_hp=0" in d_card_burst_terminal.reason), \
+        f"card-burst terminal bridge missing or action drifted: {d_card_burst_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "card_burst_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing card_burst_terminal_outcome_obs"
+
+    card_burst_terminal_reload_pol = policy.Policy(knowledge.Knowledge(tmp))
+    card_burst_terminal_reload_ctx = _CardBurstTerminalCtx()
+    card_burst_terminal_reload_ctx.decisions = list(
+        card_burst_terminal_ctx.decisions)
+    d_card_burst_terminal_reload = card_burst_terminal_reload_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_reload_ctx)
+    assert (d_card_burst_terminal_reload.action
+            == d_card_burst_terminal.action
+            and d_card_burst_terminal_reload.params
+            == d_card_burst_terminal.params
+            and "CARD_BURST_TERMINAL_OUTCOME_OBS"
+            in d_card_burst_terminal_reload.reason), \
+        f"card-burst terminal bridge did not survive reload: {d_card_burst_terminal_reload}"
+
+    card_burst_terminal_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    card_burst_terminal_retry_ctx = _CardBurstTerminalCtx()
+    card_burst_terminal_retry_ctx.decisions = list(
+        card_burst_terminal_ctx.decisions)
+    d_card_burst_terminal_retry_first = card_burst_terminal_retry_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_retry_ctx)
+    d_card_burst_terminal_retry = card_burst_terminal_retry_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_retry_ctx)
+    assert ("CARD_BURST_TERMINAL_OUTCOME_OBS"
+            in d_card_burst_terminal_retry_first.reason
+            and "CARD_BURST_TERMINAL_OUTCOME_OBS"
+            in d_card_burst_terminal_retry.reason), \
+        "card-burst terminal bridge did not retry after a lost decision"
+    card_burst_terminal_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 17,
+        "reason": d_card_burst_terminal_retry.reason,
+    })
+    d_card_burst_terminal_retry_committed = card_burst_terminal_retry_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_retry_ctx)
+    assert "CARD_BURST_TERMINAL_OUTCOME_OBS" \
+        not in d_card_burst_terminal_retry_committed.reason, \
+        "card-burst terminal bridge duplicated after commit"
+
+    card_burst_terminal_off_know = knowledge.Knowledge(tmp)
+    card_burst_terminal_off_know.policy[
+        "card_burst_terminal_outcome_obs"] = False
+    card_burst_terminal_off_pol = policy.Policy(card_burst_terminal_off_know)
+    card_burst_terminal_off_ctx = _CardBurstTerminalCtx()
+    card_burst_terminal_off_ctx.decisions = list(
+        card_burst_terminal_ctx.decisions)
+    d_card_burst_terminal_off = card_burst_terminal_off_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_off_ctx)
+    assert (d_card_burst_terminal_off.action == d_card_burst_terminal.action
+            and d_card_burst_terminal_off.params
+            == d_card_burst_terminal.params
+            and "CARD_BURST_TERMINAL_OUTCOME_OBS"
+            not in d_card_burst_terminal_off.reason), \
+        f"card-burst terminal rollback changed action or kept marker: {d_card_burst_terminal_off}"
+
+    card_burst_terminal_boundary_ctx = _CardBurstTerminalCtx()
+    card_burst_terminal_boundary_ctx.decisions = [{
+        "screen": "CARD_SELECTION", "action": "select_deck_card",
+        "floor": 16, "reason": card_burst_terminal_source,
+    }]
+    d_card_burst_terminal_boundary = card_burst_terminal_pol.decide(
+        card_burst_terminal_state, card_burst_terminal_boundary_ctx)
+    assert (d_card_burst_terminal_boundary.action
+            == d_card_burst_terminal.action
+            and d_card_burst_terminal_boundary.params
+            == d_card_burst_terminal.params
+            and "CARD_BURST_TERMINAL_OUTCOME_OBS"
+            not in d_card_burst_terminal_boundary.reason), \
+        f"card-burst terminal bridge crossed floor boundary: {d_card_burst_terminal_boundary}"
+
     class _PerComboNative:
         available = True
         pools: dict = {}

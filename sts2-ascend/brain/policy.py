@@ -915,6 +915,7 @@ class Policy:
         self._kill_race_hp_pay_terminal_outcome_pending = None  # 最近一次竞速自付 HP，等待 GAME_OVER 结局对账
         self._kill_race_hp_pay_terminal_outcome_reported = False  # 竞速自付结局 marker 每场只写一次
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
+        self._card_burst_terminal_outcome_reported = False  # 拿牌爆发审计结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
         self._longfight_joint_flip_terminal_outcome_reported = False
@@ -2518,6 +2519,7 @@ class Policy:
             self._hp_cost_atk_nonlethal_terminal_outcome_pending = None
             self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
+            self._card_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
             self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
@@ -5472,6 +5474,152 @@ class Policy:
             f"/selected={_token(source_audit, 'selected') or '?'}"
             f"/final_hp={_num(final_hp)}"
             "（LOW_POOL_BURST_TERMINAL_OUTCOME_OBS）")
+
+    def _consume_card_burst_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join the latest same-floor card-burst audit to GAME_OVER.
+
+        CARD_BURST_PICK_AUDIT and CARD_BURST_FORCED_PICK_AUDIT are already
+        durable selection-side observations.  This bridge only records their
+        latest same-floor values at the terminal boundary; it never feeds
+        selection, scoring, or action choice.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "card_burst_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        decisions = getattr(ctx, "decisions", None)
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        marker = "CARD_BURST_TERMINAL_OUTCOME_OBS"
+        if any(marker in str(row.get("reason") or "")
+               for row in decisions if isinstance(row, dict)):
+            return ""
+        if getattr(self, "_card_burst_terminal_outcome_reported", False):
+            # A returned GAME_OVER decision may be lost before POST.  Durable
+            # marker presence above is the commit proof; otherwise retry once
+            # on the next poll just like the other terminal joins.
+            self._card_burst_terminal_outcome_reported = False
+
+        def _field(audit: str, name: str):
+            match = re.search(
+                rf"(?:^|,){re.escape(name)}=([^,；;\s]+)", audit)
+            return match.group(1) if match else None
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        source = None
+        source_audit = ""
+        source_kind = ""
+        source_index = -1
+        specs = (
+            ("forced", "CARD_BURST_FORCED_PICK_AUDIT:"),
+            ("voluntary", "CARD_BURST_PICK_AUDIT:"),
+        )
+        required_fields = (
+            "card", "before", "after", "delta", "line",
+            "starved_before", "starved_after",
+        )
+        for index in range(len(decisions) - 1, -1, -1):
+            row = decisions[index]
+            if not isinstance(row, dict):
+                continue
+            if row.get("screen") not in ("REWARD", "CARD_SELECTION"):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                continue
+            reason = str(row.get("reason") or "")
+            for kind, source_marker in specs:
+                marker_at = reason.rfind(source_marker)
+                if marker_at < 0:
+                    continue
+                audit = reason[marker_at:]
+                if any(_field(audit, name) is None
+                       for name in required_fields):
+                    continue
+                try:
+                    for name in ("before", "after", "delta", "line"):
+                        float(_field(audit, name))
+                    for name in ("starved_before", "starved_after"):
+                        int(_field(audit, name))
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                source = row
+                source_audit = audit
+                source_kind = kind
+                source_index = index
+                break
+            if source is not None:
+                break
+        if source is None:
+            return ""
+
+        terminal_action = "?"
+        terminal_round = None
+        terminal_hp = None
+        for row in reversed(decisions):
+            if not isinstance(row, dict):
+                continue
+            if row.get("screen") != "COMBAT":
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                continue
+            terminal_action = row.get("action") or "?"
+            terminal_round = row.get("turn", row.get("round"))
+            terminal_hp = row.get("hp")
+            break
+
+        def _safe_token(name: str) -> str:
+            value = _field(source_audit, name)
+            return str(value) if value is not None else "?"
+
+        _card = re.sub(
+            r"[/；（）()\s,]+", "_", _safe_token("card")).strip("_") or "?"
+        _offer_max = re.sub(
+            r"[/；（）()\s,]+", "_", _safe_token("offer_max")).strip("_") or "?"
+        _result = "victory" if victory else "defeat"
+        _bridge_decisions = sum(
+            1 for row in decisions[source_index + 1:]
+            if isinstance(row, dict)
+            and (floor is None or row.get("floor") is None
+                 or str(row.get("floor")) == str(floor)))
+        self._card_burst_terminal_outcome_reported = True
+        return (
+            f"；卡组爆发终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_screen={source.get('screen') or '?'}"
+            f"/source_action={source.get('action') or '?'}"
+            f"/kind={source_kind}"
+            f"/card={_card}"
+            f"/before={_num(_safe_token('before'))}"
+            f"/after={_num(_safe_token('after'))}"
+            f"/delta={_num(_safe_token('delta'))}"
+            f"/line={_num(_safe_token('line'))}"
+            f"/starved_before={_safe_token('starved_before')}"
+            f"/starved_after={_safe_token('starved_after')}"
+            f"/offer_max={_offer_max}"
+            f"/supply_left={_safe_token('supply_left')}"
+            f"/terminal_round={_round(terminal_round)}"
+            f"/terminal_action={terminal_action}"
+            f"/terminal_hp={_num(terminal_hp)}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_bridge_decisions}"
+            "（CARD_BURST_TERMINAL_OUTCOME_OBS）")
 
     def _restore_boss_effective_dpt_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -22456,6 +22604,9 @@ class Policy:
         _low_pool_burst_terminal_outcome_note = (
             self._consume_low_pool_burst_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _card_burst_terminal_outcome_note = (
+            self._consume_card_burst_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -22494,7 +22645,8 @@ class Policy:
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}"
-                            f"{_low_pool_burst_terminal_outcome_note}", wait=1.0)
+                            f"{_low_pool_burst_terminal_outcome_note}"
+                            f"{_card_burst_terminal_outcome_note}", wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger
@@ -22541,7 +22693,8 @@ class Policy:
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}"
-                        f"{_low_pool_burst_terminal_outcome_note}",
+                        f"{_low_pool_burst_terminal_outcome_note}"
+                        f"{_card_burst_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -22573,11 +22726,13 @@ class Policy:
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"
                                 f"{_sandpit_terminal_outcome_note}"
-                                f"{_low_pool_burst_terminal_outcome_note}",
+                                f"{_low_pool_burst_terminal_outcome_note}"
+                                f"{_card_burst_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {},
                             "结算：返回主菜单，备战下一局"
-                            f"{_ovicopter_summon_pressure_terminal_outcome_note}",
+                            f"{_ovicopter_summon_pressure_terminal_outcome_note}"
+                            f"{_card_burst_terminal_outcome_note}",
                             tags=[("timeline_check", True)], wait=1.5)
         if phase == "summary_animating" or go.get("showing_summary"):
             return Decision(None, {}, "结算：原生分数、解锁与存档动画进行中，等待", wait=0.8)

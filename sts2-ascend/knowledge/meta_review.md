@@ -14945,3 +14945,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-01 run 1811: bridge forced card-burst supply to the terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1811`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1811's F17 forced card selection records a material card-burst supply change, but the GAME_OVER row does not join that selection audit to the outcome. A same-floor terminal bridge should add one bounded observation without changing the selected card or terminal action. This is falsifiable: a missing required field, cross-floor source, duplicate committed retry, disabled switch, or any action/parameter drift must stay silent or fail the fixture.
+- **EVIDENCE**: The exact full chain is `sts2-ascend/knowledge/runs/20261001-035817_E20BMKHMMDT7.json` with 180 decisions; the packet retained 108 and omitted 72, so the on-disk chain was read for the F17 tail. D171 records `CARD_BURST_FORCED_PICK_AUDIT` for `HEMOKINESIS`, `before=45.0`, `after=56.0`, `delta=+11.0`, `line=87.6`, `starved_after=1`, and `supply_left=+0.0`; D180 is the defeat `GAME_OVER`. The existing selection audit therefore proves the source, but not its terminal outcome.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, emit exactly one `CARD_BURST_TERMINAL_OUTCOME_OBS` with source kind/card/before/after/delta/line, starvation and supply fields, terminal round/action/HP, outcome, and bounded bridge count. The marker must be absent for cross-floor or malformed sources, already-committed retries, and the off switch; selected action and `{}`/original parameters must remain identical.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `card_burst_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: reverse-scan only the latest same-floor `REWARD`/`CARD_SELECTION` burst audit, validate its numeric/source fields, and append an outcome-only suffix through every existing GAME_OVER return branch. The new state marker is reset per combat and is not read by card scoring, ranking, gates, selection, or terminal action choice.
+- `sts2-ascend/brain/selfcheck.py`: add positive forced-pick, default/reload, lost-decision retry, duplicate suppression, off-switch, and cross-floor boundary fixtures; all assert unchanged `continue_game_over` and empty parameters.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent terminals and compare marker count, source kind/card, burst delta, `starved_after`, `supply_left`, terminal round/HP/outcome, bridge count, and the real applied selection/terminal receipts.
+- **Adjust**: if the marker crosses a floor/screen boundary, accepts malformed or incomplete fields, selects a stale audit, duplicates after durable commit, or differs from the real card-burst source, retain the failed evidence and tighten only this observation parser; do not promote it into a card-pick or kill-race behavior change.
+- **Rollback**: set `card_burst_terminal_outcome_obs` to `False`; the new terminal suffix disappears while the existing card-burst source audit, selected card, terminal action, and parameters remain unchanged.
+- **Validation**: direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full selfcheck then completed through a clone-local process-level temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Final target diff review and `git diff --check` passed with only existing LF/CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
