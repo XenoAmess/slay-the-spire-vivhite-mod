@@ -14879,3 +14879,14 @@
 - 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1143959838757134局)，STOKE(16分/2.036243671886769局)，BULLY(16分/2.619572015859836局)
 - 策略进化：block_safety: 1.96 → 2.01（高速失血爆毙（5回合掉血73，每回合15≥14）——按「没挡住」证据上调防御权重）；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.01 → 2.00（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.00 → 1.95（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1753 胜，当前目标进阶 0
+
+## 第 1754 局复盘（2026-09-30 10:12）
+- 结果：💀 失败｜进阶 0｜到达层数 25｜当局评分 25
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：UNRELENTING, SPITE, UPPERCUT, BREAKTHROUGH, SHRUG_IT_OFF, INFLAME, SWORD_BOOMERANG, BLUDGEON, MOLTEN_FIST, SPITE, FEED, HEADBUTT, ROLLING_BOULDER, SHRUG_IT_OFF, IRON_WAVE, SUCKER_PUNCH, LEG_SWEEP, AFTERIMAGE, BLUDGEON
+- 本局遗物：RIPPLE_BASIN
+- 战斗记录：F14 Monster战 掉血2｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血44｜自损1（可行动段1/非行动段49，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=167/dpt=4.8/ttk=34.7917/tsurv=2.84615（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=34.7917/actual_over_projected=0.20（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战7回合获胜｜竞速Boss有效火力收官对账：samples=4/actual_dpt=38.75/projected_dpt=19.1458/ratio=2.00/min_ratio=1.62（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=1/actual_dpt=24/projected_dpt=14.8/ratio=1.62/min_ratio=1.62|clear_samples=3/actual_dpt=43.6667/projected_dpt=20.5944/ratio=2.13/min_ratio=1.79（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）; F19 Monster战 掉血21; F21 Monster战 掉血15｜自损1（可行动段1/非行动段10，SELF_LOSS_PHASE_OBS）; F25 Elite战 掉血51｜竞速投影审计：pool=115/dpt=27/ttk=4.25926/tsurv=2.53731（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.25926/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.76（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/8.19968203364945局)，HELLRAISER(25分/5.287091754264612局)，MANGLE(25分/48.484680949425154局)，FEED(25分/29.042269537203406局)，PACTS_END(24分/52.99462750918844局)
+- 当前低价值卡牌：STRIKE_IRONCLAD(12分/2.1069955979321486局)，STOKE(16分/2.0291168190351656局)，BULLY(16分/2.6104035138043264局)
+- 策略进化：elite_grey_safety_mult: 1.95 → 2.15（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.40（行至 F25（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.00 → 1.99（行至 F25（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F25——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1754 胜，当前目标进阶 0
