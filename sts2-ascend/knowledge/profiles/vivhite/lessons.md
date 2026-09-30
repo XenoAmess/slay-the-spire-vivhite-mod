@@ -19994,3 +19994,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.1850472693348126局)，FASTEN(21分/3.8694190912234676局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/24.40896594758439局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：4/1814 胜，当前目标进阶 4
+
+## 第 1815 局复盘（2026-10-01 05:25）
+- 结果：💀 失败｜进阶 4｜到达层数 15｜当局评分 15
+- 死因：敌人组合 CORPSE_SLUG
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL
+- 本局遗物：GORGET
+- 战斗记录：F6 Monster战 掉血29｜自损22（可行动段22/非行动段14，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血21｜自损16（可行动段16/非行动段19，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血12｜自损20（可行动段20/非行动段18，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血0｜自损6（可行动段6/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血41｜自损18（可行动段18/非行动段36，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/4.043490283420451局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.381165869343778局)，JACKPOT(37分/8.822114218239566局)，THINKING_AHEAD(37分/2.744395174205408局)，ROLLING_BOULDER(36分/2.7616614532893218局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.177399603892141局)，FASTEN(21分/3.8558761244041855局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.323534566767847局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（10回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1815 胜，当前目标进阶 4
