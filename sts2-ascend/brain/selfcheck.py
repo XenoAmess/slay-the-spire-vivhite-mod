@@ -20591,6 +20591,29 @@ def main() -> int:
                 in d_rpre_terminal.reason), \
         f"竞速未锁前格挡终局对账缺失或动作漂移: {d_rpre_terminal}"
 
+    # 3rpre-a1) Armaments-style CARD_SELECTION is an in-combat modal, not a
+    # room boundary.  The terminal join may cross it only when both adjacent
+    # durable rows remain COMBAT on the same floor.
+    rpre_terminal_card_bridge_ctx = _SettleCtx()
+    rpre_terminal_card_bridge_ctx.decisions = [
+        dict(rpre_terminal_ctx.decisions[0]),
+        {"screen": "CARD_SELECTION", "floor": 7,
+         "action": "select_deck_card", "params": {"option_index": 0},
+         "reason": "战斗内手牌升级选择"},
+        dict(rpre_terminal_ctx.decisions[1]),
+    ]
+    rpre_terminal_card_bridge_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_terminal_card_bridge = rpre_terminal_card_bridge_pol.decide(
+        rpre_terminal_state, rpre_terminal_card_bridge_ctx)
+    assert (d_rpre_terminal_card_bridge.action == d_rpre_terminal.action
+            and d_rpre_terminal_card_bridge.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_terminal_card_bridge.reason
+            and "/source_round=2/source_action=play_card"
+                in d_rpre_terminal_card_bridge.reason), \
+        f"战斗内 CARD_SELECTION 桥接缺失或动作漂移: " \
+        f"{d_rpre_terminal_card_bridge}"
+
     rpre_terminal_reload_pol = policy.Policy(knowledge.Knowledge(tmp))
     d_rpre_terminal_reload = rpre_terminal_reload_pol.decide(
         rpre_terminal_state, rpre_terminal_ctx)

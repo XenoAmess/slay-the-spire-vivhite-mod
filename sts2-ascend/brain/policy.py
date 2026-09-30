@@ -5025,13 +5025,42 @@ class Policy:
             terminal.get("turn", terminal.get("round")))
         _terminal_hp = _number(terminal.get("hp"))
         _start = max(0, len(decisions) - 64)
-        for row in reversed(decisions[_start:-1]):
+        def _is_in_combat_card_selection(row_index, row) -> bool:
+            """Treat an in-combat hand-choice modal as a same-combat row.
+
+            Armaments and similar cards temporarily expose CARD_SELECTION
+            between two COMBAT decisions.  It is not a room transition, but
+            a generic CARD_SELECTION from REST/SHOP must remain a hard
+            boundary so an older combat cannot feed this terminal join.
+            """
+            if (row.get("screen") != "CARD_SELECTION"
+                    or row.get("action") != "select_deck_card"):
+                return False
+            if row_index <= 0 or row_index + 1 >= len(decisions):
+                return False
+            previous = decisions[row_index - 1]
+            following = decisions[row_index + 1]
+            if not isinstance(previous, dict) or not isinstance(following, dict):
+                return False
+            if (previous.get("screen") != "COMBAT"
+                    or following.get("screen") != "COMBAT"):
+                return False
+            if floor is not None:
+                for neighbor in (previous, following):
+                    if (neighbor.get("floor") is not None
+                            and str(neighbor.get("floor")) != str(floor)):
+                        return False
+            return True
+
+        for row_index in range(len(decisions) - 2, _start - 1, -1):
+            row = decisions[row_index]
             if not isinstance(row, dict):
                 continue
             if (floor is not None and row.get("floor") is not None
                     and str(row.get("floor")) != str(floor)):
                 return
-            if row.get("screen") not in (None, "COMBAT"):
+            if (row.get("screen") not in (None, "COMBAT")
+                    and not _is_in_combat_card_selection(row_index, row)):
                 return
             reason = str(row.get("reason") or "")
             # Only a marker in this trailing combat can suppress a duplicate;

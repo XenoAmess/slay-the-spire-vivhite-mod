@@ -14157,3 +14157,30 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**：新增夹具断言通过；完整 selfcheck 在 clone 现有 ACL 临时池上经进程级 `tempfile.mkdtemp` 适配退出码0并输出 `SELFCHECK OK`。生产 diff 为 2 个目标文件、46行新增，`git diff --cached --check` 通过并已提交 checkpoint `c4695bff4`；未写入 `.runtime/`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-09-30 runs 1751-1752: preserve the prelock audit across combat CARD_SELECTION
+
+profile_id: `ironclad`
+requested_runs: `1751, 1752`
+production_code_commit: `pending local commit after report closeout`
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1752, `RACE_PRELOCK_DEFENSE_OBS` at F33 D443/D445/D446 was not joined to the terminal audit because native in-combat selection rows D444/D450/D455 are `CARD_SELECTION`. The join should cross only a same-floor `COMBAT -> CARD_SELECTION(select_deck_card) -> COMBAT` modal; REST/SHOP/REWARD and missing-neighbor boundaries must remain hard stops. The action and params must not change.
+- **EVIDENCE**: Full `sts2-ascend/knowledge/runs/20260930-084957_490HFEL2NM9C.json` was read (473 decisions). D472 `GAME_OVER` lacked `RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS`; D443/D445/D446 contain the source marker; D444/D450/D455 are between F33 COMBAT rows. Native ARMAMENTS mechanics call `CardSelectCmd.FromHandForUpgrade`, confirming the in-combat modal shape. Run 1751 supplied negative evidence: no matching source marker or bridge.
+- **EXPECTED_SIGNAL**: Over the next 3-10 terminal windows, the marker appears only for same-floor bounded tails with the adjacent-COMBAT modal shape. REST/SHOP/REWARD or missing-neighbor boundaries remain silent, while `continue_game_over` and `{}` remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: permit only same-floor `CARD_SELECTION` rows with `select_deck_card` and immediate COMBAT neighbors while restoring this audit-only terminal source; scoring, candidate ordering, action, and params are untouched.
+- `sts2-ascend/brain/selfcheck.py`: add an Armaments-shaped modal bridge assertion, requiring the terminal action/params to match and the source round/action to remain intact.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminal windows and compare source/terminal rounds, floor, action, params, and marker scope.
+- **Adjust**: if a real tail crosses a room screen, has a non-COMBAT neighbor, or joins an unrelated combat, retain the sample and tighten the boundary; do not promote the observation into behavior.
+- **Rollback**: set `race_prelock_defense_terminal_outcome_obs` to `False`; this removes only the new terminal observation marker.
+- **Validation**: the required direct selfcheck hit the host's fixed 256-directory bootstrap limit; a process-level adapter rooted in the existing clone `.review-cache/selfcheck-pool` exited 0 with `SELFCHECK OK`. Actual 1752 replay restored `source_card=武装`, `source_round=1`, `terminal_action=end_turn`, `terminal_round=6`; an inserted REST boundary returned no pending source. `git diff --check` and final targeted diff review passed. No prohibited state, formal run/archive, learning memory, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
