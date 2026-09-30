@@ -19983,3 +19983,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.1927217956194807局)，FASTEN(21分/3.8830096249106547局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/24.494697388443946局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
 - 生涯战绩：4/1813 胜，当前目标进阶 4
+
+## 第 1814 局复盘（2026-10-01 05:12）
+- 结果：💀 失败｜进阶 4｜到达层数 4｜当局评分 4
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, PANIC_BUTTON
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血44｜自损40（可行动段40/非行动段18，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=18/dpt=1.93846/ttk=9.28571/tsurv=1.07692（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=16/projected_ttk=9.28571/actual_over_projected=1.72（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T15判死→实战16回合获胜; F4 Monster战 掉血18｜自损10（可行动段10/非行动段6，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MAYHEM(38分/4.057692206141947局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.389529221619446局)，JACKPOT(37分/8.853100068479243局)，THINKING_AHEAD(37分/2.754034294235231局)，ROLLING_BOULDER(36分/2.771361217550749局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.1850472693348126局)，FASTEN(21分/3.8694190912234676局)，VIVHITE_CARD_PARALLEL_STARFALL(22分/24.40896594758439局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1814 胜，当前目标进阶 4
