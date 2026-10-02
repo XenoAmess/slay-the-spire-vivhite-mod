@@ -20870,8 +20870,26 @@ class Policy:
         removing = self._sel_mode == "remove"
 
         # 已达选择数量且可确认 → 先确认（升级/删除等分支也必须走这里，否则永远循环）
-        min_sel = sel.get("min_select", 1)
-        if (sel.get("can_confirm") and sel.get("selected_count", 0) >= min_sel
+        # Deck-enchant grids report min_select=0, but native confirmation ignores
+        # an empty selection. Use the available enchant capacity before confirming;
+        # other optional grids keep their zero-choice confirmation behavior.
+        try:
+            min_sel = max(0, int(sel.get("min_select", 1) or 0))
+        except (TypeError, ValueError):
+            min_sel = 1
+        try:
+            reported_selected = max(0, int(sel.get("selected_count", 0) or 0))
+        except (TypeError, ValueError):
+            reported_selected = 0
+        selection_target = min_sel
+        if kind == "deck_enchant_select":
+            try:
+                max_sel = max(0, int(sel.get("max_select", 0) or 0))
+            except (TypeError, ValueError):
+                max_sel = 0
+            selection_target = max(
+                min_sel, min(max_sel, len(cards)) if max_sel > 0 else 1)
+        if (sel.get("can_confirm") and reported_selected >= selection_target
                 and "confirm_selection" in actions):
             if self._ui_action_cooled(state, "confirm_selection", {}):
                 return self._cooldown_wait("选牌界面")
@@ -20912,19 +20930,19 @@ class Policy:
         # turn a one-card Prefetch/discard/recovery choice into a visible roll
         # across candidates.  Wait for that accepted outcome to become observable;
         # failed requests never enter credit_tags and remain immediately retryable.
-        try:
-            reported_selected = int(sel.get("selected_count", 0) or 0)
-        except (TypeError, ValueError):
-            reported_selected = 0
         accepted_clicks = len(self._sel_tried)
         if (accepted_clicks > reported_selected
-                or (accepted_clicks > 0 and reported_selected >= min_sel)):
+                or (accepted_clicks > 0 and reported_selected >= selection_target)):
             return Decision(
                 None, {},
                 f"选牌界面（{kind}）：选择已被服务端接受，等待结果刷新，避免连续点选",
                 wait=0.5)
 
-        live_candidates = [c for c in cards if c["index"] not in self._sel_tried]
+        # A restarted Brain has no local click ledger for an open grid. Native
+        # selected flags still identify cards that another click would deselect.
+        live_candidates = [c for c in cards
+                           if c["index"] not in self._sel_tried
+                           and c.get("selected") is not True]
         if not live_candidates:
             return Decision(
                 None, {},
