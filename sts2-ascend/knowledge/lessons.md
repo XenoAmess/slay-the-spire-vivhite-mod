@@ -15649,3 +15649,14 @@
 - 当前低价值卡牌：BULLY(16分/2.0494699498197617局)，BURNING_PACT(17分/12.373902209539029局)，DEFEND_IRONCLAD(18分/3.435721476282787局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1823 胜，当前目标进阶 0
+
+## 第 1824 局复盘（2026-10-03 07:55）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 GREMLIN_MERC
+- 本局拿牌：BREAKTHROUGH, TAUNT, TRUE_GRIT, MOLTEN_FIST
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血13; F3 Monster战 掉血5; F4 Monster战 掉血0｜自损1（可行动段1/非行动段3，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血56｜自损1（可行动段1/非行动段60，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=44/dpt=11.2/ttk=3.92857/tsurv=1.90476（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=3.92857/actual_over_projected=2.29（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T6判死→实战9回合获胜; F7 Monster战 掉血7（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.202261054969078局)，BRAND(26分/2.5699274782026116局)，PROWESS(26分/10.770816441262232局)，MANGLE(25分/44.24661834669局)，HELLRAISER(25分/4.136452674979621局)
+- 当前低价值卡牌：BULLY(16分/2.0422968049953925局)，BURNING_PACT(17分/12.330593551805643局)，DEFEND_IRONCLAD(18分/3.4236964511157972局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））
+- 生涯战绩：0/1824 胜，当前目标进阶 0
