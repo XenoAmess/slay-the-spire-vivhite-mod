@@ -15583,3 +15583,14 @@
 - 当前低价值卡牌：BULLY(16分/2.093041004712047局)，BURNING_PACT(17分/12.636967287634471局)，DEFEND_IRONCLAD(18分/3.508763781221626局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.37 → 0.38（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.05 → 2.04（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F24——药水交药线部分胜利回收）
 - 生涯战绩：0/1817 胜，当前目标进阶 0
+
+## 第 1818 局复盘（2026-10-03 06:23）
+- 结果：💀 失败｜进阶 0｜到达层数 48｜当局评分 48
+- 死因：敌人组合 TEST_SUBJECT
+- 本局拿牌：BLUDGEON, UNRELENTING, JUGGLING, INFLAME, SWORD_BOOMERANG, EXPECT_A_FIGHT, TAUNT, RAMPAGE, AGGRESSION, SWORD_BOOMERANG, VICIOUS, TAUNT, UPPERCUT, SWORD_BOOMERANG, MASTER_OF_STRATEGY, RAMPAGE, JUGGLING, DISMANTLE, THUNDERCLAP, DISMANTLE, EXPECT_A_FIGHT, FEED, HEADBUTT, THUNDERCLAP, INFLAME, BLUDGEON, DISMANTLE, MANGLE, SPITE, DISMANTLE
+- 本局遗物：VAMBRACE, ODDLY_SMOOTH_STONE, VENERABLE_TEA_SET, RUINED_HELMET, MINIATURE_CANNON
+- 战斗记录：F35 Monster战 掉血35; F39 Monster战 掉血7; F43 Unknown战 掉血20; F44 Unknown战 掉血0; F45 Monster战 掉血11｜竞速投影审计：pool=148/dpt=40.5/ttk=3.65432/tsurv=1.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.65432/actual_over_projected=1.64（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战6回合获胜; F48 Boss战 掉血57｜竞速投影审计：pool=157/dpt=22.8/ttk=6.88596/tsurv=1.38636（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=6.88596/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.89（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战4回合阵亡｜竞速Boss有效火力收官对账：samples=2/actual_dpt=47.5/projected_dpt=27.732/ratio=1.71/min_ratio=1.49（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=2/actual_dpt=47.5/projected_dpt=27.732/ratio=1.71/min_ratio=1.49（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.312859408465303局)，BRAND(26分/2.624563288418715局)，PROWESS(26分/10.99980044487655局)，ONE_TWO_PUNCH(25分/2.4008213271124115局)，MANGLE(25分/45.187286853174406局)
+- 当前低价值卡牌：BULLY(16分/2.0857153611955552局)，BURNING_PACT(17分/12.592737902127752局)，DEFEND_IRONCLAD(18分/3.4964831079873506局)
+- 策略进化：block_safety: 2.04 → 2.09（高速失血爆毙（4回合掉血57，每回合14≥14）——按「没挡住」证据上调防御权重）；kill_race_prior_eff: 0.38 → 0.41（行至 F48（一二幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.09 → 2.08（行至 F48（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.37 → 0.35（行至 F48——药水交药线部分胜利回收）
+- 生涯战绩：0/1818 胜，当前目标进阶 0
