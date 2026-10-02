@@ -458,4 +458,4 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 <!-- rejection:20260930-101331-1790734411903560800-c5d89832 -->
 | 2026-09-30 10:13:31 | 第 1753 局 | `c5d89832` | online_runtime | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `36c5290d` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 36c5290d 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20261003-064709-1790981229471883700-a80fed38 -->
-| 2026-10-03 06:47:09 | 第 1817 局 | `a80fed38` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20261003-064709-1790981229471883700-a80fed38` | 复盘 patch 触碰 deny-only 路径边界：sts2-selfcheck-action-txn-alecj3ma/brain.log (Git/outside/unsafe), sts2-selfcheck-action-txn-alecj3ma/runs/20261003-063849_TX_RUN.json (Git/outside/unsafe), sts2-selfcheck-actrepair-gq0u9twy/policy.json (Git/outs… |
+| 2026-10-03 06:47:09 | 第 1817 局 | `a80fed38` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `1ede0b3d` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 1ede0b3d 已推送；远端确认后精确清理对应失败包 |
