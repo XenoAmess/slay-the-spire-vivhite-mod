@@ -15616,3 +15616,14 @@
 - 当前低价值卡牌：BULLY(16分/2.071140903680361局)，BURNING_PACT(17分/12.50474299785216局)，DEFEND_IRONCLAD(18分/3.4720505581495122局)
 - 策略进化：精英战阵亡但满血线进场（91%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：0/1820 胜，当前目标进阶 0
+
+## 第 1821 局复盘（2026-10-03 07:09）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：UNRELENTING, FLAME_BARRIER, HEMOKINESIS, BLUDGEON, BLUDGEON, BLUDGEON, MOLTEN_FIST, SHRUG_IT_OFF, PANIC_BUTTON, FEED, STONE_ARMOR, STONE_ARMOR, HEADBUTT, WHIRLWIND, TRUE_GRIT, FLASH_OF_STEEL, SPITE, TWIN_STRIKE, POMMEL_STRIKE
+- 本局遗物：PEN_NIB, POTION_BELT
+- 战斗记录：F15 Monster战 掉血0｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血33｜自损2（可行动段2/非行动段37，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血9｜自损2（可行动段2/非行动段13，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血10; F22 Monster战 掉血53｜竞速投影审计：pool=75/dpt=29.76/ttk=2.52016/tsurv=0.75（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=2.52016/actual_over_projected=3.17（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T5判死→实战8回合获胜; F24 Monster战 掉血8｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=107/dpt=29.4/ttk=3.63946/tsurv=0.214286（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=3/projected_ttk=3.63946/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=14.00（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.257269404470833局)，BRAND(26分/2.597101714063017局)，PROWESS(26分/10.884706311255254局)，MANGLE(25分/44.71447903660301局)，HELLRAISER(25分/4.180191240199335局)
+- 当前低价值卡牌：BULLY(16分/2.06389191051748局)，BURNING_PACT(17分/12.460976397359678局)，DEFEND_IRONCLAD(18分/3.459898381195989局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.39 → 0.40（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.08 → 2.07（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F24——药水交药线部分胜利回收）
+- 生涯战绩：0/1821 胜，当前目标进阶 0
