@@ -18207,6 +18207,126 @@ def main() -> int:
         f"终端药水储备对账关闭后动作或既有 marker 漂移: " \
         f"{d_potion_reserve_terminal_off}"
 
+    # 3z-4c-0-1) 可用药水终局对账（POTION_READY_TERMINAL_OUTCOME_OBS）：
+    #         1817-F24 的形态——终端快照仍有一个 ready potion，但其是否
+    #         能即时救援不能由 can_use 单字段推断。把同战斗 use_potion 历史
+    #         接入有界审计，并对 POWDERED_DEMISE 保守标为延迟生效；action/
+    #         params 与既有药水储备终局对账保持不变。
+    potion_ready_reason = d_potion_reserve.reason.replace(
+        "can_use=0/ids=BLOCK_P/ready_ids=none",
+        "can_use=1/ids=POWDERED_DEMISE/ready_ids=POWDERED_DEMISE")
+    potion_ready_terminal_ctx = _SettleCtx()
+    potion_ready_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "use_potion", "floor": 33,
+        "turn": 6, "reason": "战斗：使用药水【虚弱药水】",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": potion_ready_reason,
+    }]
+    potion_ready_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_potion_ready_terminal = potion_ready_terminal_pol.decide(
+        lethal_unavailable_outcome_state, potion_ready_terminal_ctx)
+    assert (d_potion_ready_terminal.action
+            == d_potion_reserve_outcome.action
+            and d_potion_ready_terminal.params
+            == d_potion_reserve_outcome.params
+            and "POTION_READY_TERMINAL_OUTCOME_OBS"
+            in d_potion_ready_terminal.reason
+            and "/ready_ids=POWDERED_DEMISE/ready_count=1"
+            in d_potion_ready_terminal.reason
+            and "/same_combat_use_count=1/same_combat_use_names=虚弱药水"
+            in d_potion_ready_terminal.reason
+            and "/classification=delayed_demise/bridge_decisions=1"
+            in d_potion_ready_terminal.reason), \
+        f"可用药水终端对账缺失或动作漂移: {d_potion_ready_terminal}"
+
+    potion_ready_no_use_ctx = _SettleCtx()
+    potion_ready_no_use_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": potion_ready_reason,
+    }]
+    d_potion_ready_no_use = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        lethal_unavailable_outcome_state, potion_ready_no_use_ctx)
+    assert (d_potion_ready_no_use.action == d_potion_ready_terminal.action
+            and d_potion_ready_no_use.params
+            == d_potion_ready_terminal.params
+            and "/same_combat_use_count=0/same_combat_use_names=none"
+            in d_potion_ready_no_use.reason
+            and "/classification=delayed_demise"
+            in d_potion_ready_no_use.reason), \
+        f"可用药水无使用历史未被保守记录: {d_potion_ready_no_use}"
+
+    potion_ready_boundary_ctx = _SettleCtx()
+    potion_ready_boundary_ctx.decisions = [{
+        "screen": "MAP", "action": "use_potion", "floor": 33,
+        "turn": 5, "reason": "边界外药水【虚弱药水】",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": potion_ready_reason,
+    }]
+    d_potion_ready_boundary = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        lethal_unavailable_outcome_state, potion_ready_boundary_ctx)
+    assert (d_potion_ready_boundary.action == d_potion_ready_terminal.action
+            and d_potion_ready_boundary.params
+            == d_potion_ready_terminal.params
+            and "/same_combat_use_count=0/same_combat_use_names=none"
+            in d_potion_ready_boundary.reason), \
+        f"可用药水终端对账越过屏幕边界: {d_potion_ready_boundary}"
+
+    potion_ready_malformed_ctx = _SettleCtx()
+    potion_ready_malformed_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": potion_ready_reason.replace(
+            "can_use=1/ids=POWDERED_DEMISE/ready_ids=POWDERED_DEMISE",
+            "can_use=2/ids=POWDERED_DEMISE/ready_ids=POWDERED_DEMISE"),
+    }]
+    d_potion_ready_malformed = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            lethal_unavailable_outcome_state,
+            potion_ready_malformed_ctx)
+    assert (d_potion_ready_malformed.action == d_potion_ready_terminal.action
+            and d_potion_ready_malformed.params
+            == d_potion_ready_terminal.params
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            in d_potion_ready_malformed.reason
+            and "POTION_READY_TERMINAL_OUTCOME_OBS"
+            not in d_potion_ready_malformed.reason), \
+        f"畸形 ready 药水字段未静默: {d_potion_ready_malformed}"
+
+    potion_ready_off_know = knowledge.Knowledge(tmp)
+    potion_ready_off_know.policy[
+        "potion_ready_terminal_outcome_obs"] = False
+    d_potion_ready_off = policy.Policy(potion_ready_off_know).decide(
+        lethal_unavailable_outcome_state, potion_ready_terminal_ctx)
+    assert (d_potion_ready_off.action == d_potion_ready_terminal.action
+            and d_potion_ready_off.params == d_potion_ready_terminal.params
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            in d_potion_ready_off.reason
+            and "POTION_READY_TERMINAL_OUTCOME_OBS"
+            not in d_potion_ready_off.reason), \
+        f"可用药水终端观测关闭后动作或既有 marker 漂移: {d_potion_ready_off}"
+    assert knowledge.DEFAULT_POLICY[
+        "potion_ready_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 potion_ready_terminal_outcome_obs"
+
+    potion_ready_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
+    potion_ready_retry_ctx = _SettleCtx()
+    potion_ready_retry_ctx.decisions = list(
+        potion_ready_terminal_ctx.decisions)
+    d_potion_ready_retry_first = potion_ready_retry_pol.decide(
+        lethal_unavailable_outcome_state, potion_ready_retry_ctx)
+    potion_ready_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 33,
+        "reason": d_potion_ready_retry_first.reason,
+    })
+    d_potion_ready_retry = potion_ready_retry_pol.decide(
+        lethal_unavailable_outcome_state, potion_ready_retry_ctx)
+    assert ("POTION_READY_TERMINAL_OUTCOME_OBS"
+            in d_potion_ready_retry_first.reason
+            and "POTION_READY_TERMINAL_OUTCOME_OBS"
+            not in d_potion_ready_retry.reason), \
+        "可用药水终端对账在已提交后重复写入 marker"
+
     lethal_unavailable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
     lethal_unavailable_replay_ctx = _SettleCtx()
     lethal_unavailable_replay_ctx.decisions = [{

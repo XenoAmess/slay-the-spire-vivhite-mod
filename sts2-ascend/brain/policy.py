@@ -4787,6 +4787,66 @@ class Policy:
         }
 
     @staticmethod
+    def _potion_ready_terminal_use_snapshot(
+            decisions, floor=None, terminal_index=None):
+        """Bound same-combat potion-use history for a ready-potion terminal.
+
+        The ready-slot snapshot is not enough to infer that a potion could
+        have rescued the turn. Walk only a small persisted COMBAT /
+        CARD_SELECTION bridge, stop at a floor or screen boundary, and keep
+        the result audit-only. This deliberately records names when the
+        payload has them, without guessing a potion effect from its label.
+        """
+        if not isinstance(decisions, list) or not decisions:
+            return None
+        try:
+            _terminal_index = (len(decisions) - 1 if terminal_index is None
+                               else int(terminal_index))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        _terminal_index = max(0, min(_terminal_index, len(decisions) - 1))
+        _use_count = 0
+        _use_names = []
+        _scanned = 0
+        _lower_bound = max(-1, _terminal_index - 64)
+
+        def _same_floor(left, right):
+            if left is None or right is None:
+                return left is right
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        for _index in range(_terminal_index - 1, _lower_bound, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if not _same_floor(_row.get("floor"), floor):
+                break
+            _screen = str(_row.get("screen") or "").strip().upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _scanned += 1
+            if str(_row.get("action") or "") != "use_potion":
+                continue
+            _use_count += 1
+            if len(_use_names) >= 8:
+                continue
+            _reason = str(_row.get("reason") or "")
+            _match = re.search(r"【([^】]{1,80})】", _reason)
+            _name = (_match.group(1) if _match else
+                     _row.get("potion_id") or _row.get("potion_name") or "?")
+            _name = re.sub(
+                r"[/；（）()\s]+", "_", str(_name)).strip("_") or "?"
+            _use_names.append(_name)
+        return {
+            "same_combat_use_count": _use_count,
+            "same_combat_use_names": "|".join(reversed(_use_names)) or "none",
+            "bridge_decisions": _scanned,
+        }
+
+    @staticmethod
     def _elite_forced_entry_projected_after(note) -> str:
         """Extract the map gate's post-Elite HP projection for a durable join.
 
@@ -9953,6 +10013,50 @@ class Policy:
                 f"/ids={_text(_potion.get('ids'))}"
                 f"/ready_ids={_text(_potion.get('ready_ids'))}"
                 "（POTION_RESERVE_TERMINAL_OUTCOME_OBS）")
+        _potion_ready_terminal_tail = ""
+        try:
+            _potion_ready_enabled = bool(int(float(pol.get(
+                "potion_ready_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _potion_ready_enabled = False
+        _potion_ready = _pending.get("potion_ready_terminal")
+        if (_potion_ready_enabled and isinstance(_potion, dict)
+                and isinstance(_potion_ready, dict)):
+            try:
+                _slot_count = int(float(_potion.get("slots")))
+                _occupied_count = int(float(_potion.get("occupied")))
+                _ready_count = int(float(_potion.get("can_use")))
+            except (TypeError, ValueError, OverflowError):
+                _slot_count = -1
+                _occupied_count = -1
+                _ready_count = 0
+            _ready_ids = [
+                _item.strip() for _item in str(
+                    _potion.get("ready_ids") or "").split("|")
+                if _item.strip() and _item.strip().casefold() not in {"none", "?"}
+            ]
+            if (_potion.get("state") == "present"
+                    and _slot_count >= _occupied_count >= _ready_count > 0
+                    and len(_ready_ids) == _ready_count):
+                _classification = (
+                    "delayed_demise"
+                    if all(_item.upper() == "POWDERED_DEMISE"
+                           for _item in _ready_ids)
+                    else "unknown")
+                _potion_ready_terminal_tail = (
+                    "；终端可用药水对账："
+                    f"outcome={_result}"
+                    f"/floor={_round(floor)}"
+                    f"/source_round={_round(_pending.get('terminal_round'))}"
+                    f"/source_action={_text(_pending.get('source_action'))}"
+                    f"/final_hp={_num(final_hp)}"
+                    f"/ready_ids={_text(_potion.get('ready_ids'))}"
+                    f"/ready_count={_ready_count}"
+                    f"/same_combat_use_count={_round(_potion_ready.get('same_combat_use_count'))}"
+                    f"/same_combat_use_names={_text(_potion_ready.get('same_combat_use_names'))}"
+                    f"/classification={_classification}"
+                    f"/bridge_decisions={_round(_potion_ready.get('bridge_decisions'))}"
+                    "（POTION_READY_TERMINAL_OUTCOME_OBS）")
         return (
             f"；致死无牌终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -9975,6 +10079,7 @@ class Policy:
             f"/forced={_flag(_pending.get('forced'))}"
             f"/gap={_flag(_pending.get('gap'))}"
             f"{_transition_tail}"
+            f"{_potion_ready_terminal_tail}"
             f"{_potion_terminal_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
 
@@ -10223,6 +10328,26 @@ class Policy:
         _potion = self._parse_potion_reserve_end_turn_observation(reason)
         if isinstance(_potion, dict):
             _pending["potion_reserve"] = _potion
+            try:
+                _slot_count = int(float(_potion.get("slots")))
+                _occupied_count = int(float(_potion.get("occupied")))
+                _ready_count = int(float(_potion.get("can_use")))
+            except (TypeError, ValueError, OverflowError):
+                _slot_count = -1
+                _occupied_count = -1
+                _ready_count = 0
+            _ready_ids = [
+                _item.strip() for _item in str(
+                    _potion.get("ready_ids") or "").split("|")
+                if _item.strip() and _item.strip().casefold() not in {"none", "?"}
+            ]
+            if (_potion.get("state") == "present"
+                    and _slot_count >= _occupied_count >= _ready_count > 0
+                    and len(_ready_ids) == _ready_count):
+                _ready_snapshot = self._potion_ready_terminal_use_snapshot(
+                    decisions, floor=floor, terminal_index=len(decisions) - 1)
+                if isinstance(_ready_snapshot, dict):
+                    _pending["potion_ready_terminal"] = _ready_snapshot
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 

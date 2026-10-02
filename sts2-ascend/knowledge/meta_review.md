@@ -15029,3 +15029,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 
 - replay target: none (`failed_review_replay.requested_packages=[]`).
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1817: distinguish ready potion from immediate rescue at the lethal terminal
+
+profile_id: `ironclad`
+requested_run: `1817`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[20261003-064709-1790981229471883700-a80fed38]`; complete target evidence was indexed and selectively reimplemented
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: A lethal no-card terminal with `can_use=1` is not, by itself, evidence that an immediate rescue was omitted. The terminal join must also record bounded same-combat potion-use history and a conservative timing classification. This is falsifiable: a different floor/screen, malformed ready fields, duplicate committed retry, disabled switch, or action/parameter drift must suppress or fail the fixture.
+- **EVIDENCE**: The exact full chain `sts2-ascend/knowledge/runs/20261001-055725_EJXD72GGFBTN.json` has 356 decisions. F24 D354 records `state=present/slots=3/occupied=1/can_use=1/ids=POWDERED_DEMISE/ready_ids=POWDERED_DEMISE`, at HP 9 and round 3; D355 is `GAME_OVER` with final HP 0. The native v0.111.0 mechanics record `POWDERED_DEMISE` applying `DemisePower`, whose `AfterSideTurnEnd` applies damage, so it is delayed rather than an immediate player-turn rescue. A read-only helper replay of the actual chain found zero F24 potion uses across a nine-decision same-combat bridge.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, emit one `POTION_READY_TERMINAL_OUTCOME_OBS` with ready IDs/count, same-combat use count/names, delayed-effect classification, source/terminal fields, and bounded bridge length. Classify `delayed_demise` only when every ready ID is exactly `POWDERED_DEMISE`; malformed counts/IDs, boundaries, and other IDs remain silent or `unknown`. No combat action or parameters change.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `potion_ready_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: after the existing persisted potion-reserve snapshot, validate slot/occupied/ready counts and boundedly reverse-scan at most 64 same-floor `COMBAT`/`CARD_SELECTION` rows. Append the new ready-potion terminal observation only for a valid non-empty ready set; the marker is audit-only and is not read by potion selection, scoring, gates, action choice, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: cover positive same-combat use, zero-use, screen boundary, malformed count, default/switch-off behavior, and duplicate committed retry; all assert unchanged `continue_game_over {}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent ready-potion terminals and compare ready IDs/count, same-combat use history, classification, source/terminal HP and round, bridge length, marker count, and applied action/parameters.
+- **Adjust**: if a real trace lacks stable IDs, mixes delayed and immediate effects, crosses a combat boundary, or exposes a different count convention, retain the evidence and narrow only this observation classifier; do not turn it into automatic potion use.
+- **Rollback**: set `potion_ready_terminal_outcome_obs` to `False`; the existing lethal and potion-reserve audits, action, and parameters must remain unchanged.
+- **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted actual-chain replay, malformed/boundary fixtures, final target diff review, and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, or online process was touched.
+
+- `retry_resolution: 20261003-064709-1790981229471883700-a80fed38 integrated`
