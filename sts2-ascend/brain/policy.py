@@ -7689,6 +7689,121 @@ class Policy:
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_kill_race_hp_pay_output_capacity_terminal_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a non-damaging HP payment to a zero-output terminal frame.
+
+        This is an audit-only classification.  It deliberately requires both
+        persisted joins to be present and never participates in card scoring or
+        action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_hp_pay_output_capacity_terminal_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _hp_pending = getattr(
+            self, "_kill_race_hp_pay_terminal_outcome_pending", None)
+        _terminal_pending = getattr(
+            self, "_race_terminal_outcome_pending", None)
+        _capacity = None
+        _terminal_round = None
+        if isinstance(_terminal_pending, dict):
+            _capacity = _terminal_pending.get("output_capacity")
+            _terminal_round = _terminal_pending.get("terminal_round")
+        if not isinstance(_capacity, dict):
+            _fallback_pending = getattr(
+                self, "_race_allin_output_capacity_terminal_outcome_pending",
+                None)
+            if isinstance(_fallback_pending, dict):
+                _capacity = _fallback_pending.get("terminal")
+                _terminal_round = _fallback_pending.get("terminal_round")
+        if (not _enabled or not isinstance(_hp_pending, dict)
+                or not isinstance(_capacity, dict)):
+            return ""
+
+        _reported = bool(getattr(
+            self, "_kill_race_hp_pay_output_capacity_terminal_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            _decisions = getattr(ctx, "decisions", None)
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS" \
+                    in _last_reason:
+                return ""
+            # The GAME_OVER action may have been lost before persistence; a
+            # durable marker is the only commit proof for this one-shot join.
+            self._kill_race_hp_pay_output_capacity_terminal_reported = False
+
+        def _number(value):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return parsed if math.isfinite(parsed) else None
+
+        _damage = _number(_hp_pending.get("damage_est"))
+        _attack_candidates = _number(_capacity.get("attack_candidates"))
+        _raw_damage_cap = _number(_capacity.get("raw_damage_cap"))
+        _target_hp = _number(_capacity.get("target_hp"))
+        _target_block = _number(_capacity.get("target_block"))
+        if (_damage is None or _attack_candidates is None
+                or _raw_damage_cap is None or _target_hp is None
+                or _target_block is None
+                or _damage < 0.0 or _attack_candidates < 0.0
+                or _raw_damage_cap < 0.0 or _target_hp < 0.0
+                or _target_block < 0.0
+                or _damage > 0.0 or _attack_candidates != 0.0
+                or _raw_damage_cap > 0.0):
+            return ""
+
+        marker = "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS"
+        self._kill_race_hp_pay_output_capacity_terminal_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _atom(value) -> str:
+            if value is None:
+                return "?"
+            if isinstance(value, str):
+                return value or "?"
+            return _num(value)
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速自付输出容量终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_hp_pending.get('source_round'))}"
+            f"/source_action={_hp_pending.get('source_action') or '?'}"
+            f"/card={_hp_pending.get('card') or '?'}"
+            f"/damage_est={_num(_damage)}"
+            f"/target_hp={_atom(_hp_pending.get('target_hp'))}"
+            f"/target_after_est={_atom(_hp_pending.get('target_after_est'))}"
+            f"/pay={_num(_hp_pending.get('pay'))}"
+            f"/post_pay_margin={_num(_hp_pending.get('post_pay_margin'))}"
+            f"/terminal_round={_round(_terminal_round)}"
+            f"/terminal_target_hp={_num(_target_hp)}"
+            f"/terminal_target_block={_num(_target_block)}"
+            f"/terminal_attack_candidates={int(_attack_candidates)}"
+            f"/terminal_raw_damage_cap={_num(_raw_damage_cap)}"
+            f"/final_hp={_num(final_hp)}"
+            "/classification=non_damage_pay_at_zero_output"
+            f"（{marker}）")
+
     def _restore_hp_cost_atk_nonlethal_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
         """Recover a bounded same-combat non-lethal HP-cost attack source.
@@ -22588,6 +22703,9 @@ class Policy:
             self.know.policy, ctx, go.get("floor"))
         self._attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
+        _kill_race_hp_pay_output_capacity_terminal_note = (
+            self._consume_kill_race_hp_pay_output_capacity_terminal_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
         _race_allin_output_capacity_terminal_outcome_note = (
@@ -22660,6 +22778,7 @@ class Policy:
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_terminal_outcome_note}"
+                            f"{_kill_race_hp_pay_output_capacity_terminal_note}"
                             f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_race_mode_flip_terminal_outcome_note}"
@@ -22708,6 +22827,7 @@ class Policy:
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
+                        f"{_kill_race_hp_pay_output_capacity_terminal_note}"
                         f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_race_mode_flip_terminal_outcome_note}"

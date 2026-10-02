@@ -20621,6 +20621,87 @@ def main() -> int:
                 not in d_hp_pay_boundary.reason), \
         f"竞速自付 HP 终局桥接越过 REWARD 边界: {d_hp_pay_boundary}"
 
+    # 3z-5h) 非伤害付血与终局零输出容量的联合观测：当最后一次竞速
+    # 付血牌本身不产生伤害、且终局已无攻击候选/原始伤害容量时，追加
+    # 一个可关闭、可重试的归因分类；不改变 GAME_OVER 动作。
+    hp_pay_capacity_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    hp_pay_capacity_pol = policy.Policy(knowledge.Knowledge(tmp))
+    hp_pay_capacity_pol._kill_race_hp_pay_terminal_outcome_pending = {
+        "source_round": 11, "source_action": "play_card",
+        "card": "HEURISTIC_SHIELD", "damage_est": 0.0,
+        "target_hp": 63.0, "target_after_est": 63.0, "net": -2.0,
+        "pay": 2.0, "hp_before": 10.0, "hp_after": 8.0,
+        "incoming": 26.0, "post_pay_margin": -18.0,
+        "terminal_round": 11, "terminal_action": "end_turn",
+        "terminal_hp": 8.0,
+    }
+    hp_pay_capacity_pol._race_terminal_outcome_pending = {
+        "terminal_round": 11,
+        "output_capacity": {
+            "target_hp": 63.0, "target_block": 0.0,
+            "attack_candidates": 0, "raw_damage_cap": 0.0,
+        },
+    }
+    hp_pay_capacity_ctx = _SettleCtx()
+    hp_pay_capacity_ctx.decisions = []
+    d_hp_pay_capacity = hp_pay_capacity_pol.decide(
+        hp_pay_capacity_state, hp_pay_capacity_ctx)
+    assert (d_hp_pay_capacity.action == "continue_game_over"
+            and d_hp_pay_capacity.params == {}
+            and "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS"
+                in d_hp_pay_capacity.reason
+            and "source_round=11/source_action=play_card"
+                "/card=HEURISTIC_SHIELD/damage_est=0/target_hp=63"
+                "/target_after_est=63/pay=2/post_pay_margin=-18"
+                "/terminal_round=11/terminal_target_hp=63"
+                "/terminal_target_block=0/terminal_attack_candidates=0"
+                "/terminal_raw_damage_cap=0/final_hp=0"
+                "/classification=non_damage_pay_at_zero_output"
+                in d_hp_pay_capacity.reason), \
+        f"非伤害付血与零输出容量联合观测缺失或动作漂移: {d_hp_pay_capacity}"
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_hp_pay_output_capacity_terminal_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速付血/零输出容量联合观测开关"
+
+    hp_pay_capacity_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_hp_pay_capacity.action,
+        "floor": 17, "reason": d_hp_pay_capacity.reason})
+    d_hp_pay_capacity_duplicate = hp_pay_capacity_pol.decide(
+        hp_pay_capacity_state, hp_pay_capacity_ctx)
+    assert (d_hp_pay_capacity_duplicate.action == d_hp_pay_capacity.action
+            and d_hp_pay_capacity_duplicate.params
+            == d_hp_pay_capacity.params
+            and "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS"
+                not in d_hp_pay_capacity_duplicate.reason), \
+        f"非伤害付血/零输出容量联合观测重复提交: {d_hp_pay_capacity_duplicate}"
+
+    hp_pay_capacity_off_know = knowledge.Knowledge(tmp)
+    hp_pay_capacity_off_know.policy[
+        "kill_race_hp_pay_output_capacity_terminal_obs"] = False
+    hp_pay_capacity_off_pol = policy.Policy(hp_pay_capacity_off_know)
+    hp_pay_capacity_off_pol._kill_race_hp_pay_terminal_outcome_pending = dict(
+        hp_pay_capacity_pol._kill_race_hp_pay_terminal_outcome_pending)
+    hp_pay_capacity_off_pol._race_terminal_outcome_pending = {
+        "terminal_round": 11,
+        "output_capacity": {
+            "target_hp": 63.0, "target_block": 0.0,
+            "attack_candidates": 0, "raw_damage_cap": 0.0,
+        },
+    }
+    d_hp_pay_capacity_off = hp_pay_capacity_off_pol.decide(
+        hp_pay_capacity_state, _SettleCtx())
+    assert (d_hp_pay_capacity_off.action == d_hp_pay_capacity.action
+            and d_hp_pay_capacity_off.params == d_hp_pay_capacity.params
+            and "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS"
+                not in d_hp_pay_capacity_off.reason), \
+        f"联合观测关闭后动作或 marker 漂移: {d_hp_pay_capacity_off}"
+
     race_terminal_retry_pol = policy.Policy(race_terminal_know)
     race_terminal_retry_ctx = _SettleCtx()
     race_terminal_retry_ctx.decisions = [{

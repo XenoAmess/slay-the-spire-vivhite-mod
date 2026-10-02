@@ -5966,3 +5966,39 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-03 第1754~1819局批：非伤害付血与终局零输出容量联合观测
+
+profile_id: `vivhite`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### ATTRIBUTION
+
+- 本批只处理「竞速终局的生命支付是否发生在输出已经归零之后」这一观测缺口，不把 F17 阵亡直接归因于启发式护盾、生命支付或单张卡牌；现有终局输出容量、有效火力和生命支付观测继续保留。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1819局 `3C31Y9Y5X1A1` 的 F17 T11 在弦光投影后打出启发式护盾+，`damage_est=0`、付血 `2`（HP `10→8`），随后终局容量为 `attack_candidates=0/raw_damage_cap=0`。若把这两个已持久化审计 join 绑定，便能识别「零输出后仍付血」这一独立形态，而不把分开出现的 marker 误当因果证明。
+- **EVIDENCE**：已逐条读取完整链 `sts2-ascend/knowledge/profiles/vivhite/runs/20261003-063927_3C31Y9Y5X1A1.json`；共265条 decisions，packet 仅保留58条、裁剪207条，`complete_persisted_chain=false`，`decision_aggregates_scope=before packet budget trimming`。F17 T11 付血审计记录启发式护盾+ `damage_est=0`、`pay=2`、`post_pay_margin=-18`；同一终局审计记录 `target_hp=63`、`attack_candidates=0`、`raw_damage_cap=0`，但此前没有单一关联信号。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Vivhite Boss 终局中，仅当 `damage_est=0` 且终局 `attack_candidates=0`、`raw_damage_cap=0` 时出现 `KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS`，并携带 source/terminal 回合、付血和胜负字段；伤害支付、非零输出容量、跨房间尾部不得出现该 marker。`action/params`、竞速判定和学习统计必须不变；缺失、错接、重复或动作漂移即证伪。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kill_race_hp_pay_output_capacity_terminal_obs`，仅控制该联合观测。
+- `sts2-ascend/brain/policy.py`：在 GAME_OVER 终局恢复完付血 join 与输出容量 join 后，追加只读 `KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS`；严格要求非伤害付血和零输出容量，支持动作丢失重试及已持久化 marker 去重，不进入评分、候选、等待、动作、参数或学习统计。
+- `sts2-ascend/brain/selfcheck.py`：新增正常输出、已提交重试去重、关闭开关三组夹具，并断言 `continue_game_over/{}` 不漂移。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+### VALIDATION
+
+- 修正新夹具的 `decisions` 初始化后，直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 的业务断言通过，随后只因宿主既有固定256槽临时池触发 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 selfcheck 的进程级继承 ACL/扩容子目录分配器重跑，退出码0，输出 `SELFCHECK OK`。
+- 已回读三处完整源码/自检 diff；`git diff --check -- sts2-ascend/brain/knowledge.py sts2-ascend/brain/policy.py sts2-ascend/brain/selfcheck.py` 通过，仅有 Git 的 LF/CRLF 提示。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续3~10个独立 Vivhite Boss 终局，按 run/floor/encounter、source/terminal 回合、damage_est、付血、post_pay_margin、terminal attack_candidates/raw_damage_cap、胜负和 action/params 分层；marker 出现本身不升级为行为闸门。
+- 若 marker 缺失、跨房间错接、非零伤害/非零容量误触发、重复提交或 action/params 漂移，将 `kill_race_hp_pay_output_capacity_terminal_obs=False`；必要时回滚本地提交，保留原有付血与输出容量终局观测。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

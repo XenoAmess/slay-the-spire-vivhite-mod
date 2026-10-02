@@ -250,6 +250,7 @@ DEFAULT_POLICY = {
     "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat (COMBAT/CARD_SELECTION bridge) source-to-terminal output-capacity join; False removes only the transition marker.
     "kill_race_terminal_outcome_obs": True,  # Audit-only link from that terminal end-turn to the next GAME_OVER/Victory result, preserving those regime flags.
     "kill_race_hp_pay_terminal_outcome_obs": True,  # Audit-only bounded same-combat join from a kill-race HP-payment value audit to the following terminal outcome; False removes only this marker.
+    "kill_race_hp_pay_output_capacity_terminal_obs": True,  # Audit-only join when a non-damaging kill-race HP payment reaches a terminal zero-output-capacity frame; False removes only this marker.
     "race_upshift_stale_terminal_outcome_obs": True,  # Audit-only bounded join from RACE_UPSHIFT_STALE to the same-combat terminal outcome; False removes only this tail and never changes the action.
     "race_audit_projection_latch_drift_obs": True,  # Audit-only first-latch versus terminal re-projection comparison; False removes only the snapshot/drift tails.
     "race_audit_projection_intent_drift_obs": True,  # Audit-only first-latch versus terminal incoming-intent comparison; False removes only this tail.
