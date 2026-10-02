@@ -30,6 +30,18 @@
 
 本地克隆的 remote：`origin` = 我方 fork，`upstream` = 官方仓库。
 
+### 2026-10-03 附魔空确认兼容修复
+
+2026-10-03 附魔选牌故障的兼容构建基线为 Agent v0.12.5、游戏 v0.111.0；本地 checkout 已切至
+`deploy/enchant-empty-confirmation-v0.12.5`，修复提交 `6e762b9`，不是最新官方 main。修复将附魔选择的
+有效最小数量由 0 校正为至少 1，避免 API 公开永远无法完成的空确认。424 项 C# 测试与 Release 构建通过；
+运行中游戏保持旧 DLL，由 Brain 兼容修复恢复原局，未热部署。最新上游结构的补丁另行提交，不能为提交 PR
+而把生产 checkout 换成尚未验证游戏兼容性的新版。详见[排查与部署证据](../../docs/2026-10-03-Brain附魔选牌卡死排查与修复.md)。
+
+上游补丁为 [PR #205](https://github.com/CharTyr/STS2-Agent/pull/205)，分支
+`fix/deck-enchant-empty-confirmation`，提交 `2eb7649`，基于官方 main `829ba230`；独立验证
+887 项 C# 测试通过、Release 构建 0 警告/0 错误，未替换生产 DLL。
+
 ### v0.9.1 已上游的修复
 
 **fix/potion-aoe-target-resolution**（commit `bf61078`，已合入上游 v0.9.1）：

@@ -88,6 +88,7 @@ py -3 -B -m unittest discover -s .\sts2-ascend\tests -p "test_*.py"
 | --- | --- | --- |
 | API `MAIN_MENU/run_unknown` | `/state`、`/actions/available`、游戏日志、原生 Continue | 保持动作/直播关闭，等待权威存档证据；不要强开新局。 |
 | Brain 反复重启 | `runner` 启动握手、review marker、失败包 | 让 runner 在预算内回滚/保全；不要手改 marker。 |
+| 附魔选牌反复“已选 0 张，确认” | `selection.kind=deck_enchant_select`、`min_select/max_select`、选中数量及 `pending/retrying` 回执 | 原生空附魔确认不生效；先使用可用附魔额度，再确认，并等待已接受选择刷新。修复后用统一 `Stop-Agent.ps1 -KeepGame` / `Start-Agent.ps1 -SkipDeploy` 保留原局验证，详见[现场记录](../../docs/2026-10-03-Brain附魔选牌卡死排查与修复.md)。 |
 | 统计或局号异常 | 对应 Profile 的 checkpoint 与 `character_rotation` 审计 | 停止后按专项恢复工具处理，不直接改 `knowledge`。 |
 | TTS 没声音 | owner epoch、17952 `/health`、GPU/Edge 日志 | 维持游戏动作链独立运行，按 [`../tts/README.md`](../tts/README.md) 诊断。 |
 | 训练没有新动作 | `connected`、合法 `state_version`、最近两个 `decision_id`/`outcome.at` 是否形成递增的 `applied` 回执 | 进入修复/复核循环；不能把“进程存活”当成训练完成。 |
