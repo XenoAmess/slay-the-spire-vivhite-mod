@@ -15224,3 +15224,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Read-only replay of the exact 1839 chain emitted the expected one-entry tail. Targeted final diff review and `git diff --check` passed with only pre-existing LF/CRLF notices on these files. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1840-1841: retain HARD_INTENT_SPIKE_FIRE through GAME_OVER
+
+profile_id: `ironclad`
+requested_runs: `1840-1841`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: A `HARD_INTENT_SPIKE_FIRE` projection source can be lost when the same combat later ends in a lethal no-card `end_turn` and `GAME_OVER`. This is falsifiable: a matching terminal must gain exactly one bounded `HARD_INTENT_SPIKE_FIRE_TERMINAL_OUTCOME_OBS` marker, while a screen/floor boundary, duplicate terminal, malformed source, or disabled switch remains silent and the applied action/parameters stay unchanged.
+- **EVIDENCE**: The exact full chain `sts2-ascend/knowledge/runs/20261003-124348_LFREGG46QSKU.json` records run 1841 F17. D215 and D217 carry `HARD_INTENT_SPIKE_FIRE` with current intent 18; D233 is the lethal `end_turn` at HP 6 and D234 is `GAME_OVER`. The existing terminal joins had no hard-intent-spike marker. Read-only replay of D1-D233 selected the latest contiguous source D217 and emitted `outcome=defeat/floor=17/source_round=2/source_action=play_card/intent=18/terminal_round=7/terminal_action=end_turn/terminal_hp=6/final_hp=0/bridge_decisions=16/bridge_rounds=5`.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, compare source round/action/intent, terminal outcome/round/HP, final HP, bridge length, marker count, and applied action/parameters. The observation must not alter scoring, gates, candidate ranking, card/target choice, action, or parameters.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add the default-on rollback key `hard_combat_intent_spike_fire_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: reverse-scan only the contiguous same-floor `COMBAT`/`CARD_SELECTION` suffix, parse the latest valid intent before `HARD_INTENT_SPIKE_FIRE`, require terminal `end_turn`, consume once, and append the marker to all existing terminal reason paths. The code is observation-only.
+- `sts2-ascend/brain/selfcheck.py`: cover positive attribution, process reload, duplicate suppression, switch-off rollback, and `REWARD` boundary silence while asserting unchanged `continue_game_over {}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching terminals and compare the source/terminal fields, bridge length, marker count, and applied action/parameters.
+- **Adjust**: if production uses a different source spelling, numeric payload, combat boundary, or terminal shape, retain the raw chain and narrow only this parser/join; do not turn the marker into combat behavior.
+- **Rollback**: set `hard_combat_intent_spike_fire_terminal_outcome_obs` to `False`; existing terminal observations, scoring, gates, action, and parameters must remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Read-only replay of the exact 1841 chain emitted the expected marker. Targeted diff review found only the three production/selfcheck files before this report was appended; `git diff --check` had no whitespace errors beyond pre-existing LF/CRLF notices. No runtime, learning memory, formal run/archive, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

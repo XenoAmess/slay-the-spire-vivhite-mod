@@ -955,6 +955,8 @@ class Policy:
         self._boss_effective_dpt_terminal_outcome_reported = False
         self._boss_intent_ramp_terminal_outcome_pending = None
         self._boss_intent_ramp_terminal_outcome_reported = False
+        self._hard_intent_spike_fire_terminal_outcome_pending = None
+        self._hard_intent_spike_fire_terminal_outcome_reported = False
         self._boss_race_joint_flip_terminal_outcome_pending = None
         self._boss_race_joint_flip_terminal_outcome_reported = False
         self._race_projection_latch_intent_terminal_outcome_pending = None
@@ -2546,6 +2548,8 @@ class Policy:
             self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
             self._boss_intent_ramp_terminal_outcome_pending = None
             self._boss_intent_ramp_terminal_outcome_reported = False
+            self._hard_intent_spike_fire_terminal_outcome_pending = None
+            self._hard_intent_spike_fire_terminal_outcome_reported = False
             self._boss_race_joint_flip_terminal_outcome_pending = None
             self._boss_race_joint_flip_terminal_outcome_reported = False
         # 正常主循环会先 _track 再 decide；这个边界闸门仍保护直接调用、恢复中间
@@ -6915,6 +6919,156 @@ class Policy:
             f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_hard_intent_spike_fire_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover a hard intent spike source before GAME_OVER.
+
+        ``HARD_INTENT_SPIKE_FIRE`` is a production projection adjustment, but
+        the native terminal row only retains the later combat tail.  Join one
+        source from the contiguous same-floor combat suffix so this remains a
+        bounded observation and cannot affect scoring or action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "hard_combat_intent_spike_fire_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        _decisions = getattr(ctx, "decisions", None)
+        _marker = "HARD_INTENT_SPIKE_FIRE_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_hard_intent_spike_fire_terminal_outcome_reported", False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            self._hard_intent_spike_fire_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_hard_intent_spike_fire_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _source = None
+        _source_index = -1
+        for _index in range(len(_decisions) - 1, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind("HARD_INTENT_SPIKE_FIRE")
+            if _marker_at < 0:
+                continue
+            # The marker is appended immediately after the current intent.
+            # Take only the last numeric token before it and reject malformed
+            # or negative payloads instead of manufacturing an observation.
+            _numbers = re.findall(
+                r"(?<![A-Za-z])[-+]?(?:\d+(?:\.\d*)?|\.\d+)",
+                _reason[:_marker_at])
+            if not _numbers:
+                continue
+            try:
+                _intent = float(_numbers[-1])
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if not math.isfinite(_intent) or _intent < 0.0:
+                continue
+            _source = {
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "intent": _intent,
+            }
+            _source_index = _index
+            break
+        if _source is None:
+            return
+
+        _terminal = _decisions[-1]
+        if not isinstance(_terminal, dict):
+            return
+        if str(_terminal.get("action") or "") != "end_turn":
+            return
+        _source["terminal_round"] = _terminal.get(
+            "turn", _terminal.get("round"))
+        _source["terminal_action"] = _terminal.get("action") or "?"
+        _source["terminal_hp"] = _terminal.get("hp")
+        _source["bridge_decisions"] = max(
+            0, len(_decisions) - 1 - _source_index)
+        try:
+            _source["bridge_rounds"] = (
+                int(float(_source["terminal_round"]))
+                - int(float(_source["source_round"])))
+        except (TypeError, ValueError, OverflowError):
+            _source["bridge_rounds"] = "?"
+        self._hard_intent_spike_fire_terminal_outcome_pending = _source
+        self._hard_intent_spike_fire_terminal_outcome_reported = False
+
+    def _consume_hard_intent_spike_fire_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Attach the hard intent spike source to the terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "hard_combat_intent_spike_fire_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_hard_intent_spike_fire_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_hard_intent_spike_fire_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._hard_intent_spike_fire_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f";hard-intent-spike terminal outcome:outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/intent={_num(_pending.get('intent'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            " (HARD_INTENT_SPIKE_FIRE_TERMINAL_OUTCOME_OBS)")
 
     def _restore_boss_race_joint_flip_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -14375,6 +14529,8 @@ class Policy:
             self._boss_effective_dpt_terminal_outcome_reported = False
             self._boss_intent_ramp_terminal_outcome_pending = None
             self._boss_intent_ramp_terminal_outcome_reported = False
+            self._hard_intent_spike_fire_terminal_outcome_pending = None
+            self._hard_intent_spike_fire_terminal_outcome_reported = False
             self._boss_race_joint_flip_terminal_outcome_pending = None
             self._boss_race_joint_flip_terminal_outcome_reported = False
             self._race_projection_latch_intent_terminal_outcome_pending = None
@@ -23414,6 +23570,11 @@ class Policy:
         _boss_intent_ramp_terminal_outcome_note = (
             self._consume_boss_intent_ramp_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_hard_intent_spike_fire_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _hard_intent_spike_fire_terminal_outcome_note = (
+            self._consume_hard_intent_spike_fire_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_boss_race_joint_flip_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _boss_race_joint_flip_terminal_outcome_note = (
@@ -23559,6 +23720,7 @@ class Policy:
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
+                            f"{_hard_intent_spike_fire_terminal_outcome_note}"
                             f"{_boss_race_joint_flip_terminal_outcome_note}"
                             f"{_race_projection_latch_intent_terminal_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
@@ -23613,6 +23775,7 @@ class Policy:
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
+                        f"{_hard_intent_spike_fire_terminal_outcome_note}"
                         f"{_boss_race_joint_flip_terminal_outcome_note}"
                         f"{_race_projection_latch_intent_terminal_outcome_note}"
                         f"{_ovicopter_summon_pressure_terminal_outcome_note}"
@@ -23650,6 +23813,7 @@ class Policy:
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_self_loss_phase_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
+                                f"{_hard_intent_spike_fire_terminal_outcome_note}"
                                 f"{_boss_race_joint_flip_terminal_outcome_note}"
                                 f"{_race_projection_latch_intent_terminal_outcome_note}"
                                 f"{_ovicopter_summon_pressure_terminal_outcome_note}"
