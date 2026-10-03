@@ -875,6 +875,8 @@ class Policy:
         self._respawn_read_obs_noted: set = set()  # 本场已并入 danger_note 的读侧敌键（每敌每场只注记一次）
         self._respawn_lookup_err: dict = {}  # 本场名册读侧 is_known 查询被吞异常：敌键 -> 异常类型名（RESPAWN_ROSTER_READ_OBS 读数增配，第 1520~1524 局批复盘）
         self._race_combat = None    # 战斗实例身份（败局竞速检测用）
+        self._race_allin_cover_latch_combat = None  # 同回合已执行覆盖的身份闩锁
+        self._race_allin_cover_latch_round = None   # 同回合覆盖优先闩锁
         self._focus_combat = None   # 战斗实例身份（集火目标记忆，第 695~697 批复盘）
         self._focus_index = None    # 上一张定向攻击牌选中的目标索引（分段体火线连续性）
         self._focus_drift_pending = []  # 评分侧静默换线挂账（FOCUS_DRIFT_FLUSH_OBS，第 852~856 局批复盘）
@@ -2584,6 +2586,8 @@ class Policy:
             self._saw_playable_this_turn = False
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
+            self._race_allin_cover_latch_combat = None
+            self._race_allin_cover_latch_round = None
             self._failed_this_turn = set()
             self._card_cooldowns = {}
             self._failed_hand_len = -1
@@ -15002,6 +15006,7 @@ class Policy:
             self._empty_hand_end_turn_stall = 0
             self._terminal_life_lock_signature = None
             self._terminal_life_lock_stall = 0
+            self._race_allin_cover_latch_round = None
         # 出牌黑名单只在"手牌数量未变"的连续 tick 间有效（第 65~66 局复盘）：
         # 手牌 index 是位置序号，打出一张牌后全体前移，旧 index 立即指向别的牌。
         # 手牌一变即释放全部黑名单；手牌未变的重试场景（409 抖动）仍精确拉黑。
@@ -15035,6 +15040,8 @@ class Policy:
         # 有意义，绝不跨战斗累计（测试环境常以 None 复用身份，生产端恒为真实对象）
         if ctx.combat is None or self._race_combat is not ctx.combat:
             self._race_combat = ctx.combat
+            self._race_allin_cover_latch_combat = ctx.combat
+            self._race_allin_cover_latch_round = None
             self._race_esc_latch_hold_count = 0
             self._hp_pay_result_pending = None
             self._hp_pay_result_note = ""
@@ -15817,6 +15824,18 @@ class Policy:
                         _ralc_low_pool_relief = (
                             _ralc_pool <= _ralc_low_pool_cap
                             and _ralc_strict_margin >= _ralc_min_margin)
+                        try:
+                            _ralc_round_latch_enabled = bool(int(float(
+                                pol.get("race_allin_lethal_cover_round_latch", 1)
+                                or 0)))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_round_latch_enabled = False
+                        _ralc_round_latched = (
+                            _ralc_round_latch_enabled
+                            and bool(pol.get(
+                                "race_allin_lethal_cover_behavior", True))
+                            and self._race_allin_cover_latch_combat is ctx.combat
+                            and self._race_allin_cover_latch_round == round_no)
                         _ralc_current_turn_lethal = False
                         _ralc_current_target_hp = 0.0
                         _ralc_current_target_block = 0.0
@@ -15873,7 +15892,8 @@ class Policy:
                             bool(pol.get("race_allin_lethal_cover_behavior", True))
                             and _ralc_pool > 0
                             and (_ralc_strict_margin >= 0.0
-                                 or _ralc_low_pool_relief))
+                                 or _ralc_low_pool_relief
+                                 or _ralc_round_latched))
                         if _ralc_behavior_eligible:
                             if _ralc_current_turn_lethal:
                                 danger_note += (
@@ -15885,8 +15905,10 @@ class Policy:
                             else:
                                 race_lethal_cover = True
                                 _ralc_behavior_mode = (
-                                    "low_pool_relief" if _ralc_strict_margin < 0.0
-                                    else "strict_margin")
+                                    "round_latch" if _ralc_round_latched
+                                    else ("low_pool_relief"
+                                          if _ralc_strict_margin < 0.0
+                                          else "strict_margin"))
                                 danger_note += (
                                     f"；败局竞速致死生还线：执行覆盖后严格买活余量"
                                     f"{_ralc_strict_margin:+.1f}回合，"
@@ -15895,6 +15917,10 @@ class Policy:
                                     f"/cap={_ralc_low_pool_cap:.0f}"
                                     f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
                                     "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
+                                if _ralc_round_latched:
+                                    danger_note += (
+                                        "；同回合已实际执行覆盖，维持本回合格挡优先"
+                                        "（RACE_ALLIN_LETHAL_COVER_ROUND_LATCH）")
                         _ralc_decision = (
                             "cover" if race_lethal_cover else "all_in")
                         if bool(pol.get(
@@ -17555,6 +17581,24 @@ class Policy:
                     hand, energy, incoming, my_hp, my_block, pol,
                     block_locked=block_locked, selected=card,
                     selected_action="play_card")
+            try:
+                _ralc_latch_arm_enabled = bool(int(float(pol.get(
+                    "race_allin_lethal_cover_round_latch", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _ralc_latch_arm_enabled = False
+            try:
+                _selected_block = float(card_numbers(card)[1] or 0.0)
+            except (TypeError, ValueError, OverflowError, IndexError):
+                _selected_block = 0.0
+            if (_ralc_latch_arm_enabled
+                    and bool(pol.get("race_allin_lethal_cover_behavior", True))
+                    and race_allin and race_lethal_cover
+                    and _selected_block > 0.0):
+                self._race_allin_cover_latch_combat = ctx.combat
+                self._race_allin_cover_latch_round = round_no
+                why += (
+                    f"｜本回合覆盖优先已锁定（round={round_no}）"
+                    "（RACE_ALLIN_LETHAL_COVER_ROUND_LATCH_ARMED）")
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
