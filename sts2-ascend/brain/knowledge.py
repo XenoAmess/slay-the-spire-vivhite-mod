@@ -736,13 +736,6 @@ DEFAULT_POLICY = {
                                                                   # 统计首末目标、次数与末次
                                                                   # 双方池值，不改变目标、评分、
                                                                   # 动作或参数。
-    "kin_leader_focus_pressure_obs": True,  # 领袖闸压力旁观：当当前攻击牌可
-                                                # 击杀被压制的 KIN_FOLLOWER 时，
-                                                # 记录领袖/随从池值与有效输出，验证
-                                                # 「廉价可斩杀随从仍被领袖语义压制」
-                                                # 是否与后续终局相关；只读，不改变
-                                                # 评分、目标、动作或参数，False 仅
-                                                # 移除 KIN_LEADER_FOCUS_PRESSURE_OBS。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的

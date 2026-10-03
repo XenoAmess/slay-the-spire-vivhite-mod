@@ -19925,8 +19925,6 @@ class Policy:
                 e.get("index") for e in _kin_leader_pool}
             _kin_minion_indices = {
                 e.get("index") for e in _kin_minion_pool}
-            # 领袖闸压力旁观需要复用同一轮已计算的 effective removal/killed，
-            # 但不应依赖减员对账开关；两者都关闭时才跳过这份只读行。
             _kin_leader_tradeoff_rows = []
             # 集火连续性（第 695~697 批复盘）：多体精英（残杀千足虫等分段体）的
             # 力量轮转让逐张重算的火线在节间横跳（697 局 F28 阵亡记录 0→1→2），
@@ -20250,15 +20248,12 @@ class Policy:
                     _kin_leader_focus_active
                     and e.get("index") in _kin_minion_indices)
                 if _kin_follower_gate_blocked:
-                    if (bool(pol.get("kin_leader_removal_tradeoff_obs", True))
-                            or bool(pol.get("kin_leader_focus_pressure_obs", True))):
+                    if bool(pol.get("kin_leader_removal_tradeoff_obs", True)):
                         _kin_leader_tradeoff_rows.append((
                             e.get("index"),
                             float(_effective_pool(e)),
                             float(s),
-                            float(_rem_cost),
-                            float(eff),
-                            bool(killed)))
+                            float(_rem_cost)))
                     # The native Kin follower gives up when its leader dies.
                     # Keep the gate after kill/removal scoring so a cheap or
                     # lethal follower cannot outrank the still-live priest.
@@ -20436,31 +20431,6 @@ class Policy:
                     f"/pre_gate_score={_tradeoff[2]:.2f}"
                     f"/removal_bonus={_tradeoff[3]:.2f}"
                     "（KIN_LEADER_REMOVAL_TRADEOFF_OBS）")
-            # 领袖闸压力旁观（KIN_LEADER_FOCUS_PRESSURE_OBS）：当前攻击牌若
-            # 已足以移除被闸压制的随从，保留这条反事实压力信号，供后续 3—10
-            # 局与终局对账判断领袖优先是否在廉价可斩杀窗口造成代价。这里沿用
-            # 同轮 _attack_outcome 的 effective removal/killed；只追加 reason，
-            # 不把压力值送回评分或目标选择。关闭键严格移除该 suffix。
-            if (best_t in _kin_leader_indices
-                    and _kin_leader_tradeoff_rows
-                    and bool(pol.get("kin_leader_focus_pressure_obs", True))):
-                _pressure_rows = [
-                    _row for _row in _kin_leader_tradeoff_rows if _row[5]]
-                if _pressure_rows:
-                    _pressure = min(_pressure_rows, key=lambda row: row[1])
-                    _leader_pressure = next(
-                        (e for e in _kin_leader_pool
-                         if e.get("index") == best_t), None)
-                    _leader_pressure_pool = float(
-                        _effective_pool(_leader_pressure or {}))
-                    why += (
-                        f"｜领袖闸压力旁观：leader=KIN_PRIEST#{best_t}"
-                        f"/leader_pool={_leader_pressure_pool:.0f}"
-                        f"/blocked_follower=KIN_FOLLOWER#{_pressure[0]}"
-                        f"/follower_pool={_pressure[1]:.0f}"
-                        f"/follower_effective={_pressure[4]:.0f}"
-                        "/follower_killable=yes"
-                        "（KIN_LEADER_FOCUS_PRESSURE_OBS）")
             # 致死生还线部分击杀旁观（LETHAL_PARTIAL_KILL_COVER_OBS）：
             # ``best_kill`` 只说明当前单体目标会被击杀。1712-F23 的
             # LETHAL_SURVIVABLE_LINE 仍先打掉一个卵，耗尽能量后留下其他敌人与
