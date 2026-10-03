@@ -20335,3 +20335,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(21分/24.676824759719178局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.239571237599165局)，VIVHITE_CARD_GEODESIC_VEIL(22分/4.587076366815361局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：4/1845 胜，当前目标进阶 4
+
+## 第 1846 局复盘（2026-10-03 14:43）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_TRICHROMATIC_WALTZ, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_OPEN_SET_SHELTER, VIVHITE_CARD_TERMINATION_CONDITION
+- 本局遗物：RAINBOW_RING, VAJRA
+- 战斗记录：F4 Monster战 掉血0｜自损8（可行动段8/非行动段5，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损9（可行动段9/非行动段7，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血13｜自损14（可行动段14/非行动段19，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血0｜自损11（可行动段11/非行动段11，SELF_LOSS_PHASE_OBS）; F12 Elite战 掉血61｜自损24（可行动段24/非行动段51，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=110/dpt=14.312/ttk=7.68587/tsurv=3.63306（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=7.68587/actual_over_projected=1.17（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战9回合获胜; F17 Boss战 掉血50｜自损26（可行动段26/非行动段26，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(42分/2.235752731606045局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.135925216752769局)，MAYHEM(37分/4.556060145675604局)，THINKING_AHEAD(37分/2.4617448674146294局)，JACKPOT(36分/8.892691343029067局)
+- 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(21分/24.59045587306016局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.16523273826757局)，VIVHITE_CARD_GEODESIC_VEIL(22分/4.571021599531507局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损26/掉血50（52%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1846 胜，当前目标进阶 4
