@@ -16375,3 +16375,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.0444337489446145局)，BURNING_PACT(17分/11.545102393239604局)，DEFEND_IRONCLAD(18分/2.7259629576623983局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（88%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1889 胜，当前目标进阶 0
+
+## 第 1890 局复盘（2026-10-04 04:25）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 CHOMPER
+- 本局拿牌：UPPERCUT, RUPTURE, BLUDGEON, STONE_ARMOR, TRUE_GRIT, JUGGLING, INFLAME, CINDER, DEMON_FORM, UPPERCUT, DISMANTLE, SHRUG_IT_OFF, INFLAME, FEED, TWIN_STRIKE
+- 本局遗物：AKABEKO, WAR_PAINT
+- 战斗记录：F17 Boss战 掉血27｜竞速投影审计：pool=195/dpt=4.05/ttk=48.1481/tsurv=4.44444（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=48.1481/actual_over_projected=0.17（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=43.7037（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战8回合获胜｜竞速Boss有效火力收官对账：samples=6/actual_dpt=31/projected_dpt=14.5905/ratio=4.41/min_ratio=0.41（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=31/projected_dpt=14.5905/ratio=4.41/min_ratio=0.41（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=31/projected_dpt=14.5905/ratio=4.41/min_ratio=0.41（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血13; F20 Monster战 掉血21; F21 Monster战 掉血6; F29 Unknown战 掉血57; F30 Monster战 掉血7｜竞速投影审计：pool=80/dpt=6.75/ttk=11.8519/tsurv=6（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=11.8519/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.33（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=5.85185（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：BLOODLETTING(29分/2.003588715902512局)，MASTER_OF_STRATEGY(27分/4.127567100485237局)，BRAND(26分/2.0390264920538774局)，STAMPEDE(25分/7.828317297848731局)，PROWESS(25分/13.263037615550253局)
+- 当前低价值卡牌：ENTROPY(17分/2.0372782308233086局)，BURNING_PACT(17分/11.504694534863267局)，DEFEND_IRONCLAD(18分/2.71642208731058局)
+- 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.37 → 0.37（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.08 → 2.07（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F30——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1890 胜，当前目标进阶 0
