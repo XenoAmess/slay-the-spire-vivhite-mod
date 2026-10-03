@@ -908,6 +908,8 @@ class Policy:
         self._race_allin_lethal_unavailable_terminal_outcome_reported = False  # race-allin 致死无牌补充结局 marker 每场只写一次
         self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
+        self._idle_leak_race_terminal_outcome_pending = None  # 最近一次竞速残能空漏，等待 GAME_OVER 结局对账
+        self._idle_leak_race_terminal_outcome_reported = False  # 竞速残能空漏结局 marker 每场只写一次
         self._exhaust_cap_pressure_terminal_outcome_pending = None  # 最近一次消耗上限压力，等待 GAME_OVER 结局对账
         self._exhaust_cap_pressure_terminal_outcome_reported = False  # 消耗上限压力结局 marker 每场只写一次
         self._thorns_reflect_terminal_outcome_pending = None  # 最近一次荆棘反伤，等待 GAME_OVER 结局对账
@@ -2510,6 +2512,8 @@ class Policy:
             self._race_allin_lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
+            self._idle_leak_race_terminal_outcome_pending = None
+            self._idle_leak_race_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
             self._thorns_reflect_terminal_outcome_pending = None
@@ -9709,6 +9713,167 @@ class Policy:
         self._lethal_playable_reject_outcome_pending = _pending
         self._lethal_playable_reject_outcome_reported = False
 
+    def _consume_idle_leak_race_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join an IDLE_LEAK_RACE end-turn audit to the terminal outcome.
+
+        This is an observation-only bridge.  The preceding end-turn already
+        made the action choice; this note only makes its unspent-energy
+        counterfactual countable when the same combat reaches GAME_OVER.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "idle_leak_race_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_idle_leak_race_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_idle_leak_race_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._idle_leak_race_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace("；", "_")
+                    .replace("（", "_")
+                    .replace("）", "_")
+                    .replace(" ", "_"))
+
+        _source = _pending.get("source") or {}
+        _terminal = _pending.get("terminal") or {}
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速残能空漏终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source.get('turn', _source.get('round')))}"
+            f"/source_action={_text(_source.get('action'))}"
+            f"/source_hp={_num(_source.get('hp'))}"
+            f"/source_energy={_num(_pending.get('energy'))}"
+            f"/source_card={_text(_pending.get('card'))}"
+            f"/source_damage={_num(_pending.get('damage'))}"
+            f"/source_gap={_num(_pending.get('gap'))}"
+            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
+            f"/terminal_action={_text(_terminal.get('action'))}"
+            f"/terminal_hp={_num(_terminal.get('hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+            f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+            "（IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_idle_leak_race_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a bounded same-floor IDLE_LEAK_RACE terminal join."""
+        decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_idle_leak_race_terminal_outcome_reported", False))
+        marker = "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._idle_leak_race_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_idle_leak_race_terminal_outcome_pending", None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        _terminal_index = len(decisions) - 1
+        _last_row = decisions[_terminal_index]
+        if not isinstance(_last_row, dict):
+            return
+        _last_screen = str(_last_row.get("screen") or "").upper()
+        if _last_screen in {"GAME_OVER", "VICTORY"}:
+            _terminal_index -= 1
+        if _terminal_index < 0:
+            return
+        _terminal = decisions[_terminal_index]
+        if (not isinstance(_terminal, dict)
+                or _terminal.get("action") != "end_turn"):
+            return
+        if (floor is not None and _terminal.get("floor") is not None
+                and str(_terminal.get("floor")) != str(floor)):
+            return
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _source = None
+        _source_index = None
+        _start = max(0, _terminal_index - 15)
+        for _index in range(_terminal_index, _start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and str(_row.get("floor")) != str(floor)):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if _row.get("action") != "end_turn":
+                continue
+            _reason = str(_row.get("reason") or "")
+            _match = re.search(
+                rf"残能空漏审计\(IDLE_LEAK_RACE\)：竞速态残能"
+                rf"(?P<energy>{_number_pattern})，未打可负担最高伤"
+                rf"【(?P<card>[^】]+)】[（(]预估(?P<damage>{_number_pattern})"
+                rf"，净缺口(?P<gap>{_number_pattern})[）)]",
+                _reason)
+            if not _match:
+                continue
+            try:
+                _energy = float(_match.group("energy"))
+                _damage = float(_match.group("damage"))
+                _gap = float(_match.group("gap"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_value)
+                        for _value in (_energy, _damage, _gap))
+                    or _energy <= 0.0 or _damage < 0.0 or _gap <= 0.0):
+                continue
+            _source = _row
+            _source_index = _index
+            _pending = {
+                "source": _source,
+                "terminal": _terminal,
+                "energy": _energy,
+                "card": _match.group("card"),
+                "damage": _damage,
+                "gap": _gap,
+                "bridge_decisions": _terminal_index - _source_index,
+                "bridge_rounds": 0,
+            }
+            _source_round = _source.get("turn", _source.get("round"))
+            _terminal_round = _terminal.get(
+                "turn", _terminal.get("round"))
+            try:
+                _pending["bridge_rounds"] = max(
+                    0, int(float(_terminal_round)) - int(float(_source_round)))
+            except (TypeError, ValueError, OverflowError):
+                pass
+            self._idle_leak_race_terminal_outcome_pending = _pending
+            self._idle_leak_race_terminal_outcome_reported = False
+            return
+
     def _consume_kill_race_lethal_free_energy_terminal_outcome_note(
             self, pol, victory, floor=None) -> str:
         """Join a lethal 0-cost energy-function rejection to GAME_OVER.
@@ -13747,6 +13912,8 @@ class Policy:
             self._lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
+            self._idle_leak_race_terminal_outcome_pending = None
+            self._idle_leak_race_terminal_outcome_reported = False
             self._exhaust_cap_pressure_terminal_outcome_pending = None
             self._exhaust_cap_pressure_terminal_outcome_reported = False
             self._thorns_reflect_terminal_outcome_pending = None
@@ -22911,6 +23078,11 @@ class Policy:
         _nonlethal_unavailable_terminal_outcome_note = (
             self._consume_nonlethal_unavailable_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_idle_leak_race_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _idle_leak_race_terminal_outcome_note = (
+            self._consume_idle_leak_race_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_waterfall_about_to_blow_terminal_outcome_from_decisions(
             ctx, go.get("floor"))
         _waterfall_about_to_blow_terminal_outcome_note = (
@@ -22966,6 +23138,7 @@ class Policy:
                             f"{_lethal_unavailable_terminal_outcome_note}"
                             f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                             f"{_nonlethal_unavailable_terminal_outcome_note}"
+                            f"{_idle_leak_race_terminal_outcome_note}"
                             f"{_waterfall_about_to_blow_terminal_outcome_note}"
                             f"{_terminal_lock_outcome_note}"
                             f"{_ritual_window_outcome_note}"
@@ -23015,6 +23188,7 @@ class Policy:
                         f"{_lethal_unavailable_terminal_outcome_note}"
                         f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                         f"{_nonlethal_unavailable_terminal_outcome_note}"
+                        f"{_idle_leak_race_terminal_outcome_note}"
                         f"{_waterfall_about_to_blow_terminal_outcome_note}"
                         f"{_terminal_lock_outcome_note}"
                         f"{_ritual_window_outcome_note}"
@@ -23048,6 +23222,7 @@ class Policy:
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
                                 f"{_nonlethal_unavailable_terminal_outcome_note}"
+                                f"{_idle_leak_race_terminal_outcome_note}"
                                 f"{_waterfall_about_to_blow_terminal_outcome_note}"
                                 f"{_terminal_lock_outcome_note}"
                                 f"{_ritual_window_outcome_note}"

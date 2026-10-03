@@ -18508,6 +18508,96 @@ def main() -> int:
         "nonlethal_unavailable_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 nonlethal_unavailable_terminal_outcome_obs"
 
+    # 3z-4d-1) F17 IDLE_LEAK_RACE 终局桥：把终局前的残能空漏审计
+    #         接到同一战斗的 GAME_OVER；仅增加可计数观测，不改变动作。
+    idle_leak_race_reason = (
+        "战斗：瀑布无敌阶段；⚠残能空漏审计(IDLE_LEAK_RACE)："
+        "竞速态残能3，未打可负担最高伤【飞剑回旋镖+】(预估28，净缺口36)")
+    idle_leak_race_ctx = _SettleCtx()
+    idle_leak_race_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 10, "hp": 1, "energy": 3,
+        "reason": idle_leak_race_reason,
+    }]
+    idle_leak_race_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_idle_leak_race = idle_leak_race_pol.decide(
+        nonlethal_unavailable_outcome_state, idle_leak_race_ctx)
+    assert (d_idle_leak_race.action == "continue_game_over"
+            and d_idle_leak_race.params == {}
+            and "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+                in d_idle_leak_race.reason
+            and "/source_round=10/source_action=end_turn/source_hp=1"
+                in d_idle_leak_race.reason
+            and "/source_energy=3/source_card=飞剑回旋镖+"
+                in d_idle_leak_race.reason
+            and "/source_damage=28/source_gap=36"
+                in d_idle_leak_race.reason
+            and "/terminal_round=10/terminal_action=end_turn/terminal_hp=1"
+                in d_idle_leak_race.reason
+            and "/final_hp=0" in d_idle_leak_race.reason), \
+        f"IDLE_LEAK_RACE 终局桥缺失或动作漂移: {d_idle_leak_race}"
+    assert knowledge.DEFAULT_POLICY[
+        "idle_leak_race_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 idle_leak_race_terminal_outcome_obs"
+
+    idle_leak_race_replay = policy.Policy(knowledge.Knowledge(tmp))
+    idle_leak_race_replay_ctx = _SettleCtx()
+    idle_leak_race_replay_ctx.decisions = [
+        dict(idle_leak_race_ctx.decisions[0])]
+    d_idle_leak_race_replay = idle_leak_race_replay.decide(
+        nonlethal_unavailable_outcome_state, idle_leak_race_replay_ctx)
+    assert "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS" \
+        in d_idle_leak_race_replay.reason, \
+        "IDLE_LEAK_RACE 终局桥未从持久链恢复"
+
+    idle_leak_race_retry = policy.Policy(knowledge.Knowledge(tmp))
+    idle_leak_race_retry_ctx = _SettleCtx()
+    idle_leak_race_retry_ctx.decisions = [
+        dict(idle_leak_race_ctx.decisions[0])]
+    d_idle_leak_race_first = idle_leak_race_retry.decide(
+        nonlethal_unavailable_outcome_state, idle_leak_race_retry_ctx)
+    idle_leak_race_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 48, "reason": d_idle_leak_race_first.reason,
+    })
+    d_idle_leak_race_retry = idle_leak_race_retry.decide(
+        nonlethal_unavailable_outcome_state, idle_leak_race_retry_ctx)
+    assert "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS" \
+        not in d_idle_leak_race_retry.reason, \
+        "IDLE_LEAK_RACE 终局桥重复提交"
+
+    idle_leak_race_off_know = knowledge.Knowledge(tmp)
+    idle_leak_race_off_know.policy[
+        "idle_leak_race_terminal_outcome_obs"] = False
+    idle_leak_race_off_ctx = _SettleCtx()
+    idle_leak_race_off_ctx.decisions = [
+        dict(idle_leak_race_ctx.decisions[0])]
+    d_idle_leak_race_off = policy.Policy(idle_leak_race_off_know).decide(
+        nonlethal_unavailable_outcome_state, idle_leak_race_off_ctx)
+    assert (d_idle_leak_race_off.action == d_idle_leak_race.action
+            and d_idle_leak_race_off.params == d_idle_leak_race.params
+            and "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+                not in d_idle_leak_race_off.reason), \
+        f"IDLE_LEAK_RACE 开关关闭后动作或 marker 漂移: {d_idle_leak_race_off}"
+
+    idle_leak_race_boundary_ctx = _SettleCtx()
+    idle_leak_race_boundary_ctx.decisions = [
+        dict(idle_leak_race_ctx.decisions[0]),
+        {"screen": "MAP", "action": "proceed", "floor": 48,
+         "turn": 10, "reason": "跨屏边界"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 10, "reason": "终局前无残能审计"},
+    ]
+    d_idle_leak_race_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            nonlethal_unavailable_outcome_state,
+            idle_leak_race_boundary_ctx)
+    assert (d_idle_leak_race_boundary.action == d_idle_leak_race.action
+            and d_idle_leak_race_boundary.params == d_idle_leak_race.params
+            and "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+                not in d_idle_leak_race_boundary.reason), \
+        f"IDLE_LEAK_RACE 终局桥越过屏幕边界: {d_idle_leak_race_boundary}"
+
     # The latest failure chain (1746-F17) had a marked non-lethal source,
     # several intervening actions, and an unmarked end_turn immediately before
     # GAME_OVER.  Keep that terminal predecessor observable without changing

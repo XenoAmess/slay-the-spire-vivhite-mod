@@ -237,6 +237,7 @@ DEFAULT_POLICY = {
     "race_allin_lethal_unavailable_terminal_outcome_obs": True,  # Audit-only fallback join when a same-floor race-allin play precedes a lethal no-card terminal but the broader kill-race audit is absent; False removes only this marker.
     "nonlethal_unavailable_end_turn_obs": True,  # Audit-only precursor marker for a non-lethal incoming turn with no affordable/playable card; includes native hook_locked/hook_ids plus raw hand block capacity and counterfactual post-block survival; False removes only the marker.
     "nonlethal_unavailable_terminal_outcome_obs": True,  # Audit-only join from a non-lethal no-card end-turn to a nearby GAME_OVER/Victory result, including a bounded same-combat chain; False removes only the outcome marker.
+    "idle_leak_race_terminal_outcome_obs": True,  # Audit-only join from a same-combat IDLE_LEAK_RACE end-turn to GAME_OVER/Victory; False removes only this marker.
     "nonlethal_unavailable_terminal_tail_obs": True,  # Audit-only terminal predecessor tail after the last marked non-lethal no-card turn; False removes only this tail observation.
     "nonlethal_unavailable_chain_pressure_obs": True,  # Audit-only summary when a bounded same-combat terminal chain contains repeated non-lethal no-card turns; False removes only the pressure tail.
     "nonlethal_unavailable_energy_pressure_obs": True,  # Audit-only attribution when every repeated non-lethal chain row is energy-locked rather than hook-locked; False removes only this attribution tail.

@@ -15084,3 +15084,31 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot bootstrap limit. A clone-local process-level 0777 temporary-directory adapter then ran the full `selfcheck.py` to exit 0 with `SELFCHECK OK`; targeted diff review passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1824-1825: connect IDLE_LEAK_RACE to the terminal outcome
+
+profile_id: `ironclad`
+requested_runs: `1824-1825`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: Run 1825 F17's final combat `end_turn` can record a residual-energy race audit without that audit being joined to the authoritative `GAME_OVER`. A bounded same-floor, same-combat terminal bridge should make this omission countable while leaving the already-vetoed action unchanged. This is falsifiable: the bridge must emit one source/terminal record for a matching terminal, but remain silent across a screen or floor boundary, malformed source fields, duplicate commit retry, or a disabled switch.
+- **EVIDENCE**: The exact chain `sts2-ascend/knowledge/runs/20261003-080449_N0PR18G6EX1V.json` records run 1825 F17's penultimate `end_turn` at turn 10 with HP 1 and energy 3. Its reason contains `IDLE_LEAK_RACE`, the affordable highest attack `飞剑回旋镖+`, estimated damage 28, and net gap 36. The following `GAME_OVER` reaches final HP 0 and preserves the Waterfall/invulnerability and other terminal audits, but has no terminal field joining this residual-energy source. Run 1824 independently shows the same batch's low-survival failure pressure.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, emit one `IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS` with source energy/card/damage/gap, source and terminal round/HP, outcome, and bounded bridge length. Compare marker count and fields with the real applied terminal receipt; action, parameters, score, gates, and candidate ranking must remain unchanged.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on `idle_leak_race_terminal_outcome_obs`; setting it to `False` removes only this terminal marker.
+- `sts2-ascend/brain/policy.py`: boundedly reverse-scan at most 16 same-floor `COMBAT`/`CARD_SELECTION` rows for the existing persisted `IDLE_LEAK_RACE` end-turn source, then append a single structured terminal suffix on the three existing GAME_OVER reason paths. The bridge is observation-only and is not read by scoring, ranking, gates, card selection, target selection, action, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add positive, reload, duplicate-commit, switch-off, and screen-boundary fixtures; all assert unchanged `continue_game_over {}` behavior.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching terminals and compare source card/energy/damage/gap, source/terminal HP and round, outcome, bridge length, marker count, and applied action/parameters.
+- **Adjust**: if a real trace has a different source phrase, malformed numeric field, a longer same-combat tail, or a distinct combat boundary, retain the evidence and narrow only this parser/join; do not promote it into energy spending or attack selection.
+- **Rollback**: set `idle_leak_race_terminal_outcome_obs` to `False`; the existing `IDLE_LEAK_RACE` source audit, Waterfall veto, terminal action, parameters, scoring, and gates must remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted diff review and `git diff --check` passed with only pre-existing long-path/LF-CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
