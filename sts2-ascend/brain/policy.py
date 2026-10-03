@@ -1034,6 +1034,8 @@ class Policy:
         self._ovicopter_summon_pressure_terminal_outcome_reported = False
         self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
         self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
+        self._kin_leader_focus_sequence_terminal_outcome_pending = None
+        self._kin_leader_focus_sequence_terminal_outcome_reported = False
         # 非 Boss 长战竞速有效火力对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
         # 只记录锁定竞速判死后的回合首敌方血池净下降，不回写竞速 dpt/判决/评分。
         self._longfight_effective_dpt_combat = None
@@ -2617,6 +2619,8 @@ class Policy:
             self._race_prelock_defense_terminal_outcome_reported = False
             self._kin_leader_removal_tradeoff_terminal_outcome_pending = None
             self._kin_leader_removal_tradeoff_terminal_outcome_reported = False
+            self._kin_leader_focus_sequence_terminal_outcome_pending = None
+            self._kin_leader_focus_sequence_terminal_outcome_reported = False
             self._boss_intent_ramp_terminal_outcome_pending = None
             self._boss_intent_ramp_terminal_outcome_reported = False
             self._hard_intent_spike_fire_terminal_outcome_pending = None
@@ -7523,6 +7527,183 @@ class Policy:
             f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
             f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
             "（KIN_LEADER_REMOVAL_TRADEOFF_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_kin_leader_focus_sequence_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover the same-floor KIN leader-focus sequence before GAME_OVER.
+
+        The existing tradeoff bridge keeps only its last row.  This companion
+        bridge counts the rows in the current combat tail and preserves the
+        first/last target plus the last observed pools.  It is deliberately
+        observation-only: no score, target, action, or parameter reads this
+        pending record.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kin_leader_focus_sequence_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+        _reported = bool(getattr(
+            self, "_kin_leader_focus_sequence_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._kin_leader_focus_sequence_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_kin_leader_focus_sequence_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        _rows = []
+        for _index in range(len(decisions) - 1, -1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            if "KIN_LEADER_REMOVAL_TRADEOFF_OBS" not in _reason:
+                continue
+            _match = re.search(
+                r"领袖闸减员对账：leader=(?P<leader>[^/]+)"
+                r"/leader_pool=(?P<leader_pool>-?\d+(?:\.\d+)?)"
+                r"/blocked_follower=(?P<follower>[^/]+)"
+                r"/follower_pool=(?P<follower_pool>-?\d+(?:\.\d+)?)"
+                r"/pre_gate_score=(?P<pre_gate>-?\d+(?:\.\d+)?)"
+                r"/removal_bonus=(?P<removal_bonus>-?\d+(?:\.\d+)?)",
+                _reason)
+            if _match is None:
+                continue
+            try:
+                _leader_pool = float(_match.group("leader_pool"))
+                _follower_pool = float(_match.group("follower_pool"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not math.isfinite(_leader_pool)
+                    or not math.isfinite(_follower_pool)
+                    or _leader_pool < 0.0 or _follower_pool < 0.0):
+                continue
+            _rows.append({
+                "index": _index,
+                "row": _row,
+                "leader": _match.group("leader").strip(),
+                "leader_pool": _leader_pool,
+                "follower": _match.group("follower").strip(),
+                "follower_pool": _follower_pool,
+            })
+        if not _rows:
+            return
+
+        _rows.reverse()
+        _first = _rows[0]
+        _last = _rows[-1]
+        _source_row = _last["row"]
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            _terminal = {}
+        _source_round = _source_row.get(
+            "turn", _source_row.get("round"))
+        _terminal_round = _terminal.get(
+            "turn", _terminal.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round)) - int(float(_source_round)))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = None
+        self._kin_leader_focus_sequence_terminal_outcome_pending = {
+            "focus_count": len(_rows),
+            "first_target": _first["leader"],
+            "last_target": _last["leader"],
+            "last_leader_pool": _last["leader_pool"],
+            "last_follower": _last["follower"],
+            "last_follower_pool": _last["follower_pool"],
+            "both_alive": (_last["leader_pool"] > 0.0
+                            and _last["follower_pool"] > 0.0),
+            "source_round": _source_row.get(
+                "turn", _source_row.get("round")),
+            "source_action": _source_row.get("action") or "?",
+            "terminal_round": _terminal_round,
+            "terminal_action": _terminal.get("action") or "?",
+            "terminal_hp": _terminal.get("hp"),
+            "bridge_decisions": len(decisions) - _last["index"] - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._kin_leader_focus_sequence_terminal_outcome_reported = False
+
+    def _consume_kin_leader_focus_sequence_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join the counted KIN leader-focus sequence to GAME_OVER."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kin_leader_focus_sequence_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_kin_leader_focus_sequence_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_kin_leader_focus_sequence_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._kin_leader_focus_sequence_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；KIN领袖聚焦序列终局观测：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/focus_count={_round(_pending.get('focus_count'))}"
+            f"/first_target={_pending.get('first_target') or '?'}"
+            f"/last_target={_pending.get('last_target') or '?'}"
+            f"/last_leader_pool={_num(_pending.get('last_leader_pool'))}"
+            f"/last_follower={_pending.get('last_follower') or '?'}"
+            f"/last_follower_pool={_num(_pending.get('last_follower_pool'))}"
+            f"/both_alive={'yes' if _pending.get('both_alive') else 'no'}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_round(_pending.get('bridge_decisions'))}"
+            f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+            "（KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS）")
 
     def _restore_exhaust_cap_pressure_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -24146,6 +24327,11 @@ class Policy:
         _kin_leader_removal_tradeoff_terminal_outcome_note = (
             self._consume_kin_leader_removal_tradeoff_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_kin_leader_focus_sequence_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _kin_leader_focus_sequence_terminal_outcome_note = (
+            self._consume_kin_leader_focus_sequence_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_exhaust_cap_pressure_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _exhaust_cap_pressure_terminal_outcome_note = (
@@ -24273,6 +24459,7 @@ class Policy:
                             f"{_race_projection_ratio_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
+                            f"{_kin_leader_focus_sequence_terminal_outcome_note}"
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_terminal_outcome_note}"

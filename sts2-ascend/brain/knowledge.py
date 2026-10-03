@@ -710,6 +710,12 @@ DEFAULT_POLICY = {
                                                                   # 领袖闸减员对账连接到
                                                                   # GAME_OVER；只读、可关闭，
                                                                   # 不改变目标或动作。
+    "kin_leader_focus_sequence_terminal_outcome_obs": True,  # 将同楼层连续的
+                                                                  # KIN 领袖聚焦对账行
+                                                                  # 连接到 GAME_OVER；只读、
+                                                                  # 统计首末目标、次数与末次
+                                                                  # 双方池值，不改变目标、评分、
+                                                                  # 动作或参数。
     "steam_eruption_kill_veto": True,  # 蒸汽喷发拦截击杀（STEAM_ERUPTION_KILL_VETO，
                                        # 第1452~1458局批复盘）：WATERFALL_GIANT 的
                                        # SteamEruptionPower（zhs「被击杀时，在你的

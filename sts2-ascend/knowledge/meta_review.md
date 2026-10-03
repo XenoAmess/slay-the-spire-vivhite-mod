@@ -15503,3 +15503,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the complete selfcheck exited 0 and printed `SELFCHECK OK` using a clone-local process-only temporary-directory adapter after the host's fixed 256-slot pool was exhausted; the targeted `git diff --check` passed. No `.runtime/`, learning memory, official run/archive, replay, or online process was touched.
 
 - `retry_resolution: none (no failed replay target; local production observation)`
+
+## 2026-10-03 runs 1861-1863: KIN 领袖聚焦序列终局观测
+
+profile_id: `ironclad`
+requested_runs: `1861-1863`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `KIN_LEADER_FOCUS_GATE` 可以是正确的领袖目标规则，但已有终局桥只保留最后一条 `KIN_LEADER_REMOVAL_TRADEOFF_OBS`，无法区分“聚焦后接近击杀”和“连续聚焦耗尽生存窗口、双方仍存活”。只增加同楼层战斗尾部的序列计数与末次池值，能够让该竞争假设可证伪，而不改变目标、评分或行动。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-192058_J2BPZK80BWVK.json`（run 1863，211 条 decisions）中，F17 多次选中 `KIN_PRIEST#2` 并带领袖闸减员对账；只读当前策略回放恢复 `focus_count=12/first_target=KIN_PRIEST#2/last_target=KIN_PRIEST#2/last_leader_pool=45/last_follower_pool=34/both_alive=yes/source_round=7/terminal_round=7/final_hp=0`，同时保持 `continue_game_over` 与空参数。v0.111.0 原生 mechanics 记录确认 `KIN_FOLLOWER` 带 `MINION_POWER`、领袖死亡会解除随从战斗约束，因此本批不把“改打随从”作为未经验证的行为修复。
+- **EXPECTED_SIGNAL**：未来 3—10 个精确 KIN 窗口统计 `focus_count`、首末目标、末次双方池值和 `both_alive`，再与终局结果及 `applied` 回执对照；若双方存活终局重复出现，支持后续行为审查；若聚焦通常以领袖死亡或单方存活收束，则削弱假设。关闭键、楼层边界、重复提交和动作/参数必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `kin_leader_focus_sequence_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：在同楼层 `COMBAT`/`CARD_SELECTION` 尾部恢复合法 KIN 减员对账行，记录首末目标、次数与末次观测池值，并在 `GAME_OVER` 一次性追加 `KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS`；该 pending 记录不参与评分、排序、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加正例、进程重载、重复提交、开关关闭和 `REWARD` 边界断言，逐项证明 `continue_game_over {}` 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个精确 KIN 窗口，区分“连续领袖聚焦且双方末次仍存活”与“领袖已被击杀”的真实终局比例；暂不把 marker 升级为目标规则。
+- **Adjust**：若真实链含同楼层多场战斗、缺失池值或终局前已落盘 `GAME_OVER` 行，只收紧尾部边界/解析，不扩大到其他 `MINION_POWER` 组合。
+- **Rollback**：将 `kin_leader_focus_sequence_terminal_outcome_obs` 设为 `False`；预期只移除新序列 marker，既有领袖闸、减员对账、action 和 params 不变。
+- **Validation**：规定的直接 selfcheck 复现宿主固定 256 槽临时池限制；同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 经 clone-local 进程级临时目录适配退出码 0 并输出 `SELFCHECK OK`。1863 只读完整链回放输出上述字段且 action/params 不变；目标源码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -21231,7 +21231,122 @@ def main() -> int:
                 not in d_kin_tradeoff_boundary.reason), \
         f"KIN 领袖闸终局桥接越过 REWARD 边界: {d_kin_tradeoff_boundary}"
 
-    # 3z-5e) 消耗上限低血压力终局桥接：1768-F17-T9 的
+    # 3z-5e) KIN 领袖聚焦序列终局观测：只统计同一战斗尾部的多条
+    # KIN_LEADER_REMOVAL_TRADEOFF_OBS，补足单条终局桥无法区分「一次近杀」与
+    # 「连续聚焦但双方仍存活」的证据；动作、参数、开关关闭和 REWARD 边界不变。
+    kin_focus_sequence_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 4, "hp": 5,
+        "reason":
+            "战斗：打出【拆卸】→同族神官｜领袖闸减员对账："
+            "leader=KIN_PRIEST#2/leader_pool=120/"
+            "blocked_follower=KIN_FOLLOWER#0/follower_pool=58/"
+            "pre_gate_score=51.72/removal_bonus=3.10"
+            "（KIN_LEADER_REMOVAL_TRADEOFF_OBS）",
+    }
+    kin_focus_sequence_second_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 5, "hp": 4,
+        "reason":
+            "战斗：打出【打击】→同族神官｜领袖闸减员对账："
+            "leader=KIN_PRIEST#2/leader_pool=80/"
+            "blocked_follower=KIN_FOLLOWER#0/follower_pool=45/"
+            "pre_gate_score=49.10/removal_bonus=2.80"
+            "（KIN_LEADER_REMOVAL_TRADEOFF_OBS）",
+    }
+    kin_focus_sequence_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 5, "hp": 4, "reason": "终端空过",
+    }
+    kin_focus_sequence_rows = [
+        dict(kin_focus_sequence_source_row),
+        dict(kin_focus_sequence_second_row),
+        dict(kin_focus_sequence_terminal_row),
+    ]
+    kin_focus_sequence_know = knowledge.Knowledge(tmp)
+    kin_focus_sequence_pol = policy.Policy(kin_focus_sequence_know)
+    kin_focus_sequence_ctx = _SettleCtx()
+    kin_focus_sequence_ctx.decisions = [dict(row) for row in kin_focus_sequence_rows]
+    d_kin_focus_sequence = kin_focus_sequence_pol.decide(
+        kin_tradeoff_terminal_state, kin_focus_sequence_ctx)
+    assert (d_kin_focus_sequence.action == "continue_game_over"
+            and d_kin_focus_sequence.params == {}
+            and "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+                in d_kin_focus_sequence.reason
+            and "outcome=defeat/floor=17/focus_count=2"
+                "/first_target=KIN_PRIEST#2/last_target=KIN_PRIEST#2"
+                "/last_leader_pool=80/last_follower=KIN_FOLLOWER#0"
+                "/last_follower_pool=45/both_alive=yes/source_round=5"
+                "/source_action=play_card/terminal_round=5"
+                "/terminal_action=end_turn/terminal_hp=4/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=0"
+                in d_kin_focus_sequence.reason), \
+        f"KIN 领袖聚焦序列终局观测缺失或动作漂移: {d_kin_focus_sequence}"
+    assert knowledge.DEFAULT_POLICY[
+        "kin_leader_focus_sequence_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 KIN 领袖聚焦序列终局观测开关"
+
+    kin_focus_sequence_replay_ctx = _SettleCtx()
+    kin_focus_sequence_replay_ctx.decisions = [
+        dict(row) for row in kin_focus_sequence_rows]
+    d_kin_focus_sequence_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            kin_tradeoff_terminal_state, kin_focus_sequence_replay_ctx)
+    assert (d_kin_focus_sequence_replay.action == d_kin_focus_sequence.action
+            and d_kin_focus_sequence_replay.params
+                == d_kin_focus_sequence.params
+            and "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+                in d_kin_focus_sequence_replay.reason), \
+        f"进程重载后未恢复 KIN 领袖聚焦序列观测: {d_kin_focus_sequence_replay}"
+
+    kin_focus_sequence_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_kin_focus_sequence.action,
+        "floor": 17, "reason": d_kin_focus_sequence.reason})
+    d_kin_focus_sequence_duplicate = kin_focus_sequence_pol.decide(
+        kin_tradeoff_terminal_state, kin_focus_sequence_ctx)
+    assert (d_kin_focus_sequence_duplicate.action
+                == d_kin_focus_sequence.action
+            and d_kin_focus_sequence_duplicate.params
+                == d_kin_focus_sequence.params
+            and "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+                not in d_kin_focus_sequence_duplicate.reason), \
+        f"KIN 领袖聚焦序列观测重复提交: {d_kin_focus_sequence_duplicate}"
+
+    kin_focus_sequence_off_know = knowledge.Knowledge(tmp)
+    kin_focus_sequence_off_know.policy[
+        "kin_leader_focus_sequence_terminal_outcome_obs"] = False
+    kin_focus_sequence_off_ctx = _SettleCtx()
+    kin_focus_sequence_off_ctx.decisions = [
+        dict(row) for row in kin_focus_sequence_rows]
+    d_kin_focus_sequence_off = policy.Policy(
+        kin_focus_sequence_off_know).decide(
+            kin_tradeoff_terminal_state, kin_focus_sequence_off_ctx)
+    assert (d_kin_focus_sequence_off.action == d_kin_focus_sequence.action
+            and d_kin_focus_sequence_off.params
+                == d_kin_focus_sequence.params
+            and "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+                not in d_kin_focus_sequence_off.reason), \
+        f"KIN 领袖聚焦序列开关关闭后动作或 marker 漂移: {d_kin_focus_sequence_off}"
+
+    kin_focus_sequence_boundary_ctx = _SettleCtx()
+    kin_focus_sequence_boundary_ctx.decisions = [
+        dict(kin_focus_sequence_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(kin_focus_sequence_terminal_row),
+    ]
+    d_kin_focus_sequence_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            kin_tradeoff_terminal_state, kin_focus_sequence_boundary_ctx)
+    assert (d_kin_focus_sequence_boundary.action
+                == d_kin_focus_sequence.action
+            and d_kin_focus_sequence_boundary.params
+                == d_kin_focus_sequence.params
+            and "KIN_LEADER_FOCUS_SEQUENCE_TERMINAL_OUTCOME_OBS"
+                not in d_kin_focus_sequence_boundary.reason), \
+        f"KIN 领袖聚焦序列观测越过 REWARD 边界: {d_kin_focus_sequence_boundary}"
+
+    # 3z-5f) 消耗上限低血压力终局桥接：1768-F17-T9 的
     # EXHAUST_CAP_SKIP_PRESSURE_OBS 只存在于 end_turn trace candidate，
     # 不能从 canonical reason 读取。只允许同楼层 COMBAT 尾部恢复，且动作/参数
     # 不变；覆盖重载、重复提交、关闭开关和 REWARD 边界。
