@@ -20687,3 +20687,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/6.004547601285376局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/24.036925171819703局)，ENTROPY(21分/4.895328160512738局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：4/1877 胜，当前目标进阶 4
+
+## 第 1878 局复盘（2026-10-04 00:40）
+- 结果：💀 失败｜进阶 4｜到达层数 6｜当局评分 6
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA
+- 本局遗物：MUMMIFIED_HAND
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段8，SELF_LOSS_PHASE_OBS）; F4 Unknown战 掉血0｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血78｜自损52（可行动段52/非行动段25，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=10/dpt=1.86667/ttk=5.35714/tsurv=0.384615（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=21/projected_ttk=5.35714/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=54.60（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.97253（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T19判死→实战21回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.9049622990676265局)，MAYHEM(37分/4.0725192502963345局)，JACKPOT(36分/8.914443983088386局)，REND(36分/2.806002894025957局)，PREP_TIME(33分/5.354208572561809局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/5.9835316846808775局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.952795933718335局)，ENTROPY(21分/4.8781945119509444局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（21回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1878 胜，当前目标进阶 4
