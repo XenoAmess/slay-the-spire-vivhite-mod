@@ -16155,3 +16155,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.053307555388498局)，BURNING_PACT(17分/12.383737233632703局)，DEFEND_IRONCLAD(18分/2.9239765769487334局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1869 胜，当前目标进阶 0
+
+## 第 1870 局复盘（2026-10-03 21:52）
+- 结果：💀 失败｜进阶 0｜到达层数 23｜当局评分 23
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：THUNDERCLAP, HEADBUTT, BREAKTHROUGH, TAUNT, CINDER, UNRELENTING, FIGHT_ME, INFLAME, MANGLE, FLAME_BARRIER, PYRE, STOMP, MOLTEN_FIST, IRON_WAVE, INFLAME
+- 本局遗物：PEAR
+- 战斗记录：F15 Monster战 掉血14｜自损1（可行动段1/非行动段19，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血38｜自损1（可行动段1/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=147/dpt=20.25/ttk=7.25926/tsurv=3.25（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=7.25926/actual_over_projected=0.83（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=4.00926（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战6回合获胜｜竞速Boss有效火力收官对账：samples=3/actual_dpt=47.8333/projected_dpt=22.9667/ratio=2.08/min_ratio=1.76（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=47.8333/projected_dpt=22.9667/ratio=2.08/min_ratio=1.76（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=47.8333/projected_dpt=22.9667/ratio=2.08/min_ratio=1.76（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血25; F20 Monster战 掉血15; F21 Monster战 掉血30; F23 Monster战 掉血20（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.094948228968563局)，BLOODLETTING(29分/2.1491291577056293局)，MASTER_OF_STRATEGY(27分/4.427393075052098局)，PROWESS(26分/10.076198493047478局)，BRAND(26分/2.1871411296271406局)
+- 当前低价值卡牌：HAVOC(15分/2.0461209789446384局)，BURNING_PACT(17分/12.340394153314989局)，DEFEND_IRONCLAD(18分/2.913742658929413局)
+- 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.36 → 0.38（行至 F23（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F23（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F23——药水交药线部分胜利回收）
+- 生涯战绩：0/1870 胜，当前目标进阶 0
