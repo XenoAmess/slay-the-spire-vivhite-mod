@@ -20115,3 +20115,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.1023797748959154局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.433663032457122局)，FASTEN(21分/3.7230262942828056局)
 - 策略进化：elite_grey_safety_mult: 1.75 → 1.95（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿7张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.40（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.99 → 1.98（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.95 → 1.90（行至 F31——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F31——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F31——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F31——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1825 胜，当前目标进阶 4
+
+## 第 1826 局复盘（2026-10-03 08:50）
+- 结果：💀 失败｜进阶 4｜到达层数 7｜当局评分 7
+- 死因：敌人组合 SLITHERING_STRANGLER+SNAPPING_JAXFRUIT
+- 本局拿牌：VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, RESTLESSNESS
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血38｜自损34（可行动段34/非行动段10，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血31｜自损32（可行动段32/非行动段27，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=62/dpt=14.5375/ttk=4.26484/tsurv=1.58333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=4.26484/actual_over_projected=2.34（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战10回合获胜; F7 Monster战 掉血21｜自损6（可行动段6/非行动段2，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.2910785659592645局)，JACKPOT(37分/8.488344744091002局)，MAYHEM(37分/4.887011803179081局)，THINKING_AHEAD(37分/2.640565716607071局)，REND(36分/3.3671956889735264局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0950214456837797局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.344645211843524局)，FASTEN(21分/3.709995702252816局)
+- 策略进化：block_safety: 1.98 → 2.03（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：4/1826 胜，当前目标进阶 4
