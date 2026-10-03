@@ -15997,3 +15997,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接入口复现宿主固定 256 槽临时池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 clone 的进程级临时目录适配器运行完整入口，退出码为 0 且输出 `SELFCHECK OK`。目标三文件 `git diff --check` 已通过；无 failed replay package，未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1894-F17：总体 Boss 有效 DPT 聚合接回终局
+
+profile_id：ironclad
+requested_run：1894
+production_code_commit：3cca397f3927c51a71db14bb77c9885dbc8cfc84
+failed_review_replay：requested_packages=[]（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1894-F17 的战斗收官总体有效 DPT 审计为 samples=8、actual_dpt=16.75、projected_dpt=18.3756、ratio=0.92、min_ratio=0.53；现有终局桥在另一条逐窗口来源上只接回 source_round=11、sample_start=10、sample_end=11、actual_dpt=31、projected_dpt=19.3、ratio=1.61，且总体聚合只隐含在分相终局 marker 中。若新增同楼层总体聚合→GAME_OVER 只读桥，未来匹配终局应能直接对账这组聚合字段；若跨楼层、跨 REWARD、重复终局、malformed 来源仍命中，或 action/params 漂移，假设即被证伪。
+- **EVIDENCE**：精确运行链 sts2-ascend/knowledge/runs/20261004-052917_ETZF37RBDMTY.json 为 run 1894、F17 败北、305 decisions。F17 的 RACE_PROJ_EFFECTIVE_DPT_AUDIT 保存上述 8 个窗口总体值；同一终局的 BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS 对账的是末窗口 31/19.3/1.61，而 RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS 才携带总体来源，缺少独立总体 marker。
+- **EXPECTED_SIGNAL**：未来 3—10 个同类 Boss 终局各至多追加一次 RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS，字段含 source_samples、source_actual_dpt、source_projected_dpt、source_ratio、source_min_ratio，并与同楼层收官备注及终端回合/HP一致；旧楼层、REWARD/MAP、重复 GAME_OVER、非法或缺失总体备注不命中。关闭 race_audit_projection_effective_dpt_terminal_outcome_obs 只移除该 marker，continue_game_over 与空 params 保持不变。
+
+### MINIMUM_CHANGE
+
+- sts2-ascend/brain/knowledge.py：增加默认开启、可回滚的总体有效 DPT 终局观测开关。
+- sts2-ascend/brain/policy.py：解析同楼层收官备注，在 GAME_OVER 的既有 reason 上追加总体聚合终局 marker；不进入评分、候选、目标、判决或动作参数。
+- sts2-ascend/brain/selfcheck.py：增加 1894 数值正例、Policy 重载、重复终局去重、关闭开关和 REWARD 边界断言，逐项锁定 continue_game_over 与 {}。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个匹配 Boss 终局，逐条比较收官备注的总体五字段、终端回合/HP和 GAME_OVER reason；同时区分总体聚合与末窗口逐笔 DPT，避免把两种 scope 合并统计。
+- **Adjust**：若出现跨楼层/跨房间接入、重复 marker、来源字段不完整或总体/末窗口 scope 混淆，收紧备注边界并保持观测层，不改竞速判定。
+- **Rollback**：将 race_audit_projection_effective_dpt_terminal_outcome_obs 设为 False，预期仅删除总体终局 marker；必要时回滚本地提交 3cca397f3927c51a71db14bb77c9885dbc8cfc84。
+- **Validation**：目标源码 git diff --check 通过；固定 256 槽适配器先明确报告 REVIEW_SELFCHECK_BOOTSTRAP_FAILED（池耗尽），随后用当前 clone 的进程级临时目录适配器运行同一完整 selfcheck.py，退出码 0 且末尾为 SELFCHECK OK。代码提交前最终 diff 仅含上述三个生产源码文件；未写入 .runtime、正式 runs/archive、学习记忆、回放包或管理在线进程。
+
+- retry_resolution: none (no failed_review_replay packages requested; aggregate DPT terminal observation integrated)

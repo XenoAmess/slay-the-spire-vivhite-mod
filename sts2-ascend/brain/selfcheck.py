@@ -25444,8 +25444,106 @@ def main() -> int:
             and _d_projection_phase_boundary.params
             == _d_projection_phase.params
             and "RACE_PROJ_EFFECTIVE_DPT_PHASE_TERMINAL_OUTCOME_OBS"
-            not in _d_projection_phase_boundary.reason), \
+                not in _d_projection_phase_boundary.reason), \
         f"竞速 Boss 分相终局桥接越过 REWARD 边界: {_d_projection_phase_boundary}"
+
+    # 3z-5f) 竞速 Boss 总体有效火力终局对账：1894-F17 同时保存了
+    # close-time aggregate DPT（8 个窗口）与最新窗口 DPT；新增桥接必须
+    # 把总体聚合字段直接接回 GAME_OVER，且不改变 continue_game_over/{}。
+    _projection_aggregate_note = (
+        "F17 Boss战 掉血71｜竞速Boss有效火力收官对账："
+        "samples=8/actual_dpt=16.75/projected_dpt=18.3756/ratio=0.92"
+        "/min_ratio=0.53（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
+    _projection_aggregate_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    _projection_aggregate_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 11, "hp": 5, "reason": "终端战斗尾部",
+    }
+    _projection_aggregate_pol = policy.Policy(knowledge.Knowledge(tmp))
+    _projection_aggregate_ctx_live = _projection_ratio_ctx(
+        [_projection_aggregate_note], [_projection_aggregate_terminal_row])
+    _d_projection_aggregate = _projection_aggregate_pol.decide(
+        _projection_aggregate_terminal_state, _projection_aggregate_ctx_live)
+    assert (_d_projection_aggregate.action == "continue_game_over"
+            and _d_projection_aggregate.params == {}
+            and _d_projection_aggregate.reason.count(
+                "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS") == 1
+            and "outcome=defeat/floor=17"
+                "/source_samples=8/source_actual_dpt=16.75"
+                "/source_projected_dpt=18.3756/source_ratio=0.92"
+                "/source_min_ratio=0.53"
+                "/terminal_round=11/terminal_action=end_turn/terminal_hp=5"
+                "/final_hp=0"
+                in _d_projection_aggregate.reason), \
+        f"竞速 Boss 总体有效火力终局桥接缺失或动作漂移: {_d_projection_aggregate}"
+    assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_effective_dpt_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速 Boss 总体有效火力终局观测开关"
+
+    _d_projection_aggregate_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _projection_aggregate_terminal_state,
+            _projection_ratio_ctx([_projection_aggregate_note],
+                                  [_projection_aggregate_terminal_row]))
+    assert (_d_projection_aggregate_reload.action
+            == _d_projection_aggregate.action
+            and _d_projection_aggregate_reload.params
+            == _d_projection_aggregate.params
+            and "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+            in _d_projection_aggregate_reload.reason), \
+        f"进程重载后未恢复竞速 Boss 总体有效火力终局桥接: {_d_projection_aggregate_reload}"
+
+    _projection_aggregate_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_projection_aggregate.action,
+        "floor": 17, "reason": _d_projection_aggregate.reason})
+    _d_projection_aggregate_duplicate = _projection_aggregate_pol.decide(
+        _projection_aggregate_terminal_state, _projection_aggregate_ctx_live)
+    assert (_d_projection_aggregate_duplicate.action
+            == _d_projection_aggregate.action
+            and _d_projection_aggregate_duplicate.params
+            == _d_projection_aggregate.params
+            and "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in _d_projection_aggregate_duplicate.reason), \
+        f"竞速 Boss 总体有效火力终局桥接重复提交: {_d_projection_aggregate_duplicate}"
+
+    _projection_aggregate_off_know = knowledge.Knowledge(tmp)
+    _projection_aggregate_off_know.policy[
+        "race_audit_projection_effective_dpt_terminal_outcome_obs"] = False
+    _d_projection_aggregate_off = policy.Policy(
+        _projection_aggregate_off_know).decide(
+            _projection_aggregate_terminal_state,
+            _projection_ratio_ctx(
+                [_projection_aggregate_note],
+                [_projection_aggregate_terminal_row]))
+    assert (_d_projection_aggregate_off.action
+            == _d_projection_aggregate.action
+            and _d_projection_aggregate_off.params
+            == _d_projection_aggregate.params
+            and "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in _d_projection_aggregate_off.reason), \
+        f"竞速 Boss 总体有效火力终局开关关闭后动作或 marker 漂移: {_d_projection_aggregate_off}"
+
+    _d_projection_aggregate_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            _projection_aggregate_terminal_state,
+            _projection_ratio_ctx(
+                [_projection_aggregate_note],
+                [_projection_aggregate_terminal_row,
+                 {"screen": "REWARD", "action": "proceed", "floor": 17,
+                  "reason": "奖励边界"}]))
+    assert (_d_projection_aggregate_boundary.action
+            == _d_projection_aggregate.action
+            and _d_projection_aggregate_boundary.params
+            == _d_projection_aggregate.params
+            and "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                not in _d_projection_aggregate_boundary.reason), \
+        f"竞速 Boss 总体有效火力终局桥接越过 REWARD 边界: {_d_projection_aggregate_boundary}"
 
     # 3z-5e) Join a same-combat non-lethal HP-cost attack trace to the
     #         authoritative terminal.  This is observation-only: the source

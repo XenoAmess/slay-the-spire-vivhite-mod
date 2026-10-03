@@ -925,6 +925,10 @@ DEFAULT_POLICY = {
     "race_audit_projection_ratio_terminal_outcome_obs": True,  # 将同楼层战斗记录中的
                                                                # TTK/存活比值接回权威 GAME_OVER；
                                                                # 只读、可回滚，不改变 action/params
+    "race_audit_projection_effective_dpt_terminal_outcome_obs": True,  # 将同楼层
+                                                                       # Boss 总体有效火力
+                                                                       # 收官对账接回权威 GAME_OVER；
+                                                                       # 只读、可回滚，不改变 action/params
     "race_audit_projection_effective_dpt_phase_terminal_outcome_obs": True,  # 将同楼层
                                                                              # Boss 有效火力分相
                                                                              # 对账接回权威 GAME_OVER；

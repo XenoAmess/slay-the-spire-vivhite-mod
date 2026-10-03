@@ -9893,6 +9893,140 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             "（RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS）")
 
+    def _consume_race_projection_effective_dpt_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join the aggregate effective-DPT audit to the terminal outcome.
+
+        The aggregate audit is emitted at combat close before the native
+        GAME_OVER row exists. Keep this bridge observation-only, same-floor,
+        and bounded by the last combat decision immediately before GAME_OVER.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_audit_projection_effective_dpt_terminal_outcome_obs",
+                1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        marker = "RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+        decisions = getattr(ctx, "decisions", None)
+        if isinstance(decisions, list) and decisions:
+            _last = decisions[-1]
+            if isinstance(_last, dict) and marker in str(
+                    _last.get("reason") or ""):
+                return ""
+        if not isinstance(decisions, list) or not decisions:
+            return ""
+        _terminal = decisions[-1]
+        if not isinstance(_terminal, dict):
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if (_terminal_screen
+                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
+            return ""
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        if (floor is not None and _terminal.get("floor") is not None
+                and not _same_floor(floor, _terminal.get("floor"))):
+            return ""
+
+        _notes = getattr(ctx, "combat_notes", None)
+        if not isinstance(_notes, list) or not _notes:
+            return ""
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _label = "竞速Boss有效火力收官对账："
+        _source = None
+        for _raw_note in reversed(_notes):
+            _note = str(_raw_note or "")
+            if not _note:
+                continue
+            _floor_match = re.search(
+                r"(?:^|[｜|])F(?P<floor>-?\d+(?:\.\d+)?)\s+",
+                _note)
+            if _floor_match is not None:
+                if (floor is not None
+                        and not _same_floor(floor, _floor_match.group("floor"))):
+                    break
+            elif floor is not None:
+                continue
+
+            _marker_at = _note.rfind("RACE_PROJ_EFFECTIVE_DPT_AUDIT")
+            if _marker_at < 0:
+                continue
+            _label_at = _note.rfind(_label, 0, _marker_at)
+            if _label_at < 0:
+                continue
+            _source_text = _note[_label_at + len(_label):_marker_at]
+            _match = re.search(
+                rf"samples=(?P<samples>\d+)"
+                rf"/actual_dpt=(?P<actual>{_number_pattern})"
+                rf"/projected_dpt=(?P<projected>{_number_pattern})"
+                rf"/ratio=(?P<ratio>{_number_pattern})"
+                rf"/min_ratio=(?P<min_ratio>{_number_pattern})",
+                _source_text)
+            if _match is None:
+                continue
+            try:
+                _source = {
+                    "samples": int(_match.group("samples")),
+                    "actual_dpt": float(_match.group("actual")),
+                    "projected_dpt": float(_match.group("projected")),
+                    "ratio": float(_match.group("ratio")),
+                    "min_ratio": float(_match.group("min_ratio")),
+                }
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (_source["samples"] <= 0
+                    or not all(math.isfinite(value) for value in (
+                        _source["actual_dpt"], _source["projected_dpt"],
+                        _source["ratio"], _source["min_ratio"]))
+                    or _source["actual_dpt"] < 0.0
+                    or _source["projected_dpt"] <= 0.0
+                    or _source["ratio"] < 0.0
+                    or _source["min_ratio"] < 0.0):
+                _source = None
+                continue
+            break
+        if _source is None:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速Boss有效火力聚合终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_samples={_source['samples']}"
+            f"/source_actual_dpt={_num(_source['actual_dpt'])}"
+            f"/source_projected_dpt={_num(_source['projected_dpt'])}"
+            f"/source_ratio={_num(_source['ratio'])}"
+            f"/source_min_ratio={_num(_source['min_ratio'])}"
+            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
+            f"/terminal_action={_terminal.get('action') or '?'}"
+            f"/terminal_hp={_num(_terminal.get('hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            "（RACE_PROJ_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+
     def _consume_race_projection_effective_dpt_phase_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join the durable phase-split effective-DPT audit to GAME_OVER.
@@ -25634,6 +25768,9 @@ class Policy:
         _race_projection_ratio_terminal_outcome_note = (
             self._consume_race_projection_ratio_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _race_projection_effective_dpt_terminal_outcome_note = (
+            self._consume_race_projection_effective_dpt_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         _race_projection_effective_dpt_phase_terminal_outcome_note = (
             self._consume_race_projection_effective_dpt_phase_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -25782,6 +25919,7 @@ class Policy:
                             f"{_race_projection_latch_intent_terminal_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                             f"{_race_projection_ratio_terminal_outcome_note}"
+                            f"{_race_projection_effective_dpt_terminal_outcome_note}"
                             f"{_race_projection_effective_dpt_phase_terminal_outcome_note}"
                             f"{_kin_leader_removal_tradeoff_terminal_outcome_note}"
                             f"{_kin_leader_focus_sequence_terminal_outcome_note}"
@@ -25844,6 +25982,7 @@ class Policy:
                         f"{_race_projection_latch_intent_terminal_outcome_note}"
                         f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                         f"{_race_projection_ratio_terminal_outcome_note}"
+                        f"{_race_projection_effective_dpt_terminal_outcome_note}"
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
@@ -25886,6 +26025,7 @@ class Policy:
                                 f"{_race_projection_latch_intent_terminal_outcome_note}"
                                 f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                                 f"{_race_projection_ratio_terminal_outcome_note}"
+                                f"{_race_projection_effective_dpt_terminal_outcome_note}"
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"
