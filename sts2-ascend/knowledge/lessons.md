@@ -16430,3 +16430,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.0089057264542505局)，BURNING_PACT(17分/11.344472435094806局)，DEFEND_IRONCLAD(18分/2.6785913696528953局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1894 胜，当前目标进阶 0
+
+## 第 1895 局复盘（2026-10-04 06:01）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：UPPERCUT, SPITE, UNRELENTING, SHRUG_IT_OFF, DEMON_FORM, CINDER, DISMANTLE, PROWESS, BATTLE_TRANCE, RUPTURE, UNRELENTING, AGGRESSION, STOMP, IRON_WAVE, PYRE, HEADBUTT, CINDER, DISMANTLE, FIGHT_ME
+- 本局遗物：HAPPY_FLOWER, CENTENNIAL_PUZZLE, BRONZE_SCALES, PEAR
+- 战斗记录：F19 Monster战 掉血4; F20 Monster战 掉血8; F23 Monster战 掉血23; F25 Monster战 掉血21｜竞速投影审计：pool=113/dpt=6.075/ttk=18.6008/tsurv=14.375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=18.6008/actual_over_projected=0.27（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=4.22582（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合获胜; F31 Monster战 掉血28｜自损15（可行动段15/非行动段19，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血57｜竞速投影审计：pool=227/dpt=16.2/ttk=14.0123/tsurv=3.5625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=14.0123/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.40（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=10.4498（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=44.3333/projected_dpt=21.8167/ratio=2.11/min_ratio=1.31（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=44.3333/projected_dpt=21.8167/ratio=2.11/min_ratio=1.31（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=44.3333/projected_dpt=21.8167/ratio=2.11/min_ratio=1.31（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.0558385365969585局)，BRAND(26分/2.0035924364844395局)，PROWESS(26分/14.032553502803111局)，MANGLE(25分/45.048589600964306局)，HELLRAISER(25分/3.224902400460496局)
+- 当前低价值卡牌：ENTROPY(17分/2.0018745564116607局)，BURNING_PACT(17分/11.304766781571974局)，DEFEND_IRONCLAD(18分/2.6692162998591105局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1895 胜，当前目标进阶 0
