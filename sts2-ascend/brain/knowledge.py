@@ -268,7 +268,6 @@ DEFAULT_POLICY = {
     "potion_reserve_end_turn_obs": True,  # Audit-only raw potion-slot snapshot on a lethal no-card end-turn; False removes only this marker.
     "potion_reserve_terminal_outcome_obs": True,  # Audit-only join from that lethal potion-slot snapshot to the next GAME_OVER/Victory result; False removes only the terminal marker.
     "potion_ready_terminal_outcome_obs": True,  # Audit-only bounded join for ready potion IDs, same-combat use history, and delayed-effect classification; False removes only this marker.
-    "potion_spend_terminal_outcome_obs": True,  # Audit-only bounded join for an empty terminal potion reserve with same-combat use history; False removes only this marker.
     "native_mandatory_card_priority": True,  # Native mandatory-card behavior gate:
                                              # ENTHRALLED is playable in the live payload but
                                              # its v0.111.0 CardModel.ShouldPlay contract
