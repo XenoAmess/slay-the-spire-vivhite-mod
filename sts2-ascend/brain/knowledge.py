@@ -1493,6 +1493,9 @@ DEFAULT_POLICY = {
                                         # 将该负余量窗口接入格挡优先；大池仍要求严格余量>=0。
                                         # 设为0恢复旧严格口径，行为总开关仍可一键回滚。
       "race_allin_lethal_cover_decision_obs": True,
+      # Audit-only marker for an all-in cover rejection when the current
+      # affordable raw attack capacity cannot clear the live output pool.
+      "race_allin_lethal_cover_rejection_obs": True,
       "race_allin_lethal_cover_terminal_outcome_obs": True,
                                          # Audit-only same-combat join from the persisted
                                          # cover decision to the authoritative GAME_OVER result;

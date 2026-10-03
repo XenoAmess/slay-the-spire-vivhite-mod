@@ -15419,3 +15419,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池限制；同一完整 selfcheck 经 clone-local 进程级 0777 临时目录适配运行，退出码 0 且输出 `SELFCHECK OK`。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1855-1856: 败局竞速覆盖拒绝的输出容量观测
+
+profile_id: `ironclad`
+requested_runs: `1855-1856`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1856-F33-D375 的全攻选择不是因为本回合无法覆盖，而是“覆盖可执行、长程严格买活余量为负、当前可负担攻击输出又不足以清空存活敌方池”的边界。若这是可复现的决策形状，新 marker 应只在 `coverage=yes`、`decision=all_in`、非当前回合原始击杀且 `raw_damage_cap < target_hp + target_block` 时出现；marker 不改变选择。未来样本中若该形状不再出现，假设不成立；若反复出现并持续以终局失败收束，再评估行为调整。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-172632_0JGMH26C2XCV.json`（run 1856）F33-D375 已记录 `need=11/max_block=16/covers=yes/post_gap=0`，同时已有 `strict_margin=-6.9/pool=232/cap=100/decision=all_in` 与 `target_hp=232/raw_damage_cap=4`；D378 终局继续记录该 all-in 来源及输出容量从 232 降至 228。原生 v0.111.0 知识将 `CRUSHER`、`ROCKET` 识别为 Boss（`runtime/monsters.jsonl`），mechanics 记录分别提供 Crusher 的 12/14 级别攻击值及 Rocket 的 18/20/31/35/3/4 伤害字段，确认这不是未知敌人形状。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立匹配来源行统计 `RACE_ALLIN_LETHAL_COVER_REJECTION_OBS`，并按 `cover_need/cover_block/post_hp/target_hp/raw_damage_cap` 对照终局胜负、source round 和 `applied` action/params。关闭观测键时只移除新 marker，既有覆盖/容量审计及 action/params 应逐项相同。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_allin_lethal_cover_rejection_obs` 回滚键。
+- `sts2-ascend/brain/policy.py`：复用既有可负担原始输出容量快照；仅在覆盖被拒且输出池无法被当前攻击容量清空时追加 `RACE_ALLIN_LETHAL_COVER_REJECTION_OBS`，不读取该 marker 参与评分、排序、门控、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加正例 marker 断言和关闭键回滚断言，逐项比较 action/params，证明改动是观测路径。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配终局，比较新 marker 的容量字段、覆盖来源回合、终局结果和真实 `applied` 回执；暂不把观测升级为格挡或全攻规则。
+- **Adjust**：若真实链出现多目标、无有效攻击候选、输出池与买活池不同步或字段语义不一致，保留原链并只收紧 marker 的来源条件；不扩大到其他竞速分支。
+- **Rollback**：将 `race_allin_lethal_cover_rejection_obs` 设为 `False`；预期只移除新 marker，既有覆盖决策、输出容量、action 和 params 不变。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽池限制；同一完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 且输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、学习记忆、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

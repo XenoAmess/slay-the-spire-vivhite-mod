@@ -15665,10 +15665,10 @@ class Policy:
                                     f"/cap={_ralc_low_pool_cap:.0f}"
                                     f"/margin_floor={_ralc_min_margin:+.1f}，恢复格挡优先"
                                     "（RACE_ALLIN_LETHAL_COVER_BEHAVIOR）")
+                        _ralc_decision = (
+                            "cover" if race_lethal_cover else "all_in")
                         if bool(pol.get(
                                 "race_allin_lethal_cover_decision_obs", True)):
-                            _ralc_decision = (
-                                "cover" if race_lethal_cover else "all_in")
                             danger_note += (
                                 f"；败局竞速覆盖决策：coverage=yes/decision="
                                 f"{_ralc_decision}/strict_margin="
@@ -15676,6 +15676,71 @@ class Policy:
                                 f"/cap={_ralc_low_pool_cap:.0f}/margin_floor="
                                 f"{_ralc_min_margin:+.1f}"
                                 "（RACE_ALLIN_LETHAL_COVER_DECISION_OBS）")
+                        try:
+                            _ralc_rejection_obs = bool(int(float(
+                                pol.get(
+                                    "race_allin_lethal_cover_rejection_obs",
+                                    True) or 0)))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_rejection_obs = False
+                        if (_ralc_rejection_obs
+                                and _ralc_decision == "all_in"
+                                and not _ralc_current_turn_lethal):
+                            _ralc_rejection_capacity = (
+                                self._race_allin_lethal_output_capacity_snapshot(
+                                    hand, enemies, energy, pol))
+                            _ralc_rejection_target_hp = None
+                            _ralc_rejection_target_block = None
+                            _ralc_rejection_attack_candidates = 0
+                            _ralc_rejection_raw_cap = None
+                            if isinstance(_ralc_rejection_capacity, dict):
+                                try:
+                                    _ralc_rejection_target_hp = float(
+                                        _ralc_rejection_capacity["target_hp"])
+                                    _ralc_rejection_target_block = float(
+                                        _ralc_rejection_capacity["target_block"])
+                                    _ralc_rejection_attack_candidates = int(
+                                        _ralc_rejection_capacity[
+                                            "attack_candidates"])
+                                    _ralc_rejection_raw_cap = float(
+                                        _ralc_rejection_capacity[
+                                            "raw_damage_cap"])
+                                except (KeyError, TypeError, ValueError,
+                                        OverflowError):
+                                    _ralc_rejection_target_hp = None
+                                    _ralc_rejection_target_block = None
+                                    _ralc_rejection_attack_candidates = 0
+                                    _ralc_rejection_raw_cap = None
+                            if (
+                                    _ralc_rejection_target_hp is not None
+                                    and _ralc_rejection_target_block is not None
+                                    and _ralc_rejection_raw_cap is not None
+                                    and math.isfinite(
+                                        _ralc_rejection_target_hp)
+                                    and math.isfinite(
+                                        _ralc_rejection_target_block)
+                                    and math.isfinite(_ralc_rejection_raw_cap)
+                                    and _ralc_rejection_target_hp >= 0.0
+                                    and _ralc_rejection_target_block >= 0.0
+                                    and _ralc_rejection_attack_candidates > 0
+                                    and _ralc_rejection_raw_cap + 1e-9 < (
+                                        _ralc_rejection_target_hp
+                                        + _ralc_rejection_target_block)):
+                                danger_note += (
+                                    "; race-allin lethal cover rejection:"
+                                    f"/coverage=yes/decision={_ralc_decision}"
+                                    f"/strict_margin={_ralc_strict_margin:+.1f}"
+                                    f"/pool={_ralc_pool:.0f}"
+                                    f"/cover_need={_ralc_need:.0f}"
+                                    f"/cover_block={_ralc_sum:.0f}"
+                                    f"/post_hp={_ralc_post_hp:.0f}"
+                                    f"/target_hp={_ralc_rejection_target_hp:g}"
+                                    f"/target_block={_ralc_rejection_target_block:g}"
+                                    f"/attack_candidates="
+                                    f"{_ralc_rejection_attack_candidates}"
+                                    f"/raw_damage_cap={_ralc_rejection_raw_cap:g}"
+                                    "/current_turn_lethal=no"
+                                    " (RACE_ALLIN_LETHAL_COVER_REJECTION_OBS)")
                         _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
                                          else "买活仍必败")
                         danger_note += (

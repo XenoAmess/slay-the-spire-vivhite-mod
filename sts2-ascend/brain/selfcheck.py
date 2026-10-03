@@ -23620,6 +23620,7 @@ def main() -> int:
         and d_rallc1.params.get("card_index") == 0 \
         and "LETHAL_SURVIVABLE_LINE" not in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc1.reason \
+        and "RACE_ALLIN_LETHAL_COVER_REJECTION_OBS" in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_CAPACITY_OBS" in d_rallc1.reason \
         and "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS" in d_rallc1.reason \
         and "/target_hp=253/target_block=0/attack_candidates=1/raw_damage_cap=6" in d_rallc1.reason \
@@ -23629,6 +23630,19 @@ def main() -> int:
         and "RACE_ALLIN_BUYBACK_MARGIN_OBS" in d_rallc1.reason \
         and "买活余量：严格-12.5/宽松-11.5回合→严格仍必败" in d_rallc1.reason, \
         f"败局竞速致死覆盖旁观缺失、买活对账缺失或全攻行为被改写: {d_rallc1.action}（{d_rallc1.reason}）"
+    pol_rallc_rejection_off = rallc_policy()
+    pol_rallc_rejection_off.know.policy[
+        "race_allin_lethal_cover_rejection_obs"] = False
+    d_rallc_rejection_off = rallc_decide(
+        pol_rallc_rejection_off, 25, 27, 1, [lsl_hit, lsl_shld])
+    assert d_rallc_rejection_off.action == d_rallc1.action \
+        and d_rallc_rejection_off.params == d_rallc1.params \
+        and "RACE_ALLIN_LETHAL_COVER_OBS" in d_rallc_rejection_off.reason \
+        and "RACE_ALLIN_LETHAL_COVER_REJECTION_OBS" not in d_rallc_rejection_off.reason, \
+        f"致死覆盖拒绝观测关闭改变动作/参数或未同灭: " \
+        f"on={d_rallc1.action}/{d_rallc1.params} " \
+        f"off={d_rallc_rejection_off.action}/{d_rallc_rejection_off.params}/" \
+        f"{d_rallc_rejection_off.reason}"
     # 3rallc-lethal) 1798-F5-T6 形状：14 血对 24 意图、能量 3，单敌剩
     #      15 血且手牌有 32 伤重锤+15 甲防御。旧覆盖行为会因投影 margin
     #      =-1.8 选防御；本回合原始输出已经足以击穿当前目标时，必须保留全攻。
