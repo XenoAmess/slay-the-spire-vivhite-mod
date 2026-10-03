@@ -16034,3 +16034,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.1340454853016735局)，BURNING_PACT(17分/12.87067710107163局)，DEFEND_IRONCLAD(18分/3.0389500086287167局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（82%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1858 胜，当前目标进阶 0
+
+## 第 1859 局复盘（2026-10-03 18:28）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 EXOSKELETON
+- 本局拿牌：HOWL_FROM_BEYOND, FIGHT_ME, RUPTURE, TWIN_STRIKE, TAUNT, UNRELENTING, TRUE_GRIT, UNRELENTING, BLUDGEON, CRIMSON_MANTLE, STOMP, STONE_ARMOR, MOLTEN_FIST, TRUE_GRIT, TAUNT, TRUE_GRIT, BREAKTHROUGH, ANGER, THUNDERCLAP, CINDER
+- 本局遗物：STONE_CRACKER, STRAWBERRY, SHOVEL
+- 战斗记录：F19 Monster战 掉血6; F21 Monster战 掉血28｜自损1（可行动段1/非行动段25，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血19｜竞速投影审计：pool=97/dpt=14.4/ttk=6.73611/tsurv=2.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=6.73611/actual_over_projected=0.74（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战5回合获胜; F27 Monster战 掉血22｜自损10（可行动段10/非行动段18，SELF_LOSS_PHASE_OBS）; F29 Unknown战 掉血8｜自损3（可行动段3/非行动段11，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=87/dpt=4.725/ttk=18.4127/tsurv=14.5455（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=18.4127/actual_over_projected=0.38（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T3判死→实战7回合获胜; F30 Monster战 掉血30（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1773235082287576局)，MASTER_OF_STRATEGY(27分/4.601482217642336局)，PROWESS(26分/10.472403827990096局)，BRAND(26分/2.273141518010579局)，HELLRAISER(25分/3.658757841430726局)
+- 当前低价值卡牌：HAVOC(15分/2.126576326103118局)，BURNING_PACT(17分/12.82562973121788局)，DEFEND_IRONCLAD(18分/3.0283136835985163局)
+- 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.37 → 0.38（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F30——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F30——药水交药线部分胜利回收）
+- 生涯战绩：0/1859 胜，当前目标进阶 0
