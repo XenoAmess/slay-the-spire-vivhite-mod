@@ -16408,3 +16408,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.023042239865873局)，BURNING_PACT(17分/11.424302605627277局)，DEFEND_IRONCLAD(18分/2.697440408869976局)
 - 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1892 胜，当前目标进阶 0
+
+## 第 1893 局复盘（2026-10-04 05:21）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：STOMP, MOLTEN_FIST, TAUNT, INFLAME, EXPECT_A_FIGHT, TRUE_GRIT, FASTEN, SPITE, BREAKTHROUGH, EQUILIBRIUM
+- 本局遗物：ETERNAL_FEATHER
+- 战斗记录：F4 Unknown战 掉血2; F6 Monster战 掉血14; F8 Monster战 掉血19; F12 Monster战 掉血16; F14 Monster战 掉血1; F17 Boss战 掉血61｜自损1（可行动段1/非行动段46，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=245/dpt=48.6/ttk=5.04115/tsurv=3.00885（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=5.04115/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.33（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.0323（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=22/projected_dpt=23.2783/ratio=1.10/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=22/projected_dpt=23.2783/ratio=1.10/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=22/projected_dpt=23.2783/ratio=1.10/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.084379157051646局)，BRAND(26分/2.0176915606876342局)，STAMPEDE(25分/7.746407321242912局)，PROWESS(25分/13.12426256856661局)，MANGLE(25分/45.36559302361506局)
+- 当前低价值卡牌：ENTROPY(17分/2.0159615920263425局)，BURNING_PACT(17分/11.384317546507582局)，DEFEND_IRONCLAD(18分/2.6879993674389313局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（67%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
+- 生涯战绩：0/1893 胜，当前目标进阶 0
