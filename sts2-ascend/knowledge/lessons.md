@@ -16331,3 +16331,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.073308028464222局)，BURNING_PACT(17分/11.708158062691833局)，DEFEND_IRONCLAD(18分/2.764462721443089局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1885 胜，当前目标进阶 0
+
+## 第 1886 局复盘（2026-10-04 03:13）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：BREAKTHROUGH, SHRUG_IT_OFF, THUNDERCLAP, SHRUG_IT_OFF, BREAKTHROUGH, PROWESS, ONE_TWO_PUNCH, HEMOKINESIS, FORGOTTEN_RITUAL
+- 本局遗物：BLOOD_VIAL, ODDLY_SMOOTH_STONE
+- 战斗记录：F4 Monster战 掉血0｜自损3（可行动段3/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血4｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血8｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损3（可行动段3/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血5｜自损4（可行动段4/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血84｜自损8（可行动段8/非行动段71，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=164/dpt=27.675/ttk=5.92593/tsurv=3.68182（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=5.92593/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.17（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.24411（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=18/projected_dpt=24.956/ratio=0.78/min_ratio=0.12（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=18/projected_dpt=24.956/ratio=0.78/min_ratio=0.12（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：intangible_samples=1/layers_max=1/actual_dpt=2/projected_dpt=17.28/ratio=0.12/min_ratio=0.12|non_intangible_samples=4/layers_max=0/actual_dpt=22/projected_dpt=26.875/ratio=0.95/min_ratio=0.16（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BLOODLETTING(29分/2.0318861262026333局)，MASTER_OF_STRATEGY(27分/4.185862228051425局)，BRAND(26分/2.0678244029227626局)，STAMPEDE(25分/7.938879463016934局)，PROWESS(25分/13.450356307382728局)
+- 当前低价值卡牌：ENTROPY(17分/2.0660514503645975局)，BURNING_PACT(17分/11.667179509472412局)，DEFEND_IRONCLAD(18分/2.7547871019180383局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1886 胜，当前目标进阶 0
