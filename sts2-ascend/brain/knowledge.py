@@ -659,12 +659,13 @@ DEFAULT_POLICY = {
                                        # 中标单体攻击附带 ENEMY_INTANGIBLE_CAP_OBS
                                        # 纯观测注记；False=严格回滚旧牌面全额口径
                                        # （评分/击杀/注记零差异）。
-    "intangible_race_output_guard": True,  # 无实体竞速低效攻击让位格挡（第1591局）：
+    "intangible_race_output_guard": True,  # 无实体竞速低效攻击保护（第1591局扩展）：
                                             # SOUL_FYSH 的 INTANGIBLE_POWER 将每 hit
-                                            # 压到1；kill_race 非致死回合若仍有可用格挡，
-                                            # 不应让低于牌面一半有效伤害的攻击抢走能量。
-                                            # 只作用于非击杀单体攻击、已有缺口且存在合格
-                                            # 格挡候选；False 严格回滚旧竞速评分。
+                                            # 压到1；kill_race 非致死回合的普通低效攻击
+                                            # 在已有格挡缺口/候选时让位格挡；若攻击还支付
+                                            # HP 且有效伤害低于自付额，即使没有格挡预留也
+                                            # 压低该净负候选。只作用于非 race_allin、非击杀
+                                            # 单体攻击；False 严格回滚旧竞速评分。
     "intangible_race_output_bypass_obs": True,  # 只记录竞速态下低效无实体攻击未触发闸门的边界；不改评分或动作，False 回滚标记
     "minion_focus_obs": True,  # 爪牙集火观测（MINION_FOCUS_OBS，第980~1016局批复盘）：
                                         # 原生 MinionPower（zhs「爪牙会在他们的领导者

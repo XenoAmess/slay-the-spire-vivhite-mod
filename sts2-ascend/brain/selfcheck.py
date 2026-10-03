@@ -8645,6 +8645,40 @@ def main() -> int:
     assert ("INTANGIBLE_HP_COST_AUDIT" in why_int_hemo
             and "eff=1/self=2/net=-1" in why_int_hemo), \
         f"intangible self-cost audit missing: {why_int_hemo}"
+    # ⑴ 第1848局 F17 D171 形状：kill_race 非致死且无格挡预留时，
+    #    HEMOKINESIS 仍支付2血却只移除1血；现有低效闸门不得因 reserve_for_block
+    #    为 False 而放行该净负候选。race_allin 仍保留旧全押行为。
+    int_race_hemo = int_pol._score_play(
+        dict(int_hemo), [int_enemy(layers=1, intent=16)], 16, 0, 4,
+        int_pol.know.policy, my_hp=40, my_max_hp=80, cur_energy=3,
+        reserve_for_block=False, min_blk_cost=99, kill_race=True,
+        run_deck=[])
+    assert (int_race_hemo[0] < int_pol.know.policy["play_threshold"]
+            and int_race_hemo[1] == 0
+            and "自残2血>有效伤害1" in int_race_hemo[2]
+            and "INTANGIBLE_RACE_OUTPUT_GUARD" in int_race_hemo[2]
+            and "INTANGIBLE_RACE_OUTPUT_BYPASS_OBS" not in int_race_hemo[2]), \
+        f"无格挡预留的无实体自残净负候选未被保护: {int_race_hemo}"
+    int_pol.know.policy["intangible_race_output_guard"] = False
+    try:
+        int_race_hemo_off = int_pol._score_play(
+            dict(int_hemo), [int_enemy(layers=1, intent=16)], 16, 0, 4,
+            int_pol.know.policy, my_hp=40, my_max_hp=80, cur_energy=3,
+            reserve_for_block=False, min_blk_cost=99, kill_race=True,
+            run_deck=[])
+        assert (int_race_hemo_off[0] >= int_pol.know.policy["play_threshold"]
+                and "INTANGIBLE_RACE_OUTPUT_GUARD" not in int_race_hemo_off[2]), \
+            f"无实体自残保护关闭后未严格回滚: {int_race_hemo_off}"
+    finally:
+        int_pol.know.policy["intangible_race_output_guard"] = True
+    int_race_hemo_allin = int_pol._score_play(
+        dict(int_hemo), [int_enemy(layers=1, intent=16)], 16, 0, 4,
+        int_pol.know.policy, my_hp=40, my_max_hp=80, cur_energy=3,
+        reserve_for_block=False, min_blk_cost=99, kill_race=True,
+        hopeless_race=True, run_deck=[])
+    assert (int_race_hemo_allin[0] >= int_pol.know.policy["play_threshold"]
+            and "INTANGIBLE_RACE_OUTPUT_GUARD" not in int_race_hemo_allin[2]), \
+        f"race_allin 不应被无实体自残保护误拦: {int_race_hemo_allin}"
     _, _, why_int_hemo_kill = int_score(int_hemo, int_enemy(hp=1, layers=2))
     assert "INTANGIBLE_HP_COST_AUDIT" not in why_int_hemo_kill, \
         f"intangible self-cost audit flagged a lethal play: {why_int_hemo_kill}"

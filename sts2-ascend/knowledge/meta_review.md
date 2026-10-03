@@ -15335,3 +15335,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 运行到宿主固定 256 槽临时目录门禁；用 clone-local 进程级临时目录适配运行同一完整 selfcheck，退出码 0 并输出 `SELFCHECK OK`。针对性 `git diff --check` 返回 0，仅有既有 LF/CRLF 与长路径提示；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-10-03 run 1848: 无实体自残攻击的竞速保护
+
+profile_id: `ironclad`
+requested_run: `1848`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `intangible_race_output_guard` 只有在本回合有格挡缺口时才压低无实体竞速的低效攻击；因此 F17 D171 的 `HEMOKINESIS+` 即使无实体有效伤害只有 1、支付 2 点生命，且没有格挡预留，也会落入 `INTANGIBLE_RACE_OUTPUT_BYPASS_OBS`。可证伪条件是：在非 `race_allin`、非致死、非击杀的同形态样本中，`effective_damage < self_cost` 的单体自残攻击不再被选作竞速候选；`race_allin`、击杀/致死、有效伤害不低于自残成本和非无实体路径保持旧行为。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-150223_P5K7Z7D5MLQT.json` 的 run 1848 F17 D168 已出现 `INTANGIBLE_POWER×1`；D170 的 `STRIKE` 记录有效伤害 1、`kill_race=yes`、`reserve=no`；D171 选择 `HEMOKINESIS+`，记录 `INTANGIBLE_HP_COST_AUDIT eff=1/self=2/net=-1/layers=1`、`INTANGIBLE_RACE_OUTPUT_BYPASS_OBS`，并以 `HP_COST_ATK_PRICING` 支付 2 点生命（HP 31→29）。原生 `sts2-ascend/knowledge/game/v0.111.0/runtime/cards.jsonl` 与 `mechanics/cards.jsonl` 均确认 `HEMOKINESIS` 为“失去2点生命。造成15点伤害”，且先支付生命再执行伤害。
+- **EXPECTED_SIGNAL**：未来 3—10 个匹配战斗中，逐样本核对无实体层数、卡牌、自残成本、有效伤害、`kill_race/race_allin`、格挡缺口、候选 action/target 和应用回执；目标分支不再把净负自残攻击作为竞速候选，其他分支不出现新的 guard marker 或动作漂移。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：保留默认开启的 `intangible_race_output_guard`，明确其新增的自残成本分支；设为 `False` 可严格回退旧竞速行为。
+- `sts2-ascend/brain/policy.py`：只在既有 guard 的非 `race_allin`、非击杀/致死、单目标竞速路径中，增加 `self_cost > 0 && effective_damage < self_cost` 的压低条件；原有“有格挡缺口且低于总伤害一半”的分支保持不变，评分和候选排序之外不新增状态写入。
+- `sts2-ascend/brain/selfcheck.py`：加入 D171 形态的无格挡预留正例、关闭开关回退和 `race_allin` 反例，断言目标牌不再被选且旧 bypass marker 仅在回退/允许路径出现。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配样本，比较目标卡牌是否被压低、实际 action/target/params、HP 战损及同回合无实体层数；同时确认 `race_allin` 不被误伤。
+- **Adjust**：若生产链的自残成本、有效伤害或竞速字段存在不同合法拼写，保留原始链，只收紧该解析或阈值；不得把保护扩大到击杀、致死、AOE 或非竞速决策。
+- **Rollback**：将 `intangible_race_output_guard` 设为 `False`，应恢复 D171 所属旧 bypass 行为；保留 `INTANGIBLE_HP_COST_AUDIT` 作为只读证据。
+- **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池门禁；同一完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。最终目标 diff 与 `git diff --check` 已复核，无新增空白错误；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`

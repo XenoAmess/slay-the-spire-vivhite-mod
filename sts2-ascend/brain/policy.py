@@ -18876,31 +18876,45 @@ class Policy:
                 why += ("｜已抑制零伤害减益体辅助加分："
                         + "、".join(_support_debuff_gate_targets)
                         + "（SUPPORT_TARGET_DEBUFF_GATE）")
-            # 无实体竞速低效攻击让位格挡（INTANGIBLE_RACE_OUTPUT_GUARD，
+            # 无实体竞速低效攻击保护（INTANGIBLE_RACE_OUTPUT_GUARD，
             # 第1591局 SOUL_FYSH）：_attack_outcome 已把每 hit 的有效伤害
             # 压到1，但 kill_race 的攻击提速仍可能让一张牌以低有效输出抢走
-            # 本回合能量。仅在非致死、非击杀、确有缺口且已有合格格挡候选时
-            # 压低该单体攻击；无格挡时仍保留抢斩杀的唯一动作，race_allin、
-            # AOE、合法击杀和普通战斗完全不变。False 严格回滚旧评分。
+            # 本回合能量。普通低效攻击仍只在确有缺口且已有合格格挡候选时
+            # 让位格挡；第1848局 F17 D171 暴露的另一条窄路径是：无格挡预留
+            # 时，HEMOKINESIS 仍支付2血却只移除1血。对非致死、非击杀、非
+            # race_allin 的 HP-cost 单体牌，若有效伤害低于自付额也压低该净负
+            # 候选；无格挡时仍保留非自残的唯一抢斩杀动作，AOE、合法击杀和
+            # 普通战斗不变。False 严格回滚旧评分。
             _intangible_guard_applied = False
             if (bool(pol.get("intangible_race_output_guard", True))
                     and kill_race and not race_allin
                     and not lethal and not best_kill
-                    and best_t is not None and reserve_for_block
-                    and incoming > my_block and best_s > floor_score):
+                    and best_t is not None and best_s > floor_score):
                 _guard_enemy = next(
                     (e for e in _pool if e.get("index") == best_t), None)
                 if _guard_enemy is not None:
                     _guard_layers = self._enemy_intangible_stack(_guard_enemy)
                     _guard_eff, _guard_killed, _ = _attack_outcome(_guard_enemy)
+                    _guard_low_output = (
+                        float(_guard_eff) < float(total) * 0.5)
+                    _guard_hp_cost = (
+                        self_cost > 0
+                        and float(_guard_eff) < float(self_cost))
+                    _guard_block_reserve = (
+                        reserve_for_block and incoming > my_block)
                     if (_guard_layers > 0 and not _guard_killed
-                            and float(_guard_eff) < float(total) * 0.5):
+                            and (_guard_hp_cost
+                                 or (_guard_block_reserve and _guard_low_output))):
                         best_s = floor_score
                         _intangible_guard_applied = True
+                        _guard_basis = (
+                            f"自残{self_cost:g}血>有效伤害{float(_guard_eff):g}"
+                            if _guard_hp_cost else
+                            f"缺口{incoming - my_block:g}")
                         why += (
-                            f"｜无实体竞速低效攻击让位格挡：有效伤害"
+                            f"｜无实体竞速低效攻击压低：有效伤害"
                             f"{float(_guard_eff):g}/{float(total):g}、"
-                            f"无实体{_guard_layers:g}层、缺口{incoming - my_block:g}"
+                            f"无实体{_guard_layers:g}层、{_guard_basis}"
                             "（INTANGIBLE_RACE_OUTPUT_GUARD）")
             # 竞速态边界观测：同一低效攻击若没有命中上面的闸门，保留触发
             # 前置条件，便于验证是 kill_race/race_allin/迟滞锁/防守储备哪一项放行。
