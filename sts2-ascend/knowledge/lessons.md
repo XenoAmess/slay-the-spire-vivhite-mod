@@ -16254,3 +16254,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.1248227526772725局)，BURNING_PACT(17分/11.999066372196205局)，DEFEND_IRONCLAD(18分/2.833150312836775局)
 - 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.37（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.06 → 2.05（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F30——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1878 胜，当前目标进阶 0
+
+## 第 1879 局复盘（2026-10-04 00:51）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：TWIN_STRIKE, CINDER, IRON_WAVE, FORGOTTEN_RITUAL, RUPTURE, PROWESS, HOWL_FROM_BEYOND, SWORD_BOOMERANG, VICIOUS, STONE_ARMOR, PROWESS, INFLAME, PACTS_END, JUGGLING, AGGRESSION, INFLAME
+- 本局遗物：ETERNAL_FEATHER
+- 战斗记录：F8 Unknown战 掉血12; F14 Monster战 掉血15; F17 Boss战 掉血47｜竞速投影审计：pool=169/dpt=6.075/ttk=27.8189/tsurv=3.26316（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=27.8189/actual_over_projected=0.36（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=24.5558（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战10回合获胜｜竞速Boss有效火力收官对账：samples=3/actual_dpt=26.6667/projected_dpt=10.6583/ratio=2.40/min_ratio=1.48（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=26.6667/projected_dpt=10.6583/ratio=2.40/min_ratio=1.48（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=26.6667/projected_dpt=10.6583/ratio=2.40/min_ratio=1.48（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血51; F21 Monster战 掉血2; F22 Monster战 掉血27｜竞速投影审计：pool=107/dpt=7.425/ttk=14.4108/tsurv=3.46154（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=14.4108/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.44（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=10.9492（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.0298737264416857局)，BLOODLETTING(29分/2.0823716556013627局)，MASTER_OF_STRATEGY(27分/4.289866811698181局)，BRAND(26分/2.119202877503063局)，PROWESS(26分/12.759705744477287局)
+- 当前低价值卡牌：ENTROPY(17分/2.117385873042902局)，BURNING_PACT(17分/11.95706963989352局)，DEFEND_IRONCLAD(18分/2.8232342867418465局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1879 胜，当前目标进阶 0
