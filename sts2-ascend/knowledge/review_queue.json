@@ -15,36 +15,52 @@
    "every": 5,
    "source": "queued",
    "run_id": "3FNWW7EZ51G4"
+  },
+  {
+   "run": 1830,
+   "time": "2026-10-03 09:53",
+   "profile_id": "ironclad",
+   "backend_key": "luna-max",
+   "priority": 2,
+   "runner": "codex",
+   "model": "gpt-5.6-luna",
+   "variant": "",
+   "reasoning_effort": "max",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 1,
+   "source": "fallback",
+   "run_id": "TBUJ3CR9L9F8",
+   "queue_id": "41144-1790992440738686900-0",
+   "retry_same_model": true,
+   "salvage_packages": [
+    "20261003-102703-1790994423506562800-9eefca76"
+   ],
+   "salvage_attempts": [],
+   "retry_group": "20261003-102703-1790994423506562800-9eefca76",
+   "replay_target": "20261003-102703-1790994423506562800-9eefca76",
+   "retry_count": 1,
+   "retry_after": 1790994490.3482127,
+   "deferred_count": 0,
+   "deferred_hold_until": 0,
+   "review_epoch": ""
+  },
+  {
+   "run": 1832,
+   "time": "2026-10-03 10:31",
+   "profile_id": "ironclad",
+   "backend_key": "kimi-k3",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
+   "source": "queued",
+   "run_id": "TK6KHEQ909CL"
   }
  ],
- "reviewing": {
-  "runs": [
-   1830
-  ],
-  "items": [
-   {
-    "run": 1830,
-    "time": "2026-10-03 09:53",
-    "profile_id": "ironclad",
-    "backend_key": "luna-max",
-    "priority": 2,
-    "runner": "codex",
-    "model": "gpt-5.6-luna",
-    "variant": "",
-    "reasoning_effort": "max",
-    "approve_for_me": false,
-    "sandbox": "workspace-write",
-    "every": 1,
-    "source": "fallback",
-    "run_id": "TBUJ3CR9L9F8",
-    "queue_id": "41144-1790992440738686900-0",
-    "retry_same_model": true,
-    "salvage_packages": [],
-    "salvage_attempts": []
-   }
-  ],
-  "profile_id": "ironclad",
-  "retry_group": "",
-  "started": "2026-10-03 09:54:00"
- }
+ "reviewing": null
 }
