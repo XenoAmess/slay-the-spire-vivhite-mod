@@ -18483,6 +18483,48 @@ def main() -> int:
         "potion_reserve_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 potion_reserve_terminal_outcome_obs"
 
+    # Empty terminal potion reserve: distinguish no supply from a same-combat
+    # potion use with a bounded observation only; action and params stay fixed.
+    potion_empty_reason = d_potion_reserve.reason.replace(
+        "slots=2/occupied=1/can_use=0/ids=BLOCK_P/ready_ids=none",
+        "slots=2/occupied=0/can_use=0/ids=none/ready_ids=none")
+    potion_empty_terminal_ctx = _SettleCtx()
+    potion_empty_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "use_potion", "floor": 33,
+        "turn": 6, "potion_id": "ABILITY_POTION",
+        "reason": "combat use potion",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": potion_empty_reason,
+    }]
+    potion_empty_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_potion_empty_terminal = potion_empty_terminal_pol.decide(
+        lethal_unavailable_outcome_state, potion_empty_terminal_ctx)
+    assert (d_potion_empty_terminal.action == d_potion_reserve_outcome.action
+            and d_potion_empty_terminal.params
+            == d_potion_reserve_outcome.params
+            and "POTION_RESERVE_USE_HISTORY_TERMINAL_OBS"
+            in d_potion_empty_terminal.reason
+            and "/reserve_occupied=0/same_combat_use_count=1"
+            "/same_combat_use_names=ABILITY_POTION/bridge_decisions=1"
+            in d_potion_empty_terminal.reason), \
+        f"Empty potion reserve history or action drift: {d_potion_empty_terminal}"
+    potion_empty_off_know = knowledge.Knowledge(tmp)
+    potion_empty_off_know.policy[
+        "potion_reserve_use_history_terminal_obs"] = False
+    d_potion_empty_off = policy.Policy(potion_empty_off_know).decide(
+        lethal_unavailable_outcome_state, potion_empty_terminal_ctx)
+    assert (d_potion_empty_off.action == d_potion_empty_terminal.action
+            and d_potion_empty_off.params == d_potion_empty_terminal.params
+            and "POTION_RESERVE_TERMINAL_OUTCOME_OBS"
+            in d_potion_empty_off.reason
+            and "POTION_RESERVE_USE_HISTORY_TERMINAL_OBS"
+            not in d_potion_empty_off.reason), \
+        f"Empty potion history gate drift: {d_potion_empty_off}"
+    assert knowledge.DEFAULT_POLICY[
+        "potion_reserve_use_history_terminal_obs"] is True, \
+        "DEFAULT_POLICY missing potion_reserve_use_history_terminal_obs"
+
     potion_reserve_terminal_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
     potion_reserve_terminal_replay_ctx = _SettleCtx()
     potion_reserve_terminal_replay_ctx.decisions = list(

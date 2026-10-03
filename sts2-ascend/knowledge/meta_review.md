@@ -15754,3 +15754,31 @@ failed_review_replay: `requested_packages=[]`（无回放目标）
 - **Validation**：宿主直接运行完整 selfcheck 时复现固定 256 槽临时池耗尽；随后用 clone-local 进程级临时目录适配器运行同一 `selfcheck.py`，退出码为 0 且输出 `SELFCHECK OK`。针对真实 1876 完整链的只读回放得到 `events=7/sum=36/peak=8/rounds=1,2,3,4,7`；另做边界探针确认 `REWARD` 后事件不被计入。目标三文件 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1879-F22：空药水槽位与同战斗消耗历史终局观测
+
+profile_id: `ironclad`
+requested_run: `1879`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：终端药水快照 `occupied=0` 只能说明当前没有存量，无法区分从未有药水与本战斗已经消耗药水。若在同楼层、仅 `COMBAT/CARD_SELECTION` 的有界桥内回接 `use_potion`，即可把两类终局分开而不改变决策；若出现跨楼层、跨屏幕或动作参数变化，假设即被证伪。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/runs/20261004-004130_GGUG6G0RQU4E.json` 的 F22 D268 使用能力药水，D290 在 `occupied=0`、`can_use=0` 后致死无牌结束，随后 D291 `GAME_OVER`；旧终局只保留空槽位，未保留同战斗消耗历史。
+- **EXPECTED_SIGNAL**：后续 3–10 个匹配终局应在空槽位时最多产生一次 `POTION_RESERVE_USE_HISTORY_TERMINAL_OBS`，包含 `same_combat_use_count`、名称和 `bridge_decisions`；无使用时 count=0，`REWARD/MAP` 或跨楼层边界不应命中，`action/params` 必须不变。1879-F22 只读回放已命中 `continue_game_over {}`、`reserve_occupied=0`、`same_combat_use_count=1`，真实名称为“能力药水”。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `potion_reserve_use_history_terminal_obs` 观测开关。
+- `sts2-ascend/brain/policy.py`：复用既有 64 行同楼层 `COMBAT/CARD_SELECTION` 扫描；持久恢复终局 pending，仅在 `occupied=0` 时追加审计 marker，不参与评分、排序、目标或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：新增空槽位+同战斗使用正例，并验证开关关闭及 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3–10 个空槽位终局，分层比较同战斗使用次数、名称、桥长度、终局结果与 `applied` 回执；证据成熟前保持只读观测。
+- **Adjust**：若真实载荷名称缺失、屏幕/楼层边界穿透、重复 GAME_OVER 产生重复 marker，收紧解析或边界；不升级为策略规则。
+- **Rollback**：将 `potion_reserve_use_history_terminal_obs` 设为 `False`，预期只移除新 marker，既有药水储备终局、action/params 保持不变。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级 0777 临时目录适配运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

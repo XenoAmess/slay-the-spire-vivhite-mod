@@ -4927,10 +4927,11 @@ class Policy:
     @staticmethod
     def _potion_ready_terminal_use_snapshot(
             decisions, floor=None, terminal_index=None):
-        """Bound same-combat potion-use history for a ready-potion terminal.
+        """Bound same-combat potion-use history for a terminal snapshot.
 
-        The ready-slot snapshot is not enough to infer that a potion could
-        have rescued the turn. Walk only a small persisted COMBAT /
+        The terminal slot snapshot is not enough to infer whether an empty
+        reserve reflects no supply or a prior same-combat use. Walk only a
+        small persisted COMBAT /
         CARD_SELECTION bridge, stop at a floor or screen boundary, and keep
         the result audit-only. This deliberately records names when the
         payload has them, without guessing a potion effect from its label.
@@ -11934,6 +11935,36 @@ class Policy:
                 f"/ids={_text(_potion.get('ids'))}"
                 f"/ready_ids={_text(_potion.get('ready_ids'))}"
                 "（POTION_RESERVE_TERMINAL_OUTCOME_OBS）")
+        _potion_use_history_terminal_tail = ""
+        try:
+            _potion_use_history_enabled = bool(int(float(pol.get(
+                "potion_reserve_use_history_terminal_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _potion_use_history_enabled = False
+        _potion_use_history = _pending.get("potion_terminal_use_history")
+        if (_potion_use_history_enabled and isinstance(_potion, dict)
+                and isinstance(_potion_use_history, dict)):
+            try:
+                _occupied_count = int(float(_potion.get("occupied")))
+            except (TypeError, ValueError, OverflowError):
+                _occupied_count = -1
+            if (_potion.get("state") == "present"
+                    and _occupied_count == 0):
+                _potion_use_history_terminal_tail = (
+                    "; terminal empty-potion same-combat use history:"
+                    f"/outcome={_result}"
+                    f"/floor={_round(floor)}"
+                    f"/source_round={_round(_pending.get('terminal_round'))}"
+                    f"/source_action={_text(_pending.get('source_action'))}"
+                    f"/final_hp={_num(final_hp)}"
+                    f"/reserve_occupied={_occupied_count}"
+                    f"/same_combat_use_count="
+                    f"{_round(_potion_use_history.get('same_combat_use_count'))}"
+                    f"/same_combat_use_names="
+                    f"{_text(_potion_use_history.get('same_combat_use_names'))}"
+                    f"/bridge_decisions="
+                    f"{_round(_potion_use_history.get('bridge_decisions'))}"
+                    " (POTION_RESERVE_USE_HISTORY_TERMINAL_OBS)")
         _potion_ready_terminal_tail = ""
         try:
             _potion_ready_enabled = bool(int(float(pol.get(
@@ -12000,6 +12031,7 @@ class Policy:
             f"/forced={_flag(_pending.get('forced'))}"
             f"/gap={_flag(_pending.get('gap'))}"
             f"{_transition_tail}"
+            f"{_potion_use_history_terminal_tail}"
             f"{_potion_ready_terminal_tail}"
             f"{_potion_terminal_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
@@ -12249,6 +12281,10 @@ class Policy:
         _potion = self._parse_potion_reserve_end_turn_observation(reason)
         if isinstance(_potion, dict):
             _pending["potion_reserve"] = _potion
+            _use_snapshot = self._potion_ready_terminal_use_snapshot(
+                decisions, floor=floor, terminal_index=len(decisions) - 1)
+            if isinstance(_use_snapshot, dict):
+                _pending["potion_terminal_use_history"] = _use_snapshot
             try:
                 _slot_count = int(float(_potion.get("slots")))
                 _occupied_count = int(float(_potion.get("occupied")))
@@ -12264,11 +12300,9 @@ class Policy:
             ]
             if (_potion.get("state") == "present"
                     and _slot_count >= _occupied_count >= _ready_count > 0
-                    and len(_ready_ids) == _ready_count):
-                _ready_snapshot = self._potion_ready_terminal_use_snapshot(
-                    decisions, floor=floor, terminal_index=len(decisions) - 1)
-                if isinstance(_ready_snapshot, dict):
-                    _pending["potion_ready_terminal"] = _ready_snapshot
+                    and len(_ready_ids) == _ready_count
+                    and isinstance(_use_snapshot, dict)):
+                _pending["potion_ready_terminal"] = _use_snapshot
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 
