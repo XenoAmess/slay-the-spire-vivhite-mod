@@ -20874,3 +20874,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.246960899409963局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.657107657864753局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/22.64608135205966局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1894 胜，当前目标进阶 4
+
+## 第 1895 局复盘（2026-10-04 06:06）
+- 结果：💀 失败｜进阶 4｜到达层数 6｜当局评分 6
+- 死因：敌人组合 INKLET
+- 本局拿牌：VIVHITE_CARD_GOLDEN_RATIO, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：KUSARIGAMA
+- 战斗记录：F2 Monster战 掉血6｜自损12（可行动段12/非行动段8，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血4｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血22｜自损28（可行动段28/非行动段4，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=25/dpt=1.86667/ttk=13.3929/tsurv=1.53846（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=13.3929/actual_over_projected=0.82（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=11.8544（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T11判死→实战11回合获胜; F5 Monster战 掉血13｜自损36（可行动段36/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=33/dpt=12/ttk=2.75/tsurv=0.55（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=12/projected_ttk=2.75/actual_over_projected=4.36（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=2.2（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T6判死→实战12回合获胜; F6 Monster战 掉血17｜自损13（可行动段13/非行动段7，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=32/dpt=7.2/ttk=4.44444/tsurv=0.5625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.44444/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=12.44（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.88194（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T6判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.7368730434156197局)，MAYHEM(36分/4.816054773775142局)，JACKPOT(36分/8.398629284167933局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/2.7779456717586823局)，REND(36分/2.643639706742742局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.239096536262028局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.637307781062226局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/22.566820067327452局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损13/掉血17（76%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1895 胜，当前目标进阶 4
