@@ -15168,3 +15168,31 @@ failed_review_replay: `requested_packages=[]`
 - **Validation**: the mandated direct selfcheck hit the host's fixed 256-slot bootstrap limit; the same full `selfcheck.py` completed through a clone-local process adapter with exit code 0 and `SELFCHECK OK`. Final target diff review and `git diff --check` passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1831-1835: preserve lock-hold attribution after the invulnerable-pool reset
+
+profile_id: `ironclad`
+requested_runs: `1831-1835`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: When the Waterfall invulnerable-pool phase clears the live `_krace_latch`, a later lethal no-card `end_turn` can still have durable `RACE_ESC_LATCH_HOLD` source rows while losing the existing `KILL_RACE_TERMINAL_LATCH_HOLD_OBS` terminal tail. This is falsifiable: a bounded same-floor join must emit exactly one `RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS` only for that reset shape, while boundaries, a normal broad audit, duplicate persistence, malformed rows, or a disabled switch remain silent and the action/parameters stay unchanged.
+- **EVIDENCE**: The exact full chain `sts2-ascend/knowledge/runs/20261003-110310_76HWLHEPEK4N.json` records run 1835 F17. D231-D234 and D236-D238 contain seven `RACE_ESC_LATCH_HOLD` rows; D244-D245 record `RACE_INVULNERABLE_POOL_OBS`; D249 is a lethal no-card `end_turn` at HP 1, block 21, incoming 42, energy 0, with two energy-locked cards. D250 reaches final HP 0 and preserves the Waterfall Steam veto and other terminal joins, but has no `KILL_RACE_TERMINAL_LATCH_HOLD_OBS` or equivalent lock-hold terminal attribution.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, compare one fallback marker's `source_first_round`, `source_last_round`, `hold_count`, invulnerable-pool evidence, terminal HP/round, and bounded bridge length against the applied terminal receipt. The bridge must not cross a screen/floor boundary or duplicate a committed GAME_OVER row. No scoring, gate, candidate, action, or parameter changes.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `race_esc_latch_hold_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: add an observation-only fallback that reverse-scans at most 64 same-floor `COMBAT`/`CARD_SELECTION` rows, requires a lethal no-card terminal plus `RACE_INVULNERABLE_POOL_OBS`, and joins persisted full-width or ASCII `RACE_ESC_LATCH_HOLD` markers to GAME_OVER. It is called on the existing full terminal reason paths and never feeds scoring, gates, ranking, card/target choice, action, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: cover positive full-width marker parsing, reload recovery, duplicate commit suppression, room-boundary silence, switch-off rollback, and no duplication beside the existing broad audit; all assert `continue_game_over {}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent Waterfall/invulnerable-pool terminals and compare source span, hold count, terminal outcome, bridge length, marker count, and applied action/parameters.
+- **Adjust**: if production reasons use a different lock-hold spelling, invulnerable phase marker, or combat-boundary shape, retain the raw chain and narrow only this parser/join; do not restore race behavior during the invulnerable phase.
+- **Rollback**: set `race_esc_latch_hold_terminal_outcome_obs` to `False`; the existing race, Waterfall, lethal-unavailable, and terminal actions/parameters remain unchanged.
+- **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temp-directory adapter ran the same `selfcheck.py` to exit 0 with `SELFCHECK OK`. Read-only replay of the full 1835 chain emitted the fallback marker exactly once with `hold_count=7`, `terminal_round=12`, `terminal_hp=1`, `final_hp=0`, `bridge_decisions=10`, and preserved `continue_game_over {}`. Targeted `git diff --check` passed with only existing LF/CRLF notices. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

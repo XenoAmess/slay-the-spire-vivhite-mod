@@ -19629,6 +19629,117 @@ def main() -> int:
             "（RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS）"
             in d_race_terminal_outcome.reason), \
         f"锁后 stale 终局桥接缺失: {d_race_terminal_outcome}"
+    assert "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS" \
+        not in d_race_terminal_outcome.reason, \
+        f"已有竞速终端审计不应重复生成锁持回退桥: {d_race_terminal_outcome}"
+
+    # 3z-5b-latch-fallback) The Waterfall invulnerable-pool reset clears the
+    # live race latch before a later lethal no-card end-turn. Durable hold
+    # rows must still join to GAME_OVER exactly once, without the broad audit
+    # or any action/parameter change.
+    race_latch_fallback_state = dict(race_terminal_outcome_state)
+    race_latch_fallback_state["run"] = {"current_hp": 0}
+    race_latch_fallback_rows = [
+        {"screen": "COMBAT", "action": "play_card", "floor": 33,
+         "turn": 8, "hp": 31,
+         "reason": "滚雪球锁持（RACE_ESC_LATCH_HOLD）"},
+        {"screen": "COMBAT", "action": "play_card", "floor": 33,
+         "turn": 9, "hp": 26,
+         "reason": "滚雪球锁持（RACE_ESC_LATCH_HOLD）"},
+        {"screen": "COMBAT", "action": "play_card", "floor": 33,
+         "turn": 11, "hp": 1,
+         "reason": "敌无敌帧（RACE_INVULNERABLE_POOL_OBS）"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 33,
+         "turn": 12, "hp": 1,
+         "reason": "致死无牌空过（LETHAL_UNAVAILABLE_END_TURN_OBS）"},
+    ]
+    race_latch_fallback_know = knowledge.Knowledge(tmp)
+    race_latch_fallback_pol = policy.Policy(race_latch_fallback_know)
+    race_latch_fallback_ctx = _SettleCtx()
+    race_latch_fallback_ctx.decisions = [
+        dict(row) for row in race_latch_fallback_rows]
+    d_race_latch_fallback = race_latch_fallback_pol.decide(
+        race_latch_fallback_state, race_latch_fallback_ctx)
+    assert knowledge.DEFAULT_POLICY[
+        "race_esc_latch_hold_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 race_esc_latch_hold_terminal_outcome_obs 默认开关"
+    assert (d_race_latch_fallback.action == "continue_game_over"
+            and d_race_latch_fallback.params == {}
+            and "KILL_RACE_TERMINAL_AUDIT_OBS"
+                not in d_race_latch_fallback.reason
+            and "/source_first_round=8/source_last_round=9"
+                "/source_action=play_card/hold_count=2"
+                "/invulnerable_pool_seen=yes/terminal_round=12"
+                "/terminal_action=end_turn/terminal_hp=1/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=3"
+                "（RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS）"
+                in d_race_latch_fallback.reason), \
+        f"无敌相清 latch 后锁持终局回退桥缺失或动作漂移: {d_race_latch_fallback}"
+
+    race_latch_fallback_replay_pol = policy.Policy(
+        knowledge.Knowledge(tmp))
+    race_latch_fallback_replay_ctx = _SettleCtx()
+    race_latch_fallback_replay_ctx.decisions = [
+        dict(row) for row in race_latch_fallback_rows]
+    d_race_latch_fallback_replay = race_latch_fallback_replay_pol.decide(
+        race_latch_fallback_state, race_latch_fallback_replay_ctx)
+    assert (d_race_latch_fallback_replay.action
+            == d_race_latch_fallback.action
+            and d_race_latch_fallback_replay.params
+            == d_race_latch_fallback.params
+            and "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS"
+                in d_race_latch_fallback_replay.reason), \
+        f"锁持终局回退桥重载恢复失败: {d_race_latch_fallback_replay}"
+
+    race_latch_fallback_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 33,
+        "reason": d_race_latch_fallback.reason,
+    })
+    d_race_latch_fallback_duplicate = race_latch_fallback_pol.decide(
+        race_latch_fallback_state, race_latch_fallback_ctx)
+    assert (d_race_latch_fallback_duplicate.action
+            == d_race_latch_fallback.action
+            and d_race_latch_fallback_duplicate.params
+            == d_race_latch_fallback.params
+            and "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS"
+                not in d_race_latch_fallback_duplicate.reason), \
+        f"锁持终局回退桥重复提交未静默: {d_race_latch_fallback_duplicate}"
+
+    race_latch_fallback_boundary_ctx = _SettleCtx()
+    race_latch_fallback_boundary_ctx.decisions = [
+        dict(race_latch_fallback_rows[0]),
+        dict(race_latch_fallback_rows[2]),
+        {"screen": "REWARD", "action": "proceed", "floor": 33,
+         "reason": "room boundary"},
+        dict(race_latch_fallback_rows[3]),
+    ]
+    d_race_latch_fallback_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            race_latch_fallback_state, race_latch_fallback_boundary_ctx)
+    assert (d_race_latch_fallback_boundary.action
+            == d_race_latch_fallback.action
+            and d_race_latch_fallback_boundary.params
+            == d_race_latch_fallback.params
+            and "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS"
+                not in d_race_latch_fallback_boundary.reason), \
+        f"锁持终局回退桥错误跨越房间边界: {d_race_latch_fallback_boundary}"
+
+    race_latch_fallback_off_know = knowledge.Knowledge(tmp)
+    race_latch_fallback_off_know.policy[
+        "race_esc_latch_hold_terminal_outcome_obs"] = False
+    race_latch_fallback_off_ctx = _SettleCtx()
+    race_latch_fallback_off_ctx.decisions = [
+        dict(row) for row in race_latch_fallback_rows]
+    d_race_latch_fallback_off = policy.Policy(
+        race_latch_fallback_off_know).decide(
+            race_latch_fallback_state, race_latch_fallback_off_ctx)
+    assert (d_race_latch_fallback_off.action
+            == d_race_latch_fallback.action
+            and d_race_latch_fallback_off.params
+            == d_race_latch_fallback.params
+            and "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS"
+                not in d_race_latch_fallback_off.reason), \
+        f"锁持终局回退桥关闭后 action/params/marker 漂移: {d_race_latch_fallback_off}"
 
     assert ("source_round=6/source_action=play_card/coverage=yes"
             "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"

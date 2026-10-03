@@ -893,6 +893,8 @@ class Policy:
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
         self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
+        self._race_esc_latch_hold_terminal_outcome_pending = None  # 无敌相清除 live latch 后的锁持终局补充对账
+        self._race_esc_latch_hold_terminal_outcome_reported = False  # 锁持回退终局 marker 每场只写一次
         self._race_allin_lethal_capacity_terminal_outcome_pending = None
         self._race_allin_lethal_capacity_terminal_outcome_reported = False
         self._race_mode_combat = None  # KILL_RACE_MODE_FLIP_OBS 的战斗身份
@@ -9297,6 +9299,158 @@ class Policy:
         self._race_terminal_outcome_pending = _pending
         self._race_terminal_outcome_reported = False
 
+    def _restore_race_esc_latch_hold_terminal_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover a lock-hold terminal after the live race latch was reset.
+
+        The invulnerable Waterfall phase intentionally clears ``_krace_latch``
+        so later decisions return to defense.  That also means the later lethal
+        no-card end-turn cannot carry the normal kill-race terminal audit.  Use
+        only durable same-floor combat rows to retain the earlier
+        ``RACE_ESC_LATCH_HOLD`` attribution.  This is an observation-only
+        fallback: it never participates in scoring, gates, or action choice.
+        """
+        try:
+            _enabled = bool(int(float(self.know.policy.get(
+                "race_esc_latch_hold_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        _reported = bool(getattr(
+            self, "_race_esc_latch_hold_terminal_outcome_reported", False))
+        decisions = getattr(ctx, "decisions", None)
+        if _reported:
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if "RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS" in _last_reason:
+                return
+            # The GAME_OVER decision may have been rejected before it was
+            # persisted. Permit the next poll to rebuild from the durable
+            # end_turn tail, matching the existing terminal joins.
+            self._race_esc_latch_hold_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_esc_latch_hold_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(decisions, list) or len(decisions) < 2:
+            return
+
+        _terminal_index = len(decisions) - 1
+        _terminal = decisions[_terminal_index]
+        if not isinstance(_terminal, dict) or _terminal.get("action") != "end_turn":
+            return
+        if (floor is not None and _terminal.get("floor") is not None
+                and str(_terminal.get("floor")) != str(floor)):
+            return
+        _terminal_reason = str(_terminal.get("reason") or "")
+        if "LETHAL_UNAVAILABLE_END_TURN_OBS" not in _terminal_reason:
+            return
+        # A normal kill-race terminal already has its own structured join. The
+        # fallback is only for the reset/lost-latch shape, so never duplicate it.
+        if ("KILL_RACE_TERMINAL_AUDIT_OBS" in _terminal_reason
+                or "KILL_RACE_TERMINAL_LATCH_HOLD_OBS" in _terminal_reason):
+            return
+
+        _source_rows = []
+        _invulnerable_pool_seen = False
+        _stop = max(0, min(len(decisions), _terminal_index))
+        for _index in range(_stop - 1, max(-1, _stop - 65), -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if (floor is not None and _row.get("floor") is not None
+                    and str(_row.get("floor")) != str(floor)):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            if "RACE_INVULNERABLE_POOL_OBS" in _reason:
+                _invulnerable_pool_seen = True
+            if ("(RACE_ESC_LATCH_HOLD)" in _reason
+                    or "（RACE_ESC_LATCH_HOLD）" in _reason):
+                _source_rows.append((_index, _row))
+        if not _invulnerable_pool_seen or not _source_rows:
+            return
+
+        _latest_source_index, _latest_source = _source_rows[0]
+        _, _earliest_source = _source_rows[-1]
+
+        def _round_value(_row):
+            return _row.get("turn", _row.get("round"))
+
+        _source_last_round = _round_value(_latest_source)
+        _terminal_round = _round_value(_terminal)
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round)) - int(float(_source_last_round)))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = None
+        self._race_esc_latch_hold_terminal_outcome_pending = {
+            "source_first_round": _round_value(_earliest_source),
+            "source_last_round": _source_last_round,
+            "source_action": _latest_source.get("action") or "?",
+            "hold_count": len(_source_rows),
+            "terminal_round": _terminal_round,
+            "terminal_action": _terminal.get("action") or "?",
+            "terminal_hp": _terminal.get("hp"),
+            "bridge_decisions": max(
+                0, _terminal_index - _latest_source_index - 1),
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._race_esc_latch_hold_terminal_outcome_reported = False
+
+    def _consume_race_esc_latch_hold_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Render the reset/lost-latch terminal join once."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_esc_latch_hold_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_race_esc_latch_hold_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_race_esc_latch_hold_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._race_esc_latch_hold_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；竞速锁持无敌相终局补充对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_first_round={_round(_pending.get('source_first_round'))}"
+            f"/source_last_round={_round(_pending.get('source_last_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/hold_count={int(_pending.get('hold_count', 0) or 0)}"
+            "/invulnerable_pool_seen=yes"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={int(_pending.get('bridge_decisions', 0) or 0)}"
+            f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
+            "（RACE_ESC_LATCH_HOLD_TERMINAL_OUTCOME_OBS）")
+
     def _restore_race_allin_output_capacity_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
         """Recover a race-all-in capacity source for the terminal join.
@@ -14125,6 +14279,8 @@ class Policy:
             self._race_terminal_projection = None
             self._race_terminal_outcome_pending = None
             self._race_terminal_outcome_reported = False
+            self._race_esc_latch_hold_terminal_outcome_pending = None
+            self._race_esc_latch_hold_terminal_outcome_reported = False
             self._race_allin_lethal_capacity_terminal_outcome_pending = None
             self._race_allin_lethal_capacity_terminal_outcome_reported = False
             self._race_mode_combat = ctx.combat
@@ -23283,6 +23439,11 @@ class Policy:
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         _terminal_outcome_note = self._consume_kill_race_terminal_outcome_note(
             self.know.policy, victory, go.get("floor"))
+        self._restore_race_esc_latch_hold_terminal_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _race_esc_latch_hold_terminal_outcome_note = (
+            self._consume_race_esc_latch_hold_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         _race_allin_output_capacity_terminal_outcome_note = (
             self._consume_race_allin_output_capacity_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
@@ -23366,6 +23527,7 @@ class Policy:
                             f"{_race_prelock_defense_terminal_outcome_note}"
                             f"{_race_mode_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
+                            f"{_race_esc_latch_hold_terminal_outcome_note}"
                             f"{_race_allin_output_capacity_terminal_outcome_note}"
                             f"{_race_allin_lethal_capacity_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
@@ -23417,6 +23579,7 @@ class Policy:
                         f"{_race_prelock_defense_terminal_outcome_note}"
                         f"{_race_mode_flip_terminal_outcome_note}"
                         f"{_terminal_outcome_note}"
+                        f"{_race_esc_latch_hold_terminal_outcome_note}"
                         f"{_race_allin_output_capacity_terminal_outcome_note}"
                         f"{_lethal_playable_reject_outcome_note}"
                         f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
@@ -23452,6 +23615,7 @@ class Policy:
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_race_mode_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
+                                f"{_race_esc_latch_hold_terminal_outcome_note}"
                                 f"{_race_allin_output_capacity_terminal_outcome_note}"
                                 f"{_race_allin_lethal_capacity_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"

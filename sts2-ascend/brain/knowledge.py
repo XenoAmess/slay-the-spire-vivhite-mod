@@ -259,6 +259,7 @@ DEFAULT_POLICY = {
     "race_projection_latch_intent_obs": True,  # Audit-only first live-latch pressure snapshot (current intent/EMA, loss rate and Steam Eruption); False removes only this marker.
     "race_projection_latch_intent_terminal_outcome_obs": True,  # Audit-only bounded same-combat join from that first-latch pressure snapshot to GAME_OVER/Victory; False removes only the terminal marker.
     "kill_race_terminal_latch_hold_obs": True,  # Audit-only link for whether RACE_ESC_LATCH_HOLD occurred before the terminal join; False removes only this tail.
+    "race_esc_latch_hold_terminal_outcome_obs": True,  # Audit-only fallback when an invulnerable-pool reset clears the live race latch before a lethal terminal; False removes only this bounded terminal join.
     "lethal_playable_reject_obs": True,  # Audit-only marker for a lethal end-turn after affordable playable cards were rejected; False removes only the marker.
     "lethal_playable_reject_outcome_obs": True,  # Audit-only link from that rejection to the next GAME_OVER result; False removes only the outcome marker.
     "vivhite_hp_pressure_playable_reject_obs": True,  # Audit-only Vivhite low-HP LifeCost-card rejection marker; False removes only the marker.
