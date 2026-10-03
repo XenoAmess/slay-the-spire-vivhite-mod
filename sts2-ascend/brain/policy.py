@@ -25095,6 +25095,137 @@ class Policy:
             return Decision("dismiss_modal", {}, f"弹窗：关闭（{modal.get('type_name')}）", wait=0.7)
         return Decision(None, {}, "弹窗：等待", wait=0.6)
 
+    def _consume_sleep_guard_pass_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join persisted sleep-guard pass rows to the same-floor terminal.
+
+        ``SLEEP_GUARD_PASS_OBS`` is emitted on the selected attack row only.
+        This bounded, read-only join makes the sleep-period sample count
+        auditable at GAME_OVER without changing the preceding action.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "sleep_guard_pass_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list) or not _decisions:
+            return ""
+
+        _marker = "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS"
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        # A second poll can see the first GAME_OVER decision in the durable
+        # chain.  Do not append a duplicate terminal observation.
+        for _row in reversed(_decisions):
+            if not isinstance(_row, dict):
+                continue
+            if str(_row.get("screen") or "").upper() not in {
+                    "GAME_OVER", "VICTORY"}:
+                continue
+            if _marker not in str(_row.get("reason") or ""):
+                continue
+            if _same_floor(floor, _row.get("floor")):
+                return ""
+
+        _rows = []
+        _source_index = None
+        _stop = len(_decisions)
+        for _index in range(_stop - 1, max(-1, _stop - 65), -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen in {"GAME_OVER", "VICTORY"}:
+                break
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if (_screen != "COMBAT"
+                    or _row.get("action") != "play_card"):
+                continue
+            _reason = str(_row.get("reason") or "")
+            if "SLEEP_GUARD_PASS_OBS" not in _reason:
+                continue
+            _match = re.search(
+                r"牌面\s*(?P<damage>[+-]?(?:\d+(?:\.\d*)?|\.\d+))"
+                r"\s*≤敌甲\s*"
+                r"(?P<block>[+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _reason)
+            if _match is None:
+                return ""
+            try:
+                _damage = float(_match.group("damage"))
+                _block = float(_match.group("block"))
+                _round_value = int(float(
+                    _row.get("turn", _row.get("round"))))
+            except (TypeError, ValueError, OverflowError):
+                return ""
+            if (not math.isfinite(_damage) or _damage < 0.0
+                    or not math.isfinite(_block) or _block < 0.0):
+                return ""
+            _rows.append({
+                "round": _round_value,
+                "damage": _damage,
+                "block": _block,
+            })
+            _source_index = _index
+        if not _rows or _source_index is None:
+            return ""
+        _rows.reverse()
+
+        _terminal_row = _decisions[-1]
+        if not isinstance(_terminal_row, dict):
+            return ""
+        try:
+            _terminal_round = int(float(
+                _terminal_row.get("turn", _terminal_row.get("round"))))
+        except (TypeError, ValueError, OverflowError):
+            _terminal_round = _rows[-1]["round"]
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        _rounds = ",".join(str(_row["round"]) for _row in _rows)
+        _damages = "|".join(_num(_row["damage"]) for _row in _rows)
+        _blocks = "|".join(_num(_row["block"]) for _row in _rows)
+        _terminal_action = str(_terminal_row.get("action") or "?")
+        _terminal_action = (_terminal_action.replace("/", "_")
+                            .replace("；", "_")
+                            .replace("（", "_")
+                            .replace("）", "_")
+                            .replace(" ", "_"))
+        return (
+            "；沉睡放行终局对账："
+            f"outcome={_result}"
+            f"/floor={floor if floor is not None else '?'}"
+            f"/source_round={_rows[0]['round']}"
+            f"/last_source_round={_rows[-1]['round']}"
+            f"/pass_count={len(_rows)}"
+            f"/pass_rounds={_rounds}"
+            f"/pass_damage={_damages}"
+            f"/pass_enemy_block={_blocks}"
+            f"/terminal_round={_terminal_round}"
+            f"/terminal_action={_terminal_action}"
+            f"/terminal_hp={_num(final_hp)}"
+            f"/bridge_decisions={max(0, _stop - 1 - _source_index)}"
+            f"/bridge_rounds={max(0, _terminal_round - _rows[0]['round'])}"
+            f"（{_marker}）")
+
     def _game_over(self, state: dict, ctx) -> Decision:
         go = state.get("game_over") or {}
         actions = state.get("available_actions", [])
@@ -25287,6 +25418,9 @@ class Policy:
         _card_burst_terminal_outcome_note = (
             self._consume_card_burst_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _sleep_guard_pass_terminal_outcome_note = (
+            self._consume_sleep_guard_pass_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -25335,7 +25469,9 @@ class Policy:
                             f"{_ritual_window_outcome_note}"
                             f"{_sandpit_terminal_outcome_note}"
                             f"{_low_pool_burst_terminal_outcome_note}"
-                            f"{_card_burst_terminal_outcome_note}", wait=1.0)
+                            f"{_card_burst_terminal_outcome_note}"
+                            f"{_sleep_guard_pass_terminal_outcome_note}",
+                            wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
         # coroutine has completed its score/save work. Finalize the Brain ledger

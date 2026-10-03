@@ -9518,6 +9518,103 @@ def main() -> int:
         f"键=False 必须严格回滚旧文本: score={s_sg_pass_off} why={why_sg_pass_off}"
     sg_pol.know.policy["sleep_guard_pass_obs"] = True
 
+    # 3sg-terminal) 同楼层沉睡放行终局汇总：1880/1881-F17 的多个合法
+    # SLEEP_GUARD_PASS_OBS 行应只读接回同一 GAME_OVER，披露次数/回合/牌面
+    # 与敌甲，且重载、重复提交、关闭开关和 REWARD 边界均保持严格可逆。
+    sg_pass_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    sg_pass_rows = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 1,
+        "reason": "战斗：打出【怨恨】｜沉睡目标攻击放行：牌面10≤敌甲12不唤醒"
+                   "（SLEEP_GUARD_PASS_OBS）",
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 1,
+        "reason": "战斗：打出【打击】｜沉睡目标攻击放行：牌面6≤敌甲7不唤醒"
+                   "（SLEEP_GUARD_PASS_OBS）",
+    }, {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 2,
+        "reason": "战斗：打出【飞剑回旋镖】｜沉睡目标攻击放行：牌面9≤敌甲12不唤醒"
+                   "（SLEEP_GUARD_PASS_OBS）",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 4, "reason": "确认无牌可出",
+    }]
+    sg_pass_ctx = type("SgPassCtx", (), {})()
+    sg_pass_ctx.decisions = [dict(row) for row in sg_pass_rows]
+    sg_pass_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_sg_pass_terminal = sg_pass_pol.decide(
+        sg_pass_terminal_state, sg_pass_ctx)
+    assert (d_sg_pass_terminal.action == "continue_game_over"
+            and d_sg_pass_terminal.params == {}
+            and d_sg_pass_terminal.reason.count(
+                "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS") == 1
+            and "/source_round=1/last_source_round=2/pass_count=3"
+                "/pass_rounds=1,1,2/pass_damage=10|6|9"
+                "/pass_enemy_block=12|7|12/terminal_round=4"
+                "/terminal_action=end_turn/terminal_hp=0"
+                "/bridge_decisions=3/bridge_rounds=3"
+                in d_sg_pass_terminal.reason), \
+        f"沉睡放行终局汇总缺失或动作漂移: {d_sg_pass_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "sleep_guard_pass_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少 sleep_guard_pass_terminal_outcome_obs"
+
+    sg_pass_reload_ctx = type("SgPassCtx", (), {})()
+    sg_pass_reload_ctx.decisions = [dict(row) for row in sg_pass_rows]
+    d_sg_pass_reload = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        sg_pass_terminal_state, sg_pass_reload_ctx)
+    assert (d_sg_pass_reload.action == d_sg_pass_terminal.action
+            and d_sg_pass_reload.params == d_sg_pass_terminal.params
+            and "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS"
+                in d_sg_pass_reload.reason), \
+        f"重载后未恢复沉睡放行终局汇总: {d_sg_pass_reload}"
+
+    sg_pass_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_sg_pass_terminal.action,
+        "floor": 17, "reason": d_sg_pass_terminal.reason})
+    d_sg_pass_duplicate = sg_pass_pol.decide(
+        sg_pass_terminal_state, sg_pass_ctx)
+    assert (d_sg_pass_duplicate.action == d_sg_pass_terminal.action
+            and d_sg_pass_duplicate.params == d_sg_pass_terminal.params
+            and "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS"
+                not in d_sg_pass_duplicate.reason), \
+        f"沉睡放行终局汇总重复提交: {d_sg_pass_duplicate}"
+
+    sg_pass_off_know = knowledge.Knowledge(tmp)
+    sg_pass_off_know.policy["sleep_guard_pass_terminal_outcome_obs"] = False
+    sg_pass_off_ctx = type("SgPassCtx", (), {})()
+    sg_pass_off_ctx.decisions = [dict(row) for row in sg_pass_rows]
+    d_sg_pass_off = policy.Policy(sg_pass_off_know).decide(
+        sg_pass_terminal_state, sg_pass_off_ctx)
+    assert (d_sg_pass_off.action == d_sg_pass_terminal.action
+            and d_sg_pass_off.params == d_sg_pass_terminal.params
+            and "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS"
+                not in d_sg_pass_off.reason), \
+        f"沉睡放行终局开关关闭后动作或既有文本漂移: {d_sg_pass_off}"
+
+    sg_pass_boundary_ctx = type("SgPassCtx", (), {})()
+    sg_pass_boundary_ctx.decisions = [
+        dict(sg_pass_rows[0]),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(sg_pass_rows[-1]),
+    ]
+    d_sg_pass_boundary = policy.Policy(knowledge.Knowledge(tmp)).decide(
+        sg_pass_terminal_state, sg_pass_boundary_ctx)
+    assert (d_sg_pass_boundary.action == d_sg_pass_terminal.action
+            and d_sg_pass_boundary.params == d_sg_pass_terminal.params
+            and "SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS"
+                not in d_sg_pass_boundary.reason), \
+        f"沉睡放行终局汇总越过 REWARD 边界: {d_sg_pass_boundary}"
+
     # 3sg2) 沉睡保期药水闸（POTION_SLEEP_GUARD，第620~636局批复盘）：卡牌侧
     #      SLEEP_GUARD 只管出牌通道，药水通道零防护——620 局 F17 T1 对沉睡族母
     #      先掷攻击药水【药水形状的石头】，下一 tick 快照「无能力」实锤已被提前

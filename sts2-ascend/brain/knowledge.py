@@ -117,6 +117,11 @@ DEFAULT_POLICY = {
                                    # 即 veto 绕过铁证（载荷缺口 vs 逻辑缺口一次分辨）。单体与 AOE
                                    # 两分支同口径；纯观测不改评分/目标/阈值；False = 注记消失
                                    # （严格回滚旧口径，selfcheck 3sg④⑧ 为对照锚）
+    "sleep_guard_pass_terminal_outcome_obs": True,  # 同楼层沉睡放行终局汇总：
+                                                     # 只把持久化的 SLEEP_GUARD_PASS_OBS
+                                                     # 行接回后续 GAME_OVER/Victory，披露
+                                                     # 放行次数、回合、牌面与敌甲读数；不参与
+                                                     # 评分或动作，False 只移除该终局 marker。
     "potion_sleep_guard": True,  # 沉睡保期药水闸（POTION_SLEEP_GUARD，第620~636局批复盘）：
                                  # 卡牌侧 SLEEP_GUARD 只管出牌通道，药水通道零防护——620 局
                                  # F17 T1 对沉睡族母（ASLEEP×3）先掷攻击药水【药水形状的石头】，

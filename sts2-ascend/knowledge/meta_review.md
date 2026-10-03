@@ -13034,6 +13034,56 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-10-04 runs 1880-1881-F17：沉睡放行终局对账观测
+
+profile_id: `ironclad`
+requested_runs: `1880, 1881`
+requested_run: `1881`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1880/1881 的 F17 `LAGAVULIN_MATRIARCH` 战斗已经逐笔记录了合法的
+  `SLEEP_GUARD_PASS_OBS`，但 GAME_OVER 只留下伤害/竞速类结果，无法在同一终局复核沉睡放行
+  的次数、回合、牌面与敌甲读数。该缺口属于只读可观测性，不应改变下一步动作。
+- **EVIDENCE**：`sts2-ascend/knowledge/runs/20261004-011550_43DXGJ5XS4LX.json`
+  的 D247/D248（F17、COMBAT、turn 2）各有一次放行；
+  `sts2-ascend/knowledge/runs/20261004-013208_87Y44L8CWWNP.json`
+  的 D169/D170/D173（F17、COMBAT、turn 1/1/2）各有一次放行；两条链均继续到
+  GAME_OVER/defeat。
+- **EXPECTED_SIGNAL**：同楼层、同一终局链最多产生一次
+  `SLEEP_GUARD_PASS_TERMINAL_OUTCOME_OBS`，并披露 `pass_count`、放行回合、牌面、敌甲、
+  终局回合/HP 与桥接长度；跨 `REWARD/MAP`、重复提交、无放行或关闭开关不得产生该 marker，
+  `action/params` 必须保持不变。任一条件不成立即证伪假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的
+  `sleep_guard_pass_terminal_outcome_obs`，只控制终局汇总 marker。
+- `sts2-ascend/brain/policy.py`：新增有界（最多 64 行）、同楼层、仅
+  `COMBAT/CARD_SELECTION` 的只读回溯；遇到 `REWARD/MAP` 等边界即停止，严格解析已有
+  `SLEEP_GUARD_PASS_OBS` 的牌面/敌甲，不参与评分、选牌或动作。
+- `sts2-ascend/brain/selfcheck.py`：新增多次放行、重载、重复 GAME_OVER、开关关闭和
+  `REWARD` 边界 fixture，断言 `continue_game_over {}` 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3–10 个真实匹配终局，核对两条真实回放的计数、回合、牌面/敌甲、
+  终局结果以及 `applied` 回执；在证据成熟前保持纯观测。
+- **Adjust**：若真实链出现字段格式、同楼层边界或桥接长度不一致，只收紧解析/边界，不升级为
+  策略规则。
+- **Rollback**：将 `sleep_guard_pass_terminal_outcome_obs` 设为 `False`；预期只移除新增终局
+  marker，既有逐笔 marker 与 `action/params` 保持不变。
+- **Validation**：直接 selfcheck 复现宿主固定 256 槽临时池的既有
+  `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用 clone-local、进程级 0777 临时目录适配器
+  运行同一完整入口，退出码为 0 且末行为 `SELFCHECK OK`。真实只读回放保持
+  `continue_game_over {}`：1880 为 2 次放行且终局 marker=1，1881 为 3 次放行且终局
+  marker=1；目标文件 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、
+  学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
 ## 2026-10-03 run 1830: 将 race-all-in 防御容量接回 GAME_OVER
 
 profile_id: ironclad
