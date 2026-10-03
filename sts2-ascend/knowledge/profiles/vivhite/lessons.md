@@ -20137,3 +20137,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0876888706238867局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.255938953602072局)，FASTEN(21分/3.6970107172949316局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）；kill_race_prior_eff: 0.40 → 0.43（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.03 → 2.02（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F31——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F31——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F31——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F31——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1827 胜，当前目标进阶 4
+
+## 第 1828 局复盘（2026-10-03 09:23）
+- 结果：💀 失败｜进阶 4｜到达层数 8｜当局评分 8
+- 死因：敌人组合 PHROG_PARASITE
+- 本局拿牌：PROWESS
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血5｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损12（可行动段12/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血1｜自损12（可行动段12/非行动段3，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血77｜自损24（可行动段24/非行动段43，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=50/dpt=9.544/ttk=5.23889/tsurv=3.5625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=5.23889/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.81（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战10回合阵亡（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.275069081709983局)，JACKPOT(37分/8.42903031310548局)，MAYHEM(37分/4.852862586451417局)，THINKING_AHEAD(37分/2.6221141035208504局)，REND(36分/3.343666567297902局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0803819595767035局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.167543167264466局)，FASTEN(21分/3.6840711797843997局)
+- 策略进化：精英战阵亡但满血线进场（99%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
+- 生涯战绩：4/1828 胜，当前目标进阶 4
