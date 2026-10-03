@@ -15888,3 +15888,30 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 首次复现宿主固定 256 槽临时池耗尽；随后用同一 `selfcheck.py` 的 clone-local 进程级 0777 临时目录适配器运行，退出码 0 且输出 `SELFCHECK OK`。1884 完整链只读回放命中新 marker：`source_floor=16/known_viable=0/6/terminal_floor=17/terminal_round=6/outcome=defeat`；目标三文件 `git diff --check` 通过。宿主 `.review-cache` 未纳入暂存或提交，未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1885-F17：共享竞速输出容量终局对账
+
+profile_id：`ironclad`
+requested_run：`1885`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 race-all-in 输出容量终局桥只接受 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`。1885 的真实终局前来源 D216/D217 使用该 marker，但最终 D218 由共享 kill-race 路径写成 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS`，因此 D219 `GAME_OVER` 会漏掉同一场战斗的终局容量对账。若终局行在同楼层、同一战斗尾部只按这对既有 marker/label 解析，应补一个只读终局观测，不改变 `continue_game_over {}` 或任何动作参数。
+- **EVIDENCE**：完整 1885 链共 220 条决策；D216/D217 分别提供 `source_target_hp=195/183`、攻击候选数 `4/3` 和 raw damage cap `18/6` 的 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`，D218 提供 `target_hp=174`、攻击候选数 `0`、raw damage cap `0` 的共享 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS`，原 D219 只有终局相关摘要而没有 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS`。根因是终局回溯调用仍把共享终局行按来源 marker 解析。
+- **EXPECTED_SIGNAL**：1885 形状应恰好新增一个终局 marker，带 source `195/0/4/18` 与 terminal `174/0/0` 的容量字段；重复回放、关闭开关、插入 `REWARD` 边界均应为 0，且 `action/params` 保持 `continue_game_over/{}` 不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：为既有输出容量解析 helper 增加可选 marker/label，终局分支仅在单行终局范围内选择已存在的 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS` 对；来源扫描默认保持原 `RACE_ALLIN` 对。改动只写终局观察 marker，不进入评分、排序、目标或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：把已有 race-all-in 终局 fallback 改成真实共享 kill-race marker，确保此前会掩盖该格式差异的 fixture 先失败、修复后通过，并继续断言开关、去重、边界与 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个匹配的 race-all-in 终局，逐项核对 source/terminal 的 hp、block、攻击候选数、raw cap、楼层/屏幕边界、重复 `GAME_OVER` 与 `applied` 回执；在证据成熟前保持只读观测。
+- **Adjust**：若真实载荷改用另一组既有 marker/label，或出现跨战斗、跨楼层、重复终局命中，只收紧这对解析输入和边界；若发现 action/params 漂移，立即关闭该观察键并回溯边界，不升级为策略规则。
+- **Rollback**：将现有 `kill_race_terminal_output_capacity_transition_obs` 设为 `False` 可移除新增终局桥而保留旧来源观测；必要时回滚本地 commit，保留原始 1885 证据。
+- **Validation**：完整 1885 回放输出 `REPLAY_1885_OK`，`marker_count=1`、`duplicate_marker=0`、`off_marker=0`、`boundary_marker=0`、`expected_fields=yes`，动作仍为 `continue_game_over {}`。直接宿主 selfcheck 复现既有固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用同一 clone 的 `.review-cache/selfcheck-pool` 进程级 0777 临时目录适配运行完整入口，退出码 0 且输出 `SELFCHECK OK`。最终 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

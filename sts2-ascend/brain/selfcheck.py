@@ -20622,10 +20622,10 @@ def main() -> int:
             "screen": "COMBAT", "action": "end_turn", "floor": 33,
             "turn": 6,
             "reason":
-                "; race-allin lethal output capacity: hp=3/block=0"
+                "; kill-race lethal output capacity: hp=3/block=0"
                 "/incoming=14/energy=1/target_hp=39/target_block=0"
                 "/attack_candidates=0/raw_damage_cap=0/cards=none"
-                " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)",
+                " (KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS)",
         },
     ]
     race_allin_terminal_fallback_state = dict(race_terminal_outcome_state)
