@@ -13144,6 +13144,12 @@ def main() -> int:
         "screen": "COMBAT", "action": "play_card", "floor": 24,
         "turn": 4, "hp": 13, "reason": _longfight_terminal_note,
     }
+    _longfight_terminal_tail_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 24,
+        "turn": 4, "hp": 13,
+        "reason": "火线漂移补记：熟睡甲虫（丝）→胧光怪"
+                  "（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）",
+    }
     _longfight_terminal_state = {
         "screen": "GAME_OVER",
         "available_actions": ["continue_game_over"],
@@ -13170,7 +13176,8 @@ def main() -> int:
     _longfight_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
     _longfight_terminal_ctx = _make_longfight_terminal_ctx(
         [_longfight_terminal_note],
-        [_longfight_terminal_source_row, _longfight_terminal_row])
+        [_longfight_terminal_source_row, _longfight_terminal_tail_row,
+         _longfight_terminal_row])
     _d_longfight_terminal = _longfight_terminal_pol.decide(
         _longfight_terminal_state, _longfight_terminal_ctx)
     assert (_d_longfight_terminal.action == "continue_game_over"
@@ -13191,6 +13198,8 @@ def main() -> int:
             in _d_longfight_terminal.reason
             and "source_focus_switches=2/flush_count=1/transition=寄生惧魔→胧光怪"
                 in _d_longfight_terminal.reason
+            and "/tail_count=1/tail_transitions=熟睡甲虫_丝_→胧光怪"
+                in _d_longfight_terminal.reason
             and "/terminal_round=4/terminal_action=end_turn/terminal_hp=13"
                 "/final_hp=0"
                 in _d_longfight_terminal.reason), \
@@ -13206,6 +13215,7 @@ def main() -> int:
             _longfight_terminal_state,
             _make_longfight_terminal_ctx([_longfight_terminal_note],
                                           [_longfight_terminal_source_row,
+                                           _longfight_terminal_tail_row,
                                            _longfight_terminal_row]))
     assert (_d_longfight_terminal_reload.action
             == _d_longfight_terminal.action
@@ -13238,6 +13248,7 @@ def main() -> int:
             _longfight_terminal_state,
             _make_longfight_terminal_ctx([_longfight_terminal_note],
                                           [_longfight_terminal_source_row,
+                                           _longfight_terminal_tail_row,
                                            _longfight_terminal_row]))
     assert (_d_longfight_terminal_off.action
             == _d_longfight_terminal.action
@@ -13271,9 +13282,10 @@ def main() -> int:
             _longfight_terminal_state,
             _make_longfight_terminal_ctx(
                 [_longfight_terminal_note],
-                [_longfight_terminal_source_row, _longfight_terminal_row,
-                 {"screen": "REWARD", "action": "proceed", "floor": 24,
-                  "reason": "奖励边界"}]))
+                [_longfight_terminal_source_row, _longfight_terminal_tail_row,
+                 _longfight_terminal_row,
+                  {"screen": "REWARD", "action": "proceed", "floor": 24,
+                   "reason": "奖励边界"}]))
     assert (_d_longfight_terminal_boundary.action
             == _d_longfight_terminal.action
             and _d_longfight_terminal_boundary.params

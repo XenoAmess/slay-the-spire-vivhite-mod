@@ -5961,7 +5961,28 @@ class Policy:
                 return str(left) == str(right)
 
         _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+
+        def _focus_transition(reason: str) -> str:
+            """Read the full persisted focus transition, including instance labels."""
+            _match = re.search(
+                r"火线漂移补记：(?P<transition>.+?)"
+                r"(?:（评分侧静默换线挂账|\(评分侧静默换线挂账)"
+                r".*FOCUS_DRIFT_FLUSH_OBS",
+                reason)
+            if _match is None:
+                # Keep compatibility with older persisted wording that did not
+                # include the standard scoring-side suffix.
+                _match = re.search(
+                    r"火线漂移补记：(?P<transition>[^（(]+)"
+                    r".*FOCUS_DRIFT_FLUSH_OBS",
+                    reason)
+            if _match is None:
+                return ""
+            return str(_match.group("transition") or "").strip()
+
         _source = None
+        _tail_focus_transitions = []
+        _tail_focus_transitions_truncated = False
         for _row in reversed(decisions):
             if not isinstance(_row, dict):
                 continue
@@ -5972,7 +5993,13 @@ class Policy:
                 break
             _reason = str(_row.get("reason") or "")
             _marker_at = _reason.rfind("LONGFIGHT_RACE_EFFECTIVE_DPT_OBS")
+            _focus_transition_value = _focus_transition(_reason)
             if _marker_at < 0:
+                if _focus_transition_value:
+                    if len(_tail_focus_transitions) < 8:
+                        _tail_focus_transitions.append(_focus_transition_value)
+                    else:
+                        _tail_focus_transitions_truncated = True
                 continue
             _match = re.search(
                 rf"长战竞速有效火力对账：采样(?P<sample_start>{_number_pattern})"
@@ -6038,15 +6065,13 @@ class Policy:
                 "focus_switches": _focus_switches,
                 "focus": _focus or "?",
             }
-            _focus_flush_match = re.search(
-                r"火线漂移补记：(?P<transition>[^（(]+)"
-                r".*FOCUS_DRIFT_FLUSH_OBS",
-                _reason)
-            if _focus_flush_match is not None:
-                _focus_transition = (
-                    _focus_flush_match.group("transition").strip())
-                if _focus_transition:
-                    _source["focus_drift_flush"] = _focus_transition
+            if _focus_transition_value:
+                _source["focus_drift_flush"] = _focus_transition_value
+            if _tail_focus_transitions:
+                _source["focus_drift_tail"] = list(
+                    reversed(_tail_focus_transitions))
+                _source["focus_drift_tail_truncated"] = (
+                    _tail_focus_transitions_truncated)
             break
         if _source is None:
             return
@@ -6115,23 +6140,44 @@ class Policy:
             _focus_drift_enabled = False
         _focus_transition = str(
             _pending.get("focus_drift_flush") or "").strip()
-        if _focus_drift_enabled and _focus_transition:
+        _focus_tail = [
+            str(_value or "").strip() for _value in (
+                _pending.get("focus_drift_tail") or [])
+            if str(_value or "").strip()
+        ]
+        if _focus_drift_enabled and (_focus_transition or _focus_tail):
             _focus_transition = re.sub(
                 r"[；()（）\r\n]+", "_", _focus_transition).strip("_")
+            _focus_tail = [
+                re.sub(r"[；()（）\r\n]+", "_", _value).strip("_")
+                for _value in _focus_tail
+            ]
+            _focus_tail = [_value for _value in _focus_tail if _value]
+            _focus_fields = ""
             if _focus_transition:
-                _focus_drift_tail = (
-                    f"；长战火线漂移终局对账：outcome={_result}"
-                    f"/floor={_round(floor)}"
-                    f"/source_round={_round(_pending.get('source_round'))}"
-                    f"/source_action={_pending.get('source_action') or '?'}"
-                    f"/source_focus_switches="
-                    f"{_focus_switches if _focus_switches is not None else '?'}"
-                    f"/flush_count=1/transition={_focus_transition}"
-                    f"/terminal_round={_round(_pending.get('terminal_round'))}"
-                    f"/terminal_action={_pending.get('terminal_action') or '?'}"
-                    f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
-                    f"/final_hp={_num(final_hp)}"
-                    "（LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS）")
+                _focus_fields += (
+                    f"/flush_count=1/transition={_focus_transition}")
+            else:
+                _focus_fields += "/flush_count=0"
+            if _focus_tail:
+                _focus_fields += (
+                    f"/tail_count={len(_focus_tail)}"
+                    f"/tail_transitions={'~'.join(_focus_tail)}")
+                if _pending.get("focus_drift_tail_truncated"):
+                    _focus_fields += "/tail_truncated=yes"
+            _focus_drift_tail = (
+                f"；长战火线漂移终局对账：outcome={_result}"
+                f"/floor={_round(floor)}"
+                f"/source_round={_round(_pending.get('source_round'))}"
+                f"/source_action={_pending.get('source_action') or '?'}"
+                f"/source_focus_switches="
+                f"{_focus_switches if _focus_switches is not None else '?'}"
+                f"{_focus_fields}"
+                f"/terminal_round={_round(_pending.get('terminal_round'))}"
+                f"/terminal_action={_pending.get('terminal_action') or '?'}"
+                f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+                f"/final_hp={_num(final_hp)}"
+                "（LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS）")
         return (
             f"；长战有效火力终局对账：outcome={_result}"
             f"/floor={_round(floor)}"

@@ -15196,3 +15196,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temp-directory adapter ran the same `selfcheck.py` to exit 0 with `SELFCHECK OK`. Read-only replay of the full 1835 chain emitted the fallback marker exactly once with `hold_count=7`, `terminal_round=12`, `terminal_hp=1`, `final_hp=0`, `bridge_decisions=10`, and preserved `continue_game_over {}`. Targeted `git diff --check` passed with only existing LF/CRLF notices. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1839: retain post-DPT focus-drift tail through GAME_OVER
+
+profile_id: `ironclad`
+requested_run: `1839`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1839 F30, the latest non-Boss longfight DPT source at D398 can be followed by a later same-combat `FOCUS_DRIFT_FLUSH_OBS` at D403 before the D408 `GAME_OVER`. The existing bridge retained only the source-row transition, so it could lose the later tail attribution. This is falsifiable: matching terminals must add a bounded `tail_count`/`tail_transitions` field, while a screen/floor boundary, malformed transition, duplicate commit, disabled switch, or action/parameter comparison must remain unchanged.
+- **EVIDENCE**: The exact chain `sts2-ascend/knowledge/runs/20261003-120037_05AGS7MR08AK.json` has 409 decisions. D398 records F30 T2 `LONGFIGHT_RACE_EFFECTIVE_DPT_OBS` with actual DPT 71 versus projected 16.4 and the source transition `熟睡甲虫→盛碗虫（石）`; D403 records the later same-floor T3 transition `盛碗虫（丝）→熟睡甲虫`; D408 is the lethal `GAME_OVER`. A read-only replay of the changed helper emitted `source_round=2`, `tail_count=1`, and `tail_transitions=盛碗虫（丝）→熟睡甲虫` while preserving the existing DPT and terminal fields.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent same-floor longfight terminals, compare source transition, bounded tail count/order, terminal outcome, source/terminal round and HP, marker count, and applied action/parameters. The tail is capped at eight transitions and must not cross `COMBAT`/`CARD_SELECTION` or floor boundaries. No scoring, candidate ranking, gate, action, or parameter changes.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: document that the existing default-on `longfight_focus_drift_terminal_outcome_obs` switch covers the source transition and subsequent same-combat tail; `False` remains a strict rollback.
+- `sts2-ascend/brain/policy.py`: extend the existing bounded reverse scan to collect at most eight later same-floor `FOCUS_DRIFT_FLUSH_OBS` transitions, preserve the source transition, and append normalized tail fields to the existing terminal observation. This is observation-only and is not read by scoring, ranking, gates, card/target choice, action, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: add a positive post-source tail fixture and assert tail attribution, reload stability, switch-off rollback, screen-boundary silence, duplicate suppression, and unchanged `continue_game_over {}`.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching terminals and compare tail count/order, source and terminal fields, marker count, and applied action/parameters.
+- **Adjust**: if production rows use a different transition suffix, instance-label form, ordering, or longer same-combat tail, retain the raw chain and narrow only this parser/cap; do not turn the observation into focus or card selection behavior.
+- **Rollback**: set `longfight_focus_drift_terminal_outcome_obs` to `False`; the existing source audit, DPT terminal bridge, scoring, gates, action, and parameters must remain unchanged.
+- **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Read-only replay of the exact 1839 chain emitted the expected one-entry tail. Targeted final diff review and `git diff --check` passed with only pre-existing LF/CRLF notices on these files. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -596,9 +596,10 @@ DEFAULT_POLICY = {
                                                                   # 接回权威 GAME_OVER，记录来源/终端
                                                                   # 火力与结局；纯观测，False=严格回滚
     "longfight_focus_drift_terminal_outcome_obs": True,  # 将同一长战 DPT 来源行中
-                                                           # 已落盘的 FOCUS_DRIFT_FLUSH_OBS
-                                                           # 接回权威 GAME_OVER，披露 DPT 上下文
-                                                           # 与实际火线漂移的边界；纯观测，False=严格回滚
+                                                           # 已落盘的 FOCUS_DRIFT_FLUSH_OBS，及其
+                                                           # 后续同一战斗尾部漂移接回权威 GAME_OVER，
+                                                           # 披露 DPT 上下文与实际火线漂移边界；
+                                                           # 纯观测，False=严格回滚
     "self_loss_phase_terminal_outcome_obs": True,  # 将同楼层战斗记录中的
                                                     # SELF_LOSS_PHASE_OBS 相位自损账
                                                     # 接回权威 GAME_OVER；纯观测，
