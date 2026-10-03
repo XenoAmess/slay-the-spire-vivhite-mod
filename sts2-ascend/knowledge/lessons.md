@@ -15847,3 +15847,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.265111161882789局)，BURNING_PACT(17分/12.599732941935281局)，DEFEND_IRONCLAD(18分/3.2255917844111113局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1841 胜，当前目标进阶 0
+
+## 第 1842 局复盘（2026-10-03 13:12）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：POMMEL_STRIKE, BREAKTHROUGH, SHRUG_IT_OFF, JUGGLING, DISMANTLE, MOLTEN_FIST, ARMAMENTS, BREAKTHROUGH, IRON_WAVE, EXPECT_A_FIGHT
+- 本局遗物：POTION_BELT
+- 战斗记录：F7 Monster战 掉血17｜自损1（可行动段1/非行动段10，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血6｜自损1（可行动段1/非行动段9，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血2; F14 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血12｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血55｜自损1（可行动段1/非行动段60，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=170/dpt=13.5/ttk=12.5926/tsurv=5.92044（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=12.5926/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.69（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=9/actual_dpt=7.33333/projected_dpt=13.267/ratio=0.59/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=4/actual_dpt=2/projected_dpt=12.8175/ratio=0.28/min_ratio=0.00|clear_samples=5/actual_dpt=11.6/projected_dpt=13.6266/ratio=0.84/min_ratio=0.38（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.884089305581703局)，BRAND(26分/2.4127499907796413局)，PROWESS(26分/10.112070278154297局)，MANGLE(25分/44.41354788208028局)，HELLRAISER(25分/3.883466065897548局)
+- 当前低价值卡牌：HAVOC(15分/2.2571832728161993局)，BURNING_PACT(17分/12.555633876638508局)，DEFEND_IRONCLAD(18分/3.2143022131656727局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1842 胜，当前目标进阶 0
