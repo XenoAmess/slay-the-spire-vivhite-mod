@@ -15704,3 +15704,14 @@
 - 当前低价值卡牌：BULLY(16分/2.0138544085931946局)，BURNING_PACT(17分/12.15886942785999局)，DEFEND_IRONCLAD(18分/3.376015755839161局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1828 胜，当前目标进阶 0
+
+## 第 1829 局复盘（2026-10-03 09:30）
+- 结果：💀 失败｜进阶 0｜到达层数 12｜当局评分 12
+- 死因：敌人组合 PHANTASMAL_GARDENER
+- 本局拿牌：SHRUG_IT_OFF, STOMP, VICIOUS, MOLTEN_FIST, MOLTEN_FIST, CONFLAGRATION, COLOSSUS, INFLAME, STONE_ARMOR, TRUE_GRIT
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F4 Monster战 掉血6; F6 Monster战 掉血0; F8 Monster战 掉血27; F9 Monster战 掉血15; F11 Monster战 掉血18; F12 Elite战 掉血20｜竞速投影审计：pool=109/dpt=8.1/ttk=13.4568/tsurv=2.33333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=3/projected_ttk=13.4568/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.29（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战3回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.111856536917516局)，BRAND(26分/2.525267463520639局)，PROWESS(26分/10.583641968642471局)，MANGLE(25分/44.47420379880834局)，HELLRAISER(25分/4.0645696982175386局)
+- 当前低价值卡牌：BULLY(16分/2.0068059181631184局)，BURNING_PACT(17分/12.116313384862481局)，DEFEND_IRONCLAD(18分/3.364199700693724局)
+- 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1829 胜，当前目标进阶 0
