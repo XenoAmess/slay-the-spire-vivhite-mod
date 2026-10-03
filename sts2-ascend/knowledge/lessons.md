@@ -15924,3 +15924,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.2101952510524527局)，BURNING_PACT(17分/12.294261924720292局)，DEFEND_IRONCLAD(18分/3.147389745681785局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1848 胜，当前目标进阶 0
+
+## 第 1849 局复盘（2026-10-03 15:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：TRUE_GRIT, JUGGLING, TRUE_GRIT, HEMOKINESIS, EVIL_EYE, POMMEL_STRIKE, FEEL_NO_PAIN, SWORD_BOOMERANG, HOWL_FROM_BEYOND, STOMP, VOLLEY, CRUELTY, TAUNT, DRUM_OF_BATTLE, UNMOVABLE, SWORD_BOOMERANG
+- 本局遗物：SPARKLING_ROUGE, WAR_PAINT
+- 战斗记录：F7 Monster战 掉血9｜自损4（可行动段4/非行动段11，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血18｜自损6（可行动段6/非行动段10，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=59/dpt=10.8/ttk=5.46296/tsurv=1.32（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=5.46296/actual_over_projected=1.65（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战9回合获胜; F9 Unknown战 掉血8｜自损2（可行动段2/非行动段7，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=51/dpt=10.8/ttk=4.72222/tsurv=1.125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=4.72222/actual_over_projected=1.69（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T5判死→实战8回合获胜; F12 Monster战 掉血0｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血1; F17 Boss战 掉血42｜自损4（可行动段4/非行动段19，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=196/dpt=12.15/ttk=16.1317/tsurv=2.21053（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=16.1317/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.71（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=24.5/projected_dpt=11.875/ratio=2.08/min_ratio=0.41（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=24.5/projected_dpt=11.875/ratio=2.08/min_ratio=0.41（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.765678245980647局)，PROWESS(26分/10.84609365973999局)，BRAND(26分/2.3542546879533486局)，HELLRAISER(25分/3.7893143616561558局)，MANGLE(25分/44.319397000860484局)
+- 当前低价值卡牌：HAVOC(15分/2.202459567673769局)，BURNING_PACT(17分/12.251232007983772局)，DEFEND_IRONCLAD(18分/3.1363738815718993局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1849 胜，当前目标进阶 0
