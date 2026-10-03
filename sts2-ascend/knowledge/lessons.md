@@ -15770,3 +15770,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.905756963232331局)，DEFEND_IRONCLAD(18分/3.3057368805167324局)，THE_GAMBIT(18分/5.631996166806267局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1834 胜，当前目标进阶 0
+
+## 第 1835 局复盘（2026-10-03 11:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：BREAKTHROUGH, DRUM_OF_BATTLE, EVIL_EYE, SETUP_STRIKE, SHRUG_IT_OFF, COLOSSUS, SWORD_BOOMERANG, HEMOKINESIS, SPITE, JUGGLING, PILLAGE
+- 本局遗物：CENTENNIAL_PUZZLE
+- 战斗记录：F7 Monster战 掉血7｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血3｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血10｜自损1（可行动段1/非行动段15，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血9｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血0｜自损3（可行动段3/非行动段1，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血75｜自损7（可行动段7/非行动段67，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=185/dpt=10.8/ttk=17.1296/tsurv=5（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=12/projected_ttk=17.1296/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.40（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战12回合阵亡｜竞速Boss有效火力收官对账：samples=8/actual_dpt=21.375/projected_dpt=21.1889/ratio=1.04/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=8/actual_dpt=21.375/projected_dpt=21.1889/ratio=1.04/min_ratio=0.32（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.005442481354297局)，BRAND(26分/2.4726987049425446局)，PROWESS(26分/10.363321179829516局)，MANGLE(25分/45.517075017970086局)，HELLRAISER(25分/3.979957123004794局)
+- 当前低价值卡牌：BURNING_PACT(17分/11.864086813861018局)，DEFEND_IRONCLAD(18分/3.294166801434924局)，THE_GAMBIT(18分/5.612284180222445局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1835 胜，当前目标进阶 0
