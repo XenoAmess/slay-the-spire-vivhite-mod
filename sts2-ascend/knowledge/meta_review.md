@@ -15726,3 +15726,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：宿主直接命令因固定 256 槽位池报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用 clone-local 进程级 0777 临时目录适配器运行同一完整 `selfcheck.py`，末尾为 `SELFCHECK OK`。真实 1875 只读链回放命中 count=3；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1876-F25：强制精英后的活力火花技能税终局汇总
+
+profile_id: `ironclad`
+requested_run: `1876`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1876 在 F24 只有一个候选精英，虽未通过精英门槛仍被迫进入 F25 `INFESTED_PRISM`；现有强制精英终局桥能记录入口与战斗结果，但没有把同一 F25 `COMBAT` 中已经落账的 `VITAL_SPARK_SKILL_TAX` 事件汇总。若未来 3–10 个匹配的强制精英终局能稳定得到同楼层事件数、技能税总量/峰值/回合，并能与终局结果和 `applied` 回执复核，则这是可观测结算缺口；若出现漏计、跨 `REWARD`/`MAP`/楼层串接，或这些字段无法复核，则假设被证伪。该字段是策略税估计，不宣称实际掉血因果。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-234636_RAV8R9BZML8Y.json` 有 276 条决策；D252 为 F24 `Elite(7,3)` 唯一候选强制入场，入口 HP `59/80`、合格牌 `18/4`、gate `0.1`、投影战后 `0%`。D253 的 F25 快照含 `INFESTED_PRISM[VITAL_SPARK_POWER×2]`；D255、D256、D258、D262、D266、D272、D273 分别落账七次技能税，回合为 `1,2,3,4,7`，税额合计 `36`、峰值 `8`。D275 为 F25 T7 致死无牌结束回合，D276 以 `GAME_OVER` 结束并保留强制精英结果。原生 `sts2-ascend/knowledge/game/v0.111.0/mechanics/monsters.jsonl` 与对应 Vital Spark 机制记录支持该敌人/能力语义。
+- **EXPECTED_SIGNAL**：终局既有 `ELITE_FORCED_ENTRY_OUTCOME_OBS` 后追加一次 `VITAL_SPARK_SKILL_TAX_TERMINAL_OUTCOME_OBS`，字段形如 `events=7/sum=36/peak=8/rounds=1,2,3,4,7`；同一次 `continue_game_over` 的 action/params 不变。任意边界或跨楼层样本不应生成该 suffix。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `vital_spark_skill_tax_terminal_outcome_obs`，只控制终局汇总 suffix。
+- `sts2-ascend/brain/policy.py`：在现有强制精英终局桥内，用有限 64 行扫描定位最近强制入场，限定预期下一楼层的 `COMBAT`，遇到 `REWARD`、`MAP`、`REST`、`SHOP`、`CHEST`、`EVENT` 或 `GAME_OVER` 即停止；解析已持久化的技能税 marker，追加事件数、可解析税额总量、峰值和回合。没有改评分、候选排序、卡牌选择或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：增加两条技能税正例，验证终局汇总、关闭开关后的严格回滚和 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3–10 个独立强制精英终局，逐窗比较 `vital_spark_skill_tax_events`、`sum`、`peak`、`rounds`、入口 gate/HP、实际战斗损失、终局结果与 `applied` 回执；按 `only_candidate`/其他强制模式和是否有 `VITAL_SPARK_POWER` 分层，暂不把观测升级为策略规则。
+- **Adjust**：若未来真实链的税额格式、事件边界或持久化字段不同，只收紧解析与同楼层边界；若 3–10 个匹配窗口持续无税负或与终局无法复核，视为假设失败，不扩大扫描范围。
+- **Rollback**：将 `vital_spark_skill_tax_terminal_outcome_obs` 设为 `False`，预期只移除新 suffix，既有 `ELITE_FORCED_ENTRY_OUTCOME_OBS` 以及 action/params 保持不变；若新 marker 在没有同楼层来源时出现，立即关闭该键并修正边界。
+- **Validation**：宿主直接运行完整 selfcheck 时复现固定 256 槽临时池耗尽；随后用 clone-local 进程级临时目录适配器运行同一 `selfcheck.py`，退出码为 0 且输出 `SELFCHECK OK`。针对真实 1876 完整链的只读回放得到 `events=7/sum=36/peak=8/rounds=1,2,3,4,7`；另做边界探针确认 `REWARD` 后事件不被计入。目标三文件 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

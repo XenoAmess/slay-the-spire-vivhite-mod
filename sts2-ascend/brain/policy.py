@@ -5102,6 +5102,108 @@ class Policy:
         except (TypeError, ValueError, OverflowError):
             return False
 
+    @staticmethod
+    def _elite_forced_entry_vital_spark_tax_enabled(pol) -> bool:
+        try:
+            return bool(int(float(pol.get(
+                "vital_spark_skill_tax_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    @staticmethod
+    def _parse_vital_spark_skill_tax_reason(reason):
+        """Parse one persisted Vital Spark skill-tax audit from a combat row."""
+        _reason = str(reason or "")
+        _marker_at = _reason.find("VITAL_SPARK_SKILL_TAX")
+        if _marker_at < 0:
+            return None
+        _tax = None
+        _tax_match = re.search(
+            r"[（(]\s*-\s*(?P<tax>[0-9]+(?:\.[0-9]+)?)",
+            _reason[:_marker_at])
+        if _tax_match:
+            try:
+                _candidate = float(_tax_match.group("tax"))
+                if math.isfinite(_candidate) and _candidate >= 0.0:
+                    _tax = _candidate
+            except (TypeError, ValueError, OverflowError):
+                pass
+        return {"tax": _tax}
+
+    def _elite_forced_entry_vital_spark_tax_note(self, pol, ctx, pending) -> str:
+        """Summarize same-floor Vital Spark tax rows for a forced-Elite outcome."""
+        if not self._elite_forced_entry_vital_spark_tax_enabled(pol):
+            return ""
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list):
+            return ""
+        try:
+            _expected_floor = int(pending.get("expected_floor"))
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        _latest_forced_index = -1
+        for _index, _row in enumerate(_decisions):
+            if (isinstance(_row, dict)
+                    and _row.get("action") == "choose_map_node"
+                    and "ELITE_FORCED_ENTRY_OBS" in str(
+                        _row.get("reason") or "")):
+                _latest_forced_index = _index
+        _start = _latest_forced_index + 1 if _latest_forced_index >= 0 else 0
+        _boundary_screens = {"REWARD", "MAP", "REST", "SHOP", "CHEST", "EVENT"}
+        _events = 0
+        _taxes = []
+        _rounds = []
+        _scanned = 0
+        for _row in _decisions[_start:]:
+            if not isinstance(_row, dict):
+                continue
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen in _boundary_screens or _screen == "GAME_OVER":
+                break
+            if _screen != "COMBAT":
+                continue
+            try:
+                if int(float(_row.get("floor"))) != _expected_floor:
+                    break
+            except (TypeError, ValueError, OverflowError):
+                continue
+            _scanned += 1
+            if _scanned > 64:
+                break
+            _parsed = self._parse_vital_spark_skill_tax_reason(
+                _row.get("reason"))
+            if _parsed is None:
+                continue
+            _events += 1
+            if _parsed.get("tax") is not None:
+                _taxes.append(float(_parsed["tax"]))
+            try:
+                _turn = int(float(_row.get("turn")))
+                if _turn not in _rounds:
+                    _rounds.append(_turn)
+            except (TypeError, ValueError, OverflowError):
+                if "?" not in _rounds:
+                    _rounds.append("?")
+        if _events <= 0:
+            return ""
+
+        def _fmt(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _tax_sum = _fmt(sum(_taxes)) if len(_taxes) == _events else "?"
+        _tax_peak = _fmt(max(_taxes)) if _taxes else "?"
+        _round_text = ",".join(str(_round) for _round in _rounds) or "?"
+        return (
+            "; vital-spark skill-tax terminal audit:"
+            f"vital_spark_skill_tax_events={_events}"
+            f"/vital_spark_skill_tax_sum={_tax_sum}"
+            f"/vital_spark_skill_tax_peak={_tax_peak}"
+            f"/vital_spark_skill_tax_rounds={_round_text}"
+            " (VITAL_SPARK_SKILL_TAX_TERMINAL_OUTCOME_OBS)")
+
     def _consume_elite_forced_entry_outcome_note(
             self, pol, ctx, victory, floor=None, terminal_hp=None) -> str:
         """Link a forced-Elite map sample to the authoritative GAME_OVER result."""
@@ -5201,6 +5303,8 @@ class Policy:
                             for _sample in _sequence)
                 + " (ELITE_FORCED_ENTRY_SEQUENCE_OBS)")
 
+        _vital_spark_note = self._elite_forced_entry_vital_spark_tax_note(
+            pol, ctx, _pending)
         _result = "victory" if victory else "defeat"
         _terminal_floor = "?" if floor is None else str(floor)
         return (
@@ -5216,6 +5320,7 @@ class Policy:
             f"/actual_after_pct={_actual_after_pct}"
             f"/outcome={_result}/terminal_floor={_terminal_floor}"
             f"{_sequence_note}"
+            f"{_vital_spark_note}"
             f"{_combat_tail}"
             " (ELITE_FORCED_ENTRY_OUTCOME_OBS)")
 

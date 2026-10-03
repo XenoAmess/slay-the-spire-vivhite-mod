@@ -10434,6 +10434,14 @@ def main() -> int:
             and "candidates=1" in d_etf.reason
             and "mode=only_candidate" in d_etf.reason), \
         f"强制精英只读对账缺失: {d_etf.reason}"
+    etf_ctx.decisions.extend([
+        {"screen": "COMBAT", "floor": 8, "turn": 1,
+         "action": "play_card",
+         "reason": "活力火花技能税：技能牌污染+2放大本回合受击（-4.0，VITAL_SPARK_SKILL_TAX）"},
+        {"screen": "COMBAT", "floor": 8, "turn": 3,
+         "action": "play_card",
+         "reason": "活力火花技能税：技能牌污染+4放大本回合受击（-8.0，VITAL_SPARK_SKILL_TAX）"},
+    ])
     etf_game_over = {
         "screen": "GAME_OVER", "run_id": "ELITE-FORCED-CHECK",
         "available_actions": ["continue_game_over"],
@@ -10455,8 +10463,36 @@ def main() -> int:
             and "/combat_stall=no" in d_etf_outcome.reason
             and "/projected_after_pct=?" in d_etf_outcome.reason
             and "/actual_after_pct=65%" in d_etf_outcome.reason
-            and "/combat_detail_source=died_in_combat" in d_etf_outcome.reason), \
+            and "/combat_detail_source=died_in_combat" in d_etf_outcome.reason
+            and "vital_spark_skill_tax_events=2" in d_etf_outcome.reason
+            and "vital_spark_skill_tax_sum=12/vital_spark_skill_tax_peak=8/"
+                "vital_spark_skill_tax_rounds=1,3"
+                in d_etf_outcome.reason
+            and "VITAL_SPARK_SKILL_TAX_TERMINAL_OUTCOME_OBS"
+                in d_etf_outcome.reason), \
         f"强制精英结局对账缺失: {d_etf_outcome.reason}"
+
+    etf_tax_off_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-elite-vspark-off-"))
+    etf_tax_off_know = knowledge.Knowledge(etf_tax_off_dir)
+    etf_tax_off_know.policy["vital_spark_skill_tax_terminal_outcome_obs"] = False
+    etf_tax_off_pol = policy.Policy(etf_tax_off_know)
+    etf_tax_off_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [],
+        "run_id": "ELITE-FORCED-TAX-OFF",
+        "died_in_combat": dict(etf_ctx.died_in_combat),
+    })()
+    etf_tax_off_state = dict(etf_state)
+    etf_tax_off_state["run_id"] = etf_tax_off_ctx.run_id
+    etf_tax_off_pol.decide(etf_tax_off_state, etf_tax_off_ctx)
+    etf_tax_off_ctx.decisions.extend(etf_ctx.decisions)
+    d_etf_tax_off = etf_tax_off_pol.decide(
+        dict(etf_game_over, run_id=etf_tax_off_ctx.run_id), etf_tax_off_ctx)
+    assert ("ELITE_FORCED_ENTRY_OUTCOME_OBS" in d_etf_tax_off.reason
+            and "VITAL_SPARK_SKILL_TAX_TERMINAL_OUTCOME_OBS"
+                not in d_etf_tax_off.reason
+            and d_etf_tax_off.action == d_etf_outcome.action
+            and d_etf_tax_off.params == d_etf_outcome.params), \
+        f"活力火花终局观测关闭未严格回滚: {d_etf_tax_off.reason}"
 
     # The map gate's numeric projection must survive the map -> GAME_OVER join
     # instead of forcing reviewers to parse the surrounding prose. This case

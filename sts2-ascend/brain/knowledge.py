@@ -154,6 +154,10 @@ DEFAULT_POLICY = {
                               # 意图（incoming>0）时技能牌按「层数×本键」扣分；意图 0 回合
                               # 无可放大对象、技能零税；攻击/能力不附污染严格零差异；
                               # 0 = 关闭（严格回滚旧口径）
+    "vital_spark_skill_tax_terminal_outcome_obs": True,  # forced-Elite GAME_OVER 只读汇总
+                                                        # 同楼层 COMBAT 中已落账的技能税事件、
+                                                        # 评分税总量/峰值与回合；不参与评分或动作，
+                                                        # False 只移除该终局 suffix
     "vivhite_vital_spark_hit_obs": 1,  # 白绮活力火花命中对账（VIVHITE_VITAL_SPARK_HIT_AUDIT）：
                                        # 只比较技能牌前后同回合敌方总意图的实际增量，估算
                                        # 每刀污染税命中数；不进入评分/动作选择；0=严格关闭。
