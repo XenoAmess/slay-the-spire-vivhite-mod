@@ -15112,3 +15112,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted diff review and `git diff --check` passed with only pre-existing long-path/LF-CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1828-1829: preserve survivable-lethal-line attribution at terminal
+
+profile_id: `ironclad`
+requested_runs: `1828-1829`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: When a `RACE_PRELOCK_DEFENSE_OBS` source also contains `LETHAL_SURVIVABLE_LINE`, the existing bounded same-floor terminal bridge can lose that causal label. This is falsifiable: matching terminals must gain exactly one survivable-line suffix, while a plain pre-lock source, a boundary, a disabled switch, or an action/parameter comparison must remain unchanged.
+- **EVIDENCE**: The exact chain `sts2-ascend/knowledge/runs/20261003-092345_L0YT0UQ2K15K.json` records run 1829 F12 decision 204 selecting `Defense` at HP 14 against incoming 17, with `LETHAL_SURVIVABLE_LINE` and `RACE_PRELOCK_DEFENSE_OBS`; decision 210 is the same-floor `GAME_OVER`. The existing terminal bridge records the pre-lock defense outcome but does not independently retain the survivable-line attribution.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, compare `/survivable_line=yes`, source/terminal round and HP, outcome, bridge length, marker count, and applied action/parameters. Plain sources must not receive the suffix; no combat behavior or score may change.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on `lethal_survivable_line_terminal_outcome_obs`; setting it to `False` removes only the new suffix.
+- `sts2-ascend/brain/policy.py`: carry a boolean source flag through the existing bounded pre-lock terminal join and append `LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS` only when the new observation switch is enabled. This is read-only and does not enter scoring, ranking, gates, card choice, target choice, action, or parameters.
+- `sts2-ascend/brain/selfcheck.py`: cover positive attribution, switch-off rollback, and plain-source silence while asserting unchanged action/parameters and the legacy terminal bridge.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare the source attribution with terminal outcome, source/terminal HP and round, bridge length, marker count, and applied action/parameters.
+- **Adjust**: if a real trace has a different source phrase, malformed source row, or a distinct combat boundary, retain the evidence and narrow only this suffix/join; do not promote it into defense or all-in behavior.
+- **Rollback**: set `lethal_survivable_line_terminal_outcome_obs` to `False`; the existing pre-lock marker, action, parameters, scoring, and gates must remain unchanged.
+- **Validation**: the mandated direct selfcheck hit the host's fixed 256-slot bootstrap limit; the same full `selfcheck.py` completed through a clone-local process adapter with exit code 0 and `SELFCHECK OK`. Final target diff review and `git diff --check` passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -894,6 +894,8 @@ DEFAULT_POLICY = {
                                         # 不改变评分、目标、判决或动作，False 严格回滚
     "race_prelock_defense_terminal_outcome_obs": True,  # 将竞速未锁前格挡来源回接同战斗 GAME_OVER；
                                                          # 只记录首尾字段，False 严格回滚，不改变 action/params
+    "lethal_survivable_line_terminal_outcome_obs": True,  # 在上述终局桥中标记
+                                                           # LETHAL_SURVIVABLE_LINE 来源的实际结局；只读、可回滚
     "kill_race_mode_flip_obs": True,   # 同一回合内竞速/普通模式翻转的只读审计；
                                          # 记录 from/to 与次数，不改变评分、判决或动作
     "kill_race_mode_flip_terminal_outcome_obs": True,  # 将同楼层同战斗的模式翻转来源回接 GAME_OVER；

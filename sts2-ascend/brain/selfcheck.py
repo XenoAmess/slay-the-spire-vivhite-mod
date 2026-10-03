@@ -22466,6 +22466,51 @@ def main() -> int:
                 in d_rpre_terminal.reason), \
         f"竞速未锁前格挡终局对账缺失或动作漂移: {d_rpre_terminal}"
 
+    # 3rpre-a0) LETHAL_SURVIVABLE_LINE 终局归因：1829-F12-T2 的生还线
+    #          先选格挡、随后仍在同一场终端落败；在既有有界 pre-lock 桥上
+    #          增加独立 marker，便于统计“生还线被执行但最终仍败”的形态。
+    #          只读键关闭必须保留原有桥、action 与 params。
+    assert knowledge.DEFAULT_POLICY.get(
+        "lethal_survivable_line_terminal_outcome_obs") is True, \
+        "DEFAULT_POLICY 缺少 lethal_survivable_line_terminal_outcome_obs"
+    rpre_lsl_reason = d_rpre_on.reason.replace(
+        "（RACE_PRELOCK_DEFENSE_OBS）",
+        "；本回合买命可生还（LETHAL_SURVIVABLE_LINE）"
+        "（RACE_PRELOCK_DEFENSE_OBS）")
+    rpre_lsl_terminal_ctx = _SettleCtx()
+    rpre_lsl_terminal_ctx.decisions = [
+        {**rpre_terminal_ctx.decisions[0], "reason": rpre_lsl_reason},
+        dict(rpre_terminal_ctx.decisions[1]),
+    ]
+    rpre_lsl_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_rpre_lsl_terminal = rpre_lsl_terminal_pol.decide(
+        rpre_terminal_state, rpre_lsl_terminal_ctx)
+    assert (d_rpre_lsl_terminal.action == d_rpre_terminal.action
+            and d_rpre_lsl_terminal.params == d_rpre_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_lsl_terminal.reason
+            and "/survivable_line=yes"
+                in d_rpre_lsl_terminal.reason
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_lsl_terminal.reason), \
+        f"致死生还线终局观测缺失或动作漂移: {d_rpre_lsl_terminal}"
+    rpre_lsl_off_know = knowledge.Knowledge(tmp)
+    rpre_lsl_off_know.policy[
+        "lethal_survivable_line_terminal_outcome_obs"] = False
+    d_rpre_lsl_off = policy.Policy(rpre_lsl_off_know).decide(
+        rpre_terminal_state, rpre_lsl_terminal_ctx)
+    assert (d_rpre_lsl_off.action == d_rpre_lsl_terminal.action
+            and d_rpre_lsl_off.params == d_rpre_lsl_terminal.params
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                in d_rpre_lsl_off.reason
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                not in d_rpre_lsl_off.reason), \
+        f"致死生还线终局观测关闭后桥或动作漂移: " \
+        f"on={d_rpre_lsl_terminal} off={d_rpre_lsl_off}"
+    assert "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS" \
+        not in d_rpre_terminal.reason, \
+        "无 LETHAL_SURVIVABLE_LINE 来源时错误产生终局 marker"
+
     # 3rpre-a1) Armaments-style CARD_SELECTION is an in-combat modal, not a
     # room boundary.  The terminal join may cross it only when both adjacent
     # durable rows remain COMBAT on the same floor.

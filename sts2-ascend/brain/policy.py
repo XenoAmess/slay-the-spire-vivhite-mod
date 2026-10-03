@@ -5401,6 +5401,8 @@ class Policy:
                 "source_projection_ttk": _projection_ttk,
                 "source_projection_tsurv": _projection_tsurv,
                 "source_projection_gap": _projection_gap,
+                "source_lethal_survivable_line": (
+                    "LETHAL_SURVIVABLE_LINE" in reason),
                 "terminal_round": _terminal_round,
                 "terminal_action": terminal.get("action") or "?",
                 "terminal_hp": _terminal_hp,
@@ -5456,6 +5458,17 @@ class Policy:
                 f"/projection_ttk={_num(_pending.get('source_projection_ttk'))}"
                 f"/projection_tsurv={_num(_pending.get('source_projection_tsurv'))}"
                 f"/projection_gap={_num(_pending.get('source_projection_gap'))}")
+        try:
+            _survivable_line_enabled = bool(int(float(pol.get(
+                "lethal_survivable_line_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _survivable_line_enabled = False
+        _survivable_line_suffix = ""
+        if (_survivable_line_enabled
+                and bool(_pending.get("source_lethal_survivable_line"))):
+            _survivable_line_suffix = (
+                "/survivable_line=yes"
+                "（LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS）")
         _result = "victory" if victory else "defeat"
         return (
             f"；竞速未锁格挡终局对账：outcome={_result}"
@@ -5474,6 +5487,7 @@ class Policy:
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
             f"/bridge_rounds={_bridge_rounds}"
+            f"{_survivable_line_suffix}"
             "（RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS）")
 
     def _consume_low_pool_burst_terminal_outcome_note(
