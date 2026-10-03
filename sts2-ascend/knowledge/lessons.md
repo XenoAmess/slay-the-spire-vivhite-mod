@@ -15913,3 +15913,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.2179581044179155局)，BURNING_PACT(17分/12.337442975133257局)，DEFEND_IRONCLAD(18分/3.1584443007343554局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1847 胜，当前目标进阶 0
+
+## 第 1848 局复盘（2026-10-03 15:08）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：CINDER, CINDER, HEMOKINESIS, STOMP, OFFERING, JUGGLING, ARMAMENTS, IRON_WAVE, REND
+- 本局遗物：ICE_CREAM, REPTILE_TRINKET, WING_CHARM
+- 战斗记录：F2 Monster战 掉血14; F4 Monster战 掉血16; F6 Monster战 掉血4; F11 Monster战 掉血0; F14 Monster战 掉血8; F17 Boss战 掉血46｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=101/dpt=2.7/ttk=37.4074/tsurv=2.92308（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=37.4074/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.74（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=7.16667/projected_dpt=8.68831/ratio=1.04/min_ratio=0.28（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=7.16667/projected_dpt=8.68831/ratio=1.04/min_ratio=0.28（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.7824167044462085局)，PROWESS(26分/10.884188318855985局)，BRAND(26分/2.3625235202743085局)，HELLRAISER(25分/3.8026235440603666局)，MANGLE(25分/44.47505970984494局)
+- 当前低价值卡牌：HAVOC(15分/2.2101952510524527局)，BURNING_PACT(17分/12.294261924720292局)，DEFEND_IRONCLAD(18分/3.147389745681785局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1848 胜，当前目标进阶 0
