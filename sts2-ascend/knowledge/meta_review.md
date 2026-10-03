@@ -15363,3 +15363,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池门禁；同一完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。最终目标 diff 与 `git diff --check` 已复核，无新增空白错误；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-10-03 runs 1849-1850: Boss 有效 DPT 按无实体区间分组
+
+profile_id: `ironclad`
+requested_runs: `1849-1850`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1850-F17 的 Boss 有效 DPT 低比值可能主要由 `INTANGIBLE_POWER` 的伤害封顶造成，而不是所有回合的投影都普遍高估。该假设可证伪：后续 3—10 个 Boss 竞速终局应能把有效 DPT 按区间起始 `intangible_layers>0` 与 `=0` 分开；若两组低比值无差异，不能据此调整行为。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261003-153020_B6LBTZ8U8BDJ.json`（run 1850，F17）中 D165 已记录无实体 TTK，Boss 有效 DPT 实际约 7.3、投影 18.0；D168 实际 0、投影 22.8；后续 D172/D176/D180/D184 的比值分别约 1.23/0.91/0.77/1.18。原终局聚合只保留 clear_samples=6、actual_dpt=18.7222、projected_dpt=23.6668、ratio=0.75，无法回答低样本是否集中在无实体窗口。
+- **EXPECTED_SIGNAL**：未来 3—10 个匹配 Boss 终局逐样本核对 `intangible_samples/layers_max/actual_dpt/projected_dpt/ratio/min_ratio` 与 `non_intangible_*`，并对照 run/floor/encounter、终局结果和真实应用回执；新增字段仅用于观测，不进入评分、门控、候选排序、目标选择、action 或 params。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `boss_race_effective_dpt_intangible_obs` 回滚键。
+- `sts2-ascend/brain/policy.py`：在既有 Boss 有效 DPT 区间起始快照记录原生无实体层数，按有/无无实体分组聚合有效 DPT，并把来源层数接入终局桥；保持原有整体/phase 账与动作路径不变。
+- `sts2-ascend/brain/agent.py`：把两组聚合写入既有战斗收官备注；`sts2-ascend/brain/selfcheck.py` 覆盖正例、两组汇总、终局桥接和关闭键 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个独立 Vivhite Boss 竞速终局，按无实体层数、分组 DPT 比值、终局 HP/胜负和 `applied` 回执核对，观测出现本身不升级为行为闸。
+- **Adjust**：若真实 reason 的无实体字段或跨回合边界不同，保留现有原始链，只收紧解析/分组；若两组差异不足，不改变伤害投影或出牌策略。
+- **Rollback**：将 `boss_race_effective_dpt_intangible_obs` 设为 `False`；预期只移除区间/分组/终局无实体尾缀，既有 action、params、整体 DPT 与 phase 观测不变。
+- **Validation**：宿主固定 256 槽池在完整路径后耗尽；使用 clone-local 进程级 0777 临时目录适配运行同一个完整 selfcheck，退出码 0 且输出 `SELFCHECK OK`。目标源码限定 `git diff --check` 退出码 0；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

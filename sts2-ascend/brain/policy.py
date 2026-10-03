@@ -949,6 +949,7 @@ class Policy:
         self._boss_effective_dpt_start_block = 0.0
         self._boss_effective_dpt_start_incoming = None
         self._boss_effective_dpt_start_slippery = 0.0
+        self._boss_effective_dpt_start_intangible = 0.0
         self._boss_effective_dpt_projected = 0.0
         self._boss_effective_dpt_samples = []
         self._boss_effective_dpt_terminal_outcome_pending = None
@@ -5873,6 +5874,26 @@ class Policy:
                                      and _phase_layers == 0.0))):
                         _source["source_phase"] = _phase_name
                         _source["source_slippery_layers"] = _phase_layers
+            try:
+                _intangible_obs_enabled = bool(int(float(pol.get(
+                    "boss_race_effective_dpt_intangible_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError, AttributeError):
+                _intangible_obs_enabled = False
+            if _intangible_obs_enabled:
+                _intangible_match = re.search(
+                    r"区间起始无实体层=(?P<intangible_layers>"
+                    r"-?\d+(?:\.\d+)?)",
+                    _reason)
+                if _intangible_match is not None:
+                    try:
+                        _intangible_layers = float(
+                            _intangible_match.group("intangible_layers"))
+                    except (TypeError, ValueError, OverflowError):
+                        _intangible_layers = -1.0
+                    if (math.isfinite(_intangible_layers)
+                            and _intangible_layers >= 0.0):
+                        _source["source_intangible_layers"] = (
+                            _intangible_layers)
             break
         if _source is None:
             return
@@ -5927,6 +5948,11 @@ class Policy:
             _phase_tail = (
                 f"/phase={_pending.get('source_phase') or '?'}"
                 f"/slippery_layers={_num(_pending.get('source_slippery_layers'))}")
+        _intangible_tail = ""
+        if "source_intangible_layers" in _pending:
+            _intangible_tail = (
+                f"/intangible_layers="
+                f"{_num(_pending.get('source_intangible_layers'))}")
         _result = "victory" if victory else "defeat"
         return (
             f"；Boss竞速有效火力终局对账：outcome={_result}"
@@ -5944,7 +5970,8 @@ class Policy:
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
-            "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
+            + _intangible_tail
+            + "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
 
     def _restore_longfight_effective_dpt_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -13939,6 +13966,7 @@ class Policy:
                             self._boss_effective_dpt_start_block = 0.0
                             self._boss_effective_dpt_start_incoming = None
                             self._boss_effective_dpt_start_slippery = 0.0
+                            self._boss_effective_dpt_start_intangible = 0.0
                             self._boss_effective_dpt_projected = 0.0
                             self._boss_effective_dpt_samples = []
                         if (self._boss_effective_dpt_round != round_no):
@@ -13953,6 +13981,8 @@ class Policy:
                                 self._boss_effective_dpt_start_roster_count)
                             _boss_prev_start_incoming = (
                                 self._boss_effective_dpt_start_incoming)
+                            _boss_prev_start_intangible = (
+                                self._boss_effective_dpt_start_intangible)
                             _boss_span = 0
                             if _boss_prev_round is not None:
                                 try:
@@ -13974,6 +14004,7 @@ class Policy:
                                     int(_boss_prev_start_roster_count),
                                     float(self._boss_effective_dpt_start_block),
                                     float(self._boss_effective_dpt_start_slippery),
+                                    float(_boss_prev_start_intangible),
                                     float(_boss_prev_start_incoming))
                             self._boss_effective_dpt_round = round_no
                             self._boss_effective_dpt_start_hp = (
@@ -13984,6 +14015,15 @@ class Policy:
                                 float(incoming))
                             self._boss_effective_dpt_start_slippery = (
                                 float(_race_slippery_layers))
+                            self._boss_effective_dpt_start_intangible = 0.0
+                            if bool(pol.get(
+                                    "boss_race_effective_dpt_intangible_obs",
+                                    True)):
+                                self._boss_effective_dpt_start_intangible = (
+                                    sum(
+                                        self._enemy_intangible_stack(_enemy)
+                                        for _enemy in enemies
+                                        if isinstance(_enemy, dict)))
                             self._boss_effective_dpt_start_state = (
                                 self._boss_effective_dpt_state(enemies)
                                 if bool(pol.get(
@@ -14008,7 +14048,8 @@ class Policy:
                          _boss_end_hp, _boss_projected,
                          _boss_start_state, _boss_start_roster,
                          _boss_start_roster_count, _boss_start_block,
-                         _boss_start_slippery, _boss_start_incoming) = (
+                         _boss_start_slippery, _boss_start_intangible,
+                         _boss_start_incoming) = (
                             _boss_effective_dpt_pending)
                         _boss_net_dpt = (
                             _boss_start_hp - _boss_end_hp) / _boss_span
@@ -14041,6 +14082,8 @@ class Policy:
                                         "ratio": _boss_ratio_value,
                                         "slippery_layers": float(
                                             _boss_start_slippery),
+                                        "intangible_layers": float(
+                                            _boss_start_intangible),
                                     })
                             except (TypeError, ValueError, OverflowError):
                                 pass
@@ -14129,6 +14172,14 @@ class Policy:
                             _boss_state_window_tail = (
                                 f"；区间起始状态={_boss_start_state}"
                                 "（BOSS_RACE_EFFECTIVE_DPT_STATE_WINDOW_OBS）")
+                        _boss_intangible_tail = ""
+                        if bool(pol.get(
+                                "boss_race_effective_dpt_intangible_obs",
+                                True)):
+                            _boss_intangible_tail = (
+                                f"；区间起始无实体层="
+                                f"{_boss_start_intangible:g}"
+                                "（BOSS_RACE_EFFECTIVE_DPT_INTANGIBLE_OBS）")
                         _boss_block_tail = ""
                         _boss_intent_ramp_tail = ""
                         _boss_intent_delta = (
@@ -14159,6 +14210,7 @@ class Policy:
                             + _boss_focus_tail
                             + _boss_roster_tail
                             + _boss_state_tail + _boss_state_window_tail
+                            + _boss_intangible_tail
                             + _boss_block_tail + _boss_intent_ramp_tail)
                     # 非 Boss 长战竞速有效火力回合边界对账（LONGFIGHT_RACE_EFFECTIVE_DPT_OBS）：
                     # F21 OVICOPTER 现场已有长战 TTK 投影与迟滞锁，但普通/精英大血池
@@ -14754,6 +14806,7 @@ class Policy:
             self._boss_effective_dpt_start_roster_count = 0
             self._boss_effective_dpt_start_incoming = None
             self._boss_effective_dpt_start_slippery = 0.0
+            self._boss_effective_dpt_start_intangible = 0.0
             self._boss_effective_dpt_projected = 0.0
             self._boss_effective_dpt_samples = []
             self._boss_effective_dpt_terminal_outcome_pending = None
@@ -20519,6 +20572,53 @@ class Policy:
                                     / _phase_count),
                                 f"boss_effective_dpt_{_phase}_ratio_min": min(
                                     value[2] for value in _values),
+                            })
+                    if bool(self.know.policy.get(
+                            "boss_race_effective_dpt_intangible_obs", True)):
+                        _intangible_groups = {
+                            "intangible": [], "non_intangible": []}
+                        if isinstance(_samples, list):
+                            for _sample in _samples:
+                                if not isinstance(_sample, dict):
+                                    continue
+                                try:
+                                    _actual = float(_sample.get("actual"))
+                                    _projected = float(
+                                        _sample.get("projected"))
+                                    _ratio = float(_sample.get("ratio"))
+                                    _intangible = float(
+                                        _sample.get("intangible_layers") or 0.0)
+                                except (TypeError, ValueError, OverflowError):
+                                    continue
+                                if (_projected <= 0.0 or _intangible < 0.0
+                                        or not all(math.isfinite(value) for value in (
+                                            _actual, _projected, _ratio,
+                                            _intangible))):
+                                    continue
+                                _group = ("intangible" if _intangible > 0.0
+                                          else "non_intangible")
+                                _intangible_groups[_group].append(
+                                    (_actual, _projected, _ratio, _intangible))
+                        for _group, _values in _intangible_groups.items():
+                            if not _values:
+                                continue
+                            _group_count = len(_values)
+                            _result.update({
+                                f"boss_effective_dpt_{_group}_samples": (
+                                    _group_count),
+                                f"boss_effective_dpt_{_group}_actual_mean": (
+                                    sum(value[0] for value in _values)
+                                    / _group_count),
+                                f"boss_effective_dpt_{_group}_projected_mean": (
+                                    sum(value[1] for value in _values)
+                                    / _group_count),
+                                f"boss_effective_dpt_{_group}_ratio_mean": (
+                                    sum(value[2] for value in _values)
+                                    / _group_count),
+                                f"boss_effective_dpt_{_group}_ratio_min": min(
+                                    value[2] for value in _values),
+                                f"boss_effective_dpt_{_group}_layers_max": max(
+                                    value[3] for value in _values),
                             })
             return _result
         return {}

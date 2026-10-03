@@ -284,9 +284,9 @@ def main() -> int:
     assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
     pol._boss_effective_dpt_samples = [
         {"actual": 12.0, "projected": 24.0, "ratio": 0.5,
-         "slippery_layers": 2.0},
+         "slippery_layers": 2.0, "intangible_layers": 2.0},
         {"actual": 18.0, "projected": 24.0, "ratio": 0.75,
-         "slippery_layers": 0.0},
+         "slippery_layers": 0.0, "intangible_layers": 0.0},
     ]
     pol._race_audit = {"latched": True, "latch_round": 4, "esc": False}
     _ra_dpt = pol.pop_race_audit()
@@ -301,6 +301,11 @@ def main() -> int:
     assert _ra_dpt["boss_effective_dpt_clear_samples"] == 1, _ra_dpt
     assert abs(_ra_dpt["boss_effective_dpt_clear_actual_mean"] - 18.0) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_clear_ratio_mean"] - 0.75) < 1e-9
+    assert _ra_dpt["boss_effective_dpt_intangible_samples"] == 1, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_intangible_actual_mean"] - 12.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_intangible_layers_max"] - 2.0) < 1e-9
+    assert _ra_dpt["boss_effective_dpt_non_intangible_samples"] == 1, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_non_intangible_ratio_mean"] - 0.75) < 1e-9
     assert pol._boss_effective_dpt_samples == []
     know.policy["race_audit_effective_dpt_obs"] = False
     pol._boss_effective_dpt_samples = [
@@ -12748,6 +12753,7 @@ def main() -> int:
                           boss_roster_obs=True, boss_roster_next=None,
                           boss_block_obs=True, boss_block_start=0,
                           boss_block_next=None,
+                          boss_intangible_obs=True,
                           boss_intent_ramp_obs=True, boss_intent_next=None,
                           race_latch_intent_obs=True,
                           longfight_effective_dpt_obs=True,
@@ -12843,6 +12849,8 @@ def main() -> int:
             "boss_race_effective_dpt_roster_obs"] = boss_roster_obs
         cap_pol.know.policy[
             "boss_race_effective_dpt_block_obs"] = boss_block_obs
+        cap_pol.know.policy[
+            "boss_race_effective_dpt_intangible_obs"] = boss_intangible_obs
         cap_pol.know.policy[
             "boss_race_intent_ramp_obs"] = boss_intent_ramp_obs
         cap_pol.know.policy[
@@ -12989,8 +12997,31 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS"
             in d_combat_boss_effective.reason
             and "hittable=1" in d_combat_boss_effective.reason
-            and "block=0" in d_combat_boss_effective.reason), \
+            and "block=0" in d_combat_boss_effective.reason
+            and "区间起始无实体层=0"
+            "（BOSS_RACE_EFFECTIVE_DPT_INTANGIBLE_OBS）"
+            in d_combat_boss_effective.reason), \
         f"普通 Boss 跨回合有效火力对账缺失: {d_combat_boss_effective.reason}"
+
+    d_combat_boss_intangible = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "INTANGIBLE_POWER", "name": "无实体",
+                            "amount": 2}])
+    assert ("区间起始无实体层=2"
+            "（BOSS_RACE_EFFECTIVE_DPT_INTANGIBLE_OBS）"
+            in d_combat_boss_intangible.reason), \
+        f"Boss DPT 无实体层数未绑定到区间: {d_combat_boss_intangible.reason}"
+    d_combat_boss_intangible_off = combat_flip_probe(
+        1.5, sample_effective_round=True,
+        boss_state_powers=[{"id": "INTANGIBLE_POWER", "name": "无实体",
+                            "amount": 2}], boss_intangible_obs=False)
+    assert (d_combat_boss_intangible_off.action
+            == d_combat_boss_intangible.action
+            and d_combat_boss_intangible_off.params
+            == d_combat_boss_intangible.params
+            and "BOSS_RACE_EFFECTIVE_DPT_INTANGIBLE_OBS"
+            not in d_combat_boss_intangible_off.reason), \
+        f"Boss DPT 无实体观测开关关闭后动作或尾缀漂移: {d_combat_boss_intangible_off}"
     assert knowledge.DEFAULT_POLICY["boss_race_effective_dpt_roster_obs"] is True
     _boss_roster_next = [
         {"index": 0, "enemy_id": "CAP_BOSS", "name": "攻坚巨兽",
@@ -16226,9 +16257,9 @@ def main() -> int:
     }
     ra_agent.policy._boss_effective_dpt_samples = [
         {"actual": 10.0, "projected": 20.0, "ratio": 0.5,
-         "slippery_layers": 8.0},
+         "slippery_layers": 8.0, "intangible_layers": 2.0},
         {"actual": 20.0, "projected": 20.0, "ratio": 1.0,
-         "slippery_layers": 0.0},
+         "slippery_layers": 0.0, "intangible_layers": 0.0},
     ]
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
     ra_agent._flush_combat_agg()
@@ -16245,6 +16276,11 @@ def main() -> int:
             "|clear_samples=1/actual_dpt=20/projected_dpt=20/ratio=1.00/min_ratio=1.00"
             "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）") in ra_agent.ctx.combat_notes[-1], \
         f"竞速有效火力分相观测未留痕: {ra_agent.ctx.combat_notes[-1]}"
+    assert ("intangible_samples=1/layers_max=2/actual_dpt=10/projected_dpt=20/ratio=0.50/min_ratio=0.50"
+            "|non_intangible_samples=1/layers_max=0/actual_dpt=20/projected_dpt=20/ratio=1.00/min_ratio=1.00"
+            "（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）") \
+        in ra_agent.ctx.combat_notes[-1], \
+        f"竞速有效火力无实体分组观测未落到生产战斗记录: {ra_agent.ctx.combat_notes[-1]}"
 
     ra_agent.know.policy["race_audit_projection_ratio_obs"] = False
     ra_agent.policy._race_audit = {
@@ -20346,7 +20382,9 @@ def main() -> int:
             "（BOSS_RACE_EFFECTIVE_DPT_ENCOUNTER_OBS）；"
             "实际/投影比0.61（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）；"
             ";phase=clear/slippery_layers=0"
-            " (BOSS_RACE_EFFECTIVE_DPT_PHASE_OBS)",
+            " (BOSS_RACE_EFFECTIVE_DPT_PHASE_OBS)；"
+            "区间起始无实体层=1"
+            "（BOSS_RACE_EFFECTIVE_DPT_INTANGIBLE_OBS）",
     }
     boss_dpt_terminal_row = {
         "screen": "COMBAT", "action": "end_turn", "floor": 17,
@@ -20376,6 +20414,7 @@ def main() -> int:
                 "/phase=clear/slippery_layers=0"
                 "/encounter=LAGAVULIN_MATRIARCH/terminal_round=8"
                 "/terminal_action=end_turn/terminal_hp=1/final_hp=0"
+                "/intangible_layers=1"
                 in d_boss_dpt_terminal.reason), \
         f"Boss有效火力终局桥接缺失或动作漂移: {d_boss_dpt_terminal}"
 
@@ -20452,6 +20491,23 @@ def main() -> int:
                 in d_boss_dpt_phase_off.reason
             and "/phase=" not in d_boss_dpt_phase_off.reason), \
         f"Boss有效火力来源阶段开关关闭后观测或动作漂移: {d_boss_dpt_phase_off}"
+
+    boss_dpt_intangible_off_know = knowledge.Knowledge(tmp)
+    boss_dpt_intangible_off_know.policy[
+        "boss_race_effective_dpt_intangible_obs"] = False
+    boss_dpt_intangible_off_ctx = _SettleCtx()
+    boss_dpt_intangible_off_ctx.decisions = [
+        dict(boss_dpt_source_row), dict(boss_dpt_terminal_row)]
+    d_boss_dpt_intangible_off = policy.Policy(
+        boss_dpt_intangible_off_know).decide(
+            boss_dpt_terminal_state, boss_dpt_intangible_off_ctx)
+    assert (d_boss_dpt_intangible_off.action == d_boss_dpt_terminal.action
+            and d_boss_dpt_intangible_off.params == d_boss_dpt_terminal.params
+            and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+            in d_boss_dpt_intangible_off.reason
+            and "/intangible_layers="
+            not in d_boss_dpt_intangible_off.reason), \
+        f"Boss DPT 终局无实体观测关闭后动作或尾缀漂移: {d_boss_dpt_intangible_off}"
 
     boss_dpt_boundary_ctx = _SettleCtx()
     boss_dpt_boundary_ctx.decisions = [

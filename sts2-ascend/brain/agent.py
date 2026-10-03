@@ -3830,6 +3830,51 @@ class Agent:
                                     "｜竞速Boss有效火力分相："
                                     + "|".join(_phase_parts)
                                     + "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）")
+                        if bool(self.know.policy.get(
+                                "boss_race_effective_dpt_intangible_obs",
+                                True)):
+                            _intangible_parts = []
+                            for _group_name in (
+                                    "intangible", "non_intangible"):
+                                try:
+                                    _group_count = int(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_samples")
+                                        or 0)
+                                    _group_actual = float(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_actual_mean")
+                                        or 0.0)
+                                    _group_projected = float(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_projected_mean")
+                                        or 0.0)
+                                    _group_ratio = float(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_ratio_mean")
+                                        or 0.0)
+                                    _group_min_ratio = float(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_ratio_min")
+                                        or 0.0)
+                                    _group_layers_max = float(_ra.get(
+                                        f"boss_effective_dpt_{_group_name}_layers_max")
+                                        or 0.0)
+                                except (TypeError, ValueError, OverflowError):
+                                    continue
+                                if (_group_count <= 0
+                                        or not all(math.isfinite(value) for value in (
+                                            _group_actual, _group_projected,
+                                            _group_ratio, _group_min_ratio,
+                                            _group_layers_max))):
+                                    continue
+                                _intangible_parts.append(
+                                    f"{_group_name}_samples={_group_count}"
+                                    f"/layers_max={_group_layers_max:g}"
+                                    f"/actual_dpt={_group_actual:g}"
+                                    f"/projected_dpt={_group_projected:g}"
+                                    f"/ratio={_group_ratio:.2f}"
+                                    f"/min_ratio={_group_min_ratio:.2f}")
+                            if _intangible_parts:
+                                note += (
+                                    "｜竞速Boss有效火力无实体分组："
+                                    + "|".join(_intangible_parts)
+                                    + "（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
             _ra_won = not agg.get("died")
