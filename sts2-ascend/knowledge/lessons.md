@@ -15979,3 +15979,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.171786637113251局)，BURNING_PACT(17分/12.08061312617675局)，DEFEND_IRONCLAD(18分/3.0926946332927203局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1853 胜，当前目标进阶 0
+
+## 第 1854 局复盘（2026-10-03 17:01）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：CINDER, BREAKTHROUGH, INFLAME, WHIRLWIND, UNRELENTING, UNRELENTING, EXPECT_A_FIGHT, TAUNT, MOLTEN_FIST, HEADBUTT, FIEND_FIRE, SHRUG_IT_OFF, SHRUG_IT_OFF, JUGGLING, UPPERCUT, THINKING_AHEAD
+- 本局遗物：KUSARIGAMA
+- 战斗记录：F4 Monster战 掉血4｜自损1（可行动段1/非行动段7，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血5｜自损1（可行动段1/非行动段10，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0｜自损1（可行动段1/非行动段1，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0; F15 Monster战 掉血0; F17 Boss战 掉血80｜竞速投影审计：pool=218/dpt=11.25/ttk=19.3778/tsurv=4.21053（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=19.3778/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.14（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=32.8/projected_dpt=18.2211/ratio=2.05/min_ratio=0.36（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=32.8/projected_dpt=18.2211/ratio=2.05/min_ratio=0.36（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=5/layers_max=0/actual_dpt=32.8/projected_dpt=18.2211/ratio=2.05/min_ratio=0.36（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.682860632549817局)，PROWESS(26分/10.657611025037468局)，BRAND(26分/2.313342619491933局)，HELLRAISER(25分/3.723463929509124局)，MANGLE(25分/43.5492177107667局)
+- 当前低价值卡牌：HAVOC(15分/2.1641853838833547局)，BURNING_PACT(17分/12.038330980235132局)，DEFEND_IRONCLAD(18分/3.081870202076196局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1854 胜，当前目标进阶 0
