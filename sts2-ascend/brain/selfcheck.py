@@ -20129,7 +20129,9 @@ def main() -> int:
             " (RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS)"
             "; race cover decision: coverage=yes/decision=all_in"
             "/strict_margin=-4.3/pool=106/cap=100/margin_floor=-2.0"
-            " (RACE_ALLIN_LETHAL_COVER_DECISION_OBS)",
+            " (RACE_ALLIN_LETHAL_COVER_DECISION_OBS)"
+            "；买活余量：严格-4.3/宽松-3.3回合→严格仍必败"
+            "（RACE_ALLIN_BUYBACK_MARGIN_OBS）",
     }
     race_terminal_ctx.decisions.append(race_terminal_cover_row)
     race_terminal_pol._krace_latch = True
@@ -20652,6 +20654,9 @@ def main() -> int:
             "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"
             "/margin_floor=-2.0/source_target_hp=44/source_target_block=0"
             "/source_attack_candidates=0/source_raw_damage_cap=0"
+            "/source_buyback_strict_margin=-4.3"
+            "/source_buyback_tolerant_margin=-3.3"
+            "/source_buyback_verdict=仍必败"
             "/terminal_round=6/outcome=defeat"
             "/bridge_decisions=0"
             " (RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS)"
@@ -20685,6 +20690,9 @@ def main() -> int:
                 "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"
                 "/margin_floor=-2.0/source_target_hp=44/source_target_block=0"
                 "/source_attack_candidates=0/source_raw_damage_cap=0"
+                "/source_buyback_strict_margin=-4.3"
+                "/source_buyback_tolerant_margin=-3.3"
+                "/source_buyback_verdict=仍必败"
                 "/terminal_round=6/outcome=defeat"
                 in d_persisted_cover.reason), \
         f"已持久 GAME_OVER 行未恢复竞速覆盖终局桥接: " \

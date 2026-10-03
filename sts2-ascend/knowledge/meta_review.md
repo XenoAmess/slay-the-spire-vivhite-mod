@@ -16107,3 +16107,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：固定 256 槽宿主入口按预期复现 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（槽耗尽）；同一 clone 的一次性 0777 进程级临时目录适配器运行同一 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；`git diff --check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; persisted GAME_OVER cover observation integrated)`
+
+## 2026-10-04 runs 1899-1900：买活余量接回竞速覆盖终局对账
+
+profile_id：`ironclad`
+requested_runs：`1899, 1900`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：run 1900-F12 的败局竞速覆盖来源已经记录买活严格余量、宽松余量和严格 verdict，但现有同战斗终局桥只回放 coverage/decision、竞速 margin 与输出容量，丢失这三项来源证据；若桥接仅从同一来源的既有 `RACE_ALLIN_BUYBACK_MARGIN_OBS` 文本补出三项 `source_buyback_*` 字段，未来 3—10 个匹配终局即可机械比较来源余量/verdict 与权威结局。若出现错配、跨屏接入、重复 marker，或 action/params 改变，该假设即被证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-072229_LVB080GWD0PX.json`（run 1900，139 条决策）中，D137/F12 的覆盖决策为 `coverage=yes/decision=all_in/strict_margin=-2.6/pool=38/cap=100/margin_floor=-2.0`，同条已有 `买活余量：严格-2.6/宽松-1.6回合→严格仍必败（RACE_ALLIN_BUYBACK_MARGIN_OBS）`；D139 的 `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS` 只含覆盖与输出容量字段，没有买活余量/verdict。该缺口与“终局桥丢来源证据、非行动错误”相符。
+- **EXPECTED_SIGNAL**：有效同楼层 COMBAT/CARD_SELECTION 来源在终局 marker 中追加 `source_buyback_strict_margin`、`source_buyback_tolerant_margin`、`source_buyback_verdict`，且每个来源只桥接一次；缺失/非法买活文本、REWARD 等屏幕边界和关闭开关不追加这些字段，`continue_game_over`/空 params 与原有终局观测保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有覆盖 marker 后解析有限数值和两个合法 verdict，只把来源字段放入现有 `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS`；不改竞速阈值、评分、候选、动作或参数。
+- `sts2-ascend/brain/knowledge.py`：补充该观察开关的字段契约注释。
+- `sts2-ascend/brain/selfcheck.py`：覆盖终局夹具加入买活余量，断言重载恢复字段、开关关闭回滚和 REWARD 边界不跨接。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个同类终局，统计来源/终局字段相等率、strict/tolerant margin、verdict 与最终 outcome 的对应关系、marker 次数及 action/params 漂移；同时单列缺失/非法来源与跨屏边界样本。
+- **Adjust**：若原生文本格式变化、来源字段与终局不一致、重复或跨房间接入，收紧解析锚点/同楼层边界并继续保持 observation-only；不据此改 `race_allin_lethal_cover_behavior_min_margin`。
+- **Rollback**：将 `race_allin_lethal_cover_terminal_outcome_obs` 设为 `False`，预期只移除覆盖终局桥及新增字段，动作参数不变；必要时回退本地提交并保留 1900 原始链。
+- **Validation**：目标源码 `git diff --check` 无 whitespace 错误；固定 256 槽入口按宿主限制复现 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，进程级复用继承 ACL 槽位的完整 selfcheck 退出码为 0 且末尾为 `SELFCHECK OK`。未写入 `.runtime`、正式 runs/archive、学习记忆、失败回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; buyback margin terminal observation integrated)`
