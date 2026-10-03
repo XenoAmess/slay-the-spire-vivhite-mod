@@ -15698,3 +15698,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：完整 selfcheck 输出 `SELFCHECK OK`；目标 diff 复核与 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; local production observation)`
+
+## 2026-10-03 runs 1874-1875-F17：同战斗 CARD_SELECTION 截断 stale 终局观测
+
+profile_id：`ironclad`
+requested_runs：`1874, 1875`
+requested_run：`1875`（本批选择最新完整失败链作为生产证据）
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS` 反向扫描遇到任意非 `COMBAT` 屏幕就停止；1875 的同一 F17 战斗在 stale 来源与 `GAME_OVER` 之间插入了同战斗 `CARD_SELECTION`，因此真实终局漏掉 stale 对账。若只放行紧邻、同楼层、由 `select_deck_card`（或 `combat_hand_select` 的 `confirm_selection`）触发且两侧均为 `COMBAT` 的选牌行，则可恢复观测而不改变动作/参数；任意非相邻选牌、跨楼层或其他屏幕仍必须截断。该命题可被下一批真实终局计数证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-232709_QNVLAL2HTMWR.json`（`run_id=QNVLAL2HTMWR`）含 258 条决策，F17 的 stale 来源记录为年龄 2、2、3，尾部为 `GAME_OVER`/`continue_game_over`；中间夹有同战斗 `CARD_SELECTION`。旧扫描器的非 `COMBAT` 硬边界会在这些行处停止。只读送入当前扫描器后得到 `stale_terminal={count:3, first_age:"2", last_age:"3"}`，终局 action 仍为 `continue_game_over`。
+- **EXPECTED_SIGNAL**：后续 3—10 个精确匹配窗口各最多产生一次 `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS`，并保留 count/首末年龄；`REWARD`、`MAP`、非相邻或跨楼层行不得产生该 marker，`action/params` 必须保持不变。若任一条件失败，假设即被证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 stale 终局观察扫描中增加局部、同楼层、两侧 `COMBAT` 的 `CARD_SELECTION` 桥；仍为只读 marker，不参与评分、选牌、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：增加 1875 形状的选牌夹层 fixture，并断言 `continue_game_over {}` 与 marker 同时成立。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个真实匹配终局，对照 stale 次数/年龄、屏幕/楼层边界和 `applied` 回执；证据成熟前保持只读观测。
+- **Adjust**：若真实链的选牌动作或理由格式不同，只补充已验证的 in-combat 形式；若出现跨边界误接，收紧邻接/楼层条件，不扩大屏幕范围。
+- **Rollback**：移除该桥接 helper 与 selfcheck fixture，恢复任意非 `COMBAT` 即停止的旧扫描；预期只失去新增 stale marker，既有终局动作与参数不变。
+- **Validation**：宿主直接命令因固定 256 槽位池报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用 clone-local 进程级 0777 临时目录适配器运行同一完整 `selfcheck.py`，末尾为 `SELFCHECK OK`。真实 1875 只读链回放命中 count=3；目标代码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

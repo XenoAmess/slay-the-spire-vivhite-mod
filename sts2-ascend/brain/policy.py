@@ -10985,8 +10985,10 @@ class Policy:
         ``RACE_UPSHIFT_STALE`` is emitted on the projection decision where the
         lock-age guard suppresses the extra dpt uplift.  The terminal audit is
         emitted later, so recover the source from the durable same-floor
-        ``COMBAT`` tail before the GAME_OVER result is committed.  This method
-        is observation-only and deliberately stops at any non-combat boundary.
+        ``COMBAT``/in-combat ``CARD_SELECTION`` tail before the GAME_OVER
+        result is committed.  This method is observation-only; a card-selection
+        row is admitted only when it is directly bracketed by same-floor
+        ``COMBAT`` rows, while every other screen remains a hard boundary.
         """
         try:
             _enabled = bool(int(float(pol.get(
@@ -11012,7 +11014,35 @@ class Policy:
             _tail_screen = str(_scan_rows[0].get("screen") or "").upper()
             if _tail_screen in {"GAME_OVER", "VICTORY"}:
                 _scan_rows = _scan_rows[1:]
-        for _row in _scan_rows:
+
+        def _is_in_combat_card_selection(_index, _row) -> bool:
+            if str(_row.get("screen") or "").upper() != "CARD_SELECTION":
+                return False
+            _selection_action = str(_row.get("action") or "").strip()
+            if _selection_action == "select_deck_card":
+                pass
+            elif (_selection_action == "confirm_selection"
+                  and "combat_hand_select" in str(
+                      _row.get("reason") or "")):
+                pass
+            else:
+                return False
+            if _index <= 0 or _index + 1 >= len(_scan_rows):
+                return False
+            _neighbors = (_scan_rows[_index - 1], _scan_rows[_index + 1])
+            if any(not isinstance(_neighbor, dict)
+                   or str(_neighbor.get("screen") or "").upper() != "COMBAT"
+                   for _neighbor in _neighbors):
+                return False
+            if _floor_text is not None:
+                for _neighbor in _neighbors:
+                    _neighbor_floor = _neighbor.get("floor")
+                    if (_neighbor_floor is not None
+                            and str(_neighbor_floor) != _floor_text):
+                        return False
+            return True
+
+        for _index, _row in enumerate(_scan_rows):
             if not isinstance(_row, dict):
                 break
             _row_floor = _row.get("floor")
@@ -11020,7 +11050,8 @@ class Policy:
                     and str(_row_floor) != _floor_text):
                 break
             _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen != "COMBAT":
+            if (_screen and _screen != "COMBAT"
+                    and not _is_in_combat_card_selection(_index, _row)):
                 break
             _reason = str(_row.get("reason") or "")
             if "RACE_UPSHIFT_STALE" not in _reason:

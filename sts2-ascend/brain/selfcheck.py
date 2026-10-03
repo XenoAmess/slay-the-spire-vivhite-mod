@@ -20057,6 +20057,40 @@ def main() -> int:
             and "RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
                 in d_stale_terminal_game_over.reason), \
         f"已持久 GAME_OVER 行未恢复 stale 终局桥接: {d_stale_terminal_game_over}"
+
+    # 3z-5b-card-selection) The 1875-F17 tail contains CARD_SELECTION rows
+    # between the stale source and GAME_OVER.  Only a select_deck_card modal
+    # bracketed by same-floor COMBAT rows may bridge this observation; the
+    # terminal action and params must remain unchanged.
+    stale_card_selection_pol = policy.Policy(knowledge.Knowledge(tmp))
+    stale_card_selection_pol._race_terminal_outcome_pending = dict(
+        race_terminal_pol._race_terminal_outcome_pending or {})
+    stale_card_selection_ctx = _SettleCtx()
+    stale_card_selection_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 4,
+        "reason": "战斗：入锁已2回合（≥新鲜窗2），投影维持21伤/回合"
+                   "（RACE_UPSHIFT_STALE）",
+    }, {
+        "screen": "CARD_SELECTION", "action": "select_deck_card",
+        "floor": 33, "turn": 5, "reason": "牌堆顶选择：暴走",
+    }, {
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "turn": 6, "reason": "终局前战斗尾部",
+    }, {
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 33, "reason": "持久终局结果行",
+    }]
+    d_stale_card_selection = stale_card_selection_pol.decide(
+        race_terminal_outcome_state, stale_card_selection_ctx)
+    assert (d_stale_card_selection.action == "continue_game_over"
+            and d_stale_card_selection.params == {}
+            and "锁后 stale 终局对账：count=1/first_age=2/last_age=2"
+                in d_stale_card_selection.reason
+            and "RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS"
+                in d_stale_card_selection.reason), \
+        f"同战斗 CARD_SELECTION 未恢复 stale 终局桥接: " \
+        f"{d_stale_card_selection}"
     d_race_terminal_outcome = race_terminal_pol.decide(
         race_terminal_outcome_state, race_terminal_ctx)
     assert (d_race_terminal_outcome.action == "continue_game_over"
