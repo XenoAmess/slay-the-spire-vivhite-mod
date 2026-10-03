@@ -15781,3 +15781,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.864086813861018局)，DEFEND_IRONCLAD(18分/3.294166801434924局)，THE_GAMBIT(18分/5.612284180222445局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1835 胜，当前目标进阶 0
+
+## 第 1836 局复盘（2026-10-03 11:25）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYRDONIS
+- 本局拿牌：CINDER, HAVOC, BURNING_PACT, TAUNT, HEMOKINESIS, HEADBUTT, SWORD_BOOMERANG, SWORD_BOOMERANG, BLUDGEON, INFLAME, FEEL_NO_PAIN, PACTS_END, MOLTEN_FIST
+- 本局遗物：VAMBRACE
+- 战斗记录：F5 Monster战 掉血17｜自损4（可行动段4/非行动段17，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血10｜自损2（可行动段2/非行动段12，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血5｜自损2（可行动段2/非行动段9，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血20; F14 Monster战 掉血20; F15 Elite战 掉血35｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.987923432669557局)，BRAND(26分/2.4640442594752456局)，PROWESS(26分/10.327049555700112局)，MANGLE(25分/45.357765255407195局)，HELLRAISER(25分/3.9660272730742774局)
+- 当前低价值卡牌：HAVOC(15分/2.3051702444185262局)，BURNING_PACT(17分/12.822562510012505局)，DEFEND_IRONCLAD(18分/3.282637217629902局)
+- 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1836 胜，当前目标进阶 0
