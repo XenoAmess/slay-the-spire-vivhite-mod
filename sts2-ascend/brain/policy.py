@@ -11679,7 +11679,18 @@ class Policy:
             return
 
         _floor_text = None if floor is None else str(floor)
-        for _index in range(len(_decisions) - 1, -1, -1):
+        # GAME_OVER/Victory may already be durable when the policy is retried.
+        # It is the result boundary, not the source boundary; skip that one
+        # trailing row so the same-floor in-combat cover decision remains
+        # recoverable.  This mirrors the capacity bridge below and keeps the
+        # bridge silent across any earlier room boundary.
+        _terminal_index = len(_decisions) - 1
+        _tail = _decisions[_terminal_index]
+        if (isinstance(_tail, dict)
+                and str(_tail.get("screen") or "").upper()
+                in {"GAME_OVER", "VICTORY"}):
+            _terminal_index -= 1
+        for _index in range(_terminal_index, -1, -1):
             _row = _decisions[_index]
             if not isinstance(_row, dict):
                 break

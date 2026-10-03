@@ -16079,3 +16079,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：规定的直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的进程级 0777 临时目录适配器运行完整 selfcheck，退出码为 0 且末尾为 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或管理在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; native slumber guard behavior integrated)`
+
+## 2026-10-04 run 1898-F25：持久 GAME_OVER 行的竞速覆盖终局观测
+
+profile_id：`ironclad`
+requested_run：`1898`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速致死覆盖的终局桥接从 decisions 尾部反向扫描；当同一策略重试时，权威 `GAME_OVER` 行已经持久化在尾部，现有扫描把它当成来源边界，因此丢掉此前同楼层的覆盖决策。只跳过这一行结果行，应恢复只读终局观测，不改变动作。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-064100_PQC2FCF613ZZ.json` 的 run 1898 / F25 中，D324 的 reason 含 `RACE_ALLIN_LETHAL_COVER_DECISION_OBS`（`coverage=yes/decision=cover/strict_margin=-1.8/pool=40/cap=100/margin_floor=-2.0`）；D332 为 `continue_game_over`、params `{}`，已有容量终局 marker，但没有 `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS`。相邻容量桥接正常命中，支持“尾部结果行遮挡覆盖来源”的单一归因。
+- **EXPECTED_SIGNAL**：未来 3–10 个同型终局重试中，尾部 `GAME_OVER`/`VICTORY` 应只让同楼层 COMBAT/CARD_SELECTION 来源产生一次覆盖终局 marker；来源回合、覆盖决策和容量字段与来源一致，不跨越 REWARD/MAP 等房间边界，`continue_game_over` 与空 params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：覆盖桥接只跳过一个尾部 `GAME_OVER`/`VICTORY` 结果行，再按原同楼层边界扫描；不进入评分、候选、门禁、动作或 params。
+- `sts2-ascend/brain/selfcheck.py`：增加“COMBAT 来源 → 已持久化 end_turn → GAME_OVER”夹具，锁定 marker 恰好一次及 `continue_game_over`/空 params；既有跨 REWARD 边界断言保留。
+- 现有 `race_allin_lethal_cover_terminal_outcome_obs` 默认开关未改，仍可作为窄回滚闸门。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3–10 个同型终局，逐条核对 marker 次数、source floor/round、coverage/decision、容量字段、终局 HP 和实际战斗回合。
+- **Adjust**：若出现重复 marker、跨房间接入、字段不完整或 action/params 漂移，收紧尾部结果行条件并保持 observation-only，不扩大竞速行为。
+- **Rollback**：将 `race_allin_lethal_cover_terminal_outcome_obs` 设为 `False`（或回退本地提交），预期只移除新增覆盖终局 marker，恢复原动作路径。
+- **Validation**：固定 256 槽宿主入口按预期复现 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（槽耗尽）；同一 clone 的一次性 0777 进程级临时目录适配器运行同一 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；`git diff --check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; persisted GAME_OVER cover observation integrated)`
