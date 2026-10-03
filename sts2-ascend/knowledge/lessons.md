@@ -16287,3 +16287,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.102590109908547局)，BURNING_PACT(17分/11.873516626517356局)，DEFEND_IRONCLAD(18分/2.8035062313546666局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1881 胜，当前目标进阶 0
+
+## 第 1882 局复盘（2026-10-04 01:49）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：SHRUG_IT_OFF, SWORD_BOOMERANG, CINDER, ULTIMATE_STRIKE, MANGLE, RUPTURE, FIGHT_ME, RAMPAGE, SHRUG_IT_OFF, INFLAME
+- 本局遗物：ORNAMENTAL_FAN
+- 战斗记录：F2 Monster战 掉血1; F4 Monster战 掉血0; F5 Monster战 掉血1; F7 Monster战 掉血0; F12 Monster战 掉血12; F17 Boss战 掉血68｜竞速投影审计：pool=190/dpt=16.2/ttk=11.7284/tsurv=6.18182（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=11.7284/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.78（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=5.54658（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战11回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=25.9286/projected_dpt=21.5834/ratio=1.23/min_ratio=0.48（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=25.9286/projected_dpt=21.5834/ratio=1.23/min_ratio=0.48（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=7/layers_max=0/actual_dpt=25.9286/projected_dpt=21.5834/ratio=1.23/min_ratio=0.48（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.008634563142659局)，BLOODLETTING(29分/2.0605831910942074局)，MASTER_OF_STRATEGY(27分/4.24498067885264局)，BRAND(26分/2.0970290371342064局)，PROWESS(26分/12.626197206274002局)
+- 当前低价值卡牌：ENTROPY(17分/2.095231044523867局)，BURNING_PACT(17分/11.831959318324545局)，DEFEND_IRONCLAD(18分/2.7936939595449255局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1882 胜，当前目标进阶 0
