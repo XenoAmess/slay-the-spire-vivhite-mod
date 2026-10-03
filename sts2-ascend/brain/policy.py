@@ -10487,29 +10487,6 @@ class Policy:
                         f"{_source_capacity.get('attack_candidates', '?')}"
                         f"/source_raw_damage_cap="
                         f"{_num(_source_capacity.get('raw_damage_cap'))}")
-                _source_buyback_tail = ""
-                _source_buyback = _cover.get("source_buyback")
-                if isinstance(_source_buyback, dict):
-                    _buyback_strict = _source_buyback.get("strict_margin")
-                    _buyback_tolerant = _source_buyback.get(
-                        "tolerant_margin")
-                    _buyback_verdict = _source_buyback.get("strict_verdict")
-                    try:
-                        _buyback_numbers = (
-                            float(_buyback_strict),
-                            float(_buyback_tolerant),
-                        )
-                    except (TypeError, ValueError, OverflowError):
-                        _buyback_numbers = None
-                    if (_buyback_numbers is not None
-                            and all(math.isfinite(_value)
-                                    for _value in _buyback_numbers)
-                            and _buyback_verdict in {"可翻盘", "仍必败"}):
-                        _source_buyback_tail = (
-                            f"/source_buyback_strict_margin={_buyback_strict}"
-                            f"/source_buyback_tolerant_margin="
-                            f"{_buyback_tolerant}"
-                            f"/source_buyback_verdict={_buyback_verdict}")
                 _cover_tail = (
                     f"; terminal cover decision audit: source_round="
                     f"{_round(_cover.get('source_round'))}"
@@ -10521,7 +10498,6 @@ class Policy:
                     f"/cap={_cover.get('cap') or '?'}"
                     f"/margin_floor={_cover.get('margin_floor') or '?'}"
                     f"{_source_capacity_tail}"
-                    f"{_source_buyback_tail}"
                     f"/terminal_round={_round(_pending.get('terminal_round'))}"
                     f"/outcome={_result}"
                     f"/bridge_decisions="
@@ -11771,29 +11747,6 @@ class Policy:
                 **_raw_values,
                 "bridge_decisions": len(_decisions) - _index - 1,
             }
-            _buyback_match = re.search(
-                r"买活余量：严格(?P<strict>[+-]?(?:\d+(?:\.\d*)?|\.\d+))"
-                r"/宽松(?P<tolerant>[+-]?(?:\d+(?:\.\d*)?|\.\d+))回合"
-                r"→严格(?P<verdict>可翻盘|仍必败)"
-                r".*?RACE_ALLIN_BUYBACK_MARGIN_OBS",
-                _reason[_marker_at:])
-            if _buyback_match:
-                _buyback_raw = {
-                    "strict_margin": _buyback_match.group("strict"),
-                    "tolerant_margin": _buyback_match.group("tolerant"),
-                    "strict_verdict": _buyback_match.group("verdict"),
-                }
-                try:
-                    _buyback_numbers = (
-                        float(_buyback_raw["strict_margin"]),
-                        float(_buyback_raw["tolerant_margin"]),
-                    )
-                except (TypeError, ValueError, OverflowError):
-                    _buyback_numbers = None
-                if (_buyback_numbers is not None
-                        and all(math.isfinite(_value)
-                                for _value in _buyback_numbers)):
-                    _cover_source["source_buyback"] = _buyback_raw
             _capacity_marker_at = _reason.rfind(
                 "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS", 0, _marker_at)
             if _capacity_marker_at >= 0:
