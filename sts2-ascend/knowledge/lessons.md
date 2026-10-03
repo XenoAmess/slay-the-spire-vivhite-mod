@@ -15891,3 +15891,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.2335657031601728局)，BURNING_PACT(17分/12.42426060215597局)，DEFEND_IRONCLAD(18分/3.1806700277205597局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（77%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1845 胜，当前目标进阶 0
+
+## 第 1846 局复盘（2026-10-03 14:35）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FOGMOG
+- 本局拿牌：ARMAMENTS, SPITE, HOWL_FROM_BEYOND, HEADBUTT, SPITE, THRASH, THRUMMING_HATCHET, SWORD_BOOMERANG
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血2; F3 Monster战 掉血0; F4 Monster战 掉血0; F6 Monster战 掉血23; F7 Monster战 掉血24; F8 Monster战 掉血38｜竞速投影审计：pool=57/dpt=13.8/ttk=4.13043/tsurv=2.53333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=4.13043/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.37（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.816070198979125局)，PROWESS(26分/10.960779505847974局)，BRAND(26分/2.3791484146084887局)，HELLRAISER(25分/3.829382310299159局)，MANGLE(25分/44.78802724724186局)
+- 当前低价值卡牌：HAVOC(15分/2.2257482231991124局)，BURNING_PACT(17分/12.380775690048425局)，DEFEND_IRONCLAD(18分/3.1695376826235377局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1846 胜，当前目标进阶 0
