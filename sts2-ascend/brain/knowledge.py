@@ -898,10 +898,6 @@ DEFAULT_POLICY = {
                                         # 不改变评分、目标、判决或动作，False 严格回滚
     "race_prelock_defense_terminal_outcome_obs": True,  # 将竞速未锁前格挡来源回接同战斗 GAME_OVER；
                                                          # 只记录首尾字段，False 严格回滚，不改变 action/params
-    "kill_race_attack_defense_capacity_obs": True,  # kill_race 尚未进入败局全攻时，
-                                                     # 记录攻击牌消耗能量后是否使当前合格格挡
-                                                     # 变为不可负担；只读观测，不改变评分/动作，
-                                                     # False 严格回滚
     "lethal_survivable_line_terminal_outcome_obs": True,  # 在上述终局桥中标记
                                                            # LETHAL_SURVIVABLE_LINE 来源的实际结局；只读、可回滚
     "kill_race_mode_flip_obs": True,   # 同一回合内竞速/普通模式翻转的只读审计；

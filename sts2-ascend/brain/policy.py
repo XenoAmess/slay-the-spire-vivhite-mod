@@ -16563,66 +16563,6 @@ class Policy:
             chosen = (immediate_score, card, target, why)
         if chosen is not None:
             chosen_score, card, target, why = chosen
-            # 竞速攻击前置防守容量观测（KILL_RACE_ATTACK_DEFENSE_CAPACITY_OBS）：
-            # 1845-F17-T2 已进入 kill_race，但尚未进入 race_allin；【痛击】消耗
-            # 2 点能量后，手里的 2 费【火焰屏障】从「当前可负担」变成下一次
-            # 决策不可负担，D215 随即以 0 能量空过。现有 RACE_BLK_FLOOR_RESERVE
-            # 只保护不超过 floor 的格挡费，不能把这个 2 费容量转成结构化证据。
-            # 这里只记录选中的攻击、当前合格格挡与消费后的可负担性；不参与评分、
-            # 排序、投影、门控、目标或动作，开关 False 严格移除尾缀。
-            try:
-                _kr_attack_capacity_obs = bool(int(float(pol.get(
-                    "kill_race_attack_defense_capacity_obs", 1) or 0)))
-            except (TypeError, ValueError, OverflowError, AttributeError):
-                _kr_attack_capacity_obs = False
-            if (_kr_attack_capacity_obs and kill_race and not race_allin
-                    and not race_lethal_cover and not block_locked
-                    and not race_blk_floor and gap_now > 0
-                    and worthwhile_blk_costs):
-                try:
-                    _kr_selected_damage, _kr_selected_block, _kr_selected_hits = (
-                        card_numbers(card))
-                    _kr_selected_damage = float(_kr_selected_damage or 0.0)
-                    _kr_selected_block = float(_kr_selected_block or 0.0)
-                    _kr_selected_cost = float(
-                        energy if card.get("costs_x")
-                        else (card.get("energy_cost") or 0.0))
-                except (TypeError, ValueError, OverflowError):
-                    _kr_selected_damage = 0.0
-                    _kr_selected_block = 0.0
-                    _kr_selected_cost = -1.0
-                _kr_selected_is_attack = (
-                    _kr_selected_damage > 0.0
-                    and _kr_selected_block <= 0.0
-                    and not is_power(card)
-                    and not is_bad_card(card))
-                if (_kr_selected_is_attack and _kr_selected_cost >= 0.0
-                        and math.isfinite(_kr_selected_cost)):
-                    _kr_post_energy = max(
-                        0.0, float(energy) - _kr_selected_cost)
-                    _kr_defense_detail = "|".join(
-                        f"{_c.get('name') or _c.get('card_id') or '?'}"
-                        f":{float(_cost):g}@{float(_block):g}"
-                        for _cost, _block, _c in _worthwhile_blk_cards)
-                    _kr_max_block = max(
-                        (float(_block) for _cost, _block, _c
-                         in _worthwhile_blk_cards), default=0.0)
-                    _kr_post_affordable = any(
-                        float(_cost) <= _kr_post_energy + 1e-9
-                        for _cost in worthwhile_blk_costs)
-                    why += (
-                        f"；竞速攻击前置防守容量旁观：hp={float(my_hp):g}"
-                        f"/block={float(my_block):g}/incoming={float(incoming):g}"
-                        f"/energy={float(energy):g}/gap={float(gap_now):g}"
-                        f"/reserve=yes/floor_reserve=no"
-                        f"/defense={_kr_defense_detail or 'none'}"
-                        f"/min_block_cost={float(min_blk_cost):g}"
-                        f"/max_block={_kr_max_block:g}"
-                        f"/selected={card.get('name') or card.get('card_id') or '?'}"
-                        f":{_kr_selected_cost:g}@{_kr_selected_damage:g}"
-                        f"/post_energy={_kr_post_energy:g}"
-                        f"/post_block_affordable={'yes' if _kr_post_affordable else 'no'}"
-                        "（KILL_RACE_ATTACK_DEFENSE_CAPACITY_OBS）")
             # 竞速未锁前格挡观测（RACE_PRELOCK_DEFENSE_OBS）：本局 F7 的
             # T1/T2 已出现「击杀需13回合>可存活4回合」的竞速判死，但实测
             # 样本尚未满两回合、迟滞锁尚未武装，实际仍选中耸肩/防御。现有

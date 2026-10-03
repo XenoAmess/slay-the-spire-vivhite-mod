@@ -1,1 +1,23 @@
-1845容量转折已加观测；不改动作；SELFCHECK OK；待3-10局验证
+1792局首次入锁压力接入终局桥（17/313/17.55）；跨界与重复静默，动作参数不变；SELFCHECK OK。
+1793: HP-cost same-combat terminal audit joined; action unchanged; SELFCHECK OK.
+1795：Boss翻盘上限已接回终局；动作参数不变；SELFCHECK OK。
+1798-F5：单敌本回合原始可斩杀时跳过败局竞速格挡覆盖；关闭键可回滚；SELFCHECK OK。
+1801：六次非致死能量锁定已接回终局；动作参数不变；SELFCHECK OK。
+1802-F24：OVICOPTER CanLay 压力已接回终局 roster；动作参数不变；SELFCHECK OK。
+1804-F17：持久 GAME_OVER 漏接 stale 竞速观测已修复；动作参数不变；SELFCHECK OK。
+1807-F17：无实体竞速低效攻击新增 bypass 边界观测；评分动作不变；SELFCHECK OK。
+1808-F21：火线漂移接回终局；动作参数不变；SELFCHECK OK。
+1809-F17：败局竞速全攻后的致死无牌终局新增补充对账；1810既有审计不重复；动作参数不变；SELFCHECK OK。
+1811-F17：强制拿牌爆发已接回终局；跨层与重复静默；动作参数不变；SELFCHECK OK。
+1815-F17：无敌帧致死可牌审计由 eligible 修正为 vetoed，动作参数不变；SELFCHECK OK。
+1816-F17：同战斗 CARD_SELECTION 不再截断竞速翻转终局观测；动作参数不变；SELFCHECK OK。
+1817-F24：ready 药水终局新增同战斗时序对账；畸形字段静默；动作参数不变；SELFCHECK OK。
+1823-F17：竞速未锁前格挡观测补写同帧 TTK/可存活回合/差值并接入终局 join；只读，动作参数不变；SELFCHECK OK；待本地提交。
+1825-F17：竞速残能空漏接入终局对账；跨屏、重复、关闭静默；动作参数不变；SELFCHECK OK；待本地提交。
+1829-F12：生还线格挡终局补充可回溯归因；动作参数不变；SELFCHECK OK；待本地提交。
+1830-F33：防御容量接回 GAME_OVER，只记观测不改动作；精确回放、SELFCHECK OK；待本地提交。
+1835-F17：无敌相清除竞速 latch 后锁持归因接回 GAME_OVER；动作参数不变；精确回放、SELFCHECK OK；待本地提交。
+已补齐长战火线漂移尾部终局观测，动作不变；自检通过，继续收集3—10局验证。
+1841-F17：突发意图火力接回 GAME_OVER 观测；动作参数不变；精确链回放、SELFCHECK OK；继续收集3—10局。
+1842-F17：Boss有效DPT终局保留来源 phase/layers；clear/滑溜、关闭与边界静默，动作参数不变；SELFCHECK OK。
+1843-F30：两瓶污浊药水累计自伤24接回终局观测；动作参数不变；SELFCHECK OK；继续收集3—10局。

@@ -23431,55 +23431,6 @@ def main() -> int:
         second_state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
         return pol_r.decide(second_state, decision_ctx)
 
-    # 3kr-capacity) 1845-F17-T2 的最小生产观测：kill_race 已成立但尚未
-    # race_allin 时，选中的 2 费攻击会让手里的 2 费合格格挡在本次出牌后
-    # 变为不可负担。只记录容量转折，不把它升级为行为规则；开关关闭必须
-    # 保持 action/params 逐位一致。
-    kr_capacity_attack = dict(
-        lsl_big, card_id="KR_CAPACITY_ATTACK", name="容量攻击",
-        card_type="Attack")
-    kr_capacity_block = {
-        "index": 1, "card_id": "KR_CAPACITY_BLOCK", "name": "容量屏障",
-        "card_type": "Skill", "playable": True, "energy_cost": 2,
-        "requires_target": False,
-        "dynamic_values": [{"name": "Block", "current_value": 12}],
-    }
-    kr_capacity_on = rallc_policy()
-    d_kr_capacity_on = rallc_decide(
-        kr_capacity_on, 40, 18, 3,
-        [kr_capacity_attack, kr_capacity_block],
-        measured_damage=40.0, measured_turns=2, enemy_hp=253)
-    assert (d_kr_capacity_on.action == "play_card"
-            and d_kr_capacity_on.params.get("card_index") == 0
-            and "KILL_RACE_ATTACK_DEFENSE_CAPACITY_OBS"
-                in d_kr_capacity_on.reason
-            and "hp=40/block=0/incoming=18/energy=3/gap=18"
-                in d_kr_capacity_on.reason
-            and "/reserve=yes/floor_reserve=no"
-                in d_kr_capacity_on.reason
-            and "/defense=容量屏障:2@12/min_block_cost=2/max_block=12"
-                in d_kr_capacity_on.reason
-            and "/selected=容量攻击:2@18/post_energy=1"
-                "/post_block_affordable=no"
-                in d_kr_capacity_on.reason), \
-        f"竞速攻击后的防守容量转折观测缺失或选牌漂移: {d_kr_capacity_on}"
-    assert knowledge.DEFAULT_POLICY[
-        "kill_race_attack_defense_capacity_obs"] is True, \
-        "DEFAULT_POLICY 缺少竞速攻击防守容量观测开关"
-    kr_capacity_off = rallc_policy()
-    kr_capacity_off.know.policy[
-        "kill_race_attack_defense_capacity_obs"] = False
-    d_kr_capacity_off = rallc_decide(
-        kr_capacity_off, 40, 18, 3,
-        [kr_capacity_attack, kr_capacity_block],
-        measured_damage=40.0, measured_turns=2, enemy_hp=253)
-    assert (d_kr_capacity_off.action == d_kr_capacity_on.action
-            and d_kr_capacity_off.params == d_kr_capacity_on.params
-            and "KILL_RACE_ATTACK_DEFENSE_CAPACITY_OBS"
-                not in d_kr_capacity_off.reason), \
-        f"竞速攻击防守容量观测关闭后动作/参数或理由漂移: " \
-        f"on={d_kr_capacity_on} off={d_kr_capacity_off}"
-
     d_rallc1 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld])
     assert d_rallc1.action == "play_card" \
         and d_rallc1.params.get("card_index") == 0 \
