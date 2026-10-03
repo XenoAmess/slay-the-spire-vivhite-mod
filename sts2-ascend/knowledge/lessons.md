@@ -16045,3 +16045,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.126576326103118局)，BURNING_PACT(17分/12.82562973121788局)，DEFEND_IRONCLAD(18分/3.0283136835985163局)
 - 策略进化：potion_block_hp_pct: 0.37 → 0.42（普通战斗短时阵亡（2回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.37 → 0.38（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F30——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.42 → 0.40（行至 F30——药水交药线部分胜利回收）
 - 生涯战绩：0/1859 胜，当前目标进阶 0
+
+## 第 1860 局复盘（2026-10-03 18:47）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEMOKINESIS, BREAKTHROUGH, SHRUG_IT_OFF, SHRUG_IT_OFF, COLOSSUS, TWIN_STRIKE, CINDER, RUPTURE, STONE_ARMOR
+- 本局遗物：VAJRA, SELF_FORMING_CLAY
+- 战斗记录：F3 Monster战 掉血4｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血4｜自损3（可行动段3/非行动段0，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血0｜自损3（可行动段3/非行动段0，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血5｜自损3（可行动段3/非行动段6，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血42｜自损5（可行动段5/非行动段43，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血50｜自损3（可行动段3/非行动段34，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=189/dpt=16.875/ttk=11.2/tsurv=2.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=11.2/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.38（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=16.1429/projected_dpt=16.7408/ratio=0.97/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=16.1429/projected_dpt=16.7408/ratio=0.97/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=7/layers_max=0/actual_dpt=16.1429/projected_dpt=16.7408/ratio=0.97/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.169702875949957局)，MASTER_OF_STRATEGY(27分/4.585377029880588局)，PROWESS(26分/10.435750414592132局)，BRAND(26分/2.2651855226975424局)，HELLRAISER(25分/3.6459521889857185局)
+- 当前低价值卡牌：HAVOC(15分/2.1191333089617572局)，BURNING_PACT(17分/12.780740027158618局)，DEFEND_IRONCLAD(18分/3.0177145857059218局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1860 胜，当前目标进阶 0
