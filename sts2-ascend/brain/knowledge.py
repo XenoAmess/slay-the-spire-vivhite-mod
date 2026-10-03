@@ -880,7 +880,6 @@ DEFAULT_POLICY = {
     "kill_race_enabled": True,
     "boss_race_intent_ramp_obs": True,  # read-only raw intent delta between Boss DPT windows
     "boss_race_intent_ramp_terminal_outcome_obs": True,  # Audit-only same-combat join from a Boss intent ramp to GAME_OVER; False removes only this terminal marker.
-    "boss_race_intent_ramp_peak_terminal_outcome_obs": True,  # Audit-only same-combat peak-ramp join; False removes only the peak marker and keeps the latest-ramp marker.
     "hard_combat_intent_spike_fire_terminal_outcome_obs": True,  # Audit-only same-combat join from HARD_INTENT_SPIKE_FIRE to GAME_OVER; False removes only this terminal marker.
     "boss_race_joint_flip_terminal_outcome_obs": True,  # Audit-only same-combat join from a Boss JOINT_FLIP_TTK_CAP source to GAME_OVER; False removes only this terminal marker.
     "race_audit_effective_dpt_obs": True,  # aggregate existing Boss effective-DPT windows at combat close; observation only
