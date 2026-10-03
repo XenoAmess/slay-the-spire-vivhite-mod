@@ -16342,3 +16342,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.0660514503645975局)，BURNING_PACT(17分/11.667179509472412局)，DEFEND_IRONCLAD(18分/2.7547871019180383局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1886 胜，当前目标进阶 0
+
+## 第 1887 局复盘（2026-10-04 03:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：TAUNT, BATTLE_TRANCE, HEADBUTT, INFLAME, SPITE, IMPERVIOUS, CINDER, INFERNAL_BLADE
+- 本局遗物：ANCHOR
+- 战斗记录：F4 Monster战 掉血7; F5 Monster战 掉血5; F8 Monster战 掉血29; F12 Monster战 掉血42; F15 Monster战 掉血37; F17 Boss战 掉血54｜竞速投影审计：pool=213/dpt=23.625/ttk=9.01587/tsurv=4.15385（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=9.01587/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.93（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.86203（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=20.5/projected_dpt=21.4125/ratio=1.00/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=20.5/projected_dpt=21.4125/ratio=1.00/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=20.5/projected_dpt=21.4125/ratio=1.00/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BLOODLETTING(29分/2.0247745247609243局)，MASTER_OF_STRATEGY(27分/4.171211710253245局)，BRAND(26分/2.060587017512533局)，STAMPEDE(25分/7.911093384896375局)，PROWESS(25分/13.403280060306889局)
+- 当前低价值卡牌：ENTROPY(17分/2.0588202702883214局)，BURNING_PACT(17分/11.62634438118926局)，DEFEND_IRONCLAD(18分/2.7451453470613254局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1887 胜，当前目标进阶 0
