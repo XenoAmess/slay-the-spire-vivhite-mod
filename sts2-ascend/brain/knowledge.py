@@ -194,8 +194,9 @@ DEFAULT_POLICY = {
     "hp_cost_atk_nonlethal_terminal_outcome_obs": True,  # Audit-only same-combat join from a non-lethal HP-cost attack trace to the terminal outcome; False removes only this marker.
     "hp_cost_lethal_guard": True,  # 自残攻击直死保护（HP_COST_LETHAL_GUARD）：原生
                                     # Hemokinesis 先执行生命支付再执行伤害；当自付额将
-                                    # 生命降至 0 时，竞速/孤注/单敌击杀豁免也不能放行，
-                                    # 否则所谓「抢斩杀」会在攻击结算前自杀。False =
+                                    # 生命降至 0，或支付后生命不足以承受仍存敌人的本回合
+                                    # 未格挡缺口时，竞速/孤注/单敌击杀豁免也不能放行，
+                                    # 否则所谓「抢斩杀」会在攻击结算前或受击后自杀。False =
                                     # 回滚该保护（仅用于可审计对照）。
     "race_invulnerable_hp_floor": 100000.0,  # 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
                                              # WATERFALL_GIANT 击倒进 AboutToBlow 相后原生 HP=999999999

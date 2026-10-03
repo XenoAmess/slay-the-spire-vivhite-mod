@@ -15914,4 +15914,30 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Rollback**：关闭 `lethal_survivable_line_terminal_outcome_obs`；预期只移除该终局 marker，既有终局记录及 action/params 不变；必要时回滚本地 commit。
 - **Validation**：宿主直接命令仍会触发已知固定 256 槽 selfcheck bootstrap 限制；使用同一 clone、本地 `.review-cache/selfcheck-pool` 的进程级 0777 临时目录适配器运行同一完整入口，退出码为 0 且输出 `SELFCHECK OK`。最终定向 `git diff --check` 通过，提交 SHA 为 `e8fc1ea6dcfdf0e64015cd88329a9d7e2a5ce997`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
-- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+## 2026-10-04 run 1888-F22：自付后承伤致死的竞速放行
+
+profile_id：`ironclad`
+requested_runs：`1888`
+production_code_commit：`pending local commit`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`hp_cost_lethal_guard` 原先只拦截自付本身把生命降至 0；若自付后仍有生命，但 `支付后生命 - 本回合未格挡缺口 ≤ 0` 且敌人不会被清场，竞速/孤注豁免仍会放行必死攻击。将该组合纳入同一保护后，单体与 AOE 都应停止放行；清场最后一击、支付后仍能承伤的安全竞速以及关闭键应保持原口径。若安全竞速被误拦、关闭键仍留 marker 或清场攻击被压制，假设即被证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-033455_0HHM39YC5NWY.json` 的 run 1888/F22 中，D339 为 26 血/7 甲对 32 意图的生还线格挡；D340 未击杀的攻击继续消耗能量；D341 选择 `BREAKTHROUGH`，自付 1 后 HP 26→25、未格挡缺口为 25，reason 带 `KILL_RACE_HOPELESS_HP_PAY_OBS`、`HP_COST_ATK_PRICING` 与 `post_pay_margin=+0`；D342 以 25 血/7 甲结束回合，D343 进入 `GAME_OVER`，action=`continue_game_over`、params=`{}`。这正是“支付不立即归零、但随后承伤归零”的反例。
+- **EXPECTED_SIGNAL**：未来 3—10 局中，仍有敌人且支付后生命不足以承受缺口的自残单体/AOE 候选应落到 `HP_COST_LETHAL_GUARD` 禁玩线；支付后仍可承伤或清场最后一击不应被该新增条件误拦；`hp_cost_lethal_guard=False` 应移除该保护并恢复旧评分/理由。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在单体、AOE 及混合防守回退路径统一计算“直接自付致死或支付后承伤致死”；清场 AOE 与最后一个敌人的单体击杀不套新增承伤条件，关闭键严格回滚。
+- `sts2-ascend/brain/knowledge.py`：补充 `hp_cost_lethal_guard` 的组合承伤语义说明，默认值与开关不变。
+- `sts2-ascend/brain/selfcheck.py`：增加 26/7/32 的单体与 AOE 反例及关闭键回滚；将原有竞速半价夹具改为 `forced_kill` 且支付后仍可承伤的安全边界，避免把旧测试误当作新反例。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 局，分别统计组合保护命中、合法清场放行和关闭键对照；重点核对自付后实际 `UnblockedDamage` 与输入缺口是否一致。
+- **Adjust**：若合法最后一击、AOE 清场或已有格挡后的安全自残被拦，先核对存活敌人集合与实际未格挡缺口；若出现新的非伤害致死来源，另立假设，不扩大本门。
+- **Rollback**：将 `hp_cost_lethal_guard` 设为 `False`，预期直接自付保护与新增组合保护均消失、评分与理由回到旧口径；必要时回滚本地 commit，保留本链证据。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 已复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行完整 selfcheck，退出码 0 且输出 `SELFCHECK OK`。报告前目标三文件 `git diff --check` 通过；无 failed replay package，未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`

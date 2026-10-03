@@ -8239,32 +8239,32 @@ def main() -> int:
               "resolved_rules_text": "失去1点生命，对所有敌人造成9点伤害。",
               "dynamic_values": [{"name": "Damage", "current_value": 9}]}
     ff_thr = ff_pol.know.policy["play_threshold"]
-    # 对照：健康局致死回合无格挡可补时的 reserve_for_block=True 口径——
-    # 群体自残照旧禁玩（回归保护）
-    s_brk_norm = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+    # 对照：原生 forced-kill 致死回合无格挡可补时的 reserve_for_block=True
+    # 口径——实际缺口 10，支付后仍有 19 血可承受该缺口，群体自残照旧禁玩。
+    s_brk_norm = ff_pol._score_play(ff_brk, ff_enemies, 10, 0, 5, ff_pol.know.policy,
                                     my_hp=20, my_max_hp=80, cur_energy=3,
-                                    reserve_for_block=True, min_blk_cost=1,
+                                    forced_kill=True, reserve_for_block=True, min_blk_cost=1,
                                     run_deck=[])[0]
     assert s_brk_norm < ff_thr, \
         f"对照场景失真（健康局致死回合群体自残仍应禁玩）: {s_brk_norm}"
     # 正例①：斩杀竞速判死（kill_race）同局面解禁，减半计价后过阈值
-    s_brk_race = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+    s_brk_race = ff_pol._score_play(ff_brk, ff_enemies, 10, 0, 5, ff_pol.know.policy,
                                     my_hp=20, my_max_hp=80, cur_energy=3,
-                                    kill_race=True, run_deck=[])[0]
+                                    forced_kill=True, kill_race=True, run_deck=[])[0]
     assert s_brk_race > ff_thr >= s_brk_norm, \
         f"判死局群体自残攻击未被解禁: race={s_brk_race} norm={s_brk_norm} thr={ff_thr}"
     # 正例②：败局竞速口径（hopeless_race + 有格挡保留 → race_allin 生效路径）
-    s_brk_allin = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+    s_brk_allin = ff_pol._score_play(ff_brk, ff_enemies, 10, 0, 5, ff_pol.know.policy,
                                      my_hp=20, my_max_hp=80, cur_energy=3,
                                      hopeless_race=True,
-                                     reserve_for_block=True, min_blk_cost=1,
+                                     forced_kill=True, reserve_for_block=True, min_blk_cost=1,
                                      run_deck=[])[0]
     assert s_brk_allin > ff_thr, \
         f"race_allin 路径的群体自残未解禁: {s_brk_allin}"
     # 反例：自残后血量归零的直死牌不豁免（第29局终局教训守卫保留）
-    s_brk_suic = ff_pol._score_play(ff_brk, ff_enemies, 50, 0, 5, ff_pol.know.policy,
+    s_brk_suic = ff_pol._score_play(ff_brk, ff_enemies, 10, 0, 5, ff_pol.know.policy,
                                     my_hp=1, my_max_hp=80, cur_energy=3,
-                                    kill_race=True, run_deck=[])[0]
+                                    forced_kill=True, kill_race=True, run_deck=[])[0]
     assert s_brk_suic < ff_thr <= s_brk_race, \
         f"自残归零的直死牌不应解禁: suic={s_brk_suic}"
     # 3xf-audit（1161-F14-T6）：reserve_for_block=True 的致死竞速回合并不
@@ -8274,13 +8274,13 @@ def main() -> int:
     ff_race_enemies = [dict(ff_enemies[0]), dict(ff_enemies[0])]
     ff_race_enemies[1].update(index=1, enemy_id="RA_BOSS_2", name="攻坚巨兽2")
     s_brk_reserved = ff_pol._score_play(
-        ff_brk, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        ff_brk, ff_race_enemies, 10, 0, 6, ff_pol.know.policy,
         my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
-        min_blk_cost=1, kill_race=True, run_deck=[])
+        min_blk_cost=1, forced_kill=True, kill_race=True, run_deck=[])
     s_brk_reserved_off = ff_pol._score_play(
-        ff_brk, ff_race_enemies, 50, 0, 6, ff_pol.know.policy,
+        ff_brk, ff_race_enemies, 10, 0, 6, ff_pol.know.policy,
         my_hp=20, my_max_hp=80, cur_energy=3, reserve_for_block=True,
-        min_blk_cost=1, kill_race=False, run_deck=[])
+        min_blk_cost=1, forced_kill=True, kill_race=False, run_deck=[])
     assert s_brk_reserved[0] > ff_thr > s_brk_reserved_off[0], \
         f"预留格挡的致死竞速群攻闸未按开关切换: on={s_brk_reserved} off={s_brk_reserved_off}"
     assert "致死竞速抢斩杀" in s_brk_reserved[2], \
@@ -23058,8 +23058,9 @@ def main() -> int:
     assert s_sui < -40.0 and "自付归零直死禁玩" in why_sui, \
         f"自付归零直死未禁玩: {s_sui}（{why_sui}）"
     s_doom, _, why_doom = hcu_pol._score_play(
-        hcu_offering, hcu_enemies, 40, 0, 6, hcu_pol.know.policy,
-        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+        hcu_offering, hcu_enemies, 12, 0, 6, hcu_pol.know.policy,
+        my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[],
+        forced_kill=True, kill_race=True)
     assert "耗血6计价（HP_COST_UTILITY_PRICING）" in why_doom and s_doom > -50.0, \
         f"判死竞速语境耗血功能牌未按半价留痕放行: {s_doom}（{why_doom}）"
     hcu_pol.know.policy["hp_cost_utility_pricing"] = 0
@@ -23125,30 +23126,31 @@ def main() -> int:
         f"观测留痕改变了评分: {s_hemo_off}vs{s_hemo} / {s_bt_off}vs{s_bt}"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 1
     s_doom, _, why_doom = hcat_pol._score_play(
-        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
         my_hp=32, my_max_hp=80, cur_energy=3, run_deck=[],
-        reserve_for_block=True, min_blk_cost=1, kill_race=True)
+        forced_kill=True, reserve_for_block=True, min_blk_cost=1, kill_race=True)
     assert "自残2半价计价（HP_COST_ATK_PRICING）" in why_doom, \
         f"判死竞速单体自残未按半价留痕: {s_doom}（{why_doom}）"
     s_bt_doom, _, why_bt_doom = hcat_pol._score_play(
-        hcat_bt, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=32, my_max_hp=80, run_deck=[], kill_race=True)
+        hcat_bt, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=32, my_max_hp=80, run_deck=[],
+        forced_kill=True, kill_race=True)
     assert "自残1半价计价（HP_COST_ATK_PRICING）" in why_bt_doom, \
         f"判死竞速 AOE 自残未按半价留痕: {s_bt_doom}（{why_bt_doom}）"
     # ⑤ 孤注豁免语境（第1325~1330局批）：致死缺口且无可负担格挡
     #    （desperate），单体非斩杀自残的计价被 elif 链短路豁免——须带
     #    「豁免疫价」披露注记；观测键=0 时注记消失且评分逐位相等
     s_dsp, _, why_dsp = hcat_pol._score_play(
-        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[])
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[], forced_kill=True)
     assert "无甲孤注抢斩杀" in why_dsp, \
         f"孤注夹具未进入 desperate 语境: {s_dsp}（{why_dsp}）"
     assert "自残2豁免疫价（HP_COST_ATK_PRICING）" in why_dsp, \
         f"孤注豁免语境单体自残未披露: {s_dsp}（{why_dsp}）"
     hcat_pol.know.policy["hp_cost_atk_pricing_trace"] = 0
     s_dsp_off, _, why_dsp_off = hcat_pol._score_play(
-        hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
-        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[])
+        hcat_hemo, hcat_enemies, 12, 0, 3, hcat_pol.know.policy,
+        my_hp=20, my_max_hp=80, cur_energy=3, run_deck=[], forced_kill=True)
     assert "自残" not in why_dsp_off and abs(s_dsp_off - s_dsp) < 1e-9, \
         f"孤注豁免披露非纯观测: {s_dsp_off}vs{s_dsp}（{why_dsp_off}）"
     # ⑥ 败局竞速全攻豁免语境：hopeless_race 且单回合非致死 → race_allin，
@@ -23188,6 +23190,21 @@ def main() -> int:
     assert s_lethal_guard_aoe <= -50.0 \
         and "HP_COST_LETHAL_GUARD" in why_lethal_guard_aoe, \
         f"竞速 AOE 自残直死未被保护: {s_lethal_guard_aoe}（{why_lethal_guard_aoe}）"
+    # ⑥b 支付后仍会承受未格挡伤害：26 血、7 甲对 32 意图，支付后
+    #     生命虽未归零，但只剩 24/25 血，竞速豁免仍不得放行单体或 AOE。
+    s_postpay_guard, _, why_postpay_guard = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 32, 7, 3, hcat_pol.know.policy,
+        my_hp=26, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+    assert s_postpay_guard <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_postpay_guard, \
+        f"竞速单体自付后承伤直死未被保护: {s_postpay_guard}（{why_postpay_guard}）"
+    s_postpay_guard_aoe, _, why_postpay_guard_aoe = hcat_pol._score_play(
+        hcat_bt, hcat_enemies, 32, 7, 3, hcat_pol.know.policy,
+        my_hp=26, my_max_hp=80, cur_energy=3, run_deck=[],
+        hopeless_race=True)
+    assert s_postpay_guard_aoe <= -50.0 \
+        and "HP_COST_LETHAL_GUARD" in why_postpay_guard_aoe, \
+        f"竞速 AOE 自付后承伤直死未被保护: {s_postpay_guard_aoe}（{why_postpay_guard_aoe}）"
     hcat_pol.know.policy["hp_cost_lethal_guard"] = False
     s_lethal_guard_off, _, why_lethal_guard_off = hcat_pol._score_play(
         hcat_hemo, hcat_enemies, 40, 0, 3, hcat_pol.know.policy,
@@ -23196,6 +23213,12 @@ def main() -> int:
     assert "HP_COST_LETHAL_GUARD" not in why_lethal_guard_off \
         and s_lethal_guard_off > s_lethal_guard, \
         f"hp_cost_lethal_guard=False 未回滚直死保护: {s_lethal_guard_off}（{why_lethal_guard_off}）"
+    s_postpay_guard_off, _, why_postpay_guard_off = hcat_pol._score_play(
+        hcat_hemo, hcat_enemies, 32, 7, 3, hcat_pol.know.policy,
+        my_hp=26, my_max_hp=80, cur_energy=3, run_deck=[], kill_race=True)
+    assert "HP_COST_LETHAL_GUARD" not in why_postpay_guard_off \
+        and s_postpay_guard_off > s_postpay_guard, \
+        f"hp_cost_lethal_guard=False 未回滚支付后承伤保护: {s_postpay_guard_off}（{why_postpay_guard_off}）"
     hcat_pol.know.policy["hp_cost_lethal_guard"] = True
     # ⑦ 自残旁观（HP_COST_ATK_PRICING 手侧扩展，第1331~1335局批复盘）：
     #    孤注/全攻中标时手牌内其他可出单体自残攻击须随中标理由入链——
