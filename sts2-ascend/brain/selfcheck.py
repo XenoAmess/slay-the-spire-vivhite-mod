@@ -20710,6 +20710,119 @@ def main() -> int:
                 not in d_boss_intent_ramp_boundary.reason), \
         f"Boss 意图斜坡终局桥接越过 REWARD 边界: {d_boss_intent_ramp_boundary}"
 
+    # 3z-5c-b) 1854-F17 exposed two Boss intent ramps in one combat: the
+    # decisive 0→21 jump was followed by a smaller 21→22 tail update.  Keep
+    # the existing latest-ramp join, and add a peak-delta join so the latter
+    # cannot hide the pressure transition that preceded the terminal outcome.
+    boss_intent_ramp_peak_second_row = dict(boss_intent_ramp_source_row)
+    boss_intent_ramp_peak_second_row.update({
+        "turn": 6,
+        "hp": 10,
+        "reason": boss_intent_ramp_source_row["reason"].replace(
+            "采样4→5回合", "采样5→6回合").replace(
+                "33.0/回合", "20.0/回合").replace(
+                    "intent=7->27 (+20)", "intent=27->28 (+1)"),
+    })
+    boss_intent_ramp_peak_terminal_row = dict(
+        boss_intent_ramp_terminal_row)
+    boss_intent_ramp_peak_terminal_row.update({"turn": 7, "hp": 0})
+    boss_intent_ramp_peak_ctx = _SettleCtx()
+    boss_intent_ramp_peak_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        boss_intent_ramp_peak_second_row,
+        boss_intent_ramp_peak_terminal_row,
+    ]
+    d_boss_intent_ramp_peak = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state, boss_intent_ramp_peak_ctx)
+    assert (d_boss_intent_ramp_peak.action
+            == d_boss_intent_ramp_terminal.action
+            and d_boss_intent_ramp_peak.params
+            == d_boss_intent_ramp_terminal.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_peak.reason
+            and "source_round=6/source_action=play_card/intent=27->28/delta=+1"
+                "/terminal_round=7/terminal_action=end_turn"
+                in d_boss_intent_ramp_peak.reason
+            and knowledge.DEFAULT_POLICY[
+                "boss_race_intent_ramp_peak_terminal_outcome_obs"] is True
+            and "BOSS_RACE_INTENT_RAMP_PEAK_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_peak.reason
+            and "peak_source_round=5/source_action=play_card/intent=7->27"
+                "/delta=+20/ramp_count=2/terminal_round=7"
+                "/terminal_action=end_turn/terminal_hp=0/final_hp=0"
+                "/bridge_decisions=2/bridge_rounds=2"
+                in d_boss_intent_ramp_peak.reason), \
+        f"Boss 意图斜坡峰值终局桥接缺失或动作漂移: {d_boss_intent_ramp_peak}"
+
+    d_boss_intent_ramp_peak_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state,
+            boss_intent_ramp_peak_ctx)
+    assert (d_boss_intent_ramp_peak_reload.action
+            == d_boss_intent_ramp_peak.action
+            and d_boss_intent_ramp_peak_reload.params
+            == d_boss_intent_ramp_peak.params
+            and "BOSS_RACE_INTENT_RAMP_PEAK_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_peak_reload.reason), \
+        f"进程重载后未恢复 Boss 意图斜坡峰值桥接: {d_boss_intent_ramp_peak_reload}"
+
+    boss_intent_ramp_peak_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_boss_intent_ramp_peak.action,
+        "floor": 17, "reason": d_boss_intent_ramp_peak.reason})
+    d_boss_intent_ramp_peak_duplicate = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state, boss_intent_ramp_peak_ctx)
+    assert (d_boss_intent_ramp_peak_duplicate.action
+            == d_boss_intent_ramp_peak.action
+            and d_boss_intent_ramp_peak_duplicate.params
+            == d_boss_intent_ramp_peak.params
+            and "BOSS_RACE_INTENT_RAMP_PEAK_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_peak_duplicate.reason), \
+        f"Boss 意图斜坡峰值终局桥接重复提交: {d_boss_intent_ramp_peak_duplicate}"
+
+    boss_intent_ramp_peak_off_know = knowledge.Knowledge(tmp)
+    boss_intent_ramp_peak_off_know.policy[
+        "boss_race_intent_ramp_peak_terminal_outcome_obs"] = False
+    boss_intent_ramp_peak_off_ctx = _SettleCtx()
+    boss_intent_ramp_peak_off_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        boss_intent_ramp_peak_second_row,
+        boss_intent_ramp_peak_terminal_row,
+    ]
+    d_boss_intent_ramp_peak_off = policy.Policy(
+        boss_intent_ramp_peak_off_know).decide(
+            boss_intent_ramp_terminal_state,
+            boss_intent_ramp_peak_off_ctx)
+    assert (d_boss_intent_ramp_peak_off.action
+            == d_boss_intent_ramp_peak.action
+            and d_boss_intent_ramp_peak_off.params
+            == d_boss_intent_ramp_peak.params
+            and "BOSS_RACE_INTENT_RAMP_TERMINAL_OUTCOME_OBS"
+                in d_boss_intent_ramp_peak_off.reason
+            and "BOSS_RACE_INTENT_RAMP_PEAK_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_peak_off.reason), \
+        f"Boss 意图斜坡峰值开关关闭后动作或 marker 漂移: {d_boss_intent_ramp_peak_off}"
+
+    boss_intent_ramp_peak_boundary_ctx = _SettleCtx()
+    boss_intent_ramp_peak_boundary_ctx.decisions = [
+        dict(boss_intent_ramp_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(boss_intent_ramp_peak_terminal_row),
+    ]
+    d_boss_intent_ramp_peak_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_intent_ramp_terminal_state,
+            boss_intent_ramp_peak_boundary_ctx)
+    assert (d_boss_intent_ramp_peak_boundary.action
+            == d_boss_intent_ramp_peak.action
+            and d_boss_intent_ramp_peak_boundary.params
+            == d_boss_intent_ramp_peak.params
+            and "BOSS_RACE_INTENT_RAMP_PEAK_TERMINAL_OUTCOME_OBS"
+                not in d_boss_intent_ramp_peak_boundary.reason), \
+        f"Boss 意图斜坡峰值桥接越过 REWARD 边界: {d_boss_intent_ramp_peak_boundary}"
+
     # 3z-5c-c) Boss 联合翻盘比上限终局桥接：1795-F33 的
     # JOINT_FLIP_TTK_CAP 只留在战斗决策中，终局必须补回同战斗来源；
     # 只读、可回滚，覆盖重载、重复提交、关闭开关与 REWARD 边界。
