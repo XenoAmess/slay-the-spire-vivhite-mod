@@ -942,6 +942,8 @@ DEFAULT_POLICY = {
                                # 阵亡；946/950 同 Boss 窗口各 1 条 CAP_OBS，3 独立对局遇窗），
                                # 并追加封顶期最大输出读数（当前手牌能量贪心每回合命中×1伤）；
                                # 滑溜>0 时不重复挂注；False 关闭全部留痕（回滚＝无留痕旧版）
+    "intangible_race_output_terminal_outcome_obs": True,  # 将无实体竞速低效攻击旁观回接同楼层 GAME_OVER；
+                                                            # 只记录来源/终局字段，False 严格回滚，不改变评分、动作或参数
     "sandpit_eat_clock_cap": True,  # 沙坑吞噬钟封底（SANDPIT_EAT_CLOCK_CAP，第381~385局批复盘，静态键）：
                                     # 无厌沙虫沙坑计数归零即强制吞噬击杀，与 HP/格挡无关；竞速投影可存活回合
                                     # 按敌持 SANDPIT_POWER 计数封底（385 局 F33「可存活16回合」实战 T6 阵亡）。

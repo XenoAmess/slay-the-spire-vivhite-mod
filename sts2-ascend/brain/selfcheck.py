@@ -20895,6 +20895,119 @@ def main() -> int:
                 not in d_boss_dpt_boundary.reason), \
         f"Boss有效火力终局桥接越过 REWARD 边界: {d_boss_dpt_boundary}"
 
+    # 3z-5c-a) 无实体竞速低效攻击终局桥接：1871-F17-T5 的
+    # INTANGIBLE_RACE_OUTPUT_BYPASS_OBS 已证明每 hit 只剩 1 点有效伤害，
+    # 但后续 GAME_OVER 只能从 DPT 清除窗口间接推断。只连接同楼层战斗尾部，
+    # 动作/参数严格不变；进程重载、重复提交、开关和 REWARD 边界均可证伪。
+    intangible_output_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 17,
+        "turn": 5, "hp": 46,
+        "reason":
+            "战斗：打出【无情猛攻】（单体伤害≈1.0）｜"
+            "INTANGIBLE_RACE_OUTPUT_BYPASS_OBS"
+            " eff=1/14/layers=1/kill_race=yes/race_allin=no"
+            "/latch=yes/reserve=no/incoming=13/block=0/energy=3"
+            "/race_blk_floor=no/block_locked=no",
+    }
+    intangible_output_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 17,
+        "turn": 7, "hp": 27, "reason": "终端致死空过",
+    }
+    intangible_output_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+        "run": {"current_hp": 0, "floor": 17},
+    }
+    intangible_output_know = knowledge.Knowledge(tmp)
+    intangible_output_pol = policy.Policy(intangible_output_know)
+    intangible_output_ctx = _SettleCtx()
+    intangible_output_ctx.decisions = [
+        dict(intangible_output_source_row),
+        dict(intangible_output_terminal_row)]
+    d_intangible_output_terminal = intangible_output_pol.decide(
+        intangible_output_terminal_state, intangible_output_ctx)
+    assert (d_intangible_output_terminal.action == "continue_game_over"
+            and d_intangible_output_terminal.params == {}
+            and "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
+                in d_intangible_output_terminal.reason
+            and "outcome=defeat/floor=17/source_round=5"
+                "/source_action=play_card/eff=1/raw=14/layers=1"
+                "/kill_race=yes/race_allin=no/latch=yes/reserve=no"
+                "/incoming=13/block=0/energy=3/terminal_round=7"
+                "/terminal_action=end_turn/terminal_hp=27/final_hp=0"
+                "/bridge_decisions=1"
+                in d_intangible_output_terminal.reason), \
+        f"无实体竞速低效攻击终局桥接缺失或动作漂移: {d_intangible_output_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "intangible_race_output_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少无实体竞速低效攻击终局观测开关"
+
+    intangible_output_replay_ctx = _SettleCtx()
+    intangible_output_replay_ctx.decisions = [
+        dict(intangible_output_source_row),
+        dict(intangible_output_terminal_row)]
+    d_intangible_output_replay = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            intangible_output_terminal_state, intangible_output_replay_ctx)
+    assert (d_intangible_output_replay.action
+            == d_intangible_output_terminal.action
+            and d_intangible_output_replay.params
+            == d_intangible_output_terminal.params
+            and "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
+                in d_intangible_output_replay.reason), \
+        f"进程重载后未恢复无实体低效攻击终局桥接: {d_intangible_output_replay}"
+
+    intangible_output_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_intangible_output_terminal.action,
+        "floor": 17, "reason": d_intangible_output_terminal.reason})
+    d_intangible_output_duplicate = intangible_output_pol.decide(
+        intangible_output_terminal_state, intangible_output_ctx)
+    assert (d_intangible_output_duplicate.action
+            == d_intangible_output_terminal.action
+            and d_intangible_output_duplicate.params
+            == d_intangible_output_terminal.params
+            and "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
+                not in d_intangible_output_duplicate.reason), \
+        f"无实体低效攻击终局桥接重复提交: {d_intangible_output_duplicate}"
+
+    intangible_output_off_know = knowledge.Knowledge(tmp)
+    intangible_output_off_know.policy[
+        "intangible_race_output_terminal_outcome_obs"] = False
+    intangible_output_off_ctx = _SettleCtx()
+    intangible_output_off_ctx.decisions = [
+        dict(intangible_output_source_row),
+        dict(intangible_output_terminal_row)]
+    d_intangible_output_off = policy.Policy(
+        intangible_output_off_know).decide(
+            intangible_output_terminal_state, intangible_output_off_ctx)
+    assert (d_intangible_output_off.action
+            == d_intangible_output_terminal.action
+            and d_intangible_output_off.params
+            == d_intangible_output_terminal.params
+            and "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
+                not in d_intangible_output_off.reason), \
+        f"无实体低效攻击终局开关关闭后动作或 marker 漂移: {d_intangible_output_off}"
+
+    intangible_output_boundary_ctx = _SettleCtx()
+    intangible_output_boundary_ctx.decisions = [
+        dict(intangible_output_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 17,
+         "reason": "combat boundary"},
+        dict(intangible_output_terminal_row),
+    ]
+    d_intangible_output_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            intangible_output_terminal_state, intangible_output_boundary_ctx)
+    assert (d_intangible_output_boundary.action
+            == d_intangible_output_terminal.action
+            and d_intangible_output_boundary.params
+            == d_intangible_output_terminal.params
+            and "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
+                not in d_intangible_output_boundary.reason), \
+        f"无实体低效攻击终局桥接越过 REWARD 边界: {d_intangible_output_boundary}"
+
     # 3z-5c-b) Boss 意图斜坡终局桥接：1769-F17-T5 的
     # BOSS_RACE_INTENT_RAMP_OBS 记录了 7→27 的突增，但原生 GAME_OVER
     # 只保留终端意图。仅连接同楼层连续战斗尾部，动作/参数必须不变；
