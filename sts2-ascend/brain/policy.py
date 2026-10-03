@@ -11844,6 +11844,48 @@ class Policy:
                 f"/bridge_rounds={_round(_pending.get('bridge_rounds'))}"
                 f"{_ringing_hook_transition_tail}"
                 "（RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS）")
+        _ringing_single_play_note = ""
+        try:
+            _ringing_single_play_enabled = bool(int(float(pol.get(
+                "ringing_single_play_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _ringing_single_play_enabled = False
+        _ringing_single_play = _pending.get("ringing_single_play")
+        if (_ringing_single_play_enabled
+                and isinstance(_ringing_single_play, dict)
+                and _hook_cards > 0
+                and _hook_locked == _hook_cards
+                and _hook_ids == "RINGING_POWER"):
+            _single_terminal_tail = _pending.get("terminal_tail")
+            _single_terminal_round = _pending.get("terminal_round")
+            _single_terminal_hp = final_hp
+            if isinstance(_single_terminal_tail, dict):
+                _single_terminal_round = _single_terminal_tail.get(
+                    "round", _single_terminal_round)
+                if _single_terminal_tail.get("hp") is not None:
+                    _single_terminal_hp = _single_terminal_tail.get("hp")
+            try:
+                _single_bridge_rounds = max(
+                    0,
+                    int(float(_single_terminal_round))
+                    - int(float(_ringing_single_play.get("source_round"))))
+            except (TypeError, ValueError, OverflowError):
+                _single_bridge_rounds = 0
+            _ringing_single_play_note = (
+                "；RINGING单卡选择终局对账："
+                f"outcome={_result}/floor={_round(floor)}"
+                f"/source_round={_round(_ringing_single_play.get('source_round'))}"
+                f"/source_card={_text(_ringing_single_play.get('source_card'))}"
+                f"/selected_damage={_num(_ringing_single_play.get('selected_damage'))}"
+                f"/comparison={_text(_ringing_single_play.get('comparison'))}"
+                f"/best_alternative={_text(_ringing_single_play.get('best_alternative'))}"
+                f"/best_alternative_damage={_num(_ringing_single_play.get('best_alternative_damage'))}"
+                f"/terminal_round={_round(_single_terminal_round)}"
+                f"/terminal_hp={_num(_single_terminal_hp)}"
+                f"/final_hp={_num(final_hp)}"
+                f"/bridge_decisions={_round(_ringing_single_play.get('bridge_decisions'))}"
+                f"/bridge_rounds={_single_bridge_rounds}"
+                "（RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS）")
         try:
             _overlap_enabled = bool(int(float(pol.get(
                 "nonlethal_unavailable_terminal_overlap_obs", 1) or 0)))
@@ -11986,7 +12028,7 @@ class Policy:
             + _overlap_tail
             + _steam_veto_tail
             + f"（{_marker}）")
-        return _base + _ringing_hook_note
+        return _base + _ringing_hook_note + _ringing_single_play_note
 
     def _restore_nonlethal_unavailable_terminal_outcome_from_decisions(
             self, ctx, floor=None) -> None:
@@ -11995,13 +12037,14 @@ class Policy:
         _reported = bool(getattr(
             self, "_nonlethal_unavailable_terminal_outcome_reported", False))
         marker = "NONLETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS"
+        chain_marker = "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
         if _reported:
             _last_reason = ""
             if isinstance(decisions, list) and decisions:
                 _last = decisions[-1]
                 if isinstance(_last, dict):
                     _last_reason = str(_last.get("reason") or "")
-            if marker in _last_reason:
+            if marker in _last_reason or chain_marker in _last_reason:
                 return
             self._nonlethal_unavailable_terminal_outcome_reported = False
         if isinstance(getattr(
@@ -12372,6 +12415,92 @@ class Policy:
             }
         except (TypeError, ValueError, OverflowError):
             return
+        # Preserve the same-turn single-card choice that armed a full native
+        # RINGING_POWER lock.  The existing hook-lock join records the blocked
+        # hand and later terminal, but without this source row it cannot tell
+        # which card won the one-play choice or what damage alternative was
+        # sacrificed.  Keep the scan bounded and same-floor/same-turn so an
+        # older RINGING decision cannot be attached to a later terminal.
+        _ringing_single_play = None
+        _source_turn = None
+        try:
+            _source_turn = int(float(row.get(
+                "turn", row.get("round"))))
+        except (TypeError, ValueError, OverflowError):
+            _source_turn = None
+        if _source_turn is not None and _source_pos > 0:
+            _number_pattern = (
+                r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)")
+            _selection_pattern = re.compile(
+                rf"昏眩单卡抉择：本选期望伤({_number_pattern})"
+                rf"([<≥])手牌最高伤备选([^()]+)"
+                rf"\(({_number_pattern})\)")
+            for _candidate_position in range(_source_pos - 1, -1, -1):
+                _candidate = _lookback[_candidate_position]
+                if not isinstance(_candidate, dict):
+                    break
+                if (floor is not None
+                        and _candidate.get("floor") is not None
+                        and str(_candidate.get("floor")) != str(floor)):
+                    break
+                if _candidate.get("screen") not in (
+                        None, "COMBAT", "CARD_SELECTION"):
+                    break
+                try:
+                    _candidate_turn = int(float(_candidate.get(
+                        "turn", _candidate.get("round"))))
+                except (TypeError, ValueError, OverflowError):
+                    _candidate_turn = None
+                if (_candidate_turn is not None
+                        and _candidate_turn != _source_turn):
+                    break
+                if _candidate.get("action") != "play_card":
+                    continue
+                _candidate_reason = str(_candidate.get("reason") or "")
+                if "RINGING_SINGLE_PLAY_OBS" not in _candidate_reason:
+                    continue
+                _card_match = re.search(
+                    r"打出【([^】]+)】", _candidate_reason)
+                _selection_match = _selection_pattern.search(
+                    _candidate_reason)
+                _no_attack_alternative = (
+                    "昏眩单卡抉择：手牌无其他可出攻击备选"
+                    in _candidate_reason)
+                if _card_match is None or (
+                        _selection_match is None
+                        and not _no_attack_alternative):
+                    continue
+                _selected_damage = None
+                _comparison = "none"
+                _best_alternative = "none"
+                _best_alternative_damage = None
+                if _selection_match is not None:
+                    try:
+                        _selected_damage = float(
+                            _selection_match.group(1))
+                    except (TypeError, ValueError, OverflowError):
+                        _selected_damage = None
+                    _comparison = _selection_match.group(2)
+                    _best_alternative = (
+                        _selection_match.group(3).strip() or "?")
+                    try:
+                        _best_alternative_damage = float(
+                            _selection_match.group(4))
+                    except (TypeError, ValueError, OverflowError):
+                        _best_alternative_damage = None
+                _ringing_single_play = {
+                    "source_round": _candidate.get(
+                        "turn", _candidate.get("round")),
+                    "source_card": _card_match.group(1).strip() or "?",
+                    "selected_damage": _selected_damage,
+                    "comparison": _comparison,
+                    "best_alternative": _best_alternative,
+                    "best_alternative_damage": _best_alternative_damage,
+                    "bridge_decisions": max(
+                        0, _source_pos - _candidate_position),
+                }
+                break
+        _pending["ringing_single_play"] = _ringing_single_play
         _ringing_hook_transition = None
         try:
             _hook_cards = int(float(_pending.get("cards")))

@@ -248,6 +248,7 @@ DEFAULT_POLICY = {
     "waterfall_steam_veto_terminal_outcome_obs": True,  # Audit-only bounded bridge from a persisted STEAM_ERUPTION_KILL_VETO_OBS play_card to the following Waterfall invulnerable-pool terminal; records the source card/time/stack without changing action selection; False removes only this field.
     "ringing_hook_lock_terminal_outcome_obs": True,  # Audit-only terminal join for a full RINGING_POWER hand lock (every remaining card blocked); False removes only this dedicated marker and never changes the action.
     "ringing_hook_lock_lethal_transition_obs": True,  # Audit-only same-combat bridge from a full RINGING_POWER hand lock to a later lethal no-card end-turn; False removes only this transition marker.
+    "ringing_single_play_terminal_outcome_obs": True,  # Audit-only same-turn join from RINGING_SINGLE_PLAY_OBS to a full hook-lock terminal; False removes only this marker.
     "kill_race_terminal_audit_obs": True,  # Audit-only link between a latched kill-race projection and a lethal resource-exhaustion end-turn; includes kill_race/race_allin regime flags.
     "kill_race_lethal_output_capacity_obs": True,  # Audit-only current target/affordable attack capacity at a kill-race lethal no-card end-turn and its terminal outcome join; False removes both capacity markers.
     "kill_race_terminal_output_capacity_transition_obs": True,  # Audit-only earliest bounded same-combat (COMBAT/CARD_SELECTION bridge) source-to-terminal output-capacity join; False removes only the transition marker.

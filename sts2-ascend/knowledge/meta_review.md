@@ -15586,3 +15586,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 selfcheck 命中宿主固定 256 槽池的既有 bootstrap 限制；随后以当前 clone 池下的进程级 0777 临时分配器运行同一入口，退出码 0 并输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过，尚未触碰 `.runtime/`、正式 runs/archive、学习记忆、回放或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1868-F17：RINGING 单卡选择接回钩锁终局
+
+profile_id：`ironclad`
+requested_run：`1868`
+production_code_commit：`182c1942d353d37d9a273a4382eb71a3f6d1daed`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1868-F17 的 D176 在 `RINGING_POWER` 下选择“御血术+”（期望伤 23，高于备选“无情猛攻”17），D177 记录全手牌钩锁，D180 进入致死无牌空过；D181 现有终局桥只保留钩锁上下文，丢失了单卡选择。若在同楼层、同回合把 `RINGING_SINGLE_PLAY_OBS` 接入该终局，后续 3—10 个匹配窗口应能同时对账选择牌、备选伤害与终局结果，且不改变 `continue_game_over {}`。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-210752_AHC7UGFQZC3U.json`（run 1868）中，D176 为单卡选择，D177 为 `NONLETHAL_UNAVAILABLE_END_TURN_OBS` + `RINGING_HOOK_LOCK_END_TURN_OBS`，D180 为 `LETHAL_UNAVAILABLE_END_TURN_OBS`，D181 为 `GAME_OVER`。当前 HEAD 的只读 replay 以该持久决策尾部重建 GAME_OVER，输出 `source_card=御血术+ / selected_damage=23 / best_alternative=无情猛攻 / best_alternative_damage=17 / terminal_round=7 / terminal_hp=5 / final_hp=0`，动作仍为 `continue_game_over`、参数 `{}`。
+- **EXPECTED_SIGNAL**：未来 3—10 个同形窗口应出现 `RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS`，并保留来源回合、选择/备选伤害、终局血量和桥接距离；跨楼层、跨屏、重复提交或关闭键不得产生该 marker。任一条件不成立即证伪假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `ringing_single_play_terminal_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：在现有非致死终局恢复链内，限于同楼层 `COMBAT`/`CARD_SELECTION`、同回合的有界尾部回溯最近单卡选择；仅追加终局审计字段。并让链式终局 marker 参与既有提交去重，避免重载后重复写入。
+- `sts2-ascend/brain/selfcheck.py`：增加正例字段、关闭键、重提交去重和楼层边界回归，逐项确认动作与参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个精确 `RINGING_SINGLE_PLAY_OBS` 窗口，对照选择牌、备选伤害、终局结果和 `applied` 回执；暂不把观测升级为选牌或防御规则。
+- **Adjust**：若真实链出现字段缺失或误接旧战斗，只收紧同楼层/同回合边界和解析，不扩大 screen 范围。
+- **Rollback**：将 `ringing_single_play_terminal_outcome_obs` 设为 `False`；预期只移除新 marker，既有钩锁终局桥、action 和 params 不变。
+- **Validation**：直接 selfcheck 复现宿主固定 256 槽临时池限制；随后用当前 clone 的进程级 0777 临时目录适配运行同一入口，退出码 0 并输出 `SELFCHECK OK`。1868 持久链只读 replay 命中新 marker 一次且保持 `continue_game_over {}`；目标 diff 复核与 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -18925,6 +18925,10 @@ def main() -> int:
     ringing_hook_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
     ringing_hook_terminal_ctx = _SettleCtx()
     ringing_hook_terminal_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 7,
+        "reason": "战斗：打出【御血术+】；昏眩单卡抉择：本选期望伤23≥手牌最高伤备选无情猛攻(17)（RINGING_SINGLE_PLAY_OBS）",
+    }, {
         "screen": "COMBAT", "action": "end_turn", "floor": 48,
         "turn": 7, "reason": d_hook_nonlethal.reason,
     }, {
@@ -18964,6 +18968,16 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "ringing_hook_lock_lethal_transition_obs"] is True, \
         "DEFAULT_POLICY 缺少 ringing_hook_lock_lethal_transition_obs"
+    assert "RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS" \
+        in d_ringing_hook_terminal.reason, \
+        f"RINGING 单卡选择终局对账缺失或动作漂移: {d_ringing_hook_terminal}"
+    assert ("/source_card=御血术+/selected_damage=23/comparison=≥"
+            "/best_alternative=无情猛攻/best_alternative_damage=17"
+            in d_ringing_hook_terminal.reason
+            and "/terminal_round=8/terminal_hp=0/final_hp=0"
+                "/bridge_decisions=1/bridge_rounds=1"
+                in d_ringing_hook_terminal.reason), \
+        f"RINGING 单卡终局对账字段缺失: {d_ringing_hook_terminal}"
 
     ringing_hook_transition_off_know = knowledge.Knowledge(tmp)
     ringing_hook_transition_off_know.policy[
@@ -18989,6 +19003,10 @@ def main() -> int:
 
     ringing_hook_no_transition_ctx = _SettleCtx()
     ringing_hook_no_transition_ctx.decisions = [{
+        "screen": "COMBAT", "action": "play_card", "floor": 48,
+        "turn": 7,
+        "reason": "战斗：打出【御血术+】；昏眩单卡抉择：本选期望伤23≥手牌最高伤备选无情猛攻(17)（RINGING_SINGLE_PLAY_OBS）",
+    }, {
         "screen": "COMBAT", "action": "end_turn", "floor": 48,
         "turn": 7, "reason": d_hook_nonlethal.reason,
     }, {
@@ -19005,6 +19023,9 @@ def main() -> int:
     assert "RINGING_HOOK_LOCK_LETHAL_TRANSITION_OBS" \
         not in d_ringing_hook_no_transition.reason, \
         "RINGING 钩锁致死桥越过楼层边界误命中"
+    assert "RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS" \
+        not in d_ringing_hook_no_transition.reason, \
+        "RINGING 单卡选择终局桥越过楼层边界误命中"
 
     ringing_hook_terminal_off_know = knowledge.Knowledge(tmp)
     ringing_hook_terminal_off_know.policy[
@@ -19012,16 +19033,8 @@ def main() -> int:
     ringing_hook_terminal_off_pol = policy.Policy(
         ringing_hook_terminal_off_know)
     ringing_hook_terminal_off_ctx = _SettleCtx()
-    ringing_hook_terminal_off_ctx.decisions = [{
-        "screen": "COMBAT", "action": "end_turn", "floor": 48,
-        "turn": 7, "reason": d_hook_nonlethal.reason,
-    }, {
-        "screen": "COMBAT", "action": "play_card", "floor": 48,
-        "turn": 8, "reason": "战斗：钩锁后续出牌",
-    }, {
-        "screen": "COMBAT", "action": "end_turn", "floor": 48,
-        "turn": 8, "reason": "战斗：钩锁后续收口",
-    }]
+    ringing_hook_terminal_off_ctx.decisions = list(
+        ringing_hook_terminal_ctx.decisions)
     d_ringing_hook_terminal_off = ringing_hook_terminal_off_pol.decide(
         nonlethal_unavailable_outcome_state,
         ringing_hook_terminal_off_ctx)
@@ -19035,6 +19048,53 @@ def main() -> int:
                 not in d_ringing_hook_terminal_off.reason), \
         f"RINGING 钩锁终局观测关闭后动作或既有 marker 漂移: " \
         f"on={d_ringing_hook_terminal} off={d_ringing_hook_terminal_off}"
+
+    ringing_single_play_terminal_off_know = knowledge.Knowledge(tmp)
+    ringing_single_play_terminal_off_know.policy[
+        "ringing_single_play_terminal_outcome_obs"] = False
+    ringing_single_play_terminal_off_pol = policy.Policy(
+        ringing_single_play_terminal_off_know)
+    ringing_single_play_terminal_off_ctx = _SettleCtx()
+    ringing_single_play_terminal_off_ctx.decisions = list(
+        ringing_hook_terminal_ctx.decisions)
+    d_ringing_single_play_terminal_off = (
+        ringing_single_play_terminal_off_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            ringing_single_play_terminal_off_ctx))
+    assert (d_ringing_single_play_terminal_off.action
+            == d_ringing_hook_terminal.action
+            and d_ringing_single_play_terminal_off.params
+            == d_ringing_hook_terminal.params
+            and "RINGING_HOOK_LOCK_TERMINAL_OUTCOME_OBS"
+                in d_ringing_single_play_terminal_off.reason
+            and "RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS"
+                not in d_ringing_single_play_terminal_off.reason), \
+        f"RINGING 单卡终局观测关闭后动作或既有 marker 漂移: " \
+        f"on={d_ringing_hook_terminal} off={d_ringing_single_play_terminal_off}"
+
+    ringing_single_play_terminal_retry_pol = policy.Policy(
+        knowledge.Knowledge(tmp))
+    ringing_single_play_terminal_retry_ctx = _SettleCtx()
+    ringing_single_play_terminal_retry_ctx.decisions = list(
+        ringing_hook_terminal_ctx.decisions)
+    d_ringing_single_play_terminal_retry_first = (
+        ringing_single_play_terminal_retry_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            ringing_single_play_terminal_retry_ctx))
+    ringing_single_play_terminal_retry_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 48,
+        "reason": d_ringing_single_play_terminal_retry_first.reason,
+    })
+    d_ringing_single_play_terminal_retry_committed = (
+        ringing_single_play_terminal_retry_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            ringing_single_play_terminal_retry_ctx))
+    assert ("RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS"
+            in d_ringing_single_play_terminal_retry_first.reason
+            and "RINGING_SINGLE_PLAY_TERMINAL_OUTCOME_OBS"
+            not in d_ringing_single_play_terminal_retry_committed.reason), \
+        "RINGING 单卡终局对账已提交后重复写入 marker"
 
     nonlethal_unavailable_replay_pol = policy.Policy(knowledge.Knowledge(tmp))
     nonlethal_unavailable_replay_ctx = _SettleCtx()
