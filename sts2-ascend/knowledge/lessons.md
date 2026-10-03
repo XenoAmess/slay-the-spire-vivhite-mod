@@ -16496,3 +16496,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.108313358382624局)，DEFEND_IRONCLAD(18分/2.6228308511831653局)，THE_GAMBIT(18分/4.46852663534908局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1900 胜，当前目标进阶 0
+
+## 第 1901 局复盘（2026-10-04 07:55）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 CRUSHER+ROCKET
+- 本局拿牌：BREAKTHROUGH, EXPECT_A_FIGHT, CINDER, FIGHT_ME, EXPECT_A_FIGHT, TRUE_GRIT, CINDER, INFLAME, CINDER, SETUP_STRIKE, BREAKTHROUGH, CINDER, PYRE, IRON_WAVE, BLUDGEON, ANGER, FEED, IRON_WAVE, SHRUG_IT_OFF
+- 本局遗物：MOLTEN_EGG, JUZU_BRACELET, HAPPY_FLOWER
+- 战斗记录：F23 Monster战 掉血9; F25 Monster战 掉血34｜自损1（可行动段1/非行动段39，SELF_LOSS_PHASE_OBS）; F27 Monster战 掉血19; F29 Monster战 掉血4; F31 Monster战 掉血6; F33 Boss战 掉血52｜竞速投影审计：pool=251/dpt=36.8/ttk=6.82065/tsurv=0.939394（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=6.82065/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.39（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=5.88126（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=28.8889/projected_dpt=25.0606/ratio=1.32/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=28.8889/projected_dpt=25.0606/ratio=1.32/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=28.8889/projected_dpt=25.0606/ratio=1.32/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.9714077188946435局)，PROWESS(26分/13.740436359577966局)，MANGLE(25分/45.09688169842741局)，HELLRAISER(25分/3.1577692677619993局)，FEED(24分/30.558970952924494局)
+- 当前低价值卡牌：BURNING_PACT(17分/11.069434261628285局)，DEFEND_IRONCLAD(18分/2.6136509432040245局)，THE_GAMBIT(18分/4.4528867921253585局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.35 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1901 胜，当前目标进阶 0
