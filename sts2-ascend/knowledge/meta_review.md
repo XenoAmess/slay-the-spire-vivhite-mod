@@ -15057,3 +15057,30 @@ failed_review_replay: `requested_packages=[20261003-064709-1790981229471883700-a
 - **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted actual-chain replay, malformed/boundary fixtures, final target diff review, and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, or online process was touched.
 
 - `retry_resolution: 20261003-064709-1790981229471883700-a80fed38 integrated`
+
+## 2026-10-03 runs 1818-1823: attribute projection at pre-lock defense
+
+profile_id: `ironclad`
+requested_runs: `1818-1823`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]`
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: A `RACE_PRELOCK_DEFENSE_OBS` decision can occur after the same-frame kill-race projection has already crossed the doomed boundary, but the existing marker records only the defense card, block, and sample turn. This is falsifiable: the marker must carry the same-frame `projection_ttk`, `projection_tsurv`, and `projection_gap` when the structured projection exists, while disabling the existing observation switch must remove the fields and preserve action/parameters.
+- **EVIDENCE**: The full chain `sts2-ascend/knowledge/runs/20261003-073022_AE5VV3LRR3YS.json` records run 1823 F17 decision 213 selecting `SHRUG_IT_OFF` with `sample_turns=1`, HP 56, incoming 13, block 10, and the projection `击杀还需14回合>可存活4回合`; the same chain reaches `GAME_OVER` at decision 234. The current source marker and terminal bridge did not preserve those projection values as structured fields.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching pre-lock decisions/terminals, compare the three projection fields with source/terminal rounds, HP, bridge length, outcome, and applied action/parameters. Malformed or partial projection fields must not create a terminal projection suffix. No scoring, target selection, or action choice changes.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`: retain the existing structured TTK/survival projection for the current combat frame, append its TTK, survival estimate, and TTK-minus-survival gap to the existing pre-lock audit marker, and carry the optional fields through the existing same-combat GAME_OVER join. This remains observation-only and uses the existing rollback switches.
+- `sts2-ascend/brain/selfcheck.py`: require the projection fields in the positive source and terminal fixtures while retaining the existing action/parameter equality and switch-off checks.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching rows and compare projection gap against terminal outcome and bridge length; do not promote the observation into a defense or all-in rule.
+- **Adjust**: if the structured projection is absent, partial, or uses a different rounding/phase convention, keep the legacy marker and narrow only this optional suffix/join.
+- **Rollback**: set `race_prelock_defense_obs=false` and/or `race_prelock_defense_terminal_outcome_obs=false`; action, parameters, scoring, and the legacy audit path must remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot bootstrap limit. A clone-local process-level 0777 temporary-directory adapter then ran the full `selfcheck.py` to exit 0 with `SELFCHECK OK`; targeted diff review passed. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

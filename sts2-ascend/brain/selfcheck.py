@@ -22326,7 +22326,10 @@ def main() -> int:
     assert (d_rpre_on.action == "play_card"
             and d_rpre_on.params.get("card_index") == 1
             and "RACE_PRELOCK_DEFENSE_OBS" in d_rpre_on.reason
-            and "sample_turns=1" in d_rpre_on.reason), \
+            and "sample_turns=1" in d_rpre_on.reason
+            and "/projection_ttk=" in d_rpre_on.reason
+            and "/projection_tsurv=" in d_rpre_on.reason
+            and "/projection_gap=" in d_rpre_on.reason), \
         f"竞速未锁前格挡观测正例缺失: {d_rpre_on.action}（{d_rpre_on.reason}）"
     assert (d_rpre_off.action == d_rpre_on.action
             and d_rpre_off.params == d_rpre_on.params
@@ -22364,6 +22367,9 @@ def main() -> int:
                 in d_rpre_terminal.reason
             and "/card=预警格挡/block=20/sample_turns=1"
                 in d_rpre_terminal.reason
+            and "/projection_ttk=" in d_rpre_terminal.reason
+            and "/projection_tsurv=" in d_rpre_terminal.reason
+            and "/projection_gap=" in d_rpre_terminal.reason
             and "/terminal_round=4/terminal_action=end_turn"
                 in d_rpre_terminal.reason
             and "/final_hp=0/bridge_rounds=2"

@@ -5357,7 +5357,10 @@ class Policy:
                 r"/round=(?P<round>-?[0-9]+)"
                 r"/hp=(?P<hp>-?[0-9]+(?:\.[0-9]+)?)"
                 r"/incoming=(?P<incoming>-?[0-9]+(?:\.[0-9]+)?)"
-                r"/race_allin=(?P<race>yes|no)",
+                r"/race_allin=(?P<race>yes|no)"
+                r"(?:/projection_ttk=(?P<projection_ttk>-?[0-9]+(?:\.[0-9]+)?)"
+                r"/projection_tsurv=(?P<projection_tsurv>-?[0-9]+(?:\.[0-9]+)?)"
+                r"/projection_gap=(?P<projection_gap>-?[0-9]+(?:\.[0-9]+)?))?",
                 reason[prefix_at:marker_at])
             if match is None:
                 continue
@@ -5366,10 +5369,21 @@ class Policy:
             _round = _number(match.group("round"))
             _hp = _number(match.group("hp"))
             _incoming = _number(match.group("incoming"))
+            _projection_ttk = _number(match.group("projection_ttk"))
+            _projection_tsurv = _number(match.group("projection_tsurv"))
+            _projection_gap = _number(match.group("projection_gap"))
+            _projection_values = (
+                _projection_ttk, _projection_tsurv, _projection_gap)
             if (_block is None or _sample is None or _round is None
                     or _hp is None or _incoming is None
                     or _block <= 0.0 or not 0.0 <= _sample < 2.0
-                    or _round < 0.0 or _hp < 0.0 or _incoming < 0.0):
+                    or _round < 0.0 or _hp < 0.0 or _incoming < 0.0
+                    or (any(value is not None for value in _projection_values)
+                        and not all(value is not None
+                                   for value in _projection_values))
+                    or (_projection_ttk is not None
+                        and (_projection_ttk < 0.0
+                             or _projection_tsurv < 0.0))):
                 continue
             self._race_prelock_defense_terminal_outcome_pending = {
                 "source_round": _round,
@@ -5380,6 +5394,9 @@ class Policy:
                 "source_hp": _hp,
                 "source_incoming": _incoming,
                 "source_race_allin": match.group("race"),
+                "source_projection_ttk": _projection_ttk,
+                "source_projection_tsurv": _projection_tsurv,
+                "source_projection_gap": _projection_gap,
                 "terminal_round": _terminal_round,
                 "terminal_action": terminal.get("action") or "?",
                 "terminal_hp": _terminal_hp,
@@ -5427,6 +5444,14 @@ class Policy:
                     0, int(float(_terminal_round) - float(_source_round))))
             except (TypeError, ValueError, OverflowError):
                 pass
+        _projection_suffix = ""
+        if all(_pending.get(key) is not None for key in (
+                "source_projection_ttk", "source_projection_tsurv",
+                "source_projection_gap")):
+            _projection_suffix = (
+                f"/projection_ttk={_num(_pending.get('source_projection_ttk'))}"
+                f"/projection_tsurv={_num(_pending.get('source_projection_tsurv'))}"
+                f"/projection_gap={_num(_pending.get('source_projection_gap'))}")
         _result = "victory" if victory else "defeat"
         return (
             f"；竞速未锁格挡终局对账：outcome={_result}"
@@ -5439,6 +5464,7 @@ class Policy:
             f"/source_hp={_num(_pending.get('source_hp'))}"
             f"/source_incoming={_num(_pending.get('source_incoming'))}"
             f"/race_allin={_pending.get('source_race_allin') or 'unknown'}"
+            f"{_projection_suffix}"
             f"/terminal_round={_round(_terminal_round)}"
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
@@ -12352,6 +12378,7 @@ class Policy:
         返回 (kill_race, all_respawn, stance, danger_note)：stance 在段内被
         竞速姿态改写原地调整并显式返回；danger_note 累加竞速对账留痕。
         """
+        self._race_prelock_projection = None
         # 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地）：
         # 91 局一幕 Boss 战实证——65 血入场、输出 ~25/回合、仪式兽 252 血，
         # 击杀需 ~9 回合而意图 18→24 每回合滚升，引擎却还在用挑衅(挡6)/武装
@@ -12745,6 +12772,10 @@ class Policy:
                             "强制吞噬，SANDPIT_EAT_CLOCK_CAP）")
                         tsurv = _sandpit_clock
                     ttk = enemy_hp_total / max(1.0, dpt)
+                    self._race_prelock_projection = {
+                        "ttk": float(ttk),
+                        "tsurv": float(tsurv),
+                    }
                     # 滑溜破层期观测（SLIPPERY_TTK_OBS，第1232局批复盘）：
                     # ttk 口径 pool/dpt 未计入滑溜层——每层把一次命中压到只失
                     # 1 血。1232 局 F17 VANTOM 8 层开局，投影「击杀还需9回合
@@ -15567,12 +15598,33 @@ class Policy:
                 except (TypeError, ValueError, OverflowError):
                     _prelock_block = 0.0
                 if _prelock_block > 0.0:
+                    _prelock_projection_tail = ""
+                    _projection = getattr(
+                        self, "_race_prelock_projection", None)
+                    if isinstance(_projection, dict):
+                        try:
+                            _projection_ttk = float(_projection.get("ttk"))
+                            _projection_tsurv = float(
+                                _projection.get("tsurv"))
+                        except (TypeError, ValueError, OverflowError):
+                            _projection_ttk = _projection_tsurv = None
+                        if (_projection_ttk is not None
+                                and _projection_tsurv is not None
+                                and math.isfinite(_projection_ttk)
+                                and math.isfinite(_projection_tsurv)
+                                and _projection_ttk >= 0.0
+                                and _projection_tsurv >= 0.0):
+                            _prelock_projection_tail = (
+                                f"/projection_ttk={_projection_ttk:g}"
+                                f"/projection_tsurv={_projection_tsurv:g}"
+                                f"/projection_gap={_projection_ttk - _projection_tsurv:g}")
                     why += (
                         f"｜竞速未锁前选格挡：{card.get('name') or card.get('card_id') or '?'}"
                         f"挡{_prelock_block:g}/sample_turns="
                         f"{int(getattr(self, '_krace_turns', 0) or 0)}"
                         f"/round={round_no}/hp={my_hp}/incoming={incoming}"
                         f"/race_allin={'yes' if race_allin else 'no'}"
+                        f"{_prelock_projection_tail}"
                         "（RACE_PRELOCK_DEFENSE_OBS）")
             if self._hp_gate_stall_rearm_pending:
                 why += self._consume_hp_gate_stall_rearm_note()
