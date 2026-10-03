@@ -5798,6 +5798,40 @@ def main() -> int:
             and "deck_tax=72/60" in d_lc_optional.reason
             and "offer_life=1/1" in d_lc_optional.reason), \
         f"超顶全生命支付可选 offer 未跳过: {d_lc_optional.action}（{d_lc_optional.reason}）"
+    # 起始白绮卡组的目录血税为 20，当前 profile 软顶 17.5，因此旧闸门会在
+    # 第一张生产性非基础牌进入前就拦下所有全生命支付 offer。允许一次有界
+    # bootstrap 让既有薄卡组正价值门接手；进入一张生产性非基础牌后仍按旧闸门跳过。
+    _lc_basic_deck = (
+        [_vm_card("VIVHITE_CARD_LUMINOUS_PROJECTION", "弦光投影", "Attack")
+         for _ in range(4)]
+        + [_vm_card("VIVHITE_CARD_CLOSED_DOMAIN_MAPPING", "闭域映射")
+           for _ in range(4)]
+        + [_vm_card("VIVHITE_CARD_VIVHITE_TRANSFORMATION", "白绮的变身式",
+                    "Ability")])
+    _lc_bootstrap_state = dict(_lc_optional_state)
+    _lc_bootstrap_state["run"] = dict(
+        _lc_optional_state["run"], deck=_lc_basic_deck)
+    vknow_lc_bootstrap = _vivhite_know(
+        "sts2-selfcheck-vlctax-optional-bootstrap-")
+    vknow_lc_bootstrap.policy["vivhite_life_cost_deck_cap"] = 17.5
+    vpol_lc_bootstrap = policy.Policy(vknow_lc_bootstrap, random.Random(19))
+    d_lc_bootstrap = vpol_lc_bootstrap.decide(
+        _lc_bootstrap_state, _lc_optional_ctx)
+    assert (d_lc_bootstrap.action == "select_deck_card"
+            and d_lc_bootstrap.params.get("option_index") == 0
+            and "VIVHITE_LIFE_COST_OVERCAP_SKIP" not in d_lc_bootstrap.reason), \
+        f"无生产性非基础牌时应允许一次血税 bootstrap: {d_lc_bootstrap.action}（{d_lc_bootstrap.reason}）"
+    vknow_lc_bootstrap_off = _vivhite_know(
+        "sts2-selfcheck-vlctax-optional-bootstrap-off-")
+    vknow_lc_bootstrap_off.policy["vivhite_life_cost_deck_cap"] = 17.5
+    vknow_lc_bootstrap_off.policy["vivhite_life_cost_overcap_bootstrap"] = 0
+    vpol_lc_bootstrap_off = policy.Policy(
+        vknow_lc_bootstrap_off, random.Random(19))
+    d_lc_bootstrap_off = vpol_lc_bootstrap_off.decide(
+        _lc_bootstrap_state, _lc_optional_ctx)
+    assert (d_lc_bootstrap_off.action == "skip_reward_cards"
+            and "VIVHITE_LIFE_COST_OVERCAP_SKIP" in d_lc_bootstrap_off.reason), \
+        f"bootstrap 关闭后应恢复超顶跳过: {d_lc_bootstrap_off.action}（{d_lc_bootstrap_off.reason}）"
     # 薄卡组也是血税闸的有效命中点：正价值保底不能把已经超顶的
     # 全生命支付 offer 强行接回卡组，否则早期连续拿牌会把终端锁提前。
     _lc_thin_state = dict(_lc_optional_state)

@@ -6002,3 +6002,39 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-03 第1820~1831局批：起始血税超顶导致早期全生命供给饥饿
+
+profile_id: `vivhite`
+production_code_commit: `d12ac8d95`（本地提交，未 push）
+
+### ATTRIBUTION
+
+- 本批将主归因收窄为「起始卡组血税已高于当前软顶，早期全生命支付供给被一律跳过」，不把第1831局 F7 阵亡单独归因于该闸门；MAWLER 伤害、抽牌和战斗决策仍需后续独立验证。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：白绮起始卡组 4×弦光投影、4×闭域映射、1×变身式的目录血税为 20，而当前 profile 的 `vivhite_life_cost_deck_cap` 为 17.5。旧闸门因此在出现第一张生产性非基础牌前就拦截全生命支付 offer，可能令早期卡组持续只有基础牌，削弱 F7 前的输出供给。
+- **EVIDENCE**：第1831局完整链 `sts2-ascend/knowledge/profiles/vivhite/runs/20261003-102006_JFB3KDJT33PX.json` 在 F1~F5 连续出现 `VIVHITE_LIFE_COST_OVERCAP_SKIP`，最终牌组仍为 4×闭域映射、4×弦光投影、1×变身式和 `CLUMSY`，F7 以 HP 2 结束；第1826局在 F2/F4/F5/F6 共4次同类跳过并于 F7 结束，第1828局在 F2/F3/F5 共3次并于 F8 结束。该链同时显示这些局没有足够的生产性非基础牌，故只能支持相关性假设。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite run 中，当卡组仍无生产性非基础牌、offer 全为正价值 LifeCost 且仅因超顶触发时，应至少允许一次 `select_deck_card`；随后出现生产性非基础牌即恢复原超顶跳过。若首张 offer 仍被跳过、接受后仍无限放行、或早期供给/输出与跳过次数不出现可区分变化，则分别证伪实现边界或该归因。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_life_cost_overcap_bootstrap`，独立控制一次早期引导例外。
+- `sts2-ascend/brain/policy.py`：仅在白绮、卡组血税超顶、offer 全为 LifeCost 且卡组尚无非基础非废牌时放行既有正价值/单薄卡组门；一旦有生产性非基础牌仍使用原 `VIVHITE_LIFE_COST_OVERCAP_SKIP` 闸门。
+- `sts2-ascend/brain/selfcheck.py`：覆盖起始卡组 cap=17.5 时放行、旋钮关闭时恢复跳过，以及已有薄卡组继续跳过。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay 目标。
+
+### VALIDATION
+
+- 直接 selfcheck 的业务断言通过，但命中宿主固定 256 槽临时池上限；使用仅用于本次执行的扩容临时目录分配适配重跑，退出码 0，输出 `SELFCHECK OK`。
+- 已回读源码及自检完整 diff；目标 `git diff --check` 和 staged diff check 均通过，仅有 Git 的 LF/CRLF 提示。生产代码已本地提交 `d12ac8d95`，未 push。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 run，分层记录首个可选 LifeCost offer 的 action、`deck_good_count`、血税、落牌 delta、F1~F3 跳过数、F7 前非基础牌数、输出容量和终局；marker 本身不升级为新的行为闸门。
+- 若出现连续放行、负价值牌被 bootstrap 接入、非白绮误触发或 action/params 漂移，将 `vivhite_life_cost_overcap_bootstrap=0` 作为运行时回滚，必要时回滚本地提交 `d12ac8d95`。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

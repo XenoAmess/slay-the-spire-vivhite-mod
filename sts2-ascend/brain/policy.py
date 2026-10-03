@@ -1282,7 +1282,11 @@ class Policy:
     def _vivhite_life_cost_overcap_skip_note(
             self, deck: list, offer: list, *, source: str) -> str:
         """Skip a voluntary offer only when every candidate costs life and the
-        current Vivhite deck-tax total is already above its soft cap."""
+        current Vivhite deck-tax total is already above its soft cap.  A thin
+        starting deck may take one positive all-LifeCost offer before the
+        supply stop engages; this bounded bootstrap is independently
+        disableable and does not reopen the gate once a productive non-basic
+        card is present."""
         try:
             enabled = bool(int(float(
                 self.know.policy.get("vivhite_life_cost_overcap_skip", 1)
@@ -1320,6 +1324,14 @@ class Policy:
         except (TypeError, ValueError):
             cap = 60.0
         if deck_tax <= cap + 1e-9:
+            return ""
+        try:
+            bootstrap = bool(int(float(
+                self.know.policy.get("vivhite_life_cost_overcap_bootstrap", 1)
+                or 0)))
+        except (TypeError, ValueError):
+            bootstrap = False
+        if bootstrap and self._deck_good_count(deck or []) <= 0:
             return ""
         return (
             f"；謦欬血税超软顶且本次供给全为生命支付，跳过"
