@@ -16309,3 +16309,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.0878977358680335局)，BURNING_PACT(17分/11.79054746071041局)，DEFEND_IRONCLAD(18分/2.7839160306865183局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1883 胜，当前目标进阶 0
+
+## 第 1884 局复盘（2026-10-04 02:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：INFLAME, UNRELENTING, HEMOKINESIS, BREAKTHROUGH, SWORD_BOOMERANG, RUPTURE, DEMON_FORM, CINDER, BLUDGEON, IMPERVIOUS, MOLTEN_FIST
+- 本局遗物：MEAL_TICKET
+- 战斗记录：F6 Monster战 掉血10｜自损5（可行动段5/非行动段0，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血26｜自损3（可行动段3/非行动段29，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损3（可行动段3/非行动段3，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血13; F15 Monster战 掉血25; F17 Boss战 掉血35｜自损4（可行动段4/非行动段30，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=172/dpt=4.05/ttk=42.4691/tsurv=4.11765（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=42.4691/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.46（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=38.3515（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=5.8/projected_dpt=13.1508/ratio=0.43/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=5/actual_dpt=5.8/projected_dpt=13.1508/ratio=0.43/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=5/layers_max=0/actual_dpt=5.8/projected_dpt=13.1508/ratio=0.43/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BLOODLETTING(29分/2.046184350900639局)，MASTER_OF_STRATEGY(27分/4.215317815113988局)，BRAND(26分/2.082375522479972局)，PROWESS(26分/12.537968496745863局)，STAMPEDE(25分/7.994744740577906局)
+- 当前低价值卡牌：ENTROPY(17分/2.0805900937924955局)，BURNING_PACT(17分/11.749280544597925局)，DEFEND_IRONCLAD(18分/2.7741723245791157局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1884 胜，当前目标进阶 0
