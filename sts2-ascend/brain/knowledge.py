@@ -373,6 +373,7 @@ DEFAULT_POLICY = {
     "elite_forced_entry_obs": True,  # 精英闸门未通过但仍被选中时追加只读对账；False 只移除该 marker
     "elite_forced_entry_outcome_obs": True,  # Link forced-Elite entry to GAME_OVER; include projected-vs-actual HP and a bounded repeated-entry sequence when present; False removes only this marker
     "path_death_valley_outcome_obs": True,  # Link all-candidate-dead map paths to the next-floor GAME_OVER; observation only
+    "path_death_valley_low_pool_terminal_obs": True,  # Link a death-valley terminal to a same-floor LOW_POOL_BURST_CARD_AUDIT with survives=no; observation only, False removes only this join
     "elite_failed_gate_survivor_veto": True,  # 精英闸门失败且存在投影可存活的非精英替代时，禁止下游价值分吞掉即时风险；False 恢复旧排序
     "path_act_scale": [1.0, 1.7, 2.3],  # 掉血先验按幕数放大：二幕起怪物伤害显著升级（先验是一幕场均）
     "unknown_gauntlet_act2_mult": 1.6,  # 二幕起 Unknown 可能是连环遭遇（如 THE_OBSCURA 三连战），额外风险乘数

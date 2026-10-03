@@ -5518,6 +5518,86 @@ class Policy:
 
         _result = "victory" if victory else "defeat"
         _terminal_floor = "?" if floor is None else str(floor)
+        _low_pool_tail = ""
+        try:
+            _low_pool_enabled = bool(int(float(pol.get(
+                "path_death_valley_low_pool_terminal_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _low_pool_enabled = False
+        _decisions = getattr(ctx, "decisions", None)
+        _low_pool_marker = "PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS"
+        if (_low_pool_enabled and isinstance(_decisions, list)
+                and not any(
+                    _low_pool_marker in str(_row.get("reason") or "")
+                    for _row in _decisions if isinstance(_row, dict))):
+            def _token(audit, name):
+                match = re.search(
+                    rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", audit)
+                return match.group(1) if match else None
+
+            def _round(value) -> str:
+                try:
+                    return str(int(value))
+                except (TypeError, ValueError, OverflowError):
+                    return "?"
+
+            _entry_index = -1
+            for _index, _row in enumerate(_decisions):
+                if (isinstance(_row, dict)
+                        and _row.get("action") == "choose_map_node"
+                        and "PATH_DEATH_VALLEY_ENTRY_OBS" in str(
+                            _row.get("reason") or "")):
+                    _entry_index = _index
+            _source = None
+            _source_audit = ""
+            if _entry_index >= 0:
+                for _row in reversed(_decisions[_entry_index + 1:]):
+                    if not isinstance(_row, dict):
+                        continue
+                    if _row.get("screen") not in (None, "COMBAT"):
+                        continue
+                    _source_floor = _row.get("floor")
+                    if _source_floor is not None:
+                        try:
+                            if int(float(_source_floor)) != _expected_floor:
+                                continue
+                        except (TypeError, ValueError, OverflowError):
+                            continue
+                    _reason = str(_row.get("reason") or "")
+                    _marker_at = _reason.rfind("LOW_POOL_BURST_CARD_AUDIT")
+                    if _marker_at < 0:
+                        continue
+                    _audit_at = _reason.rfind(
+                        "低池爆发牌面审计：", 0, _marker_at)
+                    if _audit_at < 0:
+                        continue
+                    _audit = _reason[_audit_at:_marker_at]
+                    if _token(_audit, "survives") != "no":
+                        continue
+                    _source = _row
+                    _source_audit = _audit
+                    break
+            if _source is not None:
+                _low_pool_tail = (
+                    "; path death-valley low-pool terminal audit:"
+                    f"entry_floor={_pending.get('entry_floor', '?')}"
+                    f"/entry_candidates={_pending.get('candidates', '?')}"
+                    f"/entry_selected={_pending.get('selected_type', '?')}"
+                    f"/entry_projected_after_pct="
+                    f"{_pending.get('projected_after_pct', '?')}"
+                    f"/outcome={_result}/terminal_floor={_terminal_floor}"
+                    f"/source_round={_round(_source.get('turn', _source.get('round')))}"
+                    f"/source_action={_source.get('action') or '?'}"
+                    f"/source_hp={_num(_token(_source_audit, 'hp'))}"
+                    f"/source_block={_num(_token(_source_audit, 'block'))}"
+                    f"/source_incoming={_num(_token(_source_audit, 'incoming'))}"
+                    f"/source_max_block={_num(_token(_source_audit, 'max_block'))}"
+                    f"/source_post_gap={_num(_token(_source_audit, 'post_gap'))}"
+                    f"/source_covers={_token(_source_audit, 'covers') or '?'}"
+                    f"/source_survives={_token(_source_audit, 'survives') or '?'}"
+                    f"/source_selected={_token(_source_audit, 'selected') or '?'}"
+                    f"/final_hp={_num(terminal_hp)}"
+                    " (PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS)")
         return (
             "; path death-valley outcome audit:"
             f"entry_floor={_pending.get('entry_floor', '?')}"
@@ -5528,7 +5608,8 @@ class Policy:
             f"/outcome={_result}/terminal_floor={_terminal_floor}"
             f"/terminal_hp={_num(terminal_hp)}"
             f"{_combat_tail}"
-            " (PATH_DEATH_VALLEY_OUTCOME_OBS)")
+            " (PATH_DEATH_VALLEY_OUTCOME_OBS)"
+            f"{_low_pool_tail}")
 
     def _restore_path_death_valley_outcome_from_decisions(
             self, ctx, floor=None) -> None:

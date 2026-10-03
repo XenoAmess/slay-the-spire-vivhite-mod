@@ -10353,7 +10353,11 @@ def main() -> int:
         {"screen": "MAP", "floor": 23, "action": d_pdv.action,
          "params": d_pdv.params, "reason": d_pdv.reason},
         {"screen": "COMBAT", "floor": 24, "action": "end_turn",
-         "reason": "死亡谷夹具战斗"},
+         "turn": 1,
+         "reason": "低池爆发牌面审计：hp=1/block=0/incoming=10/energy=0/"
+                   "block_locked=no/defense=none/need=10/max_block=0/"
+                   "covers=no/post_gap=10/survives=no/selected=end_turn"
+                   "（LOW_POOL_BURST_CARD_AUDIT）"},
     ])
     pdv_game_over = {
         "screen": "GAME_OVER", "run_id": pdv_ctx.run_id,
@@ -10373,7 +10377,14 @@ def main() -> int:
             and "/outcome=defeat/terminal_floor=24/terminal_hp=0"
             in d_pdv_outcome.reason
             and "/combat_id=TEST_DEATH_VALLEY" in d_pdv_outcome.reason
-            and "/combat_node_type=Monster" in d_pdv_outcome.reason), \
+            and "/combat_node_type=Monster" in d_pdv_outcome.reason
+            and "PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS"
+            in d_pdv_outcome.reason
+            and "/source_round=1/source_action=end_turn/source_hp=1/"
+                "source_block=0/source_incoming=10/source_max_block=0/"
+                "source_post_gap=10/source_covers=no/source_survives=no/"
+                "source_selected=end_turn/final_hp=0"
+            in d_pdv_outcome.reason), \
         f"死亡谷终局接桥缺失: {d_pdv_outcome.reason}"
     pdv_ctx.decisions.append({"screen": "GAME_OVER", "floor": 24,
                               "action": d_pdv_outcome.action,
@@ -10381,6 +10392,27 @@ def main() -> int:
     d_pdv_duplicate = pdv_pol.decide(pdv_game_over, pdv_ctx)
     assert "PATH_DEATH_VALLEY_OUTCOME_OBS" not in d_pdv_duplicate.reason, \
         f"死亡谷终局 marker 非幂等: {d_pdv_duplicate.reason}"
+    assert "PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS" \
+        not in d_pdv_duplicate.reason, \
+        f"死亡谷低池终局 marker 非幂等: {d_pdv_duplicate.reason}"
+
+    pdv_join_off_know = pdv_know
+    pdv_join_off_know.policy["path_death_valley_low_pool_terminal_obs"] = False
+    pdv_join_off_pol = policy.Policy(pdv_join_off_know)
+    pdv_join_off_ctx = type("C", (), {
+        "credit_tags": [], "decisions": list(pdv_ctx.decisions[:2]),
+        "run_id": pdv_ctx.run_id,
+        "died_in_combat": dict(pdv_ctx.died_in_combat),
+    })()
+    d_pdv_join_off = pdv_join_off_pol.decide(
+        pdv_game_over, pdv_join_off_ctx)
+    assert (d_pdv_join_off.action == d_pdv_outcome.action
+            and d_pdv_join_off.params == d_pdv_outcome.params
+            and "PATH_DEATH_VALLEY_OUTCOME_OBS" in d_pdv_join_off.reason
+            and "PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS"
+            not in d_pdv_join_off.reason), \
+        f"死亡谷低池接桥关闭改变动作或残留 marker: {d_pdv_join_off.action} " \
+        f"{d_pdv_join_off.params} {d_pdv_join_off.reason}"
 
     pdv_know.policy["path_death_valley_outcome_obs"] = False
     pdv_off_pol = policy.Policy(pdv_know)

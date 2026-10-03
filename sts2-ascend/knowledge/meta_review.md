@@ -13396,6 +13396,34 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
 
+## 2026-10-04 runs 1889-1890：死亡谷路径与低池不可生存终局接桥
+
+profile_id：`ironclad`
+requested_runs：`1889, 1890`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无 replay target）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`PATH_DEATH_VALLEY_OUTCOME_OBS` 已说明“全候选路径投影死亡”最终如何收束，但没有证明终局是否落在同楼层的低池不可生存牌面。若把二者在同一死亡谷入口、下一层 COMBAT、`survives=no` 的有界链中接成一次只读对账，即可区分“强制路径导致的低池终局”与普通战斗投影误差；跨楼层/房间或可生存牌面不得命中。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-041541_QMHS7X19YDQZ.json`（run 1890）D273/F29 仅有 `Monster(12,5)`，`projected_after_pct=0%` 且记录 `PATH_DEATH_VALLEY_ENTRY_OBS`；D280/F30 记录 `LOW_POOL_BURST_CARD_AUDIT`：`hp=6/block=5/incoming=16/max_block=0/post_gap=11/covers=no/survives=no/selected=end_turn`；D281 为 `GAME_OVER` 失败。旧终局虽分别有两个 marker，但没有入口—低池牌面联合证据。1889-F17 为独立失败对照，不把其缺失链误当本假设证据。
+- **EXPECTED_SIGNAL**：未来 3—10 局中，同一死亡谷入口后、同楼层 COMBAT 出现 `survives=no` 的终局应最多追加一次 `PATH_DEATH_VALLEY_LOW_POOL_TERMINAL_OBS`，携带入口候选/投影值、低池 source round、HP/格挡/来袭/`post_gap`、最终 HP 与胜负；`REWARD/MAP/REST/SHOP/CHEST/EVENT` 边界、`survives=yes`、重复 GAME_OVER 不命中。评分、候选、action、params 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `path_death_valley_low_pool_terminal_obs`。
+- `sts2-ascend/brain/policy.py`：在既有死亡谷终局桥内，从入口之后、预期下一楼层的 COMBAT 决策有界读取 `LOW_POOL_BURST_CARD_AUDIT`，仅当 `survives=no` 时追加联合 marker；不读取该 marker 参与评分、排序、门控、目标或动作。
+- `sts2-ascend/brain/selfcheck.py`：增加联合正例、重复 GAME_OVER 幂等性、关闭开关仍保留旧死亡谷 marker 且 action/params 不漂移的夹具；复用既有临时目录以免扩大 selfcheck 资源预算。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配终局，按 `entry_candidates`、`projected_after_pct`、`source_post_gap`、胜负和近期 `applied` 回执分层；证据成熟前不改低血战斗或药水策略。
+- **Adjust**：若真实链 marker 缺失，只收紧低池文案解析或同楼层边界；若出现跨房间/跨楼层、`survives=yes` 或重复接桥，立即收紧条件并关闭本观测。
+- **Rollback**：将 `path_death_valley_low_pool_terminal_obs` 设为 `False`，预期只移除新联合 suffix，既有 `PATH_DEATH_VALLEY_OUTCOME_OBS`、action 与 params 不变。
+- **Validation**：直接 selfcheck 命中宿主既有 256 槽 bootstrap 限制；使用当前 clone 的进程内 0777 临时目录适配运行同一完整入口，退出码 0 且输出 `SELFCHECK OK`。对 1890 完整链去除旧 GAME_OVER 行后只读重放命中新 marker，action=`continue_game_over`、params=`{}`；`git diff --check` 通过。未写 `.runtime`、runs/archive、学习记忆、replay 或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
 ## 2026-09-29 第1673局复盘（WATERFALL_ABOUT_TO_BLOW_TERMINAL_OUTCOME_OBS）
 
 ### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
