@@ -20148,3 +20148,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0803819595767035局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.167543167264466局)，FASTEN(21分/3.6840711797843997局)
 - 策略进化：精英战阵亡但满血线进场（99%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收
 - 生涯战绩：4/1828 胜，当前目标进阶 4
+
+## 第 1829 局复盘（2026-10-03 09:38）
+- 结果：💀 失败｜进阶 4｜到达层数 15｜当局评分 15
+- 死因：敌人组合 HAUNTED_SHIP
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_TERMINATION_CONDITION, AUTOMATION, VIVHITE_CARD_ASTRAL_SEARCH, VIVHITE_CARD_CONSERVED_RECURRENCE
+- 本局遗物：LANTERN, ANCHOR
+- 战斗记录：F3 Monster战 掉血0｜自损8（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血0｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F8 Unknown战 掉血4｜自损18（可行动段18/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损12（可行动段12/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血21｜自损42（可行动段42/非行动段5，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血57｜自损30（可行动段30/非行动段25，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.2671063399239983局)，JACKPOT(37分/8.399528707009612局)，MAYHEM(37分/4.835877567398837局)，THINKING_AHEAD(37分/2.6129367041585274局)，REND(36分/3.3319637343123594局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.073100622718185局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.079456766179042局)，FASTEN(21分/3.6711769306551543局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（11回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，致命Monster战实测自损30/掉血57（53%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
+- 生涯战绩：4/1829 胜，当前目标进阶 4
