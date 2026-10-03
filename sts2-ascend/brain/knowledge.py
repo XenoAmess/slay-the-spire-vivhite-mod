@@ -99,6 +99,9 @@ DEFAULT_POLICY = {
                                                      # 已有重复实证的同幕组合可行；False 回落
                                                      # 旧的「任一组合可行即放行」口径（1132/1137/1147
                                                      # 三例 KIN 实际阵亡暴露了存在性放行的风险）
+    "boss_race_combo_gate_terminal_outcome_obs": True,  # 将 Boss 前夜组合门与紧随其后的
+                                                         # 原生终局只读对账；关闭时严格回退
+                                                         # 既有动作与前夜判定
     # --- combat ---
     "slippery_burn_cost_tiebreak": True,  # 同折算产出且同分时，滑溜烧层优先低费；False 严格回滚旧候选顺序
     "sleep_guard_min_stacks": 2.0,  # 沉睡保期禁攻（SLEEP_GUARD，第1280~1284局批复盘）：

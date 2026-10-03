@@ -14403,6 +14403,91 @@ def main() -> int:
         and "BOSS_RACE_COMBO_GATE" not in d_pc_off.reason, \
         f"组合门关闭时应回落均值判死: {d_pc_off.reason}"
 
+    # 3br-combo-terminal) 把 Boss 前夜组合门与紧随其后的 Boss 终局对账。
+    #     1883/1884-F16 REST 的 0/6 门禁后均进入 F17 Boss 并失败；这里只
+    #     增加可重试、可回滚的终局观测，不改变 GAME_OVER 动作或参数。
+    assert float(knowledge.DEFAULT_POLICY[
+        "boss_race_combo_gate_terminal_outcome_obs"]) == 1.0, \
+        "DEFAULT_POLICY 缺少 boss_race_combo_gate_terminal_outcome_obs"
+    combo_gate_source = {
+        "screen": "REST", "floor": 16, "action": "choose_rest_option",
+        "reason": "篝火：Boss 前夜竞速预演；BOSS_RACE_COMBO_GATE："
+                   "已知组合可行0/6，未满足全部已知组合可行；分账："
+                   "VANTOM173池必败,CEREMONIAL_BEAST252池必败",
+    }
+    combo_gate_rows = [
+        combo_gate_source,
+        {"screen": "REST", "floor": 16, "action": "choose_rest_option",
+         "reason": "篝火：确认锻造"},
+        {"screen": "MAP", "floor": 16, "action": "choose_map_node",
+         "reason": "路径规划：Boss(16,3)"},
+        {"screen": "COMBAT", "floor": 17, "turn": 6, "hp": 1,
+         "action": "end_turn", "reason": "战斗：终端回合"},
+    ]
+    combo_gate_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "run": {"current_hp": 0, "floor": 17},
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 17},
+    }
+    combo_gate_ctx = DummyCtx()
+    combo_gate_ctx.decisions = list(combo_gate_rows)
+    combo_gate_pol = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-combo-terminal-"))), random.Random(13))
+    d_combo_gate_terminal = combo_gate_pol.decide(
+        combo_gate_terminal_state, combo_gate_ctx)
+    assert (d_combo_gate_terminal.action == "continue_game_over"
+            and d_combo_gate_terminal.params == {}
+            and "BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS"
+            in d_combo_gate_terminal.reason
+            and "outcome=defeat" in d_combo_gate_terminal.reason
+            and "/source_floor=16" in d_combo_gate_terminal.reason
+            and "/known_viable=0/6" in d_combo_gate_terminal.reason
+            and "/terminal_floor=17" in d_combo_gate_terminal.reason
+            and "/terminal_round=6" in d_combo_gate_terminal.reason
+            and "/final_hp=0" in d_combo_gate_terminal.reason), \
+        f"组合门终局对账缺字段或动作漂移: {d_combo_gate_terminal}"
+    combo_gate_ctx.decisions.append({
+        "screen": "GAME_OVER", "floor": 17,
+        "action": d_combo_gate_terminal.action,
+        "reason": d_combo_gate_terminal.reason,
+    })
+    d_combo_gate_repeat = combo_gate_pol.decide(
+        combo_gate_terminal_state, combo_gate_ctx)
+    assert "BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS" \
+        not in d_combo_gate_repeat.reason, \
+        "组合门终局 marker 在已持久化终局后重复追加"
+
+    combo_gate_off_know = knowledge.Knowledge(Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-combo-terminal-off-")))
+    combo_gate_off_know.policy[
+        "boss_race_combo_gate_terminal_outcome_obs"] = False
+    combo_gate_off_pol = policy.Policy(combo_gate_off_know, random.Random(13))
+    combo_gate_off_ctx = DummyCtx()
+    combo_gate_off_ctx.decisions = list(combo_gate_rows)
+    d_combo_gate_off = combo_gate_off_pol.decide(
+        combo_gate_terminal_state, combo_gate_off_ctx)
+    assert (d_combo_gate_off.action == d_combo_gate_terminal.action
+            and d_combo_gate_off.params == d_combo_gate_terminal.params
+            and "BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS"
+            not in d_combo_gate_off.reason), \
+        f"组合门终局观测关闭后动作或参数漂移: {d_combo_gate_off}"
+
+    combo_gate_boundary_ctx = DummyCtx()
+    combo_gate_boundary_ctx.decisions = [
+        combo_gate_source,
+        {"screen": "REWARD", "floor": 16, "action": "claim_reward",
+         "reason": "奖励"},
+        combo_gate_rows[-1],
+    ]
+    d_combo_gate_boundary = combo_gate_pol.decide(
+        combo_gate_terminal_state, combo_gate_boundary_ctx)
+    assert "BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS" \
+        not in d_combo_gate_boundary.reason, \
+        "组合门终局对账越过 REWARD 边界"
+
     # 3br-pool-clamp（HP_POOL_NATIVE_CLAMP，第187~196局批复盘）：在线 hp_pool
     #     台账实证相对原生快照虚高 4~20 倍（KNOWLEDGE_DEMON 账面 2254 vs 原生 379，
     #     同局 F33 实战长战注「敌血池379」交叉证实），竞速预演 ttk 同倍率高估、

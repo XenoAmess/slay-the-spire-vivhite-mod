@@ -15860,3 +15860,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：宿主直接命令复现固定 256 槽临时池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用当前 clone 的进程级 `.review-cache/selfcheck-pool` 适配器运行同一完整入口，退出码为 0 且末尾为 `SELFCHECK OK`。目标三文件完整 diff 已复核，`git diff --check` 无 whitespace error，生产变更已提交为 `b5988537ce63cec87549af3f7d643924811453b4`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1883-1884-F17：Boss 组合门与终局结果只读对账
+
+profile_id：`ironclad`
+requested_runs：`1883, 1884`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 前夜 `BOSS_RACE_COMBO_GATE=0/6` 是一个尚未接回权威终局的生产预测。若把同一条 REST→MAP→下一楼层 Boss 战斗尾段限定连接到 `GAME_OVER`，则后续 3—10 局应能统计门禁命中与胜负的对应关系；若出现跨房间/跨楼层、重复 marker 或动作参数变化，假设即被证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-020710_5AD85RW4DWDQ.json` 的 1883 局 D138/F16 REST 有 `BOSS_RACE_COMBO_GATE：已知组合可行0/6`，随后 D162/F17 `GAME_OVER` 失败；完整链 `sts2-ascend/knowledge/runs/20261004-022800_R25NNPBS2BU1.json` 的 1884 局 D186/F16 REST 同样为 `0/6`，D188 进入 Boss 地图，D210/F17 失败。两条终局原始 reason 均没有该组合门终局 join。
+- **EXPECTED_SIGNAL**：匹配终局最多追加一次 `BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS`，包含 `source_floor/known_viable/terminal_floor/terminal_round/outcome`；经过 `REWARD`、`SHOP`、`EVENT`、`CHEST`、跨楼层或已持久化 GAME_OVER 时不应命中；`continue_game_over {}` 及其他终局 action/params 必须不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `boss_race_combo_gate_terminal_outcome_obs`，只控制新增终局 suffix。
+- `sts2-ascend/brain/policy.py`：新增只读终局桥，要求 REST 来源、终局楼层为来源楼层+1、尾段出现下一楼层 COMBAT，并拒绝 `REWARD`/`SHOP`/`EVENT`/`CHEST`/终局等边界；只追加 marker，不改评分、候选、等待、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 0/6 正例、marker 去重、关闭键回滚、REWARD 边界拒绝和 `continue_game_over {}` 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个独立 Boss 终局，按 `known_viable/known_total`、source/terminal 楼层、胜负、回合跨度及近期 `applied` 回执分层；观测成熟前不把结果升级为策略门。
+- **Adjust**：若真实链出现不同的 REST marker 格式，只收紧解析或保留已证实的屏幕形态；若跨边界串接、重复提交、字段与原始决策不一致或 action/params 漂移，立即关闭该观测键并修正边界。
+- **Rollback**：将 `boss_race_combo_gate_terminal_outcome_obs` 设为 `False`，预期只移除新 marker；必要时回滚本地 commit，保留既有 `BOSS_RACE_COMBO_GATE` 前夜留痕与全部旧终局观测。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 首次复现宿主固定 256 槽临时池耗尽；随后用同一 `selfcheck.py` 的 clone-local 进程级 0777 临时目录适配器运行，退出码 0 且输出 `SELFCHECK OK`。1884 完整链只读回放命中新 marker：`source_floor=16/known_viable=0/6/terminal_floor=17/terminal_round=6/outcome=defeat`；目标三文件 `git diff --check` 通过。宿主 `.review-cache` 未纳入暂存或提交，未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

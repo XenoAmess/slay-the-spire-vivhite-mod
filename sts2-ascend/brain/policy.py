@@ -5589,6 +5589,148 @@ class Policy:
         self._path_death_valley_outcome_pending = _sample
         self._path_death_valley_outcome_reported = False
 
+    def _consume_boss_race_combo_gate_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join a Boss-eve combo-gate verdict to the next Boss terminal.
+
+        ``BOSS_RACE_COMBO_GATE`` is emitted on the RestSite decision before
+        the Boss map node.  The native GAME_OVER payload only carries the
+        result, so this bounded, observation-only join preserves the gate's
+        known-combination count and the following terminal result without
+        changing the preceding rest choice or any combat action.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "boss_race_combo_gate_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return ""
+
+        _decisions = getattr(ctx, "decisions", None)
+        _marker = "BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS"
+        if not isinstance(_decisions, list) or not _decisions:
+            return ""
+        if any(_marker in str(_row.get("reason") or "")
+               for _row in _decisions if isinstance(_row, dict)):
+            return ""
+
+        _terminal = _decisions[-1]
+        if not isinstance(_terminal, dict):
+            return ""
+        _terminal_screen = str(_terminal.get("screen") or "").upper()
+        if _terminal_screen not in ("", "COMBAT"):
+            return ""
+
+        def _floor_number(value):
+            try:
+                _value = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return int(_value) if math.isfinite(_value) else None
+
+        _terminal_floor = _floor_number(floor)
+        if _terminal_floor is None:
+            _terminal_floor = _floor_number(_terminal.get("floor"))
+        if _terminal_floor is None:
+            return ""
+
+        _source = None
+        _source_index = -1
+        _alive = None
+        _total = None
+        _gate_re = re.compile(
+            r"BOSS_RACE_COMBO_GATE[：:]\s*已知组合可行"
+            r"(?P<alive>\d+)\s*/\s*(?P<total>\d+)")
+        for _index in range(len(_decisions) - 2, -1, -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            if str(_row.get("screen") or "").upper() != "REST":
+                continue
+            _match = _gate_re.search(str(_row.get("reason") or ""))
+            if _match is None:
+                continue
+            _source_floor = _floor_number(_row.get("floor"))
+            if (_source_floor is None
+                    or _terminal_floor != _source_floor + 1):
+                continue
+            try:
+                _candidate_alive = int(_match.group("alive"))
+                _candidate_total = int(_match.group("total"))
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (_candidate_total <= 0
+                    or _candidate_alive < 0
+                    or _candidate_alive > _candidate_total):
+                continue
+
+            _valid_tail = True
+            _saw_combat = False
+            for _tail_row in _decisions[_index + 1:]:
+                if not isinstance(_tail_row, dict):
+                    continue
+                _tail_screen = str(_tail_row.get("screen") or "").upper()
+                if _tail_screen in {
+                        "REWARD", "SHOP", "EVENT", "CHEST", "MAIN_MENU",
+                        "CHARACTER_SELECT", "GAME_OVER", "VICTORY", "TIMELINE"}:
+                    _valid_tail = False
+                    break
+                if _tail_screen == "COMBAT":
+                    _saw_combat = True
+                    _tail_floor = _floor_number(_tail_row.get("floor"))
+                    if (_tail_floor is not None
+                            and _tail_floor != _terminal_floor):
+                        _valid_tail = False
+                        break
+                elif _tail_screen in {"REST", "MAP"}:
+                    _tail_floor = _floor_number(_tail_row.get("floor"))
+                    if (_tail_floor is not None
+                            and _tail_floor != _source_floor):
+                        _valid_tail = False
+                        break
+                elif _tail_screen not in {"", "CARD_SELECTION", "UNKNOWN",
+                                          "WAITING"}:
+                    _valid_tail = False
+                    break
+            if not _valid_tail or not _saw_combat:
+                continue
+            _source = _row
+            _source_index = _index
+            _alive = _candidate_alive
+            _total = _candidate_total
+            break
+        if _source is None:
+            return ""
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _terminal_round = _terminal.get("turn", _terminal.get("round"))
+        _terminal_action = _terminal.get("action") or "?"
+        _result = "victory" if victory else "defeat"
+        return (
+            f"；Boss组合门终局对账：outcome={_result}"
+            f"/source_floor={_source.get('floor', '?')}"
+            f"/source_action={_source.get('action') or '?'}"
+            f"/known_viable={_alive}/{_total}"
+            f"/terminal_floor={_terminal_floor}"
+            f"/terminal_round={_round(_terminal_round)}"
+            f"/terminal_action={_terminal_action}"
+            f"/terminal_hp={_num(_terminal.get('hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={max(0, len(_decisions) - 1 - _source_index)}"
+            f"（{_marker}）")
+
     def _consume_longfight_joint_flip_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join a long-fight flip-cap decision to the authoritative terminal result."""
@@ -25323,6 +25465,9 @@ class Policy:
         _path_death_valley_outcome_note = (
             self._consume_path_death_valley_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _boss_race_combo_gate_terminal_outcome_note = (
+            self._consume_boss_race_combo_gate_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_elite_forced_entry_outcome_from_decisions(
             ctx, go.get("floor"))
         _elite_forced_entry_outcome_note = (
@@ -25514,6 +25659,7 @@ class Policy:
             return Decision("continue_game_over", {},
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
                             f"{_path_death_valley_outcome_note}"
+                            f"{_boss_race_combo_gate_terminal_outcome_note}"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -25576,6 +25722,7 @@ class Policy:
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
                         f"原生结算已落盘，正在提交终局统计…"
                         f"{_path_death_valley_outcome_note}"
+                        f"{_boss_race_combo_gate_terminal_outcome_note}"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -25617,6 +25764,7 @@ class Policy:
                 return Decision("return_to_main_menu", {},
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
                                 f"{_path_death_valley_outcome_note}"
+                                f"{_boss_race_combo_gate_terminal_outcome_note}"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -25654,6 +25802,7 @@ class Policy:
             return Decision("return_to_main_menu", {},
                             "结算：返回主菜单，备战下一局"
                             f"{_path_death_valley_outcome_note}"
+                            f"{_boss_race_combo_gate_terminal_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
                             f"{_card_burst_terminal_outcome_note}",
