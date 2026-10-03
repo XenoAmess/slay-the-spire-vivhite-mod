@@ -1048,8 +1048,6 @@ class Policy:
         self._longfight_effective_dpt_projected = 0.0
         self._longfight_effective_dpt_terminal_outcome_pending = None
         self._longfight_effective_dpt_terminal_outcome_reported = False
-        self._decimillipede_reattach_terminal_outcome_pending = None
-        self._decimillipede_reattach_terminal_outcome_reported = False
         self._self_loss_phase_terminal_outcome_pending = None
         self._self_loss_phase_terminal_outcome_reported = False
         self._potion_self_harm_terminal_outcome_pending = None
@@ -6731,185 +6729,6 @@ class Policy:
             f"{_survival_gap_note}"
             f"{_focus_drift_tail}"
             "（LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
-
-    def _restore_decimillipede_reattach_terminal_outcome_from_decisions(
-            self, pol, ctx, floor=None) -> None:
-        """Recover same-combat linked-segment reattach windows before GAME_OVER.
-
-        ``DECIMILLIPEDE_REATTACH_WINDOW_OBS`` is emitted on combat decisions,
-        while the native terminal row is persisted separately.  Summarize only
-        the contiguous same-floor combat tail so the terminal DPT audit can be
-        read together with segment disappear/return evidence.  This helper is
-        observation-only and never participates in scoring or action choice.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "decimillipede_reattach_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        if not _enabled:
-            return
-
-        decisions = getattr(ctx, "decisions", None)
-        marker = "DECIMILLIPEDE_REATTACH_TERMINAL_OUTCOME_OBS"
-        _reported = bool(getattr(
-            self, "_decimillipede_reattach_terminal_outcome_reported",
-            False))
-        if _reported:
-            _last_reason = ""
-            if isinstance(decisions, list) and decisions:
-                _last = decisions[-1]
-                if isinstance(_last, dict):
-                    _last_reason = str(_last.get("reason") or "")
-            if marker in _last_reason:
-                return
-            self._decimillipede_reattach_terminal_outcome_reported = False
-        if isinstance(getattr(
-                self, "_decimillipede_reattach_terminal_outcome_pending",
-                None), dict):
-            return
-        if not isinstance(decisions, list) or not decisions:
-            return
-
-        def _same_floor(left, right) -> bool:
-            if left is None or right is None:
-                return True
-            try:
-                return int(float(left)) == int(float(right))
-            except (TypeError, ValueError, OverflowError):
-                return str(left) == str(right)
-
-        def _tokens(value: str) -> list[str]:
-            return sorted({
-                item.strip() for item in str(value or "").split(",")
-                if item.strip() and item.strip() != "-"
-            })
-
-        _rows = []
-        _seen_rounds = set()
-        for _row in reversed(decisions):
-            if not isinstance(_row, dict):
-                continue
-            if not _same_floor(floor, _row.get("floor")):
-                break
-            _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
-                break
-            _reason = str(_row.get("reason") or "")
-            _prefix = "DECIMILLIPEDE_REATTACH_WINDOW_OBS:"
-            _marker_at = _reason.rfind(_prefix)
-            if _marker_at < 0:
-                continue
-            _payload = _reason[_marker_at + len(_prefix):]
-            _fields = {}
-            for _part in re.split(r"[;；]", _payload):
-                if "=" not in _part:
-                    continue
-                _key, _value = _part.split("=", 1)
-                _fields[_key.strip()] = _value.strip()
-            try:
-                _round = int(float(_fields.get("round")))
-                _live = int(float(_fields.get("live")))
-            except (TypeError, ValueError, OverflowError):
-                continue
-            if _round in _seen_rounds or _live < 2:
-                continue
-            _seen_rounds.add(_round)
-            _rows.append({
-                "round": _round,
-                "live": _live,
-                "missing": _tokens(_fields.get("missing", "-")),
-                "returned": _tokens(_fields.get("returned", "-")),
-                "returned_after": _tokens(
-                    _fields.get("returned_after", "-")),
-            })
-        if not _rows:
-            return
-        _rows.sort(key=lambda _row: _row["round"])
-        _missing = sorted({
-            _item for _row in _rows for _item in _row["missing"]})
-        _returned = sorted({
-            _item for _row in _rows for _item in _row["returned"]})
-        if not _missing and not _returned:
-            return
-
-        _terminal = decisions[-1]
-        if not isinstance(_terminal, dict):
-            return
-        _terminal_screen = str(_terminal.get("screen") or "").upper()
-        if (_terminal_screen
-                and _terminal_screen not in {"COMBAT", "CARD_SELECTION"}):
-            return
-        if not _same_floor(floor, _terminal.get("floor")):
-            return
-        self._decimillipede_reattach_terminal_outcome_pending = {
-            "window_count": len(_rows),
-            "first_round": _rows[0]["round"],
-            "last_round": _rows[-1]["round"],
-            "missing_events": sum(bool(_row["missing"]) for _row in _rows),
-            "returned_events": sum(bool(_row["returned"]) for _row in _rows),
-            "missing_segments": _missing,
-            "returned_segments": _returned,
-            "returned_after": sorted({
-                _item for _row in _rows for _item in _row["returned_after"]}),
-            "terminal_round": _terminal.get(
-                "turn", _terminal.get("round")),
-            "terminal_action": _terminal.get("action") or "?",
-            "terminal_hp": _terminal.get("hp"),
-        }
-        self._decimillipede_reattach_terminal_outcome_reported = False
-
-    def _consume_decimillipede_reattach_terminal_outcome_note(
-            self, pol, victory, floor=None, final_hp=None) -> str:
-        """Join linked-segment reattach counts to the native terminal result."""
-        try:
-            _enabled = bool(int(float(pol.get(
-                "decimillipede_reattach_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        _pending = getattr(
-            self, "_decimillipede_reattach_terminal_outcome_pending", None)
-        if (not _enabled or not isinstance(_pending, dict)
-                or bool(getattr(
-                    self, "_decimillipede_reattach_terminal_outcome_reported",
-                    False))):
-            return ""
-        self._decimillipede_reattach_terminal_outcome_reported = True
-
-        def _num(value) -> str:
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        def _round(value) -> str:
-            try:
-                return str(int(float(value)))
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        def _csv(key: str) -> str:
-            _values = [str(_value).strip() for _value in (
-                _pending.get(key) or []) if str(_value).strip()]
-            return ",".join(_values) or "-"
-
-        _result = "victory" if victory else "defeat"
-        return (
-            "；千足虫重生窗口终局对账："
-            f"outcome={_result}/floor={_round(floor)}"
-            f"/windows={_pending.get('window_count', 0)}"
-            f"/first_round={_round(_pending.get('first_round'))}"
-            f"/last_round={_round(_pending.get('last_round'))}"
-            f"/missing_events={_pending.get('missing_events', 0)}"
-            f"/returned_events={_pending.get('returned_events', 0)}"
-            f"/missing_segments={_csv('missing_segments')}"
-            f"/returned_segments={_csv('returned_segments')}"
-            f"/returned_after={_csv('returned_after')}"
-            f"/terminal_round={_round(_pending.get('terminal_round'))}"
-            f"/terminal_action={_pending.get('terminal_action') or '?'}"
-            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
-            f"/final_hp={_num(final_hp)}"
-            "（DECIMILLIPEDE_REATTACH_TERMINAL_OUTCOME_OBS）")
 
     def _restore_self_loss_phase_terminal_outcome_from_notes(
             self, pol, ctx, floor=None) -> None:
@@ -16119,8 +15938,6 @@ class Policy:
             self._longfight_effective_dpt_projected = 0.0
             self._longfight_effective_dpt_terminal_outcome_pending = None
             self._longfight_effective_dpt_terminal_outcome_reported = False
-            self._decimillipede_reattach_terminal_outcome_pending = None
-            self._decimillipede_reattach_terminal_outcome_reported = False
             self._self_loss_phase_terminal_outcome_pending = None
             self._self_loss_phase_terminal_outcome_reported = False
             self._potion_self_harm_terminal_outcome_pending = None
@@ -25276,11 +25093,6 @@ class Policy:
         _longfight_effective_dpt_terminal_outcome_note = (
             self._consume_longfight_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
-        self._restore_decimillipede_reattach_terminal_outcome_from_decisions(
-            self.know.policy, ctx, go.get("floor"))
-        _decimillipede_reattach_terminal_outcome_note = (
-            self._consume_decimillipede_reattach_terminal_outcome_note(
-                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_self_loss_phase_terminal_outcome_from_notes(
             self.know.policy, ctx, go.get("floor"))
         _self_loss_phase_terminal_outcome_note = (
@@ -25455,7 +25267,6 @@ class Policy:
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
-                            f"{_decimillipede_reattach_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
                             f"{_potion_self_harm_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
@@ -25516,7 +25327,6 @@ class Policy:
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
-                        f"{_decimillipede_reattach_terminal_outcome_note}"
                         f"{_potion_self_harm_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_hard_intent_spike_fire_terminal_outcome_note}"

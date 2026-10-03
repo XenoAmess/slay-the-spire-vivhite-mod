@@ -81,7 +81,6 @@ DEFAULT_POLICY = {
     "longfight_race_effective_dpt_survival_gap_obs": True,  # Read-only join of same-floor longfight DPT and projection survival gap.
     "enemy_hardened_shell_dmg_cap": True,  # Native HardenedShellPower caps HP loss per turn; disable for strict rollback.
     "decimillipede_reattach_window_obs": True,  # pure observation: track missing_since/elapsed/due and returned_after inside native 2-turn reattach windows
-    "decimillipede_reattach_terminal_outcome_obs": True,  # same-floor terminal summary of decimillipede missing/returned windows; observation only
     "boss_race_slippery_joint_guard": True,  # Boss combat: do not reopen a doomed race when live Slippery powers make static DPS optimistic
     "boss_race_slippery_tax_per_layer": 0.25,  # 前夜竞速预演的开局滑溜破层税（BOSS_RACE_SLIPPERY_TAX，第5~6局批复盘）：
     # 同幕已有重复实证的 Boss 组合池含开局自挂滑溜的成员（VANTOM 8层，每层把一次命中压到1血）时，
