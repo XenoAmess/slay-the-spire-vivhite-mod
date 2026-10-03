@@ -15888,3 +15888,30 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 首次复现宿主固定 256 槽临时池耗尽；随后用同一 `selfcheck.py` 的 clone-local 进程级 0777 临时目录适配器运行，退出码 0 且输出 `SELFCHECK OK`。1884 完整链只读回放命中新 marker：`source_floor=16/known_viable=0/6/terminal_floor=17/terminal_round=6/outcome=defeat`；目标三文件 `git diff --check` 通过。宿主 `.review-cache` 未纳入暂存或提交，未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1886-1887-F17：跨旧楼层边界的独立生还线终局对账
+
+profile_id：`ironclad`
+requested_runs：`1886, 1887`
+production_code_commit：`e8fc1ea6dcfdf0e64015cd88329a9d7e2a5ce997`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1887-F17 D221 的普通 `play_card` 已记录 `LETHAL_SURVIVABLE_LINE`，但 D240 `GAME_OVER` 没有独立生还线终局 marker。原因假设为：终局桥前置的旧竞速来源扫描在有界尾部遇到 F16 旧楼层边界时直接 `return`，使下面独立生还线扫描不可达。若把该处改为只结束前置扫描、继续执行独立扫描，则应只补写一次 `LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS`，且 `continue_game_over {}` 的 action/params 不变；若跨旧楼层仍被接入、重复 marker 或动作漂移，假设即被证伪。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/runs/20261004-032152_PVSNAANTNV7J.json` 中，D221/T4/F17 记录「防御」、我方 HP 21、incoming 22 与 `LETHAL_SURVIVABLE_LINE`；D240/T8/F17 为 `GAME_OVER`，旧实现未追加独立生还线 marker。直接用完整决策链回放修复后，pending source 为 `lethal_survivable_line`，终局 reason 命中：`outcome=defeat/floor=17/source_round=4/source_action=play_card/source_card=防御/source_hp=21/source_incoming=22/terminal_round=8/terminal_action=end_turn/terminal_hp=4/final_hp=0/bridge_rounds=4`；action 仍为 `continue_game_over`，params 仍为 `{}`。
+- **EXPECTED_SIGNAL**：后续 3—10 个匹配终局最多各追加一次 marker，字段能与来源、终局和桥长度对账；`REWARD/MAP`、跨楼层或重复终局不命中，关闭观测键只移除 marker；`action/params` 必须逐位保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：将前置 `RACE_PRELOCK_DEFENSE` 尾部扫描遇到楼层/房间边界时的硬 `return` 改为局部 `break`，让后续独立生还线扫描继续执行；不改变评分、候选、选牌、等待或终局动作。
+- `sts2-ascend/brain/selfcheck.py`：增加“有旧楼层边界 + 当前战斗独立生还线”回归夹具，断言 marker 可达、竞速 marker 不串入且 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个同类终局，核对 source/terminal/final HP、incoming、回合跨度和 `applied` 回执；证据成熟前保持只读观测。
+- **Adjust**：若出现跨旧楼层或跨房间接入、重复 marker、字段缺失或 action/params 变化，立即收紧边界并停留在观测层。
+- **Rollback**：关闭 `lethal_survivable_line_terminal_outcome_obs`；预期只移除该终局 marker，既有终局记录及 action/params 不变；必要时回滚本地 commit。
+- **Validation**：宿主直接命令仍会触发已知固定 256 槽 selfcheck bootstrap 限制；使用同一 clone、本地 `.review-cache/selfcheck-pool` 的进程级 0777 临时目录适配器运行同一完整入口，退出码为 0 且输出 `SELFCHECK OK`。最终定向 `git diff --check` 通过，提交 SHA 为 `e8fc1ea6dcfdf0e64015cd88329a9d7e2a5ce997`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

@@ -5901,10 +5901,13 @@ class Policy:
                 continue
             if (floor is not None and row.get("floor") is not None
                     and str(row.get("floor")) != str(floor)):
-                return
+                # Stop this pre-lock source scan at the room/floor boundary,
+                # but still let the independent survivable-line scan below
+                # inspect the current combat tail.
+                break
             if (row.get("screen") not in (None, "COMBAT")
                     and not _is_in_combat_card_selection(row_index, row)):
-                return
+                break
             reason = str(row.get("reason") or "")
             # Only a marker in this trailing combat can suppress a duplicate;
             # an earlier combat in the same run must not block a new join.

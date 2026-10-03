@@ -24070,6 +24070,30 @@ def main() -> int:
             and "/final_hp=0/bridge_rounds=1"
                 in d_lsl_standalone.reason), \
         f"独立致死生还线终局观测缺失或动作漂移: {d_lsl_standalone}"
+
+    # 3rpre-a0c) A prior-floor boundary inside the bounded tail must stop only
+    # the pre-lock source scan.  The independent survivable-line source in the
+    # current combat must remain reachable, matching 1887-F17's D221 -> D240
+    # shape without changing the terminal action or parameters.
+    lsl_standalone_history_ctx = _SettleCtx()
+    lsl_standalone_history_ctx.decisions = [
+        {"screen": "MAP", "floor": 6, "action": "choose_map_node",
+         "params": {}, "reason": "旧战斗边界"},
+        dict(lsl_standalone_ctx.decisions[0]),
+        dict(lsl_standalone_ctx.decisions[1]),
+    ]
+    d_lsl_standalone_history = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            rpre_terminal_state, lsl_standalone_history_ctx)
+    assert (d_lsl_standalone_history.action == d_lsl_standalone.action
+            and d_lsl_standalone_history.params == d_lsl_standalone.params
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                in d_lsl_standalone_history.reason
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                not in d_lsl_standalone_history.reason), \
+        f"跨旧楼层边界后独立致死生还线未接回或动作漂移: " \
+        f"{d_lsl_standalone_history}"
+
     lsl_standalone_off_know = knowledge.Knowledge(tmp)
     lsl_standalone_off_know.policy[
         "lethal_survivable_line_terminal_outcome_obs"] = False
