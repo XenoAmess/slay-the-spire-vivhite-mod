@@ -10566,9 +10566,7 @@ class Policy:
 
     @staticmethod
     def _find_race_output_capacity_transition_source(
-            decisions, floor=None, before_index=None,
-            marker="RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS",
-            label="race-allin lethal output capacity:") -> dict | None:
+            decisions, floor=None, before_index=None) -> dict | None:
         """Find the earliest bounded same-combat output-capacity source row.
 
         The source is an already persisted observation, never a recomputed
@@ -10577,9 +10575,7 @@ class Policy:
         sample.  ``CARD_SELECTION`` is an in-combat UI bridge in the native
         decision chain and must not sever that boundary.  Keep the earliest
         valid row in that bounded window so a sequence of shrinking capacity
-        frames cannot make the terminal row its own source.  Callers may select
-        the persisted marker/label pair when reading a terminal frame emitted
-        by the shared kill-race capacity path.
+        frames cannot make the terminal row its own source.
         """
         if not isinstance(decisions, list) or not decisions:
             return None
@@ -10609,10 +10605,12 @@ class Policy:
             if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
                 break
             _reason = str(_row.get("reason") or "")
-            _marker_at = _reason.rfind(marker)
+            _marker_at = _reason.rfind(
+                "RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS")
             if _marker_at < 0:
                 continue
-            _label_at = _reason.rfind(label, 0, _marker_at)
+            _label_at = _reason.rfind(
+                "race-allin lethal output capacity:", 0, _marker_at)
             if _label_at < 0:
                 continue
             _capacity_text = _reason[_label_at:_marker_at]
@@ -11040,9 +11038,7 @@ class Policy:
                 and str(_terminal_row.get("floor")) != str(floor)):
             return
         _terminal = self._find_race_output_capacity_transition_source(
-            [_terminal_row], floor=floor, before_index=1,
-            marker="KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS",
-            label="kill-race lethal output capacity:")
+            [_terminal_row], floor=floor, before_index=1)
         if not isinstance(_terminal, dict):
             return
         _source = self._find_race_output_capacity_transition_source(
