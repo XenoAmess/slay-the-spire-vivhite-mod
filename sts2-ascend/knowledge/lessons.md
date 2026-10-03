@@ -15792,3 +15792,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.3051702444185262局)，BURNING_PACT(17分/12.822562510012505局)，DEFEND_IRONCLAD(18分/3.282637217629902局)
 - 策略进化：elite_grey_safety_mult: 1.50 → 1.70（精英战灰区进场阵亡，灰区悲观投影系数上调）
 - 生涯战绩：0/1836 胜，当前目标进阶 0
+
+## 第 1837 局复盘（2026-10-03 11:39）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：UNRELENTING, BREAKTHROUGH, JUGGLING, BATTLE_TRANCE, CINDER, BATTLE_TRANCE, HOWL_FROM_BEYOND, UNRELENTING, CINDER, ARMAMENTS, RAMPAGE
+- 本局遗物：ODDLY_SMOOTH_STONE, VENERABLE_TEA_SET, REGAL_PILLOW
+- 战斗记录：F6 Monster战 掉血3｜自损1（可行动段1/非行动段8，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血13｜自损1（可行动段1/非行动段18，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血2; F14 Monster战 掉血8; F15 Unknown战 掉血8; F17 Boss战 掉血70｜竞速投影审计：pool=215/dpt=18.9/ttk=11.3757/tsurv=3.68421（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=11.3757/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.17（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T4判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=32.25/projected_dpt=24.8292/ratio=1.30/min_ratio=1.03（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=32.25/projected_dpt=24.8292/ratio=1.30/min_ratio=1.03（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.970465700655215局)，BRAND(26分/2.4554201045670823局)，PROWESS(26分/10.290904882255163局)，MANGLE(25分/45.19901307701327局)，HELLRAISER(25分/3.9521461776185176局)
+- 当前低价值卡牌：HAVOC(15分/2.2971021485630616局)，BURNING_PACT(17分/12.77768354122746局)，DEFEND_IRONCLAD(18分/3.2711479873681975局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1837 胜，当前目标进阶 0
