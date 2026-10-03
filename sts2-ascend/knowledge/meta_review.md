@@ -15832,3 +15832,31 @@ failed_review_replay: `requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级 0777 临时目录适配运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1882-F17：独立致死生还线终局对账
+
+profile_id：`ironclad`
+requested_run：`1882`
+production_code_commit：`b5988537ce63cec87549af3f7d643924811453b4`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1882-F17 的 D181 普通 `play_card` 已记录 `LETHAL_SURVIVABLE_LINE`，但没有 `RACE_PRELOCK_DEFENSE_OBS`；现有终局桥只回溯竞速未锁前格挡来源，因此 D187 `GAME_OVER` 无法把这条独立生还线接到权威结局。若在同楼层、同战斗尾部 `COMBAT/CARD_SELECTION` 中回接独立来源，应只追加一次 `LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS`，且 `action/params` 不变。跨 `REWARD` 等房间边界、缺字段、重复终局或关闭观测键时不得命中；任一条件不成立即证伪假设。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-014246_XG7MZWX10ZZ6.json` 的 F17 D181/T10 选择「耸肩无视」，reason 含 `敌意图总伤25`、`我方23血` 与 `LETHAL_SURVIVABLE_LINE`；同战斗 D186/T11 无牌结束回合，D187 为 `GAME_OVER`，原终局 reason 含多项 Waterfall/竞速终局 marker，但没有 `LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS`。现有来源是真实终局前的生还线出牌，不是跨房间猜测。
+- **EXPECTED_SIGNAL**：未来 3–10 个匹配终局各至多出现一次独立终局对账，包含 `outcome/floor/source_round/source_action/source_card/source_hp/source_incoming/terminal_round/terminal_action/terminal_hp/final_hp/bridge_rounds`；同楼层普通战斗或经过已验证的 in-combat `CARD_SELECTION` 可命中，`REWARD/MAP`、跨楼层、畸形字段和重复提交必须静默，`action/params` 必须逐位保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：明确既有 `lethal_survivable_line_terminal_outcome_obs` 同时覆盖独立生还线来源；默认开启且可关闭。
+- `sts2-ascend/brain/policy.py`：在既有同楼层、有限尾部终局桥中增加独立 `play_card` 来源回溯与字段对账；只写观测 marker，不进入评分、选牌、目标或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：增加独立来源正例、关闭键严格回滚和 `REWARD` 边界负例，并断言 `continue_game_over {}` 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3–10 个真实同类终局，对照生还线来源字段、Waterfall/终局血量、同战斗回合跨度与 `applied` 回执；证据成熟前保持只读观测。
+- **Adjust**：若真实链的卡名、来袭伤害或屏幕形态不同，只收紧解析和同战斗边界；若出现跨房间/跨楼层误接，立即收紧扫描，不升级为策略规则。
+- **Rollback**：将 `lethal_survivable_line_terminal_outcome_obs` 设为 `False`；预期只移除独立终局 marker，既有终局 marker、`action` 与 `params` 保持不变。
+- **Validation**：宿主直接命令复现固定 256 槽临时池的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用当前 clone 的进程级 `.review-cache/selfcheck-pool` 适配器运行同一完整入口，退出码为 0 且末尾为 `SELFCHECK OK`。目标三文件完整 diff 已复核，`git diff --check` 无 whitespace error，生产变更已提交为 `b5988537ce63cec87549af3f7d643924811453b4`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

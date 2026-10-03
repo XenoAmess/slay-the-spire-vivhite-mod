@@ -23952,6 +23952,68 @@ def main() -> int:
         not in d_rpre_terminal.reason, \
         "无 LETHAL_SURVIVABLE_LINE 来源时错误产生终局 marker"
 
+    # 3rpre-a0b) 独立 LETHAL_SURVIVABLE_LINE 来源：1882-F17 在普通致死
+    #             出牌上记录生还线，但没有 RACE_PRELOCK_DEFENSE_OBS；同楼层
+    #             终局仍应只追加独立归因，关闭键和跨房间边界必须严格回滚。
+    lsl_standalone_ctx = _SettleCtx()
+    lsl_standalone_ctx.decisions = [
+        {"screen": "COMBAT", "floor": 7, "turn": 3, "hp": 23,
+         "action": "play_card", "params": {"card_index": 0},
+         "reason": (
+             "战斗：打出【耸肩无视】（格挡8）；敌意图总伤25，"
+             "我方23血/0甲；本回合买命可生还，非斩杀攻击让位格挡"
+             "（LETHAL_SURVIVABLE_LINE）")},
+        {"screen": "COMBAT", "floor": 7, "turn": 4, "hp": 23,
+         "action": "end_turn", "params": {},
+         "reason": "致死无牌空过观测"},
+    ]
+    lsl_standalone_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_lsl_standalone = lsl_standalone_pol.decide(
+        rpre_terminal_state, lsl_standalone_ctx)
+    assert (d_lsl_standalone.action == "continue_game_over"
+            and d_lsl_standalone.params == {}
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                in d_lsl_standalone.reason
+            and "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+                not in d_lsl_standalone.reason
+            and "/source_round=3/source_action=play_card"
+                in d_lsl_standalone.reason
+            and "/source_card=耸肩无视/source_hp=23/source_incoming=25"
+                in d_lsl_standalone.reason
+            and "/terminal_round=4/terminal_action=end_turn"
+                in d_lsl_standalone.reason
+            and "/final_hp=0/bridge_rounds=1"
+                in d_lsl_standalone.reason), \
+        f"独立致死生还线终局观测缺失或动作漂移: {d_lsl_standalone}"
+    lsl_standalone_off_know = knowledge.Knowledge(tmp)
+    lsl_standalone_off_know.policy[
+        "lethal_survivable_line_terminal_outcome_obs"] = False
+    d_lsl_standalone_off = policy.Policy(lsl_standalone_off_know).decide(
+        rpre_terminal_state, lsl_standalone_ctx)
+    assert (d_lsl_standalone_off.action == d_lsl_standalone.action
+            and d_lsl_standalone_off.params == d_lsl_standalone.params
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+                not in d_lsl_standalone_off.reason), \
+        f"独立致死生还线关闭未严格回滚: " \
+        f"on={d_lsl_standalone} off={d_lsl_standalone_off}"
+    lsl_standalone_boundary_ctx = _SettleCtx()
+    lsl_standalone_boundary_ctx.decisions = [
+        dict(lsl_standalone_ctx.decisions[0]),
+        {"screen": "REWARD", "floor": 7, "action": "claim_reward",
+         "params": {}, "reason": "房间边界"},
+        dict(lsl_standalone_ctx.decisions[1]),
+    ]
+    d_lsl_standalone_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            rpre_terminal_state, lsl_standalone_boundary_ctx)
+    assert (d_lsl_standalone_boundary.action
+            == d_lsl_standalone.action
+            and d_lsl_standalone_boundary.params
+            == d_lsl_standalone.params
+            and "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
+            not in d_lsl_standalone_boundary.reason), \
+        f"独立致死生还线跨房间误接: {d_lsl_standalone_boundary}"
+
     # 3rpre-a1) Armaments-style CARD_SELECTION is an in-combat modal, not a
     # room boundary.  The terminal join may cross it only when both adjacent
     # durable rows remain COMBAT on the same floor.

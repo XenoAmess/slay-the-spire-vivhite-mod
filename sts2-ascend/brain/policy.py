@@ -5678,6 +5678,7 @@ class Policy:
         """
         decisions = getattr(ctx, "decisions", None)
         marker = "RACE_PRELOCK_DEFENSE_TERMINAL_OUTCOME_OBS"
+        survivable_line_marker = "LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS"
         if not isinstance(decisions, list) or not decisions:
             return
         _reported = bool(getattr(
@@ -5687,7 +5688,7 @@ class Policy:
             _last = decisions[-1]
             if isinstance(_last, dict):
                 _last_reason = str(_last.get("reason") or "")
-            if marker in _last_reason:
+            if marker in _last_reason or survivable_line_marker in _last_reason:
                 return
             # The GAME_OVER action may have been lost before persistence.
             # Let the next authoritative poll rebuild the same source join.
@@ -5829,20 +5830,72 @@ class Policy:
             self._race_prelock_defense_terminal_outcome_reported = False
             return
 
+        # A normal lethal tick can emit LETHAL_SURVIVABLE_LINE on the chosen
+        # play_card without going through the older pre-lock defense audit.
+        # Keep that source join on the same bounded COMBAT/CARD_SELECTION tail
+        # so a real GAME_OVER can attribute the line without changing action
+        # selection.  Any room screen remains a hard boundary.
+        for row_index in range(len(decisions) - 2, _start - 1, -1):
+            row = decisions[row_index]
+            if not isinstance(row, dict):
+                continue
+            if (floor is not None and row.get("floor") is not None
+                    and str(row.get("floor")) != str(floor)):
+                return
+            if (row.get("screen") not in (None, "COMBAT")
+                    and not _is_in_combat_card_selection(row_index, row)):
+                return
+            reason = str(row.get("reason") or "")
+            if survivable_line_marker in reason:
+                return
+            if (row.get("action") != "play_card"
+                    or "LETHAL_SURVIVABLE_LINE" not in reason):
+                continue
+            _source_round = _number(row.get("turn", row.get("round")))
+            _source_hp = _number(row.get("hp"))
+            if _source_round is None or _source_hp is None:
+                continue
+            _card_match = re.search(r"打出【([^】]+)】", reason)
+            _incoming_match = re.search(
+                r"敌意图总伤([+-]?(?:\d+(?:\.\d*)?|\.\d+))", reason)
+            _source_incoming = _number(
+                _incoming_match.group(1) if _incoming_match else None)
+            self._race_prelock_defense_terminal_outcome_pending = {
+                "source_kind": "lethal_survivable_line",
+                "source_round": _source_round,
+                "source_action": row.get("action") or "?",
+                "source_card": (_card_match.group(1).strip()
+                                 if _card_match else "?"),
+                "source_hp": _source_hp,
+                "source_incoming": _source_incoming,
+                "terminal_round": _terminal_round,
+                "terminal_action": terminal.get("action") or "?",
+                "terminal_hp": _terminal_hp,
+            }
+            self._race_prelock_defense_terminal_outcome_reported = False
+            return
+
     def _consume_race_prelock_defense_terminal_outcome_note(
             self, pol, victory, floor=None, final_hp=None) -> str:
         """Join a pre-lock defense audit to the authoritative terminal result."""
-        try:
-            _enabled = bool(int(float(pol.get(
-                "race_prelock_defense_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
         _pending = getattr(
             self, "_race_prelock_defense_terminal_outcome_pending", None)
-        if (not _enabled or not isinstance(_pending, dict)
+        if (not isinstance(_pending, dict)
                 or bool(getattr(
                     self, "_race_prelock_defense_terminal_outcome_reported",
                     False))):
+            return ""
+        _standalone_survivable_line = (
+            _pending.get("source_kind") == "lethal_survivable_line")
+        _enabled_key = (
+            "lethal_survivable_line_terminal_outcome_obs"
+            if _standalone_survivable_line
+            else "race_prelock_defense_terminal_outcome_obs")
+        try:
+            _enabled = bool(int(float(pol.get(_enabled_key, 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
             return ""
         self._race_prelock_defense_terminal_outcome_reported = True
 
@@ -5857,6 +5910,36 @@ class Policy:
                 return str(int(float(value)))
             except (TypeError, ValueError, OverflowError):
                 return "?"
+
+        def _text(value) -> str:
+            return (re.sub(r"[/；（）()\s]+", "_", str(value or "?"))
+                    .strip("_") or "?")
+
+        if _standalone_survivable_line:
+            _source_round = _pending.get("source_round")
+            _terminal_round = _pending.get("terminal_round")
+            try:
+                _bridge_rounds = str(max(
+                    0, int(float(_terminal_round))
+                    - int(float(_source_round))))
+            except (TypeError, ValueError, OverflowError):
+                _bridge_rounds = "?"
+            _result = "victory" if victory else "defeat"
+            return (
+                "；致死生还线终局对账："
+                f"outcome={_result}"
+                f"/floor={_round(floor)}"
+                f"/source_round={_round(_source_round)}"
+                f"/source_action={_text(_pending.get('source_action'))}"
+                f"/source_card={_text(_pending.get('source_card'))}"
+                f"/source_hp={_num(_pending.get('source_hp'))}"
+                f"/source_incoming={_num(_pending.get('source_incoming'))}"
+                f"/terminal_round={_round(_terminal_round)}"
+                f"/terminal_action={_text(_pending.get('terminal_action'))}"
+                f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+                f"/final_hp={_num(final_hp)}"
+                f"/bridge_rounds={_bridge_rounds}"
+                "（LETHAL_SURVIVABLE_LINE_TERMINAL_OUTCOME_OBS）")
 
         _card = str(_pending.get("source_card") or "?")
         _card = re.sub(r"[/；（）()\s]+", "_", _card).strip("_") or "?"
