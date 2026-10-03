@@ -20346,3 +20346,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(21分/24.59045587306016局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.16523273826757局)，VIVHITE_CARD_GEODESIC_VEIL(22分/4.571021599531507局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——致命Boss战实测自损26/掉血50（52%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1846 胜，当前目标进阶 4
+
+## 第 1847 局复盘（2026-10-03 15:01）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_MEASURE
+- 本局遗物：VEXING_PUZZLEBOX, RED_MASK, INTIMIDATING_HELMET
+- 战斗记录：F6 Unknown战 掉血14｜自损18（可行动段18/非行动段8，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血8｜自损12（可行动段12/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血35｜自损30（可行动段30/非行动段19，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损18（可行动段18/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血63｜自损26（可行动段26/非行动段21，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=195/dpt=38.475/ttk=5.06823/tsurv=2.94444（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=5.06823/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.38（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=26.2/projected_dpt=35.875/ratio=0.76/min_ratio=0.37（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=26.2/projected_dpt=35.875/ratio=0.76/min_ratio=0.37（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(42分/2.227927597045424局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.1284494784941344局)，MAYHEM(37分/4.540113935165739局)，THINKING_AHEAD(37分/2.453128760378678局)，JACKPOT(36分/8.861566923328466局)
+- 当前低价值卡牌：VIVHITE_CARD_PARALLEL_STARFALL(21分/24.50438927750445局)，VIVHITE_CARD_CONVERGENCE_VERDICT(22分/21.091154423683633局)，VIVHITE_CARD_GEODESIC_VEIL(22分/4.555023023933147局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（81%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：4/1847 胜，当前目标进阶 4
