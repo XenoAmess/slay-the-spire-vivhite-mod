@@ -11235,7 +11235,10 @@ class Policy:
                 continue
             if not _same_floor(floor, _row.get("floor")):
                 break
-            if _row.get("screen") not in (None, "COMBAT"):
+            # An active-combat top-deck/upgrade choice is persisted as
+            # CARD_SELECTION between COMBAT rows.  Keep it inside this
+            # bounded same-floor tail; REWARD/MAP/etc. remain hard boundaries.
+            if _row.get("screen") not in (None, "COMBAT", "CARD_SELECTION"):
                 break
             if (_row.get("action") == "end_turn"
                     and "NONLETHAL_UNAVAILABLE_END_TURN_OBS"
@@ -12028,7 +12031,10 @@ class Policy:
             if (floor is not None and _candidate.get("floor") is not None
                     and str(_candidate.get("floor")) != str(floor)):
                 break
-            if _candidate.get("screen") not in (None, "COMBAT"):
+            # Combat card choices are a modal inside the current fight, not a
+            # room transition.  Preserve the bounded source join across them.
+            if _candidate.get("screen") not in (
+                    None, "COMBAT", "CARD_SELECTION"):
                 break
             if _candidate.get("action") != "end_turn":
                 continue
@@ -12180,7 +12186,8 @@ class Policy:
             if (floor is not None and _candidate.get("floor") is not None
                     and str(_candidate.get("floor")) != str(floor)):
                 break
-            if _candidate.get("screen") not in (None, "COMBAT"):
+            if _candidate.get("screen") not in (
+                    None, "COMBAT", "CARD_SELECTION"):
                 break
             _combat_segment.append(_candidate)
             if len(_combat_segment) >= 64:

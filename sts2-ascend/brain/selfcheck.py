@@ -19508,6 +19508,56 @@ def main() -> int:
                 not in d_nonlethal_pressure_off.reason), \
         f"能量锁定归因关闭后动作或既有 marker 漂移: {d_nonlethal_pressure_off}"
 
+    # 3z-4g-1) Same-combat CARD_SELECTION rows must not cut the bounded
+    # non-lethal pressure/transition bridge.  This mirrors 1867-F33: three
+    # non-lethal end_turn markers are separated by combat card selections
+    # before a later lethal end_turn and GAME_OVER; all observations remain
+    # audit-only and the terminal action stays unchanged.
+    nonlethal_card_selection_ctx = _SettleCtx()
+    nonlethal_card_selection_ctx.decisions = [
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 4, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 4, "reason": "战斗：桥接出牌"},
+        {"screen": "CARD_SELECTION", "action": "select_deck_card",
+         "floor": 48, "reason": "战斗：牌堆顶选择"},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 4, "reason": "战斗：桥接出牌"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 5, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 5, "reason": "战斗：桥接出牌"},
+        {"screen": "CARD_SELECTION", "action": "select_deck_card",
+         "floor": 48, "reason": "战斗：牌堆顶选择"},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 5, "reason": "战斗：桥接出牌"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 6, "reason": d_nonlethal_empty.reason},
+        {"screen": "COMBAT", "action": "play_card", "floor": 48,
+         "turn": 6, "reason": "战斗：桥接出牌"},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 48,
+         "turn": 7, "reason": d_lethal_empty.reason},
+    ]
+    d_nonlethal_card_selection = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_card_selection_ctx)
+    assert (d_nonlethal_card_selection.action
+            == d_nonlethal_empty_outcome.action
+            and d_nonlethal_card_selection.params
+            == d_nonlethal_empty_outcome.params
+            and "NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS"
+                in d_nonlethal_card_selection.reason
+            and "NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS"
+                in d_nonlethal_card_selection.reason
+            and "count=3/first_round=4/last_round=6"
+                in d_nonlethal_card_selection.reason
+            and "NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS"
+                in d_nonlethal_card_selection.reason
+            and "count=3/first_round=4/last_nonlethal_round=6"
+                in d_nonlethal_card_selection.reason), \
+        f"CARD_SELECTION 截断非致死压力链或动作漂移: {d_nonlethal_card_selection}"
+
     # 3z-5) 竞速终端资源对账（KILL_RACE_TERMINAL_AUDIT_OBS）：
     #       1601-F17 的尾部形态——此前已经锁定 ttk>tsurv，随后因无可负担
     #       手牌被迫提交致死 end_turn；只追加最近一次投影与终端资源，不能

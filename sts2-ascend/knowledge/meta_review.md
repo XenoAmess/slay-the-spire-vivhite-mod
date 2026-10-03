@@ -15559,3 +15559,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: direct selfcheck reproduced the host's fixed 256-slot bootstrap limit; the clone-local process adapter then completed the full check with exit code 0 and `SELFCHECK OK`. Read-only run 1865 replay emitted the new marker once with `source_ttk_minus_tsurv=3.49578`, preserving `continue_game_over` and `{}`. Final target diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1867-F33：同战斗 CARD_SELECTION 的非致死终局桥接
+
+profile_id：`ironclad`
+requested_run：`1867`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：1867-F33 的非致死“无可用行动”尾部被同一场战斗中的 `CARD_SELECTION` 行截断，导致 D408、D411、D414 的非致死 `end_turn` 无法完整连接到 D422 的致死 `end_turn`。若只把同楼层 `CARD_SELECTION` 视为战斗内模态、保留 `REWARD`/`MAP` 等硬边界，既有终局桥应恢复压力与致死转折观测，而不改变动作。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-203809_JT26H88Y516E.json` 的 `decisions` 数组中，D408/D411/D414 为非致死终结行，D416/D420 为 `CARD_SELECTION`，D422 为带 `LETHAL_UNAVAILABLE_END_TURN_OBS` 的致死终结行，随后进入 `GAME_OVER`。修改前三个相关扫描均把非 `COMBAT` 视为硬边界；本批没有失败回放包。
+- **EXPECTED_SIGNAL**：未来相同尾部应出现 `NONLETHAL_UNAVAILABLE_CHAIN_OUTCOME_OBS`、`NONLETHAL_UNAVAILABLE_CHAIN_PRESSURE_OBS`（`count=3/first_round=4/last_round=6`）和 `NONLETHAL_UNAVAILABLE_LETHAL_TRANSITION_OBS`（`count=3/first_round=4/last_nonlethal_round=6`）；跨 `REWARD`/`MAP` 仍不应产生这些 marker。`applied` action 与 params 必须保持不变。任一条件不成立即证伪该假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：仅在非致死转折、终局来源回溯和同段压力回溯的三个有界扫描中加入 `CARD_SELECTION`；仍要求同楼层，其他 screen 继续截断。
+- `sts2-ascend/brain/selfcheck.py`：增加三次非致死 `end_turn`、两次同战斗 `CARD_SELECTION`、一次致死 `end_turn` 的夹具，并断言三个 marker 及 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个同类真实终局，比较 marker 的次数/回合、`GAME_OVER` 结果与 `applied` 回执；暂不把观测升级为策略规则。
+- **Adjust**：若真实链在同楼层仍出现误跨战斗或字段缺失，只收紧来源边界/解析，不扩大到 `REWARD`、`MAP` 或其他 screen。
+- **Rollback**：撤回三个扫描中的 `CARD_SELECTION` 放行即可恢复原行为；既有 COMBAT 观测与动作保持。
+- **Validation**：直接 selfcheck 命中宿主固定 256 槽池的既有 bootstrap 限制；随后以当前 clone 池下的进程级 0777 临时分配器运行同一入口，退出码 0 并输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过，尚未触碰 `.runtime/`、正式 runs/archive、学习记忆、回放或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
