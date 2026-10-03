@@ -16078,3 +16078,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.1043253351820597局)，BURNING_PACT(17分/12.691431411033841局)，DEFEND_IRONCLAD(18分/2.996627550609656局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（68%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.00，步长 0.03→0.000）；block_safety: 2.09 → 2.08（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F33——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F33——药水交药线部分胜利回收）
 - 生涯战绩：0/1862 胜，当前目标进阶 0
+
+## 第 1863 局复盘（2026-10-03 19:28）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BREAKTHROUGH, DISMANTLE, MOLTEN_FIST, TRUE_GRIT, ARMAMENTS, BREAKTHROUGH, VICIOUS, FEEL_NO_PAIN, THRASH, CINDER, SECOND_WIND
+- 本局遗物：LUCKY_FYSH
+- 战斗记录：F4 Monster战 掉血0｜自损1（可行动段1/非行动段3，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血7｜自损2（可行动段2/非行动段11，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血14｜自损2（可行动段2/非行动段3，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血21｜自损1（可行动段1/非行动段25，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血85｜自损2（可行动段2/非行动段77，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=198/dpt=35.7/ttk=5.54622/tsurv=1.62963（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=5.54622/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.30（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T5判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=31.0833/projected_dpt=23.3823/ratio=1.44/min_ratio=0.88（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=31.0833/projected_dpt=23.3823/ratio=1.44/min_ratio=0.88（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=31.0833/projected_dpt=23.3823/ratio=1.44/min_ratio=0.88（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.147000639307163局)，BLOODLETTING(29分/2.2025277817101094局)，MASTER_OF_STRATEGY(27分/4.53739888707465局)，PROWESS(26分/10.326558101633855局)，BRAND(26分/2.241484223157348局)
+- 当前低价值卡牌：HAVOC(15分/2.0969601965089226局)，BURNING_PACT(17分/12.647011401095224局)，DEFEND_IRONCLAD(18分/2.986139354182522局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1863 胜，当前目标进阶 0
