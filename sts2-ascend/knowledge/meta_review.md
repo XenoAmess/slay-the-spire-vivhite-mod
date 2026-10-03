@@ -15391,3 +15391,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：宿主固定 256 槽池在完整路径后耗尽；使用 clone-local 进程级 0777 临时目录适配运行同一个完整 selfcheck，退出码 0 且输出 `SELFCHECK OK`。目标源码限定 `git diff --check` 退出码 0；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1851-1852: 残能最高伤牌的自残直死归因
+
+profile_id: `ironclad`
+requested_runs: `1851-1852`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`IDLE_LEAK_RACE` 的“最高伤牌”读数可能把自残后 HP≤0 的牌误报为可负担残能泄漏；新增只读字段应区分牌面最高伤与 HP 门过滤后的合法最高伤，而不改变 `end_turn`。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261003-162635_AZTUT7F5HZ4E.json`（run 1852）F17 第 14 回合记录 HP=1、格挡=5、来袭=25、残能=2 且 action=`end_turn`；同一 reason 同时有 `RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_OBS`（`raw_damage_cap=7/cards=突破+:1@7`）、旧 `IDLE_LEAK_RACE` 和 `LETHAL_PLAYABLE_REJECT_OBS`。`突破+` 的 1 点自残在 HP=1 时使 post-HP=0，故被 `HP_COST_LETHAL_GUARD` 拒绝；既有终局桥只记录 source card/damage/gap，无法区分这一情况。
+- **EXPECTED_SIGNAL**：未来 3—10 个匹配终局统计 `IDLE_LEAK_RACE_HP_COST_FILTER_OBS` 及 `card/self_cost/hp/post_hp/legal_best`，并核对终局 `/source_hp_cost_filter=yes`。若最高伤牌未被自残直死过滤，不应出现新 marker；开关开/关及旧路径的 action/params 应保持逐项相同。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有残能竞速审计中以有界文本/动态值解析自残成本；仅追加 HP 过滤归因，并把该位接入既有终局桥，不改评分、候选排序、出牌或 `end_turn`。
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `idle_leak_race_hp_cost_obs` 回滚键。
+- `sts2-ascend/brain/selfcheck.py`：覆盖 `突破+` 自残直死、合法次高伤牌、终局桥接和关闭键 action/params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个同类残能终局，比较 HP 门前后的最高伤牌、合法最高伤牌、终局 source 字段与 `applied` 回执；新字段仅用于归因，不升级为行为闸。
+- **Adjust**：若真实 reason 使用未覆盖的自残文本/动态变量或终局跨回合边界不同，保留原始链并只收紧解析或桥接条件；不得把观测升级为出牌规则。
+- **Rollback**：将 `idle_leak_race_hp_cost_obs` 设为 `False`；预期只移除新归因及终局 suffix，旧 `IDLE_LEAK_RACE`、既有终局 marker、action 和 params 不变。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池限制；同一完整 selfcheck 经 clone-local 进程级 0777 临时目录适配运行，退出码 0 且输出 `SELFCHECK OK`。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

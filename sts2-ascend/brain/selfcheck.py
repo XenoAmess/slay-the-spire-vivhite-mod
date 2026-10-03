@@ -18679,6 +18679,81 @@ def main() -> int:
         "idle_leak_race_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 idle_leak_race_terminal_outcome_obs"
 
+    # 3z-4d-2) F17 residual-energy attribution: a raw highest-damage card can
+    # be present in the hand while HP_COST_LETHAL_GUARD deliberately rejects
+    # it.  Keep the legacy IDLE_LEAK_RACE marker, but expose that distinction
+    # and carry it through the existing terminal bridge without changing the
+    # terminal action or parameters.
+    idle_leak_hp_cost_cards = [
+        {
+            "name": "突破+", "card_id": "BREAKTHROUGH", "playable": True,
+            "energy_cost": 1,
+            "resolved_rules_text": "造成7点伤害。失去1点生命。",
+            "dynamic_values": [{"name": "Damage", "current_value": 7}],
+        },
+        {
+            "name": "打击", "card_id": "STRIKE_IRONCLAD", "playable": True,
+            "energy_cost": 1,
+            "resolved_rules_text": "造成2点伤害。",
+            "dynamic_values": [{"name": "Damage", "current_value": 2}],
+        },
+    ]
+    idle_leak_hp_cost_note = policy.idle_leak_audit_note(
+        idle_leak_hp_cost_cards, 2, 25, 5,
+        is_unavailable=lambda _card: False,
+        race_mode=True, my_hp=1, hp_cost_obs=True)
+    assert (
+        "IDLE_LEAK_RACE" in idle_leak_hp_cost_note
+        and "IDLE_LEAK_RACE_HP_COST_FILTER_OBS" in idle_leak_hp_cost_note
+        and "/self_cost=1/hp=1/post_hp=0/legal_best=打击@2"
+            in idle_leak_hp_cost_note), \
+        f"残能自残直死过滤观测缺失: {idle_leak_hp_cost_note}"
+    idle_leak_hp_cost_ctx = _SettleCtx()
+    idle_leak_hp_cost_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 14, "hp": 1, "energy": 2,
+        "reason": "战斗：评估后无值得出的牌" + idle_leak_hp_cost_note,
+    }]
+    idle_leak_hp_cost_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_idle_leak_hp_cost = idle_leak_hp_cost_pol.decide(
+        nonlethal_unavailable_outcome_state, idle_leak_hp_cost_ctx)
+    assert (d_idle_leak_hp_cost.action == d_idle_leak_race.action
+            and d_idle_leak_hp_cost.params == d_idle_leak_race.params
+            and "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+                in d_idle_leak_hp_cost.reason
+            and "/source_hp_cost_filter=yes"
+                in d_idle_leak_hp_cost.reason), \
+        f"残能自残直死过滤终局桥缺失或动作漂移: {d_idle_leak_hp_cost}"
+    assert knowledge.DEFAULT_POLICY["idle_leak_race_hp_cost_obs"] is True, \
+        "DEFAULT_POLICY 缺少 idle_leak_race_hp_cost_obs"
+
+    idle_leak_hp_cost_off_note = policy.idle_leak_audit_note(
+        idle_leak_hp_cost_cards, 2, 25, 5,
+        is_unavailable=lambda _card: False,
+        race_mode=True, my_hp=1, hp_cost_obs=False)
+    idle_leak_hp_cost_off_know = knowledge.Knowledge(tmp)
+    idle_leak_hp_cost_off_know.policy["idle_leak_race_hp_cost_obs"] = False
+    idle_leak_hp_cost_off_ctx = _SettleCtx()
+    idle_leak_hp_cost_off_ctx.decisions = [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 48,
+        "turn": 14, "hp": 1, "energy": 2,
+        "reason": "战斗：评估后无值得出的牌" + idle_leak_hp_cost_off_note,
+    }]
+    d_idle_leak_hp_cost_off = policy.Policy(
+        idle_leak_hp_cost_off_know).decide(
+            nonlethal_unavailable_outcome_state,
+            idle_leak_hp_cost_off_ctx)
+    assert (d_idle_leak_hp_cost_off.action == d_idle_leak_hp_cost.action
+            and d_idle_leak_hp_cost_off.params == d_idle_leak_hp_cost.params
+            and "IDLE_LEAK_RACE_TERMINAL_OUTCOME_OBS"
+                in d_idle_leak_hp_cost_off.reason
+            and "IDLE_LEAK_RACE_HP_COST_FILTER_OBS"
+                not in d_idle_leak_hp_cost_off.reason
+            and "/source_hp_cost_filter=yes"
+                not in d_idle_leak_hp_cost_off.reason), \
+        f"残能自残直死过滤观测关闭后动作或既有 marker 漂移: " \
+        f"on={d_idle_leak_hp_cost} off={d_idle_leak_hp_cost_off}"
+
     idle_leak_race_replay = policy.Policy(knowledge.Knowledge(tmp))
     idle_leak_race_replay_ctx = _SettleCtx()
     idle_leak_race_replay_ctx.decisions = [

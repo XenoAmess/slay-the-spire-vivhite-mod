@@ -378,11 +378,14 @@ def _rescue_block_tradeoff(
 def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                          is_unavailable=None, race_mode: bool = False,
                          character_strategy: CharacterStrategy | None = None,
-                         player_powers=None) -> str:
+                         player_powers=None, my_hp=None,
+                         hp_cost_obs: bool = True) -> str:
     """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。
 
     与残能救场候选保持同一边界：会消耗其他手牌的牌不能作为可负担
-    格挡漏打证据，否则消耗上限跳过的牌会制造假阳性。
+    格挡漏打证据，否则消耗上限跳过的牌会制造假阳性。竞速攻击审计
+    仍保留历史牌面最高伤读数；可选的 HP-cost 观测只标出自付后直死
+    的牌，绝不改变 end_turn 或评分。
     """
     try:
         gap = int(incoming) - int(my_block)
@@ -390,7 +393,44 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
             return ""
         unavailable = is_unavailable or (lambda _card: False)
         best_block = None  # (effective block, negative cost, name)
-        best_attack = None  # (estimated damage, name)
+        # (estimated damage, name, self cost, post-hp, filtered by lethal HP cost)
+        best_attack = None
+        best_legal_attack = None  # (estimated damage, name)
+        try:
+            _hp_value = float(my_hp) if my_hp is not None else None
+        except (TypeError, ValueError, OverflowError):
+            _hp_value = None
+
+        def _card_self_cost(card) -> float:
+            try:
+                text = _text(card)
+                match = re.search(
+                    r"(?:失去\s*(\d+)\s*点?\s*生命|"
+                    r"lose[s]?\s+(\d+)\s*(?:hp|health|life))",
+                    text, re.I)
+                if match:
+                    return float(next(group for group in match.groups() if group))
+                for dynamic in card.get("dynamic_values") or []:
+                    name = str(dynamic.get("name") or "").casefold()
+                    if name not in {"hploss", "lifecost", "healthloss", "lifeloss"}:
+                        continue
+                    value = dynamic.get(
+                        "current_value", dynamic.get("base_value", 0))
+                    value = float(value or 0)
+                    if value > 0:
+                        return value
+            except (AttributeError, TypeError, ValueError, OverflowError,
+                    StopIteration):
+                pass
+            return 0.0
+
+        def _audit_text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace("；", "_")
+                    .replace("（", "_")
+                    .replace("）", "_")
+                    .replace(" ", "_"))
         for card in hand or []:
             if (not isinstance(card, dict) or not card.get("playable")
                     or unavailable(card) or card.get("costs_x")
@@ -417,9 +457,24 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                 if best_block is None or candidate[:2] > best_block[:2]:
                     best_block = candidate
             elif race_mode and damage > 0:
-                candidate = (int(damage) * max(1, int(hits or 1)), card.get("name") or "")
+                _estimated = int(damage) * max(1, int(hits or 1))
+                _self_cost = _card_self_cost(card)
+                _post_hp = (
+                    _hp_value - _self_cost
+                    if _hp_value is not None and _self_cost > 0
+                    else None)
+                _hp_cost_filtered = (
+                    _post_hp is not None and _post_hp <= 0.0)
+                candidate = (
+                    _estimated, card.get("name") or "", _self_cost,
+                    _post_hp, _hp_cost_filtered)
                 if best_attack is None or candidate[0] > best_attack[0]:
                     best_attack = candidate
+                if not _hp_cost_filtered:
+                    _legal_candidate = (_estimated, card.get("name") or "")
+                    if (best_legal_attack is None
+                            or _legal_candidate[0] > best_legal_attack[0]):
+                        best_legal_attack = _legal_candidate
         notes = []
         if best_block is not None:
             notes.append(
@@ -431,6 +486,19 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
             notes.append(
                 f"⚠残能空漏审计(IDLE_LEAK_RACE)：竞速态残能{int(energy)}，"
                 f"未打可负担最高伤【{best_attack[1]}】(预估{best_attack[0]}，净缺口{gap})")
+            if hp_cost_obs and best_attack[4]:
+                _legal_best = (
+                    "none" if best_legal_attack is None
+                    else f"{_audit_text(best_legal_attack[1])}"
+                    f"@{best_legal_attack[0]:g}")
+                notes.append(
+                    "残能空漏最高伤牌被自残直死过滤："
+                    f"card={_audit_text(best_attack[1])}"
+                    f"/self_cost={best_attack[2]:g}"
+                    f"/hp={_hp_value:g}"
+                    f"/post_hp={best_attack[3]:g}"
+                    f"/legal_best={_legal_best}"
+                    "（IDLE_LEAK_RACE_HP_COST_FILTER_OBS）")
         return ("；" + "；".join(notes)) if notes else ""
     except Exception:
         # 审计位不得因脏载荷改变 end_turn 保活语义。
@@ -10586,6 +10654,9 @@ class Policy:
         _source = _pending.get("source") or {}
         _terminal = _pending.get("terminal") or {}
         _result = "victory" if victory else "defeat"
+        _hp_cost_filter_suffix = (
+            "/source_hp_cost_filter=yes"
+            if _pending.get("hp_cost_filter") else "")
         return (
             f"；竞速残能空漏终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -10596,6 +10667,7 @@ class Policy:
             f"/source_card={_text(_pending.get('card'))}"
             f"/source_damage={_num(_pending.get('damage'))}"
             f"/source_gap={_num(_pending.get('gap'))}"
+            f"{_hp_cost_filter_suffix}"
             f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
             f"/terminal_action={_text(_terminal.get('action'))}"
             f"/terminal_hp={_num(_terminal.get('hp'))}"
@@ -10687,6 +10759,8 @@ class Policy:
                 "card": _match.group("card"),
                 "damage": _damage,
                 "gap": _gap,
+                "hp_cost_filter": (
+                    "IDLE_LEAK_RACE_HP_COST_FILTER_OBS" in _reason),
                 "bridge_decisions": _terminal_index - _source_index,
                 "bridge_rounds": 0,
             }
@@ -17253,7 +17327,9 @@ class Policy:
                 is_unavailable=self._card_unavailable,
                 race_mode=bool(race_allin or kill_race),
                 character_strategy=self.character_strategy,
-                player_powers=player.get("powers") or [])
+                player_powers=player.get("powers") or [],
+                my_hp=my_hp,
+                hp_cost_obs=bool(pol.get("idle_leak_race_hp_cost_obs", True)))
             # 手牌滞留税披露（HAND_END_TAX，第808~812局批复盘）：毒素/感染型
             # 回合结束手牌伤害不进格挡结算，评估收口与强制收口两侧都需显形。
             _tax_total, _tax_detail = hand_end_turn_tax(hand)
