@@ -15935,3 +15935,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.202459567673769局)，BURNING_PACT(17分/12.251232007983772局)，DEFEND_IRONCLAD(18分/3.1363738815718993局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1849 胜，当前目标进阶 0
+
+## 第 1850 局复盘（2026-10-03 15:36）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：RAMPAGE, TRUE_GRIT, SPITE, BREAKTHROUGH, OFFERING, VICIOUS, DISMANTLE
+- 本局遗物：ETERNAL_FEATHER, BAG_OF_PREPARATION, BAG_OF_MARBLES
+- 战斗记录：F2 Monster战 掉血8; F3 Monster战 掉血3; F5 Monster战 掉血2; F7 Monster战 掉血12｜自损1（可行动段1/非行动段11，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血25｜自损2（可行动段2/非行动段27，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血73｜自损2（可行动段2/非行动段67，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=124/dpt=22.8/ttk=5.4386/tsurv=2.63158（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=5.4386/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.80（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T5判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=18.7222/projected_dpt=23.6668/ratio=0.75/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=18.7222/projected_dpt=23.6668/ratio=0.75/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.748998372119715局)，PROWESS(26分/10.808132331930901局)，BRAND(26分/2.346014796545512局)，HELLRAISER(25分/3.7760517613903595局)，MANGLE(25分/44.16427911135747局)
+- 当前低价值卡牌：HAVOC(15分/2.1947509591869108局)，BURNING_PACT(17分/12.20835269595583局)，DEFEND_IRONCLAD(18分/3.1253965729863977局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1850 胜，当前目标进阶 0
