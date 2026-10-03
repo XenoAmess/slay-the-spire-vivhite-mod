@@ -15642,3 +15642,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽临时池限制；随后用当前 clone 池的进程级 0777 临时目录适配运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过，生产差异已回读；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1872-F23/F24：全候选死亡路径接回终局
+
+profile_id：`ironclad`
+requested_run：`1872`
+production_code_commit：`cdeafd029edee25f809aef7546cc51ff0f97564d`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当地图层所有候选路径都带有“投影中途死亡”，且选中节点进入下一层战斗时，同楼层 `GAME_OVER` 应归因于该“死亡谷”入口，而不是被记录成无来源的普通战斗终局。若未来出现可存活候选仍被标记、楼层边界错配，或入口无法稳定接回终局，则假设被证伪。
+- **EVIDENCE**：精确失败链 `sts2-ascend/knowledge/runs/20261003-222541_FKSVXNKZ6VSV.json` 的 D330（F23）选择 `Monster(6,0)`；候选 `Monster(6,0)` 与 `Monster(6,2)` 均为 `-68.82`、预计进 Boss `0%`，并都带 `投影中途死亡`。D331—D339 进入 F24 外骨骼虫战斗，D340 为失败 `GAME_OVER`；原生资料中的 EXOSKELETON 还显示 HardToKill 及多段攻击，说明该投影是可审计的风险事实，不是新增策略假设。
+- **EXPECTED_SIGNAL**：后续 3—10 个匹配窗口应在地图理由追加一次 `PATH_DEATH_VALLEY_ENTRY_OBS`（entry floor、候选数、选中节点、分数、投影血量），并在同一 run 的下一层 `COMBAT`→`GAME_OVER` 追加一次 `PATH_DEATH_VALLEY_OUTCOME_OBS`（胜负、终局楼层/血量及可用的战斗尾部）。`REWARD`/`MAP` 等边界、楼层不匹配、可存活候选和重复提交不得产生接桥；`action/params` 必须保持不变。任一条件不成立即证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的 `path_death_valley_outcome_obs`。
+- `sts2-ascend/brain/policy.py`：仅在 `all(cand.doomed)` 时追加地图入口 marker；以“下一层楼层 + 后续 COMBAT 证据”为有界条件恢复并接入 `GAME_OVER`，不参与评分、排序、目标或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：增加两个 Monster 候选均投影死亡的正例，覆盖终局字段、重复提交和关闭闸门，并断言地图动作/参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个独立匹配窗口，按候选数、选中节点、投影血量、实际战斗尾部、胜负和 `applied` 回执分层；证据成熟前保持只读观测，不把死亡谷 marker 升级为路线偏好。
+- **Adjust**：若真实链出现跨 `REWARD`/`MAP`、跨楼层或持久化重载误接，只收紧来源解析和边界；不扩大屏幕范围，也不修改路径评分。
+- **Rollback**：将 `path_death_valley_outcome_obs` 设为 `False`；预期只移除入口/终局 marker，既有评分、地图 action/params 与其他终局审计保持不变。
+- **Validation**：直接运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽临时池限制；随后使用当前 clone 的进程级 `0777` 临时目录适配器运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。生产三文件已完成 `git diff --check`、完整 diff 回读并提交为 `cdeafd029`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

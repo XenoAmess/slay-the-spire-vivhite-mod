@@ -10208,6 +10208,96 @@ def main() -> int:
     assert "绝境全候选死亡投影" not in d_dv_mon.reason, \
         f"无价值节点时误留痕: {d_dv_mon.reason}"
 
+    # 3xy2-d) 死亡谷入口→终局只读接桥（第1872局 F23/F24）：两个 Monster
+    #       候选都投影中途死亡，F24 才由原生 GAME_OVER 定案。入口 marker 只
+    #       描述既有投影，终局 marker 只连接同一 run 的下一层 COMBAT 事实；
+    #       不改变地图动作/参数，关闭旋钮也只移除这组 marker。
+    pdv_dir = Path(tempfile.mkdtemp(prefix="sts2-selfcheck-path-death-valley-"))
+    pdv_know = knowledge.Knowledge(pdv_dir)
+    pdv_pol = policy.Policy(pdv_know)
+    pdv_heads = [
+        {"index": 0, "row": 1, "col": 0, "node_type": "Monster",
+         "children": [{"row": 2, "col": 0}]},
+        {"index": 1, "row": 1, "col": 1, "node_type": "Monster",
+         "children": [{"row": 2, "col": 1}]},
+    ]
+    pdv_nodes = pdv_heads + [
+        {"row": 2, "col": 0, "node_type": "Boss"},
+        {"row": 2, "col": 1, "node_type": "Boss"},
+    ]
+    pdv_state = {
+        "screen": "MAP", "run_id": "PATH-DEATH-VALLEY-CHECK",
+        "available_actions": ["choose_map_node"],
+        "map": {"available_nodes": pdv_heads, "nodes": pdv_nodes,
+                "boss_node": {"row": 2}},
+        "run": {"current_hp": 1, "max_hp": 80, "gold": 0,
+                "floor": 23, "deck": []},
+    }
+    pdv_ctx = type("C", (), {
+        "credit_tags": [], "decisions": [],
+        "run_id": "PATH-DEATH-VALLEY-CHECK",
+        "died_in_combat": {
+            "comp_id": "TEST_DEATH_VALLEY",
+            "node_type": "Monster", "floor": 24, "rounds": 1,
+            "hp_lost": 1.0, "self_hp_loss": 0.0, "stall": False,
+        },
+    })()
+    d_pdv = pdv_pol.decide(pdv_state, pdv_ctx)
+    assert d_pdv.action == "choose_map_node" \
+        and d_pdv.params == {"option_index": 0}, \
+        f"死亡谷入口动作漂移: {d_pdv.action} {d_pdv.params}"
+    assert ("PATH_DEATH_VALLEY_ENTRY_OBS" in d_pdv.reason
+            and "entry_floor=23" in d_pdv.reason
+            and "candidates=2" in d_pdv.reason
+            and "selected=Monster" in d_pdv.reason
+            and "projected_after_pct=0%" in d_pdv.reason), \
+        f"死亡谷入口观测缺失: {d_pdv.reason}"
+    pdv_ctx.decisions.extend([
+        {"screen": "MAP", "floor": 23, "action": d_pdv.action,
+         "params": d_pdv.params, "reason": d_pdv.reason},
+        {"screen": "COMBAT", "floor": 24, "action": "end_turn",
+         "reason": "死亡谷夹具战斗"},
+    ])
+    pdv_game_over = {
+        "screen": "GAME_OVER", "run_id": pdv_ctx.run_id,
+        "available_actions": ["continue_game_over"],
+        "game_over": {"is_victory": False, "floor": 24,
+                       "can_continue": True},
+        "run": {"current_hp": 0},
+    }
+    d_pdv_outcome = pdv_pol.decide(pdv_game_over, pdv_ctx)
+    assert (d_pdv_outcome.action == "continue_game_over"
+            and d_pdv_outcome.reason.count(
+                "PATH_DEATH_VALLEY_OUTCOME_OBS") == 1
+            and "entry_floor=23" in d_pdv_outcome.reason
+            and "/entry_candidates=2" in d_pdv_outcome.reason
+            and "/entry_selected=Monster" in d_pdv_outcome.reason
+            and "/entry_projected_after_pct=0%" in d_pdv_outcome.reason
+            and "/outcome=defeat/terminal_floor=24/terminal_hp=0"
+            in d_pdv_outcome.reason
+            and "/combat_id=TEST_DEATH_VALLEY" in d_pdv_outcome.reason
+            and "/combat_node_type=Monster" in d_pdv_outcome.reason), \
+        f"死亡谷终局接桥缺失: {d_pdv_outcome.reason}"
+    pdv_ctx.decisions.append({"screen": "GAME_OVER", "floor": 24,
+                              "action": d_pdv_outcome.action,
+                              "reason": d_pdv_outcome.reason})
+    d_pdv_duplicate = pdv_pol.decide(pdv_game_over, pdv_ctx)
+    assert "PATH_DEATH_VALLEY_OUTCOME_OBS" not in d_pdv_duplicate.reason, \
+        f"死亡谷终局 marker 非幂等: {d_pdv_duplicate.reason}"
+
+    pdv_know.policy["path_death_valley_outcome_obs"] = False
+    pdv_off_pol = policy.Policy(pdv_know)
+    pdv_off_ctx = type("C", (), {"credit_tags": [], "decisions": [],
+                                  "run_id": pdv_ctx.run_id})()
+    d_pdv_off = pdv_off_pol.decide(pdv_state, pdv_off_ctx)
+    assert (d_pdv_off.action == d_pdv.action
+            and d_pdv_off.params == d_pdv.params
+            and "PATH_DEATH_VALLEY" not in d_pdv_off.reason), \
+        f"死亡谷旋钮关闭改变动作或仍留 marker: {d_pdv_off.action} {d_pdv_off.params} {d_pdv_off.reason}"
+    d_pdv_off_outcome = pdv_off_pol.decide(pdv_game_over, pdv_off_ctx)
+    assert "PATH_DEATH_VALLEY" not in d_pdv_off_outcome.reason, \
+        f"死亡谷旋钮关闭仍留终局 marker: {d_pdv_off_outcome.reason}"
+
     # 3xy3) 中段精英罚分深度衰减（第 107 局复盘）：29% 血时唯一篝火因子树深处
     #       藏精英被罚到 -84 压过 Monster(-0.94)，放弃救命休息。逐节点选路下
     #       depth 越深的精英越不是承诺（中间岔口可改道），罚分须随深度衰减；

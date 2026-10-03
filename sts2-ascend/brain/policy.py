@@ -992,6 +992,8 @@ class Policy:
         self._card_burst_terminal_outcome_reported = False  # 拿牌爆发审计结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
         self._elite_forced_entry_reported = False  # 被迫精英结局 marker 每场只写一次
+        self._path_death_valley_outcome_pending = None  # 全候选死亡路径，等待下一层终局对账
+        self._path_death_valley_outcome_reported = False  # 死亡谷结局 marker 每场只写一次
         self._longfight_joint_flip_terminal_outcome_reported = False
         self._hp_cost_atk_nonlethal_terminal_outcome_pending = None
         self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
@@ -2598,6 +2600,8 @@ class Policy:
             self._hp_pay_result_note = ""
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
+            self._path_death_valley_outcome_pending = None
+            self._path_death_valley_outcome_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
             self._race_allin_lethal_unavailable_terminal_outcome_reported = False
@@ -2648,6 +2652,8 @@ class Policy:
             # GAME_OVER outcome; do not carry its pending audit into a later room.
             self._elite_forced_entry_pending = None
             self._elite_forced_entry_reported = False
+            self._path_death_valley_outcome_pending = None
+            self._path_death_valley_outcome_reported = False
         # 相同候选可能在后续同楼层再次真实出现；只要中间离开 offer 屏就释放
         # 当前 key。这样轮询不重复计数，而两个独立的同构 offer 仍各记一次。
         if not self._state_has_explicit_card_offer(state):
@@ -3883,6 +3889,35 @@ class Policy:
                     f"/mode={mode}/projected_after_pct={_projected_after_pct}"
                     "（ELITE_FORCED_ENTRY_OBS）")
             note_txt = f"；{'；'.join(best_notes)}"
+        # 全候选死亡路径只做入口事实与下一层终局的有界对账，不改变排序、
+        # 选择或参数。这样第 1872 局 F23 的“两个候选都投影中途死亡”可以与
+        # F24 的权威 GAME_OVER 连接，而不是只留下地图侧的一句散文。
+        if (best_node is not None and cand
+                and self._path_death_valley_outcome_enabled(pol)
+                and all(bool(c.get("doomed")) for c in cand)):
+            try:
+                _path_score = float(best_score)
+                _path_projection = float(best_proj)
+                if math.isfinite(_path_score) and math.isfinite(_path_projection):
+                    _path_projected_after_pct = (
+                        f"{clamp(100.0 * _path_projection, 0.0, 100.0):g}%")
+                    _path_selected = str(
+                        best_node.get("node_type") or "Unknown")
+                    self._remember_path_death_valley_observation(
+                        floor=floor, candidates=len(cand),
+                        selected_type=_path_selected,
+                        selected_score=_path_score,
+                        projected_after_pct=_path_projected_after_pct)
+                    best_notes.append(
+                        "全候选路径均投影死亡："
+                        f"entry_floor={int(floor)}/candidates={len(cand)}"
+                        f"/selected={_path_selected}"
+                        f"/selected_score={_path_score:.2f}"
+                        f"/projected_after_pct={_path_projected_after_pct}"
+                        "（PATH_DEATH_VALLEY_ENTRY_OBS）")
+                    note_txt = f"；{'；'.join(best_notes)}"
+            except (TypeError, ValueError, OverflowError):
+                pass
         # Boss 前夜篝火语义传递（第 48 局实证：72% 血在 Boss 前夜按常规线选了
         # 锻造，Boss 战 -58 正好打死；回血 +24 即可保命——_rest 据此优先回血）
         ctx.rest_before_boss = (best_node.get("node_type") == "RestSite"
@@ -5264,6 +5299,185 @@ class Policy:
                 return
             self._elite_forced_entry_reported = False
             return
+
+    @staticmethod
+    def _path_death_valley_outcome_enabled(pol) -> bool:
+        try:
+            return bool(int(float(pol.get(
+                "path_death_valley_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            return False
+
+    @staticmethod
+    def _parse_path_death_valley_observation(reason):
+        """Parse a durable all-candidate-dead map observation."""
+        _reason = str(reason or "")
+        _marker_at = _reason.rfind("PATH_DEATH_VALLEY_ENTRY_OBS")
+        if _marker_at < 0:
+            return None
+        _match = re.search(
+            r"entry_floor=(?P<entry_floor>\d+)/candidates=(?P<candidates>\d+)/"
+            r"selected=(?P<selected>[^/（）\s]+)/"
+            r"selected_score=(?P<score>-?\d+(?:\.\d+)?)/"
+            r"projected_after_pct=(?P<projected>-?\d+(?:\.\d+)?)%",
+            _reason[:_marker_at])
+        if not _match:
+            return None
+        try:
+            _projected = clamp(float(_match.group("projected")), 0.0, 100.0)
+            return {
+                "entry_floor": int(_match.group("entry_floor")),
+                "expected_floor": int(_match.group("entry_floor")) + 1,
+                "candidates": int(_match.group("candidates")),
+                "selected_type": _match.group("selected"),
+                "selected_score": float(_match.group("score")),
+                "projected_after_pct": f"{_projected:g}%",
+            }
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    def _remember_path_death_valley_observation(
+            self, floor, candidates, selected_type, selected_score,
+            projected_after_pct) -> None:
+        """Keep a map-side death-valley sample until its next room resolves."""
+        try:
+            self._path_death_valley_outcome_pending = {
+                "entry_floor": int(floor),
+                "expected_floor": int(floor) + 1,
+                "candidates": int(candidates),
+                "selected_type": str(selected_type or "Unknown"),
+                "selected_score": float(selected_score),
+                "projected_after_pct": str(projected_after_pct or "?"),
+            }
+            self._path_death_valley_outcome_reported = False
+        except (TypeError, ValueError, OverflowError):
+            self._path_death_valley_outcome_pending = None
+            self._path_death_valley_outcome_reported = False
+
+    def _consume_path_death_valley_outcome_note(
+            self, pol, ctx, victory, floor=None, terminal_hp=None) -> str:
+        """Join an all-candidate-dead map sample to the next-floor result."""
+        if not self._path_death_valley_outcome_enabled(pol):
+            return ""
+        _pending = getattr(self, "_path_death_valley_outcome_pending", None)
+        if (not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_path_death_valley_outcome_reported", False))):
+            return ""
+        try:
+            _expected_floor = int(_pending.get("expected_floor"))
+        except (TypeError, ValueError, OverflowError):
+            return ""
+        if floor is not None:
+            try:
+                if int(float(floor)) != _expected_floor:
+                    return ""
+            except (TypeError, ValueError, OverflowError):
+                return ""
+        self._path_death_valley_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _combat_tail = ""
+        _died = getattr(ctx, "died_in_combat", None)
+        if not victory and isinstance(_died, dict):
+            _died_floor = _died.get("floor")
+            _floor_matches = True
+            if _died_floor is not None:
+                try:
+                    _floor_matches = int(float(_died_floor)) == _expected_floor
+                except (TypeError, ValueError, OverflowError):
+                    _floor_matches = False
+            _node_type = str(_died.get("node_type") or "")
+            if _floor_matches and _node_type in ("", "Monster", "Elite"):
+                _stall = _died.get("stall")
+                _stall_text = (
+                    "?" if _stall is None else ("yes" if bool(_stall) else "no"))
+                _combat_tail = (
+                    f"/combat_id={str(_died.get('comp_id') or '?')}"
+                    f"/combat_node_type={_node_type or '?'}"
+                    f"/combat_rounds={_num(_died.get('rounds'))}"
+                    f"/combat_hp_lost={_num(_died.get('hp_lost'))}"
+                    f"/combat_self_hp_loss={_num(_died.get('self_hp_loss'))}"
+                    f"/combat_stall={_stall_text}"
+                    "/combat_detail_source=died_in_combat")
+
+        _result = "victory" if victory else "defeat"
+        _terminal_floor = "?" if floor is None else str(floor)
+        return (
+            "; path death-valley outcome audit:"
+            f"entry_floor={_pending.get('entry_floor', '?')}"
+            f"/entry_candidates={_pending.get('candidates', '?')}"
+            f"/entry_selected={_pending.get('selected_type', '?')}"
+            f"/entry_selected_score={_num(_pending.get('selected_score'))}"
+            f"/entry_projected_after_pct={_pending.get('projected_after_pct', '?')}"
+            f"/outcome={_result}/terminal_floor={_terminal_floor}"
+            f"/terminal_hp={_num(terminal_hp)}"
+            f"{_combat_tail}"
+            " (PATH_DEATH_VALLEY_OUTCOME_OBS)")
+
+    def _restore_path_death_valley_outcome_from_decisions(
+            self, ctx, floor=None) -> None:
+        """Recover the bounded map-to-terminal join after a process reload."""
+        decisions = getattr(ctx, "decisions", None)
+        entry_marker = "PATH_DEATH_VALLEY_ENTRY_OBS"
+        outcome_marker = "PATH_DEATH_VALLEY_OUTCOME_OBS"
+        if not isinstance(decisions, list) or not decisions:
+            if getattr(self, "_path_death_valley_outcome_reported", False):
+                self._path_death_valley_outcome_reported = False
+            return
+        _latest_entry_index = -1
+        for _index, _row in enumerate(decisions):
+            if (isinstance(_row, dict)
+                    and _row.get("action") == "choose_map_node"
+                    and entry_marker in str(_row.get("reason") or "")):
+                _latest_entry_index = _index
+        if _latest_entry_index < 0:
+            _last = decisions[-1]
+            if (isinstance(_last, dict)
+                    and outcome_marker in str(_last.get("reason") or "")):
+                self._path_death_valley_outcome_reported = True
+            return
+        if any(outcome_marker in str(row.get("reason") or "")
+               for row in decisions[_latest_entry_index + 1:]
+               if isinstance(row, dict)):
+            self._path_death_valley_outcome_reported = True
+            return
+        if getattr(self, "_path_death_valley_outcome_reported", False):
+            self._path_death_valley_outcome_reported = False
+        if isinstance(getattr(
+                self, "_path_death_valley_outcome_pending", None), dict):
+            return
+
+        _later = [row for row in decisions[_latest_entry_index + 1:]
+                  if isinstance(row, dict)]
+        _later_screens = {str(row.get("screen") or "").upper()
+                          for row in _later}
+        # A durable join requires a subsequent combat observation. A reward,
+        # map, or other room boundary proves the route sample was not this
+        # terminal's immediate predecessor.
+        if (not _later
+                or "COMBAT" not in _later_screens
+                or "REWARD" in _later_screens
+                or _later_screens.intersection(
+                    {"MAP", "REST", "SHOP", "CHEST", "EVENT"})):
+            return
+        _sample = self._parse_path_death_valley_observation(
+            decisions[_latest_entry_index].get("reason"))
+        if not isinstance(_sample, dict):
+            return
+        try:
+            if floor is not None and int(float(floor)) != int(
+                    _sample.get("expected_floor")):
+                return
+        except (TypeError, ValueError, OverflowError):
+            return
+        self._path_death_valley_outcome_pending = _sample
+        self._path_death_valley_outcome_reported = False
 
     def _consume_longfight_joint_flip_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -24521,6 +24735,11 @@ class Policy:
         if terminal_hp is None:
             terminal_hp = ((state.get("combat") or {}).get("player") or {}).get(
                 "current_hp")
+        self._restore_path_death_valley_outcome_from_decisions(
+            ctx, go.get("floor"))
+        _path_death_valley_outcome_note = (
+            self._consume_path_death_valley_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
         self._restore_elite_forced_entry_outcome_from_decisions(
             ctx, go.get("floor"))
         _elite_forced_entry_outcome_note = (
@@ -24703,6 +24922,7 @@ class Policy:
         if go.get("can_continue") and "continue_game_over" in actions:
             return Decision("continue_game_over", {},
                             "结算：确认战绩，执行原生分数、解锁与存档流程"
+                            f"{_path_death_valley_outcome_note}"
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -24761,6 +24981,7 @@ class Policy:
                         None, {},
                         f"对局结束：{'胜利' if victory else '失败'}（层数 {go.get('floor')}），"
                         f"原生结算已落盘，正在提交终局统计…"
+                        f"{_path_death_valley_outcome_note}"
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -24800,6 +25021,7 @@ class Policy:
                 # The unresolved rotation entry continues to block embark.
                 return Decision("return_to_main_menu", {},
                                 "结算：恢复旧终局界面，仅完成原生返回，不重复统计"
+                                f"{_path_death_valley_outcome_note}"
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
@@ -24835,6 +25057,7 @@ class Policy:
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {},
                             "结算：返回主菜单，备战下一局"
+                            f"{_path_death_valley_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                             f"{_card_burst_terminal_outcome_note}",
                             tags=[("timeline_check", True)], wait=1.5)
