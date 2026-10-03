@@ -1022,8 +1022,6 @@ class Policy:
         self._boss_effective_dpt_samples = []
         self._boss_effective_dpt_terminal_outcome_pending = None
         self._boss_effective_dpt_terminal_outcome_reported = False
-        self._intangible_race_output_terminal_outcome_pending = None
-        self._intangible_race_output_terminal_outcome_reported = False
         self._boss_intent_ramp_terminal_outcome_pending = None
         self._boss_intent_ramp_terminal_outcome_reported = False
         self._hard_intent_spike_fire_terminal_outcome_pending = None
@@ -6046,181 +6044,6 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             + _intangible_tail
             + "（BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
-
-    def _restore_intangible_race_output_terminal_outcome_from_decisions(
-            self, pol, ctx, floor=None) -> None:
-        """Recover a bounded intangible-output bypass before GAME_OVER.
-
-        ``INTANGIBLE_RACE_OUTPUT_BYPASS_OBS`` is emitted at the card scorer,
-        while the terminal decision only carries the later native outcome.
-        Join the latest same-floor COMBAT/CARD_SELECTION source to that
-        outcome without feeding any value back into scoring or action choice.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "intangible_race_output_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        if not _enabled:
-            return
-
-        decisions = getattr(ctx, "decisions", None)
-        marker = "INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS"
-        _reported = bool(getattr(
-            self, "_intangible_race_output_terminal_outcome_reported", False))
-        if _reported:
-            _last_reason = ""
-            if isinstance(decisions, list) and decisions:
-                _last = decisions[-1]
-                if isinstance(_last, dict):
-                    _last_reason = str(_last.get("reason") or "")
-            if marker in _last_reason:
-                return
-            self._intangible_race_output_terminal_outcome_reported = False
-        if isinstance(getattr(
-                self, "_intangible_race_output_terminal_outcome_pending", None),
-                dict):
-            return
-        if not isinstance(decisions, list) or not decisions:
-            return
-
-        def _same_floor(left, right) -> bool:
-            if left is None or right is None:
-                return True
-            try:
-                return int(float(left)) == int(float(right))
-            except (TypeError, ValueError, OverflowError):
-                return str(left) == str(right)
-
-        _rows = list(reversed(decisions))
-        if (_rows and isinstance(_rows[0], dict)
-                and str(_rows[0].get("screen") or "").upper()
-                in {"GAME_OVER", "VICTORY"}):
-            _rows = _rows[1:]
-
-        _source = None
-        _bridge_decisions = 0
-        for _offset, _row in enumerate(_rows):
-            if not isinstance(_row, dict):
-                break
-            if not _same_floor(floor, _row.get("floor")):
-                break
-            _screen = str(_row.get("screen") or "").upper()
-            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
-                break
-            _reason = str(_row.get("reason") or "")
-            _match = re.search(
-                r"INTANGIBLE_RACE_OUTPUT_BYPASS_OBS"
-                r" eff=(?P<eff>-?\d+(?:\.\d+)?)/(?P<raw>-?\d+(?:\.\d+)?)"
-                r"/layers=(?P<layers>-?\d+(?:\.\d+)?)"
-                r"/kill_race=(?P<kill_race>yes|no)"
-                r"/race_allin=(?P<race_allin>yes|no)"
-                r"/latch=(?P<latch>yes|no)"
-                r"/reserve=(?P<reserve>yes|no)"
-                r"/incoming=(?P<incoming>-?\d+(?:\.\d+)?)"
-                r"/block=(?P<block>-?\d+(?:\.\d+)?)"
-                r"/energy=(?P<energy>-?\d+(?:\.\d+)?)",
-                _reason)
-            if _match is None:
-                continue
-            try:
-                _values = {
-                    key: float(_match.group(key))
-                    for key in ("eff", "raw", "layers", "incoming",
-                                "block", "energy")}
-            except (TypeError, ValueError, OverflowError):
-                continue
-            if (not all(math.isfinite(value) for value in _values.values())
-                    or _values["eff"] < 0.0
-                    or _values["raw"] <= 0.0
-                    or _values["layers"] <= 0.0):
-                continue
-            _source = {
-                "source_round": _row.get("turn", _row.get("round")),
-                "source_action": _row.get("action") or "?",
-                **_values,
-                "kill_race": _match.group("kill_race"),
-                "race_allin": _match.group("race_allin"),
-                "latch": _match.group("latch"),
-                "reserve": _match.group("reserve"),
-            }
-            _bridge_decisions = _offset
-            break
-        if _source is None:
-            return
-
-        _terminal = decisions[-1]
-        if not isinstance(_terminal, dict):
-            _terminal = {}
-        if (str(_terminal.get("screen") or "").upper()
-                in {"GAME_OVER", "VICTORY"} and len(decisions) >= 2):
-            _terminal = decisions[-2]
-        self._intangible_race_output_terminal_outcome_pending = {
-            **_source,
-            "bridge_decisions": _bridge_decisions,
-            "terminal_round": _terminal.get(
-                "turn", _terminal.get("round")),
-            "terminal_action": _terminal.get("action") or "?",
-            "terminal_hp": _terminal.get("hp"),
-        }
-        self._intangible_race_output_terminal_outcome_reported = False
-
-    def _consume_intangible_race_output_terminal_outcome_note(
-            self, pol, victory, floor=None, final_hp=None) -> str:
-        """Join the intangible-output bypass source to the native outcome."""
-        try:
-            _enabled = bool(int(float(pol.get(
-                "intangible_race_output_terminal_outcome_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        _pending = getattr(
-            self, "_intangible_race_output_terminal_outcome_pending", None)
-        if (not _enabled or not isinstance(_pending, dict)
-                or bool(getattr(
-                    self, "_intangible_race_output_terminal_outcome_reported",
-                    False))):
-            return ""
-        self._intangible_race_output_terminal_outcome_reported = True
-
-        def _num(value) -> str:
-            try:
-                return f"{float(value):g}"
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        def _round(value) -> str:
-            try:
-                return str(int(float(value)))
-            except (TypeError, ValueError, OverflowError):
-                return "?"
-
-        try:
-            _bridge = str(max(0, int(float(
-                _pending.get("bridge_decisions", 0)))))
-        except (TypeError, ValueError, OverflowError):
-            _bridge = "?"
-        _result = "victory" if victory else "defeat"
-        return (
-            f"；无实体竞速低效攻击终局对账：outcome={_result}"
-            f"/floor={_round(floor)}"
-            f"/source_round={_round(_pending.get('source_round'))}"
-            f"/source_action={_pending.get('source_action') or '?'}"
-            f"/eff={_num(_pending.get('eff'))}"
-            f"/raw={_num(_pending.get('raw'))}"
-            f"/layers={_num(_pending.get('layers'))}"
-            f"/kill_race={_pending.get('kill_race') or '?'}"
-            f"/race_allin={_pending.get('race_allin') or '?'}"
-            f"/latch={_pending.get('latch') or '?'}"
-            f"/reserve={_pending.get('reserve') or '?'}"
-            f"/incoming={_num(_pending.get('incoming'))}"
-            f"/block={_num(_pending.get('block'))}"
-            f"/energy={_num(_pending.get('energy'))}"
-            f"/terminal_round={_round(_pending.get('terminal_round'))}"
-            f"/terminal_action={_pending.get('terminal_action') or '?'}"
-            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
-            f"/final_hp={_num(final_hp)}"
-            f"/bridge_decisions={_bridge}"
-            "（INTANGIBLE_RACE_OUTPUT_TERMINAL_OUTCOME_OBS）")
 
     def _restore_longfight_effective_dpt_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
@@ -15550,8 +15373,6 @@ class Policy:
             self._boss_effective_dpt_samples = []
             self._boss_effective_dpt_terminal_outcome_pending = None
             self._boss_effective_dpt_terminal_outcome_reported = False
-            self._intangible_race_output_terminal_outcome_pending = None
-            self._intangible_race_output_terminal_outcome_reported = False
             self._boss_intent_ramp_terminal_outcome_pending = None
             self._boss_intent_ramp_terminal_outcome_reported = False
             self._hard_intent_spike_fire_terminal_outcome_pending = None
@@ -24713,11 +24534,6 @@ class Policy:
         _boss_effective_dpt_terminal_outcome_note = (
             self._consume_boss_effective_dpt_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
-        self._restore_intangible_race_output_terminal_outcome_from_decisions(
-            self.know.policy, ctx, go.get("floor"))
-        _intangible_race_output_terminal_outcome_note = (
-            self._consume_intangible_race_output_terminal_outcome_note(
-                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_longfight_effective_dpt_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _longfight_effective_dpt_terminal_outcome_note = (
@@ -24890,7 +24706,6 @@ class Policy:
                             f"{_elite_forced_entry_outcome_note}"
                             f"{_longfight_joint_flip_terminal_outcome_note}"
                             f"{_boss_effective_dpt_terminal_outcome_note}"
-                            f"{_intangible_race_output_terminal_outcome_note}"
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
                             f"{_potion_self_harm_terminal_outcome_note}"
@@ -24949,7 +24764,6 @@ class Policy:
                         f"{_elite_forced_entry_outcome_note}"
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
-                        f"{_intangible_race_output_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
                         f"{_potion_self_harm_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
@@ -24989,7 +24803,6 @@ class Policy:
                                 f"{_elite_forced_entry_outcome_note}"
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
-                                f"{_intangible_race_output_terminal_outcome_note}"
                                 f"{_self_loss_phase_terminal_outcome_note}"
                                 f"{_potion_self_harm_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
