@@ -15112,3 +15112,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Targeted diff review and `git diff --check` passed with only pre-existing long-path/LF-CRLF notices. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1827: distinguish invulnerable residual attack from real idle leak
+
+profile_id: `ironclad`
+requested_run: `1827`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: When `IDLE_LEAK_RACE` is emitted in race mode while every live, hittable enemy is already above the existing invulnerability veto floor, the affordable attacks are filtered counterfactuals rather than executable missed saves. Appending `INVULN_IDLE_LEAK_VETO_OBS` should separate this case from a real residual-energy leak without changing the decision. This is falsifiable: normal or mixed target pools must not receive the marker, and disabling the switch must remove only the new suffix.
+- **EVIDENCE**: The full chain `sts2-ascend/knowledge/runs/20261003-085030_1GSLDCAMUEAN.json` has 212 decisions. F17 decision 210 records `end_turn` at HP 13, block 7, incoming 33, energy 2, with three affordable attacks (`剑柄打击`, `飞剑回旋镖`, `头槌`), all rejected by `INVULN_TARGET_VETO`; the same row records `INVULN_LETHAL_END_TURN_OBS` with `vetoed_attacks=3` and `non_attack_candidates=0`. This is a forced no-rescue terminal, so the change must remain observation-only.
+- **EXPECTED_SIGNAL**: Across the next 3-10 matching terminals, retain the existing `IDLE_LEAK_RACE` fields and append one `INVULN_IDLE_LEAK_VETO_OBS` attribution with the affordable attack count. A normal or mixed target pool stays on the legacy marker only; switch-off preserves action, parameters, score, and the legacy marker.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on `invuln_idle_leak_veto_obs`; `False` removes only this attribution suffix.
+- `sts2-ascend/brain/policy.py`: pass the existing live enemy snapshot and invulnerability settings into `idle_leak_audit_note`, count affordable race attacks, and append the marker only when every live target meets the existing veto floor. No scoring, candidate ranking, target selection, action, or parameters read the new marker.
+- `sts2-ascend/brain/selfcheck.py`: cover default-on, positive all-invulnerable, switch-off, and mixed-target boundaries while asserting unchanged lethal end-turn behavior.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching F17 terminals and compare attack count, source/terminal HP and round, existing veto fields, marker count, and applied action/parameters.
+- **Adjust**: if a live target uses a different invulnerability field or a real mixed pool is classified incorrectly, narrow only this observer's target predicate; do not make filtered attacks executable.
+- **Rollback**: set `invuln_idle_leak_veto_obs` to `False`; the existing `IDLE_LEAK_RACE`, invulnerability veto, lethal audit, action, and parameters must remain unchanged.
+- **Validation**: the mandated direct selfcheck reproduced the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then completed through a clone-local process-level 1024-slot adapter with exit code 0 and `SELFCHECK OK`. The production diff was reread, and only the intended static files are targeted for commit; no `.runtime/`, formal run/archive, learning memory, replay package, or online process was touched.
+
+- replay target: none (`failed_review_replay.requested_packages=[]`).
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

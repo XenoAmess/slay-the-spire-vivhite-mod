@@ -6989,6 +6989,8 @@ def main() -> int:
         random.Random(7))
     assert itv_pol.know.policy.get("invuln_lethal_end_turn_obs") is True, \
         "无敌帧致死空过观测默认键未迁移"
+    assert itv_pol.know.policy.get("invuln_idle_leak_veto_obs") is True, \
+        "无敌帧残能归因观测默认键未迁移"
 
     def itv_enemy(hp=999999999, *, index=0, intent=36, name="瀑布巨兽"):
         return {"index": index, "enemy_id": "INVLN_BOSS", "name": name,
@@ -7066,6 +7068,32 @@ def main() -> int:
         and "vetoed_attacks=1" in d_itv.reason \
         and "non_attack_candidates=0" in d_itv.reason, \
         f"无敌帧致死空过缺少可证伪分层: {d_itv.reason}"
+    invuln_idle_leak_note = policy.idle_leak_audit_note(
+        [dict(itv_strike)], energy=3, incoming=36, my_block=0,
+        race_mode=True, enemies=[itv_enemy(intent=36)],
+        invuln_hp_floor=100000.0, invuln_attack_veto=True,
+        invuln_idle_leak_obs=True)
+    assert "IDLE_LEAK_RACE" in invuln_idle_leak_note \
+        and "vetoed_attacks=1" not in invuln_idle_leak_note \
+        and "INVULN_IDLE_LEAK_VETO_OBS" in invuln_idle_leak_note, \
+        f"竞速无敌帧残能归因观测缺失: {invuln_idle_leak_note}"
+    invuln_idle_leak_off_note = policy.idle_leak_audit_note(
+        [dict(itv_strike)], energy=3, incoming=36, my_block=0,
+        race_mode=True, enemies=[itv_enemy(intent=36)],
+        invuln_hp_floor=100000.0, invuln_attack_veto=True,
+        invuln_idle_leak_obs=False)
+    assert "IDLE_LEAK_RACE" in invuln_idle_leak_off_note \
+        and "INVULN_IDLE_LEAK_VETO_OBS" not in invuln_idle_leak_off_note, \
+        f"竞速无敌帧残能归因关闭未回滚: {invuln_idle_leak_off_note}"
+    invuln_idle_leak_mixed_note = policy.idle_leak_audit_note(
+        [dict(itv_strike)], energy=3, incoming=36, my_block=0,
+        race_mode=True,
+        enemies=[itv_enemy(), itv_enemy(hp=10, index=1)],
+        invuln_hp_floor=100000.0, invuln_attack_veto=True,
+        invuln_idle_leak_obs=True)
+    assert "IDLE_LEAK_RACE" in invuln_idle_leak_mixed_note \
+        and "INVULN_IDLE_LEAK_VETO_OBS" not in invuln_idle_leak_mixed_note, \
+        f"混合目标不应误挂无敌帧残能归因: {invuln_idle_leak_mixed_note}"
     # ④g) WaterfallGiant 的原生 AboutToBlow 相会在移除 SteamEruptionPower 后
     # 只留下 HP=999999999 哨兵；新增观测必须用实体 ID 把它与普通无敌目标分开，
     # 且不得改写既有 end_turn 动作/参数。
@@ -7204,11 +7232,13 @@ def main() -> int:
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-invuln-end-turn-off-"))),
         random.Random(7))
     itv_live_obs_off.know.policy["invuln_lethal_end_turn_obs"] = False
+    itv_live_obs_off.know.policy["invuln_idle_leak_veto_obs"] = False
     d_itv_obs_off = itv_live_obs_off.decide(
         itv_combat_state([dict(itv_strike)]), DummyCtx())
     assert d_itv_obs_off.action == d_itv.action \
         and d_itv_obs_off.params == d_itv.params \
-        and "INVULN_LETHAL_END_TURN_OBS" not in d_itv_obs_off.reason, \
+        and "INVULN_LETHAL_END_TURN_OBS" not in d_itv_obs_off.reason \
+        and "INVULN_IDLE_LEAK_VETO_OBS" not in d_itv_obs_off.reason, \
         f"无敌帧致死空过观测关闭未严格回滚: {d_itv_obs_off.action} {d_itv_obs_off.params}（{d_itv_obs_off.reason}）"
     # 对照锚：同一载荷键=False 时攻击照常打出（旧口径回归）
     itv_live_off = policy.Policy(knowledge.Knowledge(
