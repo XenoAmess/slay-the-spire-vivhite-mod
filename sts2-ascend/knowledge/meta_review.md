@@ -15531,3 +15531,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：规定的直接 selfcheck 复现宿主固定 256 槽临时池限制；同一 `py -3 -B sts2-ascend/brain/selfcheck.py` 经 clone-local 进程级临时目录适配退出码 0 并输出 `SELFCHECK OK`。1863 只读完整链回放输出上述字段且 action/params 不变；目标源码 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1865: longfight DPT / projection survival-gap terminal join
+
+profile_id: `ironclad`
+requested_run: `1865`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The F21 terminal combines two distinct calibration risks: longfight effective DPT was `7.5` versus projected `12.8` (`ratio=0.59`), while the same-floor projection note reports `ttk=10.8642`, `tsurv=7.36842`, and `ttk_minus_tsurv=3.49578`. Joining these two read-only observations at the existing terminal bridge should distinguish damage shortfall from survival-horizon shortfall. The hypothesis is falsified if future matching windows are unstable or the join crosses combat/floor boundaries.
+- **EVIDENCE**: The complete persisted chain `sts2-ascend/knowledge/runs/20261003-195645_W893RYYY5X8L.json` has 278 decisions. D265 is the F21 longfight DPT source (`actual=7.5/projected=12.8/ratio=0.59`); D277 is the F21 defeat at final HP 0. The F21 combat note contains the projection survival gap above. No failed replay package was requested.
+- **EXPECTED_SIGNAL**: Future same-floor terminals should add `LONGFIGHT_RACE_EFFECTIVE_DPT_SURVIVAL_GAP_TERMINAL_OUTCOME_OBS` with `/source_ttk_minus_tsurv=<value>`, while keeping scoring, gates, candidate ranking, action selection, and params untouched.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `longfight_race_effective_dpt_survival_gap_obs`.
+- `sts2-ascend/brain/policy.py`: recover a finite same-floor projection gap from persisted combat decisions or a same-floor combat note and append it only to the existing longfight terminal observation.
+- `sts2-ascend/brain/selfcheck.py`: cover positive output, reload, switch-off behavior, same-floor boundary, and action/params invariance.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent matching longfight terminals and compare the joined gap with actual terminal rounds, survival ratio, encounter, and `applied` receipts.
+- **Adjust**: if the signal is not stable, tighten only the source/floor boundary or parsing; do not promote it into an action rule.
+- **Rollback**: set `longfight_race_effective_dpt_survival_gap_obs` to `False`; the existing DPT terminal marker and action/params remain.
+- **Validation**: direct selfcheck reproduced the host's fixed 256-slot bootstrap limit; the clone-local process adapter then completed the full check with exit code 0 and `SELFCHECK OK`. Read-only run 1865 replay emitted the new marker once with `source_ttk_minus_tsurv=3.49578`, preserving `continue_game_over` and `{}`. Final target diff review and `git diff --check` passed. No `.runtime/`, formal runs/archive, learning memory, replay package, or online process was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

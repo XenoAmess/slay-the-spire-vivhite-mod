@@ -6098,6 +6098,54 @@ class Policy:
 
         _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
 
+        def _projection_gap_from_text(text: str):
+            if "RACE_PROJ_SURVIVAL_GAP_OBS" not in text:
+                return None
+            _match = re.search(
+                rf"ttk_minus_tsurv=(?P<gap>{_number_pattern})", text)
+            if _match is None:
+                return None
+            try:
+                _gap = float(_match.group("gap"))
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return _gap if math.isfinite(_gap) else None
+
+        # Prefer a same-floor persisted decision, then use the same-floor
+        # combat note used by production calibration.  Never borrow a note
+        # without an explicit floor token.
+        _projection_ttk_minus_tsurv = None
+        for _candidate in reversed(decisions):
+            if not isinstance(_candidate, dict):
+                continue
+            if not _same_floor(floor, _candidate.get("floor")):
+                break
+            _candidate_screen = str(_candidate.get("screen") or "").upper()
+            if (_candidate_screen
+                    and _candidate_screen not in {"COMBAT", "CARD_SELECTION"}):
+                break
+            _candidate_gap = _projection_gap_from_text(
+                str(_candidate.get("reason") or ""))
+            if _candidate_gap is not None:
+                _projection_ttk_minus_tsurv = _candidate_gap
+                break
+        if _projection_ttk_minus_tsurv is None:
+            _floor_token = None
+            try:
+                if floor is not None:
+                    _floor_token = f"F{int(float(floor))}"
+            except (TypeError, ValueError, OverflowError):
+                _floor_token = None
+            if _floor_token:
+                for _note in reversed(getattr(ctx, "combat_notes", None) or []):
+                    _note_text = str(_note or "")
+                    if _floor_token not in _note_text:
+                        continue
+                    _note_gap = _projection_gap_from_text(_note_text)
+                    if _note_gap is not None:
+                        _projection_ttk_minus_tsurv = _note_gap
+                        break
+
         def _focus_transition(reason: str) -> str:
             """Read the full persisted focus transition, including instance labels."""
             _match = re.search(
@@ -6201,6 +6249,9 @@ class Policy:
                 "focus_switches": _focus_switches,
                 "focus": _focus or "?",
             }
+            if _projection_ttk_minus_tsurv is not None:
+                _source["projection_ttk_minus_tsurv"] = (
+                    _projection_ttk_minus_tsurv)
             if _focus_transition_value:
                 _source["focus_drift_flush"] = _focus_transition_value
             if _tail_focus_transitions:
@@ -6239,6 +6290,11 @@ class Policy:
                 or 0)))
         except (TypeError, ValueError, OverflowError, AttributeError):
             _enabled = False
+        try:
+            _survival_gap_enabled = bool(int(float(pol.get(
+                "longfight_race_effective_dpt_survival_gap_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _survival_gap_enabled = False
         _pending = getattr(
             self, "_longfight_effective_dpt_terminal_outcome_pending", None)
         if (not _enabled or not isinstance(_pending, dict)
@@ -6265,6 +6321,20 @@ class Policy:
         except (TypeError, ValueError, OverflowError):
             _ratio = "?"
         _result = "victory" if victory else "defeat"
+        _survival_gap_note = ""
+        if (_survival_gap_enabled
+                and _pending.get("projection_ttk_minus_tsurv") is not None):
+            _survival_gap_note = (
+                ";longfight projection survival-gap join:"
+                f"outcome={_result}/floor={_round(floor)}"
+                f"/source_round={_round(_pending.get('source_round'))}"
+                f"/source_action={_pending.get('source_action') or '?'}"
+                f"/source_ttk_minus_tsurv={_num(_pending.get('projection_ttk_minus_tsurv'))}"
+                f"/terminal_round={_round(_pending.get('terminal_round'))}"
+                f"/terminal_action={_pending.get('terminal_action') or '?'}"
+                f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+                f"/final_hp={_num(final_hp)}"
+                " (LONGFIGHT_RACE_EFFECTIVE_DPT_SURVIVAL_GAP_TERMINAL_OUTCOME_OBS)")
         _pool_start = _pending.get("pool_start")
         _pool_end = _pending.get("pool_end")
         _focus_switches = _pending.get("focus_switches")
@@ -6333,6 +6403,7 @@ class Policy:
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
             f"/final_hp={_num(final_hp)}"
+            f"{_survival_gap_note}"
             f"{_focus_drift_tail}"
             "（LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS）")
 

@@ -13223,6 +13223,9 @@ def main() -> int:
         "火线已换线2次至熟睡甲虫（LONGFIGHT_RACE_EFFECTIVE_DPT_CONTEXT_OBS）；"
         "火线漂移补记：寄生惧魔→胧光怪"
         "（评分侧静默换线挂账，FOCUS_DRIFT_FLUSH_OBS）")
+    _longfight_terminal_projection_note = (
+        "F24 Monster projection_ttk=8.0/projection_tsurv=4.25/"
+        "ttk_minus_tsurv=3.75 RACE_PROJ_SURVIVAL_GAP_OBS")
     _longfight_terminal_row = {
         "screen": "COMBAT", "action": "end_turn", "floor": 24,
         "turn": 4, "hp": 13, "reason": "终端战斗尾部",
@@ -13262,7 +13265,7 @@ def main() -> int:
 
     _longfight_terminal_pol = policy.Policy(knowledge.Knowledge(tmp))
     _longfight_terminal_ctx = _make_longfight_terminal_ctx(
-        [_longfight_terminal_note],
+        [_longfight_terminal_note, _longfight_terminal_projection_note],
         [_longfight_terminal_source_row, _longfight_terminal_tail_row,
          _longfight_terminal_row])
     _d_longfight_terminal = _longfight_terminal_pol.decide(
@@ -13281,6 +13284,14 @@ def main() -> int:
                 "/final_hp=0"
                 in _d_longfight_terminal.reason), \
         f"非 Boss 长战有效火力终局桥接缺失或动作漂移: {_d_longfight_terminal}"
+    assert ("LONGFIGHT_RACE_EFFECTIVE_DPT_SURVIVAL_GAP_TERMINAL_OUTCOME_OBS"
+            in _d_longfight_terminal.reason
+            and "/source_ttk_minus_tsurv=3.75"
+                in _d_longfight_terminal.reason), \
+        f"longfight DPT/survival-gap join missing: {_d_longfight_terminal}"
+    assert knowledge.DEFAULT_POLICY[
+        "longfight_race_effective_dpt_survival_gap_obs"] is True, \
+        "DEFAULT_POLICY missing longfight survival-gap observation key"
     assert ("LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
             in _d_longfight_terminal.reason
             and "source_focus_switches=2/flush_count=1/transition=寄生惧魔→胧光怪"
@@ -13300,10 +13311,11 @@ def main() -> int:
     _d_longfight_terminal_reload = policy.Policy(
         knowledge.Knowledge(tmp)).decide(
             _longfight_terminal_state,
-            _make_longfight_terminal_ctx([_longfight_terminal_note],
-                                          [_longfight_terminal_source_row,
-                                           _longfight_terminal_tail_row,
-                                           _longfight_terminal_row]))
+            _make_longfight_terminal_ctx(
+                [_longfight_terminal_note, _longfight_terminal_projection_note],
+                [_longfight_terminal_source_row,
+                 _longfight_terminal_tail_row,
+                 _longfight_terminal_row]))
     assert (_d_longfight_terminal_reload.action
             == _d_longfight_terminal.action
             and _d_longfight_terminal_reload.params
@@ -13313,6 +13325,9 @@ def main() -> int:
             and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
                 in _d_longfight_terminal_reload.reason), \
         f"进程重载后未恢复非 Boss 长战终局桥接: {_d_longfight_terminal_reload}"
+    assert ("LONGFIGHT_RACE_EFFECTIVE_DPT_SURVIVAL_GAP_TERMINAL_OUTCOME_OBS"
+            in _d_longfight_terminal_reload.reason), \
+        f"reload lost longfight DPT/survival-gap join: {_d_longfight_terminal_reload}"
     _longfight_terminal_ctx.decisions.append({
         "screen": "GAME_OVER", "action": _d_longfight_terminal.action,
         "floor": 24, "reason": _d_longfight_terminal.reason})
@@ -13346,6 +13361,25 @@ def main() -> int:
             and "LONGFIGHT_RACE_FOCUS_DRIFT_TERMINAL_OUTCOME_OBS"
             not in _d_longfight_terminal_off.reason), \
         f"非 Boss 长战终局开关关闭后动作或 marker 漂移: {_d_longfight_terminal_off}"
+    _longfight_survival_gap_off_know = knowledge.Knowledge(tmp)
+    _longfight_survival_gap_off_know.policy[
+        "longfight_race_effective_dpt_survival_gap_obs"] = False
+    _d_longfight_survival_gap_off = policy.Policy(
+        _longfight_survival_gap_off_know).decide(
+            _longfight_terminal_state,
+            _make_longfight_terminal_ctx(
+                [_longfight_terminal_note, _longfight_terminal_projection_note],
+                [_longfight_terminal_source_row, _longfight_terminal_tail_row,
+                 _longfight_terminal_row]))
+    assert (_d_longfight_survival_gap_off.action
+            == _d_longfight_terminal.action
+            and _d_longfight_survival_gap_off.params
+            == _d_longfight_terminal.params
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                in _d_longfight_survival_gap_off.reason
+            and "LONGFIGHT_RACE_EFFECTIVE_DPT_SURVIVAL_GAP_TERMINAL_OUTCOME_OBS"
+                not in _d_longfight_survival_gap_off.reason), \
+        f"survival-gap rollback drifted action or marker: {_d_longfight_survival_gap_off}"
     _longfight_focus_drift_off_know = knowledge.Knowledge(tmp)
     _longfight_focus_drift_off_know.policy[
         "longfight_focus_drift_terminal_outcome_obs"] = False
@@ -13368,7 +13402,7 @@ def main() -> int:
         knowledge.Knowledge(tmp)).decide(
             _longfight_terminal_state,
             _make_longfight_terminal_ctx(
-                [_longfight_terminal_note],
+                [_longfight_terminal_note, _longfight_terminal_projection_note],
                 [_longfight_terminal_source_row, _longfight_terminal_tail_row,
                  _longfight_terminal_row,
                   {"screen": "REWARD", "action": "proceed", "floor": 24,
