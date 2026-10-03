@@ -16056,3 +16056,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.1191333089617572局)，BURNING_PACT(17分/12.780740027158618局)，DEFEND_IRONCLAD(18分/3.0177145857059218局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1860 胜，当前目标进阶 0
+
+## 第 1861 局复盘（2026-10-03 18:59）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 ASSASSIN_RUBY_RAIDER+AXE_RUBY_RAIDER+TRACKER_RUBY_RAIDER
+- 本局拿牌：DEMON_FORM, ANGER, INFLAME, SWORD_BOOMERANG, TWIN_STRIKE, RAMPAGE, THUNDERCLAP, CINDER, TWIN_STRIKE, SPITE, EXPECT_A_FIGHT, PACTS_END
+- 本局遗物：NUNCHAKU
+- 战斗记录：F7 Monster战 掉血12; F9 Monster战 掉血22; F11 Monster战 掉血22｜竞速投影审计：pool=27/dpt=11.2/ttk=2.41071/tsurv=0.55（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=2.41071/actual_over_projected=2.07（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes｜竞速审计：T4判死→实战5回合获胜; F13 Monster战 掉血6; F14 Monster战 掉血19; F15 Monster战 掉血12（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1621089158841325局)，MASTER_OF_STRATEGY(27分/4.569328210276006局)，PROWESS(26分/10.39922528814106局)，BRAND(26分/2.257257373368101局)，HELLRAISER(25分/3.633191356324269局)
+- 当前低价值卡牌：HAVOC(15分/2.111716342380391局)，BURNING_PACT(17分/12.736007437063563局)，DEFEND_IRONCLAD(18分/3.0071525846559513局)
+- 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1861 胜，当前目标进阶 0
