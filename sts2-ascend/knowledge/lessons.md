@@ -16397,3 +16397,14 @@
 - 当前低价值卡牌：ENTROPY(17分/2.030147757015427局)，BURNING_PACT(17分/11.464428103991246局)，DEFEND_IRONCLAD(18分/2.7069146100049934局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.40（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.07 → 2.06（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F30——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1891 胜，当前目标进阶 0
+
+## 第 1892 局复盘（2026-10-04 05:06）
+- 结果：💀 失败｜进阶 0｜到达层数 8｜当局评分 8
+- 死因：敌人组合 TERROR_EEL
+- 本局拿牌：BREAKTHROUGH, CINDER, STOMP, TRUE_GRIT, ROLLING_BOULDER, SPITE, STONE_ARMOR, TRUE_GRIT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血0; F3 Monster战 掉血9｜自损1（可行动段1/非行动段14，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血8; F5 Monster战 掉血21｜自损1（可行动段1/非行动段25，SELF_LOSS_PHASE_OBS）; F8 Elite战 掉血42｜竞速投影审计：pool=117/dpt=18.9/ttk=6.19048/tsurv=2.81818（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=6.19048/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.13（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.37229（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.098724693478822局)，BRAND(26分/2.0247782846840283局)，STAMPEDE(25分/7.773614973650689局)，PROWESS(25分/13.170358824452192局)，MANGLE(25分/45.52493027959364局)
+- 当前低价值卡牌：ENTROPY(17分/2.023042239865873局)，BURNING_PACT(17分/11.424302605627277局)，DEFEND_IRONCLAD(18分/2.697440408869976局)
+- 策略进化：elite_grey_safety_mult: 1.55 → 1.75（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1892 胜，当前目标进阶 0
