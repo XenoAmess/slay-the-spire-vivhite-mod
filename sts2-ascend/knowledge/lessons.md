@@ -16122,3 +16122,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.0750190878256327局)，BURNING_PACT(17分/12.514682016812102局)，DEFEND_IRONCLAD(18分/2.9548945035541476局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（79%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.41 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1866 胜，当前目标进阶 0
+
+## 第 1867 局复盘（2026-10-03 20:52）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 KNOWLEDGE_DEMON
+- 本局拿牌：SHRUG_IT_OFF, TWIN_STRIKE, BLUDGEON, BATTLE_TRANCE, HEADBUTT, SHRUG_IT_OFF, IMPERVIOUS, UPPERCUT, BREAKTHROUGH, STAMPEDE, RESTLESSNESS, UNRELENTING, FLAME_BARRIER, MANGLE, CINDER, CINDER, HEADBUTT, STONE_ARMOR, TRUE_GRIT, CINDER, FIGHT_ME, RUPTURE, TAUNT, THUNDERCLAP, HEADBUTT
+- 本局遗物：ORNAMENTAL_FAN, STRAWBERRY, PAPER_PHROG, TUNING_FORK
+- 战斗记录：F19 Monster战 掉血10; F22 Monster战 掉血17; F24 Elite战 掉血21; F30 Monster战 掉血16; F31 Monster战 掉血56｜竞速投影审计：pool=120/dpt=6.075/ttk=19.7531/tsurv=0.675676（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=19.7531/actual_over_projected=0.41（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=19.0774（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T7判死→实战8回合获胜; F33 Boss战 掉血41｜竞速投影审计：pool=259/dpt=48.6/ttk=5.32922/tsurv=1（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=5.32922/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.00（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.32922（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=22.25/projected_dpt=24.9552/ratio=1.12/min_ratio=-0.73（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=22.25/projected_dpt=24.9552/ratio=1.12/min_ratio=-0.73（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=22.25/projected_dpt=24.9552/ratio=1.12/min_ratio=-0.73（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：BACKSTAB(32分/2.1171000670154267局)，BLOODLETTING(29分/2.171853901155126局)，MASTER_OF_STRATEGY(27分/4.474208023990789局)，PROWESS(26分/10.182743520776368局)，BRAND(26分/2.2102678090453662局)
+- 当前低价值卡牌：HAVOC(15分/2.067756521018243局)，BURNING_PACT(17分/12.47088062975326局)，DEFEND_IRONCLAD(18分/2.9445523727917084局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.39 → 0.40（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1867 胜，当前目标进阶 0
