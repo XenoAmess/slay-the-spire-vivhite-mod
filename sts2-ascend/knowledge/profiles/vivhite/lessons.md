@@ -20500,3 +20500,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/5.352066431677577局)，ENTROPY(21分/5.195982247720954局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.41255564308917局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：4/1860 胜，当前目标进阶 4
+
+## 第 1861 局复盘（2026-10-03 19:03）
+- 结果：💀 失败｜进阶 4｜到达层数 4｜当局评分 4
+- 死因：敌人组合 FUZZY_WURM_CRAWLER
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_RIEMANN_STAR_ARRAY
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血1｜自损10（可行动段10/非行动段5，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血33｜自损34（可行动段34/非行动段13，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血28｜自损18（可行动段18/非行动段6，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=37/dpt=17.3466/ttk=2.13299/tsurv=0.555556（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=2.13299/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=16.20（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T6判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/3.0833750141631087局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.0264952429508023局)，MAYHEM(37分/4.322639266296955局)，JACKPOT(36分/8.437091599618535局)，REND(36分/2.978337865481399局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/5.333334199166706局)，ENTROPY(21分/5.177796309853931局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.33061169833836局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损18/掉血28（64%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1861 胜，当前目标进阶 4
