@@ -9452,6 +9452,20 @@ def main() -> int:
         f"无沉睡敌人旧评分回归: score={s_sg_plain} why={why_sg_plain}"
     assert s_sg_veto <= -50.0 and t_sg_veto is None and "SLEEP_GUARD" in why_sg_veto, \
         f"沉睡3层未格挡攻击未禁玩: score={s_sg_veto} target={t_sg_veto} why={why_sg_veto}"
+    # ①b) 原生 SLUMBERING_BEETLE 使用 SLUMBER_POWER/「熟睡」，必须与
+    #      ASLEEP_POWER 共享同一禁攻闸门；否则攻击会以伤害唤醒甲虫。
+    sg_slumber_enemy = sg_enemy(asleep=None)
+    sg_slumber_enemy.update({"enemy_id": "SLUMBERING_BEETLE", "name": "熟睡甲虫"})
+    sg_slumber_enemy["powers"] = [{
+        "power_id": "SLUMBER_POWER", "name": "熟睡", "amount": 3,
+        "is_debuff": False,
+    }]
+    s_sg_slumber, t_sg_slumber, why_sg_slumber = sg_score(
+        sg_strike, sg_slumber_enemy)
+    assert s_sg_slumber <= -50.0 and t_sg_slumber is None \
+        and "SLEEP_GUARD" in why_sg_slumber, \
+        f"原生熟睡能力未接入沉睡禁攻: score={s_sg_slumber} " \
+        f"target={t_sg_slumber} why={why_sg_slumber}"
     # ② 计数1（本回合末自然苏醒）不拦截
     s_sg_one, _, why_sg_one = sg_score(sg_strike, sg_enemy(asleep=1))
     assert math.isclose(s_sg_one, 6.0) and "SLEEP_GUARD" not in why_sg_one, \

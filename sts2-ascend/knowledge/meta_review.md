@@ -16052,3 +16052,30 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：1895 与 1896 的当前策略回放均命中预期 `source_projected_tsurv`；完整 `py -3 -B sts2-ascend/brain/selfcheck.py` 经 clone-local 进程级临时目录适配器退出码 0，末尾为 `SELFCHECK OK`。宿主直跑与固定 256 槽适配器仍复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，不是断言失败；目标源码差异检查通过。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; terminal survival denominator observation integrated)`
+
+## 2026-10-04 run 1897-F25：原生 SLUMBER_POWER 纳入沉睡保期禁攻
+
+profile_id：`ironclad`
+requested_runs：`1897`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `SLEEP_GUARD` 只识别 `ASLEEP_POWER`/「沉睡」，漏读 v0.111.0 原生 `SLUMBER_POWER`/「熟睡」，所以熟睡甲虫的非致死未格挡攻击没有进入沉睡禁攻闸门；若补齐该别名，既有阈值与边界不变即可阻止提前唤醒，否则假设被证伪。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261004-062049_GCTX72MSSJWV.json` 的 1897-F25 中，D339、D341、D342、D343 连续攻击 `SLUMBERING_BEETLE`，理由分别只出现 `intent=Sleep`/`Stun` 与辅助体转火，没有 `SLEEP_GUARD`，D345 在 `BOWLBUG_ROCK+BOWLBUG_SILK+SLUMBERING_BEETLE` 中死亡。v0.111.0 `knowledge/game/v0.111.0/mechanics/monsters.jsonl:96` 显示甲虫入场施加 `SlumberPower×3`；`mechanics/powers.jsonl:257` 显示 `SLUMBER_POWER` 在 `UnblockedDamage != 0` 时扣层并触发醒来/`ROLL_OUT_MOVE`，而旧 `_enemy_asleep_stack` 只传入 `asleep`/`沉睡`。
+- **EXPECTED_SIGNAL**：selfcheck 的 `SLUMBER_POWER×3` 非致死攻击应被压到禁玩线并留下 `SLEEP_GUARD`；`sleep_guard_min_stacks=0`、1 层、可击杀和全格挡边界继续保持旧行为。未来 3—10 个匹配战斗中，熟睡甲虫的未格挡非致死攻击应出现保护命中，而不应再出现无保护的提前唤醒攻击。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：让 `_enemy_asleep_stack` 兼容 `slumber`、`熟睡`、`睡眠`，复用现有 `SLEEP_GUARD` 阈值、伤害与目标判定；不改默认阈值、投影、评分或其他睡眠边界。
+- `sts2-ascend/brain/selfcheck.py`：在既有沉睡夹具中加入真实 `SLUMBER_POWER`/`SLUMBERING_BEETLE` 载荷，断言非致死攻击被 veto 并留下 marker。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个带 `SLUMBER_POWER` 的熟睡甲虫战斗，核对 `SLEEP_GUARD` 命中、层数、目标、实际未格挡伤害和醒来/出击转折；同时检查可击杀、单层、全格挡和关闭键没有误拦截。
+- **Adjust**：若实际 API 使用新的已证实 ID/name，只增加该原生别名；若正常苏醒目标、单层目标或全格挡攻击被误拦，收紧别名或沿用既有边界，不扩大到意图文本猜测。
+- **Rollback**：移除 `slumber`/`熟睡`/`睡眠` 别名即可恢复旧读取；运行时紧急回退可将 `sleep_guard_min_stacks` 设为 `0`，预期恢复旧动作，同时保留原始 1897 链。
+- **Validation**：规定的直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的进程级 0777 临时目录适配器运行完整 selfcheck，退出码为 0 且末尾为 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或管理在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; native slumber guard behavior integrated)`

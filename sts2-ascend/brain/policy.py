@@ -21773,8 +21773,14 @@ class Policy:
         return current_hp >= 100000.0
 
     def _enemy_asleep_stack(self, enemy: dict) -> float:
-        """读取敌人的沉睡层数（ASLEEP_POWER），兼容 id/power_id/name 载荷。"""
-        return self._enemy_power_stack(enemy, "asleep", "沉睡")
+        """读取敌人的沉睡层数，兼容不同原生睡眠能力载荷。
+
+        LAGAVULIN 使用 ASLEEP_POWER/「沉睡」，而 SLUMBERING_BEETLE 在
+        v0.111.0 使用 SLUMBER_POWER/「熟睡」。两者都会在未格挡伤害后
+        提前苏醒，因此必须共享 SLEEP_GUARD 的保护阈值。
+        """
+        return self._enemy_power_stack(
+            enemy, "asleep", "slumber", "沉睡", "熟睡", "睡眠")
 
     def _is_frantic_escape(self, card: dict) -> bool:
         """狂乱逃离（FRANTIC_ESCAPE）识别：无厌沙虫 Liquify 灌注的沙坑续命
