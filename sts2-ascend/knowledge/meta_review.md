@@ -15279,3 +15279,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直连 selfcheck 命中宿主固定 256 槽池门禁；使用 clone-local 进程级临时目录适配运行同一完整 selfcheck，退出码 0 并输出 `SELFCHECK OK`；最终目标 diff 与 `git diff --check` 通过。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1843: 同战斗累计药水自伤接回终局
+
+profile_id: `ironclad`
+requested_run: `1843`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `potion_self_harm_gate` 只判断单次支付后是否贴死，连续两瓶污浊药水的累计自伤可能在之后的致死 `end_turn` 前失去来源。该假设可证伪：同楼层、同战斗尾部应产生且只产生一个 `POTION_SELF_HARM_TERMINAL_OUTCOME_OBS`，而 `REWARD` 边界、重复终局、畸形来源或关闭开关必须静默，action/params 不变。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-132541_EYC1VX9G5JE4.json` 的 run 1843 F30 D406/D407 两次 `FOUL_POTION` 将 HP 35→23→11，累计自伤 0→12→24；D416 为 HP1 的致死 `end_turn`，D417 为 HP0 `GAME_OVER`。`runtime/potions.jsonl` 同时确认 `FOUL_POTION` 是对玩家和敌人造成伤害的药水。
+- **EXPECTED_SIGNAL**：未来 3—10 个匹配终局逐样本核对药水名、来源回合/HP、累计自伤、终局回合/HP、桥接长度和 marker 次数；新增字段只用于审计，不进入评分、门控、候选排序、目标选择、action 或 params。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：增加默认开启的 `potion_self_harm_terminal_outcome_obs` 回滚开关。
+- `sts2-ascend/brain/policy.py`：在 `GAME_OVER` 前反向扫描最多 64 条同楼层 `COMBAT`/`CARD_SELECTION` 尾部，只接受带 `POTION_SELF_HARM_CUMULATIVE_OBS` 的药水回执，并一次性追加同战斗终局 marker；不读取该状态做决策。
+- `sts2-ascend/brain/selfcheck.py`：覆盖两次药水来源、重载、重复提交、关闭开关和 `REWARD` 边界，断言 `continue_game_over` 与 `{}` 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配终端，比较来源/终局字段、marker 次数及应用 action/params。
+- **Adjust**：若生产 reason 的药水名、累计格式或终局形状不同，保留原始链并仅收紧该解析/桥接，不升级为战斗行为。
+- **Rollback**：将 `potion_self_harm_terminal_outcome_obs` 设为 `False`；预期只移除本 marker，其他终局观察、动作和参数不变。
+- **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 受宿主固定 256 槽临时池限制；同一完整 selfcheck 经 clone-local 进程级 0777 临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。最终差异审阅与 `git diff --check` 无新增空白错误；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

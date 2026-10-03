@@ -975,6 +975,8 @@ class Policy:
         self._longfight_effective_dpt_terminal_outcome_reported = False
         self._self_loss_phase_terminal_outcome_pending = None
         self._self_loss_phase_terminal_outcome_reported = False
+        self._potion_self_harm_terminal_outcome_pending = None
+        self._potion_self_harm_terminal_outcome_reported = False
         self._self_harm_potion_paid = 0.0  # 本场已成功支付的自伤药水血量（累计观测）
         # Boss 意图0生命支付链只消费服务端成功回执；用于把首击前的多张
         # 白绮生命支付与后续终端锁收口拼成同一场战斗的可证伪观测。
@@ -8323,6 +8325,193 @@ class Policy:
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "(HP_COST_ATK_NONLETHAL_TERMINAL_OUTCOME_OBS)")
 
+    def _restore_potion_self_harm_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover cumulative self-harm potion rows before a terminal end-turn.
+
+        The source is an observation-only accepted-potion trace.  A bounded
+        same-floor combat tail is required so a later room cannot inherit an
+        earlier potion payment; no scoring or action path reads this state.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "potion_self_harm_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS"
+        if bool(getattr(
+                self, "_potion_self_harm_terminal_outcome_reported", False)):
+            _last_reason = ""
+            if isinstance(decisions, list) and decisions:
+                _last = decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if marker in _last_reason:
+                return
+            self._potion_self_harm_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_potion_self_harm_terminal_outcome_pending", None),
+                dict):
+            return
+        if not isinstance(decisions, list) or not decisions:
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _number(value):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return parsed if math.isfinite(parsed) else None
+
+        _tail = decisions[-1]
+        if not isinstance(_tail, dict) or _tail.get("action") != "end_turn":
+            return
+        if (floor is not None and _tail.get("floor") is not None
+                and not _same_floor(floor, _tail.get("floor"))):
+            return
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _sources = []
+        _lookback_start = max(0, len(decisions) - 64)
+        for _index in range(len(decisions) - 2,
+                            _lookback_start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            if _screen != "COMBAT" or _row.get("action") != "use_potion":
+                continue
+            _reason = str(_row.get("reason") or "")
+            if "POTION_SELF_HARM_CUMULATIVE_OBS" not in _reason:
+                continue
+            _cumulative = re.search(
+                rf"本场累计自伤(?P<before>{_number_pattern})"
+                rf"(?:→|->)(?P<after>{_number_pattern})血", _reason)
+            _cost = re.search(
+                rf"自伤(?P<self_harm>{_number_pattern})血", _reason)
+            if _cumulative is None or _cost is None:
+                continue
+            _potion = re.search(r"药水【(?P<potion>[^】]+)】", _reason)
+            _sources.append({
+                "source_floor": _row.get("floor"),
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "use_potion",
+                "potion": (_potion.group("potion").strip()
+                           if _potion else "?"),
+                "self_harm": _number(_cost.group("self_harm")),
+                "cumulative_before": _number(_cumulative.group("before")),
+                "cumulative_after": _number(_cumulative.group("after")),
+                "source_hp": _number(_row.get("hp")),
+                "source_index": _index,
+            })
+        if not _sources:
+            return
+
+        _sources.reverse()
+        _first = _sources[0]
+        _last = _sources[-1]
+        _total = _last.get("cumulative_after")
+        if _total is None:
+            _total = sum(row.get("self_harm") or 0.0 for row in _sources)
+        try:
+            _bridge_rounds = max(
+                0, int(float(_tail.get("turn", _tail.get("round"))))
+                - int(float(_last.get("source_round"))))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        self._potion_self_harm_terminal_outcome_pending = {
+            "source_floor": _first.get("source_floor"),
+            "source_round": _first.get("source_round"),
+            "last_source_round": _last.get("source_round"),
+            "source_action": _first.get("source_action") or "use_potion",
+            "potion": _last.get("potion") or _first.get("potion") or "?",
+            "source_count": len(_sources),
+            "self_harm_total": _total,
+            "last_self_harm": _last.get("self_harm"),
+            "source_hp": _first.get("source_hp"),
+            "last_source_hp": _last.get("source_hp"),
+            "source_index": _first.get("source_index"),
+            "terminal_round": _tail.get("turn", _tail.get("round")),
+            "terminal_action": _tail.get("action") or "end_turn",
+            "terminal_hp": _tail.get("hp"),
+            "bridge_decisions": len(decisions) - _first["source_index"] - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._potion_self_harm_terminal_outcome_reported = False
+
+    def _consume_potion_self_harm_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join cumulative potion self-harm to the terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "potion_self_harm_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_potion_self_harm_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_potion_self_harm_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._potion_self_harm_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _text(value) -> str:
+            return (str(value or "?")
+                    .replace("/", "_")
+                    .replace(" ", "_"))
+
+        _result = "victory" if victory else "defeat"
+        return (
+            "| potion_self_harm_terminal_outcome:"
+            f"outcome={_result}/floor={_round(floor)}"
+            f"/source_floor={_round(_pending.get('source_floor'))}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/last_source_round={_round(_pending.get('last_source_round'))}"
+            f"/source_action={_pending.get('source_action') or '?'}"
+            f"/potion={_text(_pending.get('potion'))}"
+            f"/source_count={int(_pending.get('source_count', 0))}"
+            f"/self_harm_total={_num(_pending.get('self_harm_total'))}"
+            f"/last_self_harm={_num(_pending.get('last_self_harm'))}"
+            f"/source_hp={_num(_pending.get('source_hp'))}"
+            f"/last_source_hp={_num(_pending.get('last_source_hp'))}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "(POTION_SELF_HARM_TERMINAL_OUTCOME_OBS)")
+
     def _consume_race_projection_ratio_terminal_outcome_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
         """Join a durable combat-note TTK ratio to the terminal outcome.
@@ -14587,6 +14776,8 @@ class Policy:
             self._longfight_effective_dpt_terminal_outcome_reported = False
             self._self_loss_phase_terminal_outcome_pending = None
             self._self_loss_phase_terminal_outcome_reported = False
+            self._potion_self_harm_terminal_outcome_pending = None
+            self._potion_self_harm_terminal_outcome_reported = False
             self._self_harm_potion_paid = 0.0
             self._boss_free_turn_hp_pay_total = 0.0
             self._boss_free_turn_hp_pay_count = 0
@@ -23607,6 +23798,11 @@ class Policy:
         _self_loss_phase_terminal_outcome_note = (
             self._consume_self_loss_phase_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_potion_self_harm_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _potion_self_harm_terminal_outcome_note = (
+            self._consume_potion_self_harm_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_boss_intent_ramp_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _boss_intent_ramp_terminal_outcome_note = (
@@ -23761,6 +23957,7 @@ class Policy:
                             f"{_boss_effective_dpt_terminal_outcome_note}"
                             f"{_longfight_effective_dpt_terminal_outcome_note}"
                             f"{_self_loss_phase_terminal_outcome_note}"
+                            f"{_potion_self_harm_terminal_outcome_note}"
                             f"{_boss_intent_ramp_terminal_outcome_note}"
                             f"{_hard_intent_spike_fire_terminal_outcome_note}"
                             f"{_boss_race_joint_flip_terminal_outcome_note}"
@@ -23816,6 +24013,7 @@ class Policy:
                         f"{_longfight_joint_flip_terminal_outcome_note}"
                         f"{_boss_effective_dpt_terminal_outcome_note}"
                         f"{_self_loss_phase_terminal_outcome_note}"
+                        f"{_potion_self_harm_terminal_outcome_note}"
                         f"{_boss_intent_ramp_terminal_outcome_note}"
                         f"{_hard_intent_spike_fire_terminal_outcome_note}"
                         f"{_boss_race_joint_flip_terminal_outcome_note}"
@@ -23854,6 +24052,7 @@ class Policy:
                                 f"{_longfight_joint_flip_terminal_outcome_note}"
                                 f"{_boss_effective_dpt_terminal_outcome_note}"
                                 f"{_self_loss_phase_terminal_outcome_note}"
+                                f"{_potion_self_harm_terminal_outcome_note}"
                                 f"{_boss_intent_ramp_terminal_outcome_note}"
                                 f"{_hard_intent_spike_fire_terminal_outcome_note}"
                                 f"{_boss_race_joint_flip_terminal_outcome_note}"

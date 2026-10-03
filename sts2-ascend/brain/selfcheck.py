@@ -24265,6 +24265,120 @@ def main() -> int:
                 not in _d_hp_cost_terminal_boundary.reason), \
         f"HP-cost terminal bridge crossed a REWARD boundary: {_d_hp_cost_terminal_boundary}"
 
+    # 3z-5e-potion) Join accepted cumulative self-harm potions to the same
+    # combat terminal.  Run 1843-F30 paid 12 HP twice (35 -> 23 -> 11) and
+    # then died on a later lethal end_turn; this remains observation-only.
+    _potion_terminal_source_reason_1 = (
+        "战斗：硬仗使用攻击药水【污浊药水】，自伤12血"
+        "（POTION_SELF_HARM_OBS），本场累计自伤0→12血"
+        "（POTION_SELF_HARM_CUMULATIVE_OBS）")
+    _potion_terminal_source_reason_2 = (
+        "战斗：硬仗使用攻击药水【污浊药水】，自伤12血"
+        "（POTION_SELF_HARM_OBS），本场累计自伤12→24血"
+        "（POTION_SELF_HARM_CUMULATIVE_OBS）")
+    _potion_terminal_source_row_1 = {
+        "screen": "COMBAT", "action": "use_potion", "floor": 30,
+        "turn": 2, "hp": 35, "reason": _potion_terminal_source_reason_1,
+    }
+    _potion_terminal_source_row_2 = {
+        "screen": "COMBAT", "action": "use_potion", "floor": 30,
+        "turn": 2, "hp": 23, "reason": _potion_terminal_source_reason_2,
+    }
+    _potion_terminal_tail_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 30,
+        "turn": 3, "hp": 1, "reason": "terminal combat tail",
+    }
+    _potion_terminal_state = {
+        "screen": "GAME_OVER", "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 30},
+        "run": {"current_hp": 0, "floor": 30},
+    }
+    _potion_terminal_dir = Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-potion-terminal-"))
+    _potion_terminal_pol = policy.Policy(
+        knowledge.Knowledge(_potion_terminal_dir))
+    assert knowledge.DEFAULT_POLICY[
+        "potion_self_harm_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing potion self-harm terminal observation switch"
+    _potion_terminal_ctx_live = _projection_ratio_ctx(
+        [], [_potion_terminal_source_row_1, _potion_terminal_source_row_2,
+             _potion_terminal_tail_row])
+    _d_potion_terminal = _potion_terminal_pol.decide(
+        _potion_terminal_state, _potion_terminal_ctx_live)
+    assert (_d_potion_terminal.action == "continue_game_over"
+            and _d_potion_terminal.params == {}
+            and _d_potion_terminal.reason.count(
+                "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS") == 1
+            and ":outcome=defeat/floor=30/source_floor=30/source_round=2"
+                "/last_source_round=2/source_action=use_potion"
+                "/potion=污浊药水/source_count=2/self_harm_total=24"
+                "/last_self_harm=12/source_hp=35/last_source_hp=23"
+                "/terminal_round=3/terminal_action=end_turn/terminal_hp=1"
+                "/final_hp=0/bridge_decisions=2/bridge_rounds=1"
+                "(POTION_SELF_HARM_TERMINAL_OUTCOME_OBS)"
+                in _d_potion_terminal.reason), \
+        f"Potion self-harm terminal bridge missing or drifting: {_d_potion_terminal}"
+
+    _d_potion_terminal_reload = policy.Policy(
+        knowledge.Knowledge(_potion_terminal_dir)).decide(
+            _potion_terminal_state,
+            _projection_ratio_ctx(
+                [], [_potion_terminal_source_row_1,
+                     _potion_terminal_source_row_2,
+                     _potion_terminal_tail_row]))
+    assert (_d_potion_terminal_reload.action == _d_potion_terminal.action
+            and _d_potion_terminal_reload.params
+            == _d_potion_terminal.params
+            and "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS"
+                in _d_potion_terminal_reload.reason), \
+        f"Potion self-harm terminal bridge was not reload-stable: {_d_potion_terminal_reload}"
+
+    _potion_terminal_ctx_live.decisions.append({
+        "screen": "GAME_OVER", "action": _d_potion_terminal.action,
+        "floor": 30, "reason": _d_potion_terminal.reason})
+    _d_potion_terminal_duplicate = _potion_terminal_pol.decide(
+        _potion_terminal_state, _potion_terminal_ctx_live)
+    assert (_d_potion_terminal_duplicate.action == _d_potion_terminal.action
+            and _d_potion_terminal_duplicate.params
+            == _d_potion_terminal.params
+            and "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS"
+                not in _d_potion_terminal_duplicate.reason), \
+        f"Potion self-harm terminal bridge duplicated on retry: {_d_potion_terminal_duplicate}"
+
+    _potion_terminal_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-potion-terminal-off-")))
+    _potion_terminal_off_know.policy[
+        "potion_self_harm_terminal_outcome_obs"] = False
+    _d_potion_terminal_off = policy.Policy(
+        _potion_terminal_off_know).decide(
+            _potion_terminal_state,
+            _projection_ratio_ctx(
+                [], [_potion_terminal_source_row_1,
+                     _potion_terminal_source_row_2,
+                     _potion_terminal_tail_row]))
+    assert (_d_potion_terminal_off.action == _d_potion_terminal.action
+            and _d_potion_terminal_off.params == _d_potion_terminal.params
+            and "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS"
+                not in _d_potion_terminal_off.reason), \
+        f"Potion self-harm terminal switch-off changed action/params or left marker: {_d_potion_terminal_off}"
+
+    _d_potion_terminal_boundary = policy.Policy(
+        knowledge.Knowledge(Path(tempfile.mkdtemp(
+            prefix="sts2-selfcheck-potion-terminal-boundary-")))).decide(
+                _potion_terminal_state,
+                _projection_ratio_ctx(
+                    [], [_potion_terminal_source_row_1,
+                         {"screen": "REWARD", "action": "proceed",
+                          "floor": 30, "reason": "reward boundary"},
+                         _potion_terminal_tail_row]))
+    assert (_d_potion_terminal_boundary.action == _d_potion_terminal.action
+            and _d_potion_terminal_boundary.params
+                == _d_potion_terminal.params
+            and "POTION_SELF_HARM_TERMINAL_OUTCOME_OBS"
+                not in _d_potion_terminal_boundary.reason), \
+        f"Potion self-harm terminal bridge crossed a REWARD boundary: {_d_potion_terminal_boundary}"
+
     # 3z-5f) Join the native OVICOPTER CanLay pressure observation to the
     # same-floor terminal roster.  The bridge is audit-only: it must preserve
     # continue_game_over/{}, survive Policy reload, deduplicate on retry, and

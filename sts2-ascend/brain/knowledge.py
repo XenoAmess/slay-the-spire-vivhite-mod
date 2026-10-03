@@ -478,6 +478,7 @@ DEFAULT_POLICY = {
                                     # 「自伤N血（POTION_SELF_HARM_OBS）」并在成功回执后
                                     # 追加本场累计自伤（POTION_SELF_HARM_CUMULATIVE_OBS）。
                                     # false = 整体回滚
+    "potion_self_harm_terminal_outcome_obs": True,  # Audit-only bounded same-combat join from cumulative potion self-harm to the terminal outcome; False removes only this marker.
     "potion_self_harm_reserve_hp": 1,  # 自伤药水使用后的最低保留血（同上批次）：旧版
                                     # hp≤自伤量时使用即当场自杀且结构无防线（is_defensive
                                     # 有交药线、is_damage 没有）；默认 1 只拦字面自杀，
