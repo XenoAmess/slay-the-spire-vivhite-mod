@@ -9784,6 +9784,26 @@ class Policy:
                 _source_text)
             if _match is None:
                 continue
+            _projected_tsurv = None
+            _calib_marker_at = _note.rfind(
+                "RACE_PROJ_CALIB_AUDIT", 0, _label_at)
+            _calib_label_at = _note.rfind(
+                "竞速投影审计：", 0, _calib_marker_at)
+            if _calib_marker_at >= 0 and _calib_label_at >= 0:
+                _calib_text = _note[
+                    _calib_label_at:_calib_marker_at]
+                _tsurv_match = re.search(
+                    rf"/tsurv=(?P<tsurv>{_number_pattern})",
+                    _calib_text)
+                if _tsurv_match is not None:
+                    try:
+                        _tsurv_value = float(_tsurv_match.group("tsurv"))
+                    except (TypeError, ValueError, OverflowError):
+                        _tsurv_value = None
+                    if (_tsurv_value is not None
+                            and math.isfinite(_tsurv_value)
+                            and _tsurv_value > 0.0):
+                        _projected_tsurv = _tsurv_value
             _suffix = _note[_marker_at + len("RACE_PROJ_TTK_RATIO_OBS"):]
             _kind_match = re.search(
                 r"/actual_rounds_kind=(?P<kind>[^/；（）()\s]+)",
@@ -9851,6 +9871,7 @@ class Policy:
                 "ratio_valid": _valid,
                 "actual_over_projected_survival": _survival,
                 "ttk_minus_tsurv": _gap,
+                "projected_tsurv": _projected_tsurv,
             }
             break
         if _source is None:
@@ -9876,6 +9897,11 @@ class Policy:
             _gap_suffix = (
                 f"/source_ttk_minus_tsurv="
                 f"{_num(_source['ttk_minus_tsurv'])}")
+        _projected_tsurv_suffix = ""
+        if _source["projected_tsurv"] is not None:
+            _projected_tsurv_suffix = (
+                f"/source_projected_tsurv="
+                f"{_num(_source['projected_tsurv'])}")
         _result = "victory" if victory else "defeat"
         return (
             f"；竞速TTK比值终局对账：outcome={_result}"
@@ -9886,6 +9912,7 @@ class Policy:
             f"/source_actual_rounds_kind={_source['actual_rounds_kind']}"
             f"/source_ratio_valid={_source['ratio_valid']}"
             f"/source_actual_over_projected_survival={_survival_text}"
+            f"{_projected_tsurv_suffix}"
             f"{_gap_suffix}"
             f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
             f"/terminal_action={_terminal.get('action') or '?'}"

@@ -25232,10 +25232,12 @@ def main() -> int:
         died_in_combat = None
 
     _projection_ratio_note = (
-        "F22 Monster战 掉血44｜竞速TTK校准比：actual_rounds=5"
+        "F22 Monster战 掉血44｜竞速投影审计：pool=42/dpt=15/ttk=2.66667"
+        "/tsurv=1.16667（RACE_PROJ_CALIB_AUDIT）｜"
+        "竞速TTK校准比：actual_rounds=5"
         "/projected_ttk=2.66667/actual_over_projected=NA"
         "（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal"
-        "/ratio_valid=no/actual_over_projected_survival=6.56"
+        "/ratio_valid=no/actual_over_projected_survival=4.2857"
         "（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=1.5"
         "（RACE_PROJ_SURVIVAL_GAP_OBS）")
     _projection_ratio_terminal_state = {
@@ -25270,7 +25272,8 @@ def main() -> int:
                 "/source_actual_rounds=5/source_projected_ttk=2.66667"
                 "/source_actual_over_projected=NA"
                 "/source_actual_rounds_kind=terminal/source_ratio_valid=no"
-                "/source_actual_over_projected_survival=6.56"
+                "/source_actual_over_projected_survival=4.2857"
+                "/source_projected_tsurv=1.16667"
                 "/source_ttk_minus_tsurv=1.5"
                 "/terminal_round=5/terminal_action=end_turn/terminal_hp=5"
                 "/final_hp=0"

@@ -16025,3 +16025,30 @@ failed_review_replay：requested_packages=[]（无回放目标）
 - **Validation**：目标源码 git diff --check 通过；固定 256 槽适配器先明确报告 REVIEW_SELFCHECK_BOOTSTRAP_FAILED（池耗尽），随后用当前 clone 的进程级临时目录适配器运行同一完整 selfcheck.py，退出码 0 且末尾为 SELFCHECK OK。代码提交前最终 diff 仅含上述三个生产源码文件；未写入 .runtime、正式 runs/archive、学习记忆、回放包或管理在线进程。
 
 - retry_resolution: none (no failed_review_replay packages requested; aggregate DPT terminal observation integrated)
+
+## 2026-10-04 runs 1895-1896：竞速生存投影分母补齐终局观测
+
+profile_id：`ironclad`
+requested_runs：`1895, 1896`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：既有 `RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS` 已把 `actual_over_projected_survival` 与 `ttk_minus_tsurv` 接回终局，但丢失同一战斗备注中的 `tsurv` 分母，无法机械复核“实际生存回合 / 预计生存回合”。若终局桥只在同一楼层、同一备注中存在有限正 `tsurv` 时追加 `source_projected_tsurv`，未来 3—10 个匹配终局应可按现有数值格式复核该比值；缺失/非法来源、跨楼层来源或重复终局不应追加字段，action/params、评分和门禁均不得变化。否则假设即被证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-054815_76A2GW3LEW0B.json` 的 run 1895/F33 备注含 `ttk=14.0123/tsurv=3.5625`，终局桥只记录 `actual_rounds=5/actual_over_projected_survival=1.4/ttk_minus_tsurv=10.4498`；完整链 `sts2-ascend/knowledge/runs/20261004-060725_9KF0D2T5MG54.json` 的 run 1896/F17 备注含 `ttk=12.7273/tsurv=2.69231`，终局桥只记录 `actual_rounds=9/actual_over_projected_survival=3.34/ttk_minus_tsurv=10.035`。当前策略只读回放两条链分别补出 `source_projected_tsurv=3.5625` 与 `source_projected_tsurv=2.69231`，且终局 action 仍为 `continue_game_over`、params 仍为 `{}`。
+- **EXPECTED_SIGNAL**：未来 3—10 个同类终局中，若来源有效，marker 应包含 `source_projected_tsurv`，并满足 `actual_rounds/source_projected_tsurv` 与已有 `source_actual_over_projected_survival` 在格式舍入误差内一致；无效来源保持旧字段集合，不臆造分母。关闭 `race_audit_projection_ratio_terminal_outcome_obs` 应删除整条终局观测而不改变动作。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 TTK 终局桥解析同一备注中最近的 `RACE_PROJ_CALIB_AUDIT`，仅接受有限正 `tsurv`，追加 `source_projected_tsurv`；不进入评分、候选、判决、门禁或动作参数。
+- `sts2-ascend/brain/selfcheck.py`：将终局比例夹具补上 `tsurv` 分母，并断言新的观测字段与原有终局字段同时存在。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个匹配 Boss/终局样本，逐条核对 `actual_rounds/source_projected_tsurv`、既有 survival ratio、floor 和同一战斗备注；单独统计缺失/非法来源与重复终局。
+- **Adjust**：若出现跨楼层串接、来源备注错配、数值超过舍入误差，或 action/params/门禁漂移，收紧备注边界并停留在观测层；不把该字段接入竞速评分。
+- **Rollback**：将 `race_audit_projection_ratio_terminal_outcome_obs` 设为 `False`，预期只移除该终局桥；必要时回滚本地 commit，保留 1895—1896 原始链。
+- **Validation**：1895 与 1896 的当前策略回放均命中预期 `source_projected_tsurv`；完整 `py -3 -B sts2-ascend/brain/selfcheck.py` 经 clone-local 进程级临时目录适配器退出码 0，末尾为 `SELFCHECK OK`。宿主直跑与固定 256 槽适配器仍复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`，不是断言失败；目标源码差异检查通过。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; terminal survival denominator observation integrated)`
