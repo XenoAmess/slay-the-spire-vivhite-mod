@@ -15759,3 +15759,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.947573470378655局)，DEFEND_IRONCLAD(18分/3.3173475971066053局)，THE_GAMBIT(18分/5.6517773876630875局)
 - 策略进化：block_safety: 2.04 → 2.09（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.39 → 0.40（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.09 → 2.08（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F22——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1833 胜，当前目标进阶 0
+
+## 第 1834 局复盘（2026-10-03 10:54）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 SOUL_FYSH
+- 本局拿牌：TRUE_GRIT, EVIL_EYE, HEMOKINESIS, BLUDGEON, BLUDGEON, BLUDGEON, BREAKTHROUGH, EQUILIBRIUM, HOWL_FROM_BEYOND, SPITE
+- 本局遗物：STRAWBERRY
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血17｜自损4（可行动段4/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血30｜自损4（可行动段4/非行动段32，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血6｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血7; F17 Boss战 掉血75｜自损5（可行动段5/非行动段61，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=149/dpt=13.5/ttk=11.037/tsurv=6.08333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=11.037/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.64（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=17.7857/projected_dpt=13.7779/ratio=1.32/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=17.7857/projected_dpt=13.7779/ratio=1.32/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/5.023023062071547局)，BRAND(26分/2.4813835473582984局)，PROWESS(26分/10.399720200531375局)，MANGLE(25分/45.67694432310094局)，HELLRAISER(25分/3.993935898650069局)
+- 当前低价值卡牌：BURNING_PACT(17分/11.905756963232331局)，DEFEND_IRONCLAD(18分/3.3057368805167324局)，THE_GAMBIT(18分/5.631996166806267局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（86%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1834 胜，当前目标进阶 0
