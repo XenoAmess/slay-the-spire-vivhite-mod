@@ -15825,3 +15825,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.2810505730244404局)，BURNING_PACT(17分/12.688396283062248局)，DEFEND_IRONCLAD(18分/3.2482900230194653局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；kill_race_prior_eff: 0.36 → 0.38（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F30——灰区悲观系数部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F30——药水交药线部分胜利回收）
 - 生涯战绩：0/1839 胜，当前目标进阶 0
+
+## 第 1840 局复盘（2026-10-03 12:32）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：HEADBUTT, HEADBUTT, BLUDGEON, CINDER, SHRUG_IT_OFF, BREAKTHROUGH, THUNDERCLAP, SHRUG_IT_OFF, ARMAMENTS, PYRE, THUNDERCLAP
+- 本局遗物：PEN_NIB
+- 战斗记录：F7 Monster战 掉血14; F9 Monster战 掉血8; F13 Unknown战 掉血0; F14 Monster战 掉血0; F15 Monster战 掉血7; F17 Boss战 掉血64｜竞速投影审计：pool=117/dpt=23.7/ttk=4.93671/tsurv=2.6（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=4.93671/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.46（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T5判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=28.75/projected_dpt=18.1363/ratio=1.67/min_ratio=0.65（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=28.75/projected_dpt=18.1363/ratio=1.67/min_ratio=0.65（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.918458262304118局)，BRAND(26分/2.4297283248818338局)，PROWESS(26分/10.18322813052336局)，MANGLE(25分/44.726082565527534局)，HELLRAISER(25分/3.910793714677284局)
+- 当前低价值卡牌：HAVOC(15分/2.273066896018855局)，BURNING_PACT(17分/12.643986896071532局)，DEFEND_IRONCLAD(18分/3.2369210079388973局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
+- 生涯战绩：0/1840 胜，当前目标进阶 0
