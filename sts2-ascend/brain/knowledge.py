@@ -430,6 +430,10 @@ DEFAULT_POLICY = {
                                       # 解封，防御/回复药水与精英/Boss 房不受限。BNSJ 局
                                       # 实证：F4/F14/F15 三瓶前倾消费后 F17 竞速空手阵亡。
                                       # 0 = 关闭预留（回退旧行为）
+    "potion_boss_reserve_floors_min": 3,  # Boss 预留安全下限（1846~1847 批）：旧
+                                          # policy.json 的 2 层在 F14→F17 仍放行强卡组
+                                          # 的进攻药水；默认至少保护 Boss 前 3 层。设为 0
+                                          # 可回退到 potion_boss_reserve_floors 的旧口径。
     "potion_starved_reserve_floors": 6,  # 输出饥饿卡组的预留窗加宽（第 386~390 批复盘新增）：
                                          # deck_burst < deck_burst_floor 的卡组距 Boss ≤N 层
                                          # 即封存进攻/增益药水（普通房）。本批五局竞速投影

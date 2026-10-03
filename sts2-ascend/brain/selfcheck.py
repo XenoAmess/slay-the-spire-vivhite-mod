@@ -798,6 +798,24 @@ def main() -> int:
     assert d_strong_far.action == "use_potion", \
         f"强卡组预留窗不得被加宽（防囤药入坟）: {d_strong_far.action}（{d_strong_far.reason}）"
     ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_strong_edge = pol.decide(reserve_potion_state(13, deck=_strong_deck), ctx)
+    assert d_strong_edge.action == "use_potion", \
+        f"强卡组距Boss 4层应在3层下限外投放: {d_strong_edge.action}（{d_strong_edge.reason}）"
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_strong_min = pol.decide(reserve_potion_state(14, deck=_strong_deck), ctx)
+    assert d_strong_min.action != "use_potion", \
+        f"强卡组距Boss 3层必须受新增安全下限保护: {d_strong_min.action}（{d_strong_min.reason}）"
+    _reserve_floor_min = know.policy.get("potion_boss_reserve_floors_min")
+    know.policy["potion_boss_reserve_floors_min"] = 0
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
+    d_strong_min_rb = pol.decide(reserve_potion_state(14, deck=_strong_deck), ctx)
+    assert d_strong_min_rb.action == "use_potion", \
+        f"关闭新增安全下限应回退旧2层口径: {d_strong_min_rb.action}（{d_strong_min_rb.reason}）"
+    if _reserve_floor_min is None:
+        know.policy.pop("potion_boss_reserve_floors_min", None)
+    else:
+        know.policy["potion_boss_reserve_floors_min"] = _reserve_floor_min
+    ctx.combat = {"comp_id": "M", "node_type": "Monster"}
     d_starve_valve = pol.decide(reserve_potion_state(12, hp=24, deck=_starved_deck), ctx)
     assert d_starve_valve.action == "use_potion", \
         f"饥饿封存下交药线解封口必须保留: {d_starve_valve.action}（{d_starve_valve.reason}）"
@@ -14997,14 +15015,15 @@ def main() -> int:
     d_bt_low = br_pol.decide(bt_potion_state(24), bt_ctx)
     assert d_bt_low.action == "use_potion", \
         f"真濒死仍须立即解封（保命优先于囤积）: {d_bt_low.action}（{d_bt_low.reason}）"
-    # 无 Boss 实证的空库：及格线回落 None→静态门槛，burst33≥30 视作强卡组，
-    # 距 Boss 3 层照旧投放（防「囤药入坟」旧病回潮）
+    # 无 Boss 实证的空库：及格线回落 None→静态门槛，burst33≥30 视作强卡组；
+    # 新增的 3 层安全下限仍保护 Boss 临门普通房，避免旧 policy.json 的 2 层
+    # 口径在 F14→F17 再次把强卡组的进攻药水烧空。
     nv2_pol = policy.Policy(knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-btline-"))), random.Random(13))
     assert nv2_pol.required_deck_burst(80) is None, "无 Boss 实证时竞速及格线应为 None"
     d_bt_nv = nv2_pol.decide(bt_potion_state(60), bt_ctx)
-    assert d_bt_nv.action == "use_potion", \
-        f"无实证时静态门槛行为必须保持: {d_bt_nv.action}（{d_bt_nv.reason}）"
+    assert d_bt_nv.action != "use_potion", \
+        f"无实证时 Boss 前3层安全下限仍必须封存: {d_bt_nv.action}（{d_bt_nv.reason}）"
 
     # 商店竞价保护：预留窗内进攻药加成压过可选卡；窗外加成关闭
     def bt_shop_state(floor_no: int) -> dict:

@@ -15307,3 +15307,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 受宿主固定 256 槽临时池限制；同一完整 selfcheck 经 clone-local 进程级 0777 临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`。最终差异审阅与 `git diff --check` 无新增空白错误；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1846-1847: extend the offensive-potion Boss reserve floor
+
+profile_id: `ironclad`
+requested_runs: `1846-1847`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `policy.json` 的 `potion_boss_reserve_floors=2` 让非饥饿/强卡组在 F14→F17 的三层窗口仍可把进攻药水投入普通战斗；Boss 终局因此可能只剩空药槽。把安全下限提高到 3 层，应只减少该窗口的普通房消耗，不改变精英/Boss、当场致死或低血交药解封口。该假设可证伪：F13（距 Boss 4 层）仍可投放，F14（距 Boss 3 层）应封存，边界与回退开关必须保持原动作。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261003-144339_YRADZCJLMJPM.json` 的 run 1847 在 F14 使用攻击药水，F16 篝火记录已知 Boss 组合可行 `0/6`，F17 D254 的 `POTION_RESERVE_END_TURN_OBS` 为 `slots=3/occupied=0/can_use=0`，随后 GAME_OVER；终局同时确认这是 `race_allin=yes` 的输出饥饿败局。对照 run 1846 F8 D142 也以 `occupied=0` 进入致死空过，但该层距 Boss 过远，不用于推导 3 层阈值。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立对局中，强/非饥饿卡组在距 Boss 3 层的普通房不再消费进攻/增益药水，Boss 入场时保留槽位比例上升；距 Boss 4 层仍允许投放；精英/Boss、致死、低血解封和应用 action/params 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认 `potion_boss_reserve_floors_min=3`，设为 0 可回退旧的两层键。
+- `sts2-ascend/brain/policy.py`：`_hold_offensive_potion` 取旧预留键与安全下限的最大值；只影响普通房进攻/增益药水预留，既有三类解封口不变。
+- `sts2-ascend/brain/selfcheck.py`：新增 F13/F14 边界、下限关闭回退和无 Boss 实证夹具，保留低血、精英和饥饿卡组测试。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 局，比较 Boss 前 4/3 层普通房的进攻/增益药水使用数、Boss 入场占用槽位、终局 HP/战损和真实应用回执。
+- **Adjust**：若 3 层仍过早耗药或 4 层已明显错失必要救命药，保留原始链，仅调整该安全下限；不扩大到精英/Boss 或低血解封口。
+- **Rollback**：将 `potion_boss_reserve_floors_min` 设为 `0`，应恢复 `potion_boss_reserve_floors=2` 的旧行为；不改其他药水分类、门控和 action/params。
+- **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 运行到宿主固定 256 槽临时目录门禁；用 clone-local 进程级临时目录适配运行同一完整 selfcheck，退出码 0 并输出 `SELFCHECK OK`。针对性 `git diff --check` 返回 0，仅有既有 LF/CRLF 与长路径提示；未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`

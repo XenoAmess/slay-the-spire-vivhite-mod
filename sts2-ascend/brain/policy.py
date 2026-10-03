@@ -21006,7 +21006,10 @@ class Policy:
         - 仅封普通房：Elite/Boss 节点药水照常投入（精英换遗物值得花弹药）；
         - 解封口：服务端致死判定在场，或血量已跌破交药线（保命优先于囤积）。
         """
-        reserve = int(pol.get("potion_boss_reserve_floors", 2))
+        reserve = max(
+            int(pol.get("potion_boss_reserve_floors", 2)),
+            int(pol.get("potion_boss_reserve_floors_min", 0)),
+        )
         if reserve <= 0:
             return False
         # 输出饥饿卡组：预留窗加宽到 potion_starved_reserve_floors（第 386~390 批）。
