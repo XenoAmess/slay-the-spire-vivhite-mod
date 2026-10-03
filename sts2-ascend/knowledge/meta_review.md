@@ -15997,3 +15997,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接入口复现宿主固定 256 槽临时池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 clone 的进程级临时目录适配器运行完整入口，退出码为 0 且输出 `SELFCHECK OK`。目标三文件 `git diff --check` 已通过；无 failed replay package，未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-04 run 1892-1893-F17：KIN 领袖闸可斩杀随从压力旁观
+
+profile_id：`ironclad`
+requested_runs：`1892, 1893`
+production_code_commit：`f09255f88b606a3bb16a191da5cbce98e58e797c`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：KIN 领袖闸在当前攻击牌已经足以击杀被压制随从的窗口，可能产生可观测的减员压力；若该压力与败局相关，未来同类窗口应出现 `KIN_LEADER_FOCUS_PRESSURE_OBS`，且其字段能与终局对账。若 marker 在非可斩杀窗口出现、字段与同帧池值不符，或改变 action/params，假设即被证伪。
+- **EVIDENCE**：1893 完整链 F17 的 D191—D214 连续把攻击指向 `KIN_PRIEST#2`，终局 D216 为 `GAME_OVER`；既有终局 marker 给出 `focus_count=9`、`last_leader_pool=95`、`last_follower=KIN_FOLLOWER#1`、`last_follower_pool=23`、`outcome=defeat`。原生知识同时确认 `MINION_POWER` 下领袖死亡后随从放弃战斗，`KIN_PRIEST.AfterDeath` 只在无存活随从时响应，足以支持本次只读旁观而不先改领袖目标。1892 同批为 F8 强制精英败局，未发现可合并的 KIN 压力证据。
+- **EXPECTED_SIGNAL**：未来 3—10 个 KIN 领袖闸窗口中，压力 marker 只在被压制随从 `follower_killable=yes` 时出现，并记录 `leader_pool/follower_pool/follower_effective`；按窗口与终局胜负分层统计。目标、评分、action 和 params 应逐位保持不变；无压力样本或无终局相关性时继续停留在观测层。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `kin_leader_focus_pressure_obs`，关闭时只移除压力 marker。
+- `sts2-ascend/brain/policy.py`：复用同轮 `_attack_outcome` 的有效移除与击杀结果，在领袖胜出且被压制随从可斩杀时追加 `KIN_LEADER_FOCUS_PRESSURE_OBS`；不改评分、候选、目标、动作或参数。
+- `sts2-ascend/brain/selfcheck.py`：增加 8 HP 随从可斩杀夹具、marker 字段断言和关闭键动作/参数零漂移断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个独立 KIN 窗口，核对 marker 与同帧池值、当前牌有效输出、后续终局及 `applied` 回执；证据成熟前不把压力信号升级为行为门。
+- **Adjust**：若出现非击杀窗口误报、重复 marker、字段无法与快照对账或 action/params 漂移，立即收紧输入边界并关闭该观测键。
+- **Rollback**：将 `kin_leader_focus_pressure_obs` 设为 `False`；预期只删除 `KIN_LEADER_FOCUS_PRESSURE_OBS`，保留既有领袖闸、减员对账和终局 marker，目标与动作不变。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配器运行完整入口，退出码为 0 且输出 `SELFCHECK OK`。代码三文件 `git diff --check` 通过并已提交为上述 SHA；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

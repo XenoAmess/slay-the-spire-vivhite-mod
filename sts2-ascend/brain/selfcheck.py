@@ -1798,7 +1798,7 @@ def main() -> int:
     #      而 MinionPower 已确认领袖死亡后随从放弃战斗。仅对精确同族组合、
     #      随从带 MinionPower 且领袖可命中时压制随从评分；关闭键须恢复旧的
     #      辅助体/减员成本目标。
-    def kin_leader_focus_state():
+    def kin_leader_focus_state(follower_hp=58):
         return {
             "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
             "turn": 1,
@@ -1813,7 +1813,7 @@ def main() -> int:
                                               "current_value": 8}]}],
                 "enemies": [
                     {"index": 0, "enemy_id": "KIN_FOLLOWER", "name": "同族信徒",
-                     "current_hp": 58, "max_hp": 59, "block": 0,
+                     "current_hp": follower_hp, "max_hp": 59, "block": 0,
                      "is_alive": True, "is_hittable": True,
                      "powers": [{"id": "MINION_POWER", "amount": 1}],
                      "intents": [{"total_damage": 0,
@@ -1829,13 +1829,41 @@ def main() -> int:
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-leader-on-")))
     assert kl_on_know.policy.get("kin_leader_focus_gate") is True, \
         "DEFAULT_POLICY 缺少 kin_leader_focus_gate 静态键"
+    assert kl_on_know.policy.get("kin_leader_focus_pressure_obs") is True, \
+        "DEFAULT_POLICY 缺少 kin_leader_focus_pressure_obs 静态键"
     kl_on = policy.Policy(kl_on_know, random.Random(11))
     d_kl_on = kl_on.decide(kin_leader_focus_state(), ctx)
     assert d_kl_on.action == "play_card" \
         and d_kl_on.params.get("target_index") == 1 \
         and "KIN_LEADER_FOCUS_GATE" in d_kl_on.reason \
-        and "KIN_LEADER_REMOVAL_TRADEOFF_OBS" in d_kl_on.reason, \
+        and "KIN_LEADER_REMOVAL_TRADEOFF_OBS" in d_kl_on.reason \
+        and "KIN_LEADER_FOCUS_PRESSURE_OBS" not in d_kl_on.reason, \
         f"同族领袖闸未把目标转向神官: {d_kl_on.params}（{d_kl_on.reason}）"
+    kl_pressure_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-pressure-on-")))
+    kl_pressure = policy.Policy(kl_pressure_know, random.Random(11))
+    d_kl_pressure = kl_pressure.decide(
+        kin_leader_focus_state(follower_hp=8), ctx)
+    assert (d_kl_pressure.action == "play_card"
+            and d_kl_pressure.params.get("target_index") == 1
+            and "KIN_LEADER_FOCUS_PRESSURE_OBS" in d_kl_pressure.reason
+            and "follower_pool=8" in d_kl_pressure.reason
+            and "follower_effective=8" in d_kl_pressure.reason), \
+        f"可斩杀被压制随从未产生压力旁观: {d_kl_pressure.params}（{d_kl_pressure.reason}）"
+    kl_pressure_off_know = knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-pressure-off-")))
+    kl_pressure_off_know.policy["kin_leader_focus_pressure_obs"] = False
+    kl_pressure_off = policy.Policy(kl_pressure_off_know, random.Random(11))
+    d_kl_pressure_off = kl_pressure_off.decide(
+        kin_leader_focus_state(follower_hp=8), ctx)
+    assert (d_kl_pressure_off.action == d_kl_pressure.action
+            and d_kl_pressure_off.params == d_kl_pressure.params
+            and "KIN_LEADER_FOCUS_GATE" in d_kl_pressure_off.reason
+            and "KIN_LEADER_FOCUS_PRESSURE_OBS"
+                not in d_kl_pressure_off.reason), \
+        f"领袖闸压力旁观关闭后动作或既有闸漂移: " \
+        f"on={d_kl_pressure.params}（{d_kl_pressure.reason}） " \
+        f"off={d_kl_pressure_off.params}（{d_kl_pressure_off.reason}）"
     kl_tradeoff_off_know = knowledge.Knowledge(
         Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kin-tradeoff-off-")))
     kl_tradeoff_off_know.policy["kin_leader_removal_tradeoff_obs"] = False
