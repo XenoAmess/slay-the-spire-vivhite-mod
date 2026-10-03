@@ -20885,3 +20885,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.239096536262028局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.637307781062226局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/22.566820067327452局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损13/掉血17（76%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1895 胜，当前目标进阶 4
+
+## 第 1896 局复盘（2026-10-04 06:20）
+- 结果：💀 失败｜进阶 4｜到达层数 12｜当局评分 12
+- 死因：敌人组合 SLITHERING_STRANGLER+SNAPPING_JAXFRUIT
+- 本局拿牌：VIVHITE_CARD_NEGATIVE_SPACE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_HEURISTIC_SHIELD, VIVHITE_CARD_PERFECT_SYNTHESIS
+- 本局遗物：RED_MASK, ODDLY_SMOOTH_STONE, REPTILE_TRINKET
+- 战斗记录：F2 Monster战 掉血6｜自损14（可行动段14/非行动段6，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血0｜自损6（可行动段6/非行动段6，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血27｜自损27（可行动段27/非行动段7，SELF_LOSS_PHASE_OBS）; F11 Monster战 掉血0｜自损23（可行动段23/非行动段2，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血62｜自损13（可行动段13/非行动段59，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.727293987763665局)，MAYHEM(36分/4.799198582066929局)，JACKPOT(36分/8.369234081673346局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/2.7682228619075273局)，REND(36分/2.6343869677691427局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.231259698385111局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.617577203828509局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/22.487836197091806局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1896 胜，当前目标进阶 4
