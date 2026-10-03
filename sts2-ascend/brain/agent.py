@@ -3755,6 +3755,20 @@ class Agent:
                                 "/actual_rounds_kind=kill/ratio_valid=yes")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
+            if bool(self.know.policy.get(
+                    "race_audit_projection_survival_gap_obs", True)):
+                try:
+                    _gap_ttk = float(_ra.get("projection_ttk") or 0.0)
+                    _gap_tsurv = float(_ra.get("projection_tsurv") or 0.0)
+                    if (math.isfinite(_gap_ttk)
+                            and math.isfinite(_gap_tsurv)
+                            and _gap_ttk > 0.0
+                            and _gap_tsurv >= 0.0):
+                        note += (
+                            f"/ttk_minus_tsurv={_gap_ttk - _gap_tsurv:g}"
+                            "（RACE_PROJ_SURVIVAL_GAP_OBS）")
+                except (KeyError, TypeError, ValueError, OverflowError):
+                    pass
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))

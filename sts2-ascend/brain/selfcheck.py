@@ -16339,6 +16339,21 @@ def main() -> int:
     assert "/actual_over_projected_survival=1.97" \
         "（RACE_PROJ_SURVIVAL_RATIO_OBS）" in _ra_terminal_note, \
         f"阵亡样本未记录存活投影比值: {_ra_terminal_note}"
+    assert "/ttk_minus_tsurv=44.2793" \
+        "（RACE_PROJ_SURVIVAL_GAP_OBS）" in _ra_terminal_note, \
+        f"阵亡样本未记录投影可存活差值: {_ra_terminal_note}"
+    ra_agent.know.policy["race_audit_projection_survival_gap_obs"] = False
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 2, "esc": False,
+        "projection_pool": 261.0, "projection_dpt": 5.4,
+        "projection_ttk": 48.3333, "projection_tsurv": 4.05405,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(False, True)
+    ra_agent._flush_combat_agg()
+    assert "RACE_PROJ_TTK_RATIO_OBS" in ra_agent.ctx.combat_notes[-1] \
+        and "RACE_PROJ_SURVIVAL_GAP_OBS" not in ra_agent.ctx.combat_notes[-1], \
+        f"关闭生存差值观测后旧比值或新尾缀漂移: {ra_agent.ctx.combat_notes[-1]}"
+    ra_agent.know.policy["race_audit_projection_survival_gap_obs"] = True
     ra_agent.know.policy["race_audit_projection_ratio_obs"] = False
     ra_agent.policy._race_audit = {
         "latched": True, "latch_round": 2, "esc": False,
@@ -24266,7 +24281,8 @@ def main() -> int:
         "/projected_ttk=2.66667/actual_over_projected=NA"
         "（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal"
         "/ratio_valid=no/actual_over_projected_survival=6.56"
-        "（RACE_PROJ_SURVIVAL_RATIO_OBS）")
+        "（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=1.5"
+        "（RACE_PROJ_SURVIVAL_GAP_OBS）")
     _projection_ratio_terminal_state = {
         "screen": "GAME_OVER",
         "available_actions": ["continue_game_over"],
@@ -24300,6 +24316,7 @@ def main() -> int:
                 "/source_actual_over_projected=NA"
                 "/source_actual_rounds_kind=terminal/source_ratio_valid=no"
                 "/source_actual_over_projected_survival=6.56"
+                "/source_ttk_minus_tsurv=1.5"
                 "/terminal_round=5/terminal_action=end_turn/terminal_hp=5"
                 "/final_hp=0"
                 in _d_projection_ratio.reason), \
@@ -24307,6 +24324,9 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "race_audit_projection_ratio_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少竞速 TTK 比值终局观测开关"
+    assert knowledge.DEFAULT_POLICY[
+        "race_audit_projection_survival_gap_obs"] is True, \
+        "DEFAULT_POLICY 缺少竞速投影可存活差值观测开关"
 
     _d_projection_ratio_reload = policy.Policy(
         knowledge.Knowledge(tmp)).decide(
@@ -24319,6 +24339,23 @@ def main() -> int:
             and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
             in _d_projection_ratio_reload.reason), \
         f"进程重载后未恢复竞速 TTK 比值终局桥接: {_d_projection_ratio_reload}"
+
+    _projection_ratio_gap_off_know = knowledge.Knowledge(tmp)
+    _projection_ratio_gap_off_know.policy[
+        "race_audit_projection_survival_gap_obs"] = False
+    _d_projection_ratio_gap_off = policy.Policy(
+        _projection_ratio_gap_off_know).decide(
+            _projection_ratio_terminal_state,
+            _projection_ratio_ctx([_projection_ratio_note],
+                                  [_projection_ratio_terminal_row]))
+    assert (_d_projection_ratio_gap_off.action == _d_projection_ratio.action
+            and _d_projection_ratio_gap_off.params
+            == _d_projection_ratio.params
+            and "RACE_PROJ_TTK_RATIO_TERMINAL_OUTCOME_OBS"
+                in _d_projection_ratio_gap_off.reason
+            and "/source_ttk_minus_tsurv="
+                not in _d_projection_ratio_gap_off.reason), \
+        f"关闭生存差值观测后终局桥接或动作漂移: {_d_projection_ratio_gap_off}"
 
     _projection_ratio_ctx_live.decisions.append({
         "screen": "GAME_OVER", "action": _d_projection_ratio.action,

@@ -15474,3 +15474,32 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`；目标源码 `git diff --check` 通过。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1859-1860: projection survival-horizon gap observation
+
+profile_id: `ironclad`
+requested_runs: `1859-1860`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: The 1860-F17 failure is consistent with a projection-horizon mismatch: projected kill time can extend beyond the projected survival window. A stable read-only `projected_ttk - projected_tsurv` field should distinguish that case from other terminal calibration drift without changing play.
+- **EVIDENCE**: `sts2-ascend/knowledge/runs/20261003-184051_T5NTQX9HVCB.json` records 1860-F17 with latch `projection_ttk=11.2/projection_tsurv=2.66667`, terminal round 9, final HP 0, and `actual_over_projected_survival=3.38`. The preceding 1859 chain (`sts2-ascend/knowledge/runs/20261003-181657_Q77ZSJBPL47V.json`) also contains a materially separated TTK/survival projection pair. The full failure chain was read; no failed replay package was supplied.
+- **EXPECTED_SIGNAL**: Future matching terminals should carry `/ttk_minus_tsurv=<value>（RACE_PROJ_SURVIVAL_GAP_OBS）` in the combat observation and, when the existing terminal bridge joins that source, `/source_ttk_minus_tsurv=<value>`. A positive value means projected kill time exceeds projected survival. The field must remain outside scoring, gates, candidate ranking, action selection, and params.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `race_audit_projection_survival_gap_obs`.
+- `sts2-ascend/brain/agent.py`: append the finite TTK-minus-survival observation beside the existing projection ratio observation.
+- `sts2-ascend/brain/policy.py`: parse that observation into the existing terminal TTK bridge, omitting only the new source suffix when the key is disabled or the source is old.
+- `sts2-ascend/brain/selfcheck.py`: cover positive production output, switch-off behavior, terminal bridging, reload, and action/params invariance.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 independent terminal matches and compare the gap with actual terminal rounds, survival ratio, encounter, and `applied` receipts.
+- **Adjust**: if the gap is not stable across the same terminal class, refine only the observation/source join; do not promote it to a behavior rule.
+- **Rollback**: set `race_audit_projection_survival_gap_obs` to `False`; the existing TTK/survival observations and action/params remain.
+- **Validation**: the complete selfcheck exited 0 and printed `SELFCHECK OK` using a clone-local process-only temporary-directory adapter after the host's fixed 256-slot pool was exhausted; the targeted `git diff --check` passed. No `.runtime/`, learning memory, official run/archive, replay, or online process was touched.
+
+- `retry_resolution: none (no failed replay target; local production observation)`

@@ -8623,6 +8623,11 @@ class Policy:
                 or 0)))
         except (TypeError, ValueError, OverflowError, AttributeError):
             _enabled = False
+        try:
+            _gap_enabled = bool(int(float(pol.get(
+                "race_audit_projection_survival_gap_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _gap_enabled = False
         if not _enabled:
             return ""
 
@@ -8734,6 +8739,20 @@ class Policy:
                 if not math.isfinite(_survival_value) or _survival_value < 0.0:
                     continue
                 _survival = _survival_value
+            _gap = None
+            if _gap_enabled:
+                _gap_match = re.search(
+                    rf"/ttk_minus_tsurv=(?P<gap>{_number_pattern})"
+                    r"[^｜|]*RACE_PROJ_SURVIVAL_GAP_OBS",
+                    _suffix)
+                if _gap_match is not None:
+                    try:
+                        _gap_value = float(_gap_match.group("gap"))
+                    except (TypeError, ValueError, OverflowError):
+                        _gap_value = None
+                    if (_gap_value is not None
+                            and math.isfinite(_gap_value)):
+                        _gap = _gap_value
             _source = {
                 "actual_rounds": _actual,
                 "projected_ttk": _ttk,
@@ -8741,6 +8760,7 @@ class Policy:
                 "actual_rounds_kind": _kind,
                 "ratio_valid": _valid,
                 "actual_over_projected_survival": _survival,
+                "ttk_minus_tsurv": _gap,
             }
             break
         if _source is None:
@@ -8761,6 +8781,11 @@ class Policy:
         _survival = _source["actual_over_projected_survival"]
         _survival_text = (
             _survival if isinstance(_survival, str) else _num(_survival))
+        _gap_suffix = ""
+        if _source["ttk_minus_tsurv"] is not None:
+            _gap_suffix = (
+                f"/source_ttk_minus_tsurv="
+                f"{_num(_source['ttk_minus_tsurv'])}")
         _result = "victory" if victory else "defeat"
         return (
             f"；竞速TTK比值终局对账：outcome={_result}"
@@ -8771,6 +8796,7 @@ class Policy:
             f"/source_actual_rounds_kind={_source['actual_rounds_kind']}"
             f"/source_ratio_valid={_source['ratio_valid']}"
             f"/source_actual_over_projected_survival={_survival_text}"
+            f"{_gap_suffix}"
             f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
             f"/terminal_action={_terminal.get('action') or '?'}"
             f"/terminal_hp={_num(_terminal.get('hp'))}"

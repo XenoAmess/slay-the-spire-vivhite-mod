@@ -894,6 +894,8 @@ DEFAULT_POLICY = {
                                                # 且 ratio_valid=no，避免把存活回合当作 TTK 校准；
                                                # 阵亡样本另记录实际存活回合/投影可存活回合，
                                                # 由 RACE_PROJ_SURVIVAL_RATIO_OBS 单独校准
+    "race_audit_projection_survival_gap_obs": True,  # 只读记录入锁投影 TTK-可存活回合差值；
+                                                       # 正值表示投影击杀时间超过预计存活窗口，False 仅移除该观测
     "race_audit_projection_ratio_terminal_outcome_obs": True,  # 将同楼层战斗记录中的
                                                                # TTK/存活比值接回权威 GAME_OVER；
                                                                # 只读、可回滚，不改变 action/params
