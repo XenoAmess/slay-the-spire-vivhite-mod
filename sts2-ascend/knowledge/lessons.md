@@ -15957,3 +15957,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.1870693308297566局)，BURNING_PACT(17分/12.165623461519985局)，DEFEND_IRONCLAD(18分/3.1144576849809456局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（71%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1851 胜，当前目标进阶 0
+
+## 第 1852 局复盘（2026-10-03 16:33）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：HEADBUTT, SWORD_BOOMERANG, TAUNT, BREAKTHROUGH, SHRUG_IT_OFF, EVIL_EYE, PANIC_BUTTON
+- 本局遗物：PEAR
+- 战斗记录：F2 Monster战 掉血0; F4 Monster战 掉血6｜自损4（可行动段4/非行动段8，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血2; F12 Unknown战 掉血2｜自损1（可行动段1/非行动段5，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血4｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血69｜自损4（可行动段4/非行动段78，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=205/dpt=9.45/ttk=21.6931/tsurv=3.63158（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=14/projected_ttk=21.6931/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.86（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战14回合阵亡｜竞速Boss有效火力收官对账：samples=10/actual_dpt=11.3333/projected_dpt=13.3611/ratio=0.87/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=10/actual_dpt=11.3333/projected_dpt=13.3611/ratio=0.87/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.715813558744936局)，PROWESS(26分/10.732607805228453局)，BRAND(26分/2.3296214316509514局)，HELLRAISER(25分/3.749665655694704局)，MANGLE(25分/43.85567016999709局)
+- 当前低价值卡牌：HAVOC(15分/2.1794145881718525局)，BURNING_PACT(17分/12.123043779404666局)，DEFEND_IRONCLAD(18分/3.1035570830835124局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（77%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1852 胜，当前目标进阶 0
