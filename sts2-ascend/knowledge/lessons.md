@@ -15836,3 +15836,14 @@
 - 当前低价值卡牌：HAVOC(15分/2.273066896018855局)，BURNING_PACT(17分/12.643986896071532局)，DEFEND_IRONCLAD(18分/3.2369210079388973局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.007）
 - 生涯战绩：0/1840 胜，当前目标进阶 0
+
+## 第 1841 局复盘（2026-10-03 12:51）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：HEADBUTT, TWIN_STRIKE, DISMANTLE, HEMOKINESIS, CINDER, SHRUG_IT_OFF, SHRUG_IT_OFF, CONFLAGRATION, IRON_WAVE, SWORD_BOOMERANG, POMMEL_STRIKE, UPPERCUT, RAMPAGE, EXPECT_A_FIGHT, FLAME_BARRIER, JUGGERNAUT
+- 本局遗物：VENERABLE_TEA_SET, WHITE_BEAST_STATUE
+- 战斗记录：F8 Monster战 掉血16｜自损4（可行动段4/非行动段3，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血6; F12 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Elite战 掉血4; F15 Monster战 掉血13｜自损2（可行动段2/非行动段6，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血55｜竞速投影审计：pool=207/dpt=6.75/ttk=30.6667/tsurv=3.05556（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=30.6667/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.29（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=27.4/projected_dpt=18.84/ratio=1.64/min_ratio=0.76（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=27.4/projected_dpt=18.84/ratio=1.64/min_ratio=0.76（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/4.901243658386054局)，BRAND(26分/2.4212242757447475局)，PROWESS(26分/10.14758683206653局)，MANGLE(25分/44.56954127654819局)，HELLRAISER(25分/3.8971059366759135局)
+- 当前低价值卡牌：HAVOC(15分/2.265111161882789局)，BURNING_PACT(17分/12.599732941935281局)，DEFEND_IRONCLAD(18分/3.2255917844111113局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1841 胜，当前目标进阶 0
