@@ -15447,3 +15447,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽池限制；同一完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 且输出 `SELFCHECK OK`。目标源码 `git diff --check` 通过；未写入 `.runtime/`、正式 runs/archive、学习记忆、replay 或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 runs 1857-1858: 同回合最新致死无牌容量接回终局
+
+profile_id: `ironclad`
+requested_runs: `1857-1858`
+production_code_commit: `79addc8268ed9b20e31d7dfe207b8de66fd8d504`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：致死无牌帧与 `GAME_OVER` 之间若仍在同一原生战斗回合，终局 pending 可能保留较早的 output-capacity 快照；应保留首帧投影/来源，但把 `target_hp/hand_cards/energy_locked` 刷新为同回合最后一帧。可证伪条件是未来匹配终局的终端容量仍与较早帧不一致，或 action/params 发生漂移。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-180504_GTWZZ91VTMAT.json`（run 1858，F17）D193 的致死 `end_turn` 已记录 `target_hp=53/hand_cards=5/energy_locked=5/raw_damage_cap=0`；D194 的 `GAME_OVER` 终端容量却仍为 `target_hp=93/hand_cards=1/energy_locked=1`。两帧都保持原生终局动作语义，且 D193 的 `KILL_RACE_LETHAL_OUTPUT_CAPACITY_OBS` 是最新可观测容量。
+- **EXPECTED_SIGNAL**：未来 3—10 个匹配终局中，终端 `KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS` 的容量字段应等于最后一个同回合致死无牌观测；首个投影/来源字段、marker 次数以及应用 action/params 保持不变。建议统计 `latest_capacity_join_match_rate`、容量字段差值、动作漂移数与重复 marker 数。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有同 `terminal_round` 的 pending 分支中，仅刷新 `output_capacity` 的目标生命、格挡、攻击候选、原始伤害上限、手牌/锁定字段；首帧 projection、transition source、终局动作路径不变。
+- `sts2-ascend/brain/selfcheck.py`：加入“首帧 93/2/2 → 同回合最新帧 53/5/5 → GAME_OVER”回归夹具，断言容量更新且 `end_turn`、`continue_game_over` 的 params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配终局，逐项比较最后致死无牌容量与终端容量，并核对真实 `applied` 回执。
+- **Adjust**：若真实链出现跨原生回合重建、重复 pending 或字段缺失，只收紧同回合 join/字段守卫；不把观测升级为出牌、格挡或终局选择规则。
+- **Rollback**：回退生产提交 `79addc8268ed9b20e31d7dfe207b8de66fd8d504`；预期仅恢复旧的终端容量快照，action/params 不变。
+- **Validation**：完整 selfcheck 经 clone-local 进程级临时目录适配运行，退出码 0 并输出 `SELFCHECK OK`；目标源码 `git diff --check` 通过。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

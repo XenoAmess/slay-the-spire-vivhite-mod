@@ -13110,6 +13110,29 @@ class Policy:
                                     _terminal_roster_count),
                             })
                         self._race_terminal_outcome_reported = False
+                    else:
+                        # A native combat turn can emit more than one lethal
+                        # no-card snapshot before GAME_OVER is observed.  The
+                        # first snapshot remains the projection/source frame,
+                        # but terminal capacity must describe the last frame;
+                        # otherwise a later zero-output hand can be reported
+                        # with stale cards/energy from an earlier decision.
+                        _terminal_pending = getattr(
+                            self, "_race_terminal_outcome_pending", None)
+                        if (isinstance(_projection, dict)
+                                and isinstance(_terminal_pending, dict)
+                                and _terminal_pending.get("terminal_round")
+                                == round_no
+                                and isinstance(_terminal_output_capacity, dict)):
+                            _terminal_pending["output_capacity"] = {
+                                _key: _terminal_output_capacity[_key]
+                                for _key in (
+                                    "target_hp", "target_block",
+                                    "attack_candidates", "raw_damage_cap",
+                                    "hand_cards", "hook_locked", "hook_ids",
+                                    "energy_locked")
+                                if _key in _terminal_output_capacity
+                            }
                 _latch_projection = self._race_latch_projection_snapshot(pol)
                 if (isinstance(_latch_projection, dict)
                         and isinstance(

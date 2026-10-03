@@ -19775,13 +19775,101 @@ def main() -> int:
             in d_race_terminal_outcome.reason), \
         f"竞速终端结局未继承输出容量: {d_race_terminal_outcome}"
     assert ("source_round=5/source_action=play_card/source_target_hp=48"
-            "/source_target_block=0/source_attack_candidates=1"
-            "/source_raw_damage_cap=16/terminal_target_hp=200"
-            "/terminal_target_block=0/terminal_attack_candidates=0"
+             "/source_target_block=0/source_attack_candidates=1"
+             "/source_raw_damage_cap=16/terminal_target_hp=200"
+             "/terminal_target_block=0/terminal_attack_candidates=0"
             "/terminal_raw_damage_cap=0/outcome=defeat"
             "（KILL_RACE_TERMINAL_OUTPUT_CAPACITY_TRANSITION_OBS）"
-            in d_race_terminal_outcome.reason), \
+             in d_race_terminal_outcome.reason), \
         f"竞速终端输出容量首末对账缺失: {d_race_terminal_outcome}"
+
+    # 3z-5b-latest-capacity) Multiple lethal no-card observations can share
+    # one native turn.  Keep the first frame for projection/source history but
+    # update the terminal capacity to the last frame, which is the frame that
+    # actually precedes GAME_OVER.
+    latest_capacity_pol = policy.Policy(knowledge.Knowledge(tmp))
+    latest_capacity_pol._race_audit = {
+        "latched": True, "latch_round": 5, "esc": False,
+        "projection_pool": 200.0, "projection_dpt": 10.0,
+        "projection_ttk": 20.0, "projection_tsurv": 8.0,
+        "projection_intent": 17.0,
+        "projection_roster": "BOSS#0、TWO_TAILED_RAT#1",
+        "projection_roster_count": 2,
+    }
+    latest_capacity_pol._race_same_round_loss = 31
+    latest_capacity_pol._race_same_round_loss_own = 31
+    latest_capacity_pol._race_same_round_loss_enemy = 41
+    latest_capacity_pol._race_esc_latch_hold_count = 3
+    latest_capacity_ctx = _SettleCtx()
+    latest_capacity_ctx.combat = {}
+    latest_capacity_ctx.decisions = [
+        dict(row) for row in race_terminal_ctx.decisions
+    ]
+    assert latest_capacity_pol.decide(
+        _lethal_unavailable_state(True), latest_capacity_ctx).action == \
+        "play_card", "最新终端容量夹具热身帧未进入出牌状态"
+
+    latest_capacity_pol._krace_latch = True
+    latest_capacity_pol._krace_latch_round = 5
+    latest_capacity_pol._race_terminal_projection = {
+        "round": 6, "enemy_hp": 46, "dpt": 21,
+        "ttk": 2.2, "tsurv": 0.5,
+    }
+    first_capacity_state = _lethal_unavailable_state(False)
+    first_capacity_state["combat"]["enemies"][0]["current_hp"] = 93
+    d_first_capacity = None
+    for _ in range(6):
+        d_candidate = latest_capacity_pol.decide(
+            first_capacity_state, latest_capacity_ctx)
+        if d_candidate.action == "end_turn":
+            d_first_capacity = d_candidate
+            break
+    assert d_first_capacity is not None \
+        and "/target_hp=93/target_block=0/attack_candidates=0" \
+            "/raw_damage_cap=0/cards=none/hand_cards=2" \
+            "/hook_locked=0/hook_ids=none/energy_locked=2" \
+                in d_first_capacity.reason, \
+        f"终端容量首帧夹具未建立: {d_first_capacity}"
+
+    latest_capacity_state = _lethal_unavailable_state(False)
+    latest_capacity_state["combat"]["enemies"][0]["current_hp"] = 53
+    for _index in range(2, 5):
+        latest_capacity_state["combat"]["hand"].append({
+            "index": _index, "card_id": "DEFEND_IRONCLAD",
+            "name": "防御", "playable": False,
+            "unplayable_reason": "not_enough_energy", "energy_cost": 1,
+            "requires_target": False,
+            "dynamic_values": [{"name": "Block", "current_value": 5}],
+        })
+    d_latest_capacity = None
+    for _ in range(6):
+        d_candidate = latest_capacity_pol.decide(
+            latest_capacity_state, latest_capacity_ctx)
+        if d_candidate.action == "end_turn":
+            d_latest_capacity = d_candidate
+            break
+    assert (d_latest_capacity is not None
+            and d_latest_capacity.action == d_first_capacity.action
+            and d_latest_capacity.params == d_first_capacity.params
+            and "target_hp=53/target_block=0/attack_candidates=0"
+                "/raw_damage_cap=0/cards=none/hand_cards=5"
+                "/hook_locked=0/hook_ids=none/energy_locked=5"
+                in d_latest_capacity.reason), \
+        f"同回合最新致死容量未更新或动作漂移: {d_latest_capacity}"
+
+    latest_capacity_outcome_state = dict(race_terminal_outcome_state)
+    latest_capacity_outcome_state["run"] = {"current_hp": 0}
+    d_latest_capacity_outcome = latest_capacity_pol.decide(
+        latest_capacity_outcome_state, latest_capacity_ctx)
+    assert (d_latest_capacity_outcome.action == "continue_game_over"
+            and d_latest_capacity_outcome.params == {}
+            and "target_hp=53/target_block=0/attack_candidates=0"
+                "/raw_damage_cap=0"
+                " (KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS)"
+                in d_latest_capacity_outcome.reason
+            and "/hand_cards=5/hook_locked=0/hook_ids=none/energy_locked=5"
+                in d_latest_capacity_outcome.reason), \
+        f"GAME_OVER 未继承最新致死容量快照或动作漂移: {d_latest_capacity_outcome}"
     assert ("latch_round=5/latch_pool=200/latch_dpt=10/latch_ttk=20"
             "/latch_tsurv=8/latest_round=6/latest_pool=46/latest_dpt=21"
             "/latest_ttk=2.2/latest_tsurv=0.5/drift=yes"
