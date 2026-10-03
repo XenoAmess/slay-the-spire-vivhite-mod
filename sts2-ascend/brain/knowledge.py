@@ -1799,8 +1799,9 @@ DEFAULT_POLICY = {
                                            # MYTES_NORMAL 由两个同类 MYTE 实例组成；载荷缺失
                                            # instance_id/uuid/spawn_id 时只能回退 enemy_id/name，
                                            # 现有火线补记可能出现“异螨→异螨”且身份计数无法确认。
-                                           # 实际定向攻击只追加来源、重复数量和索引，不改评分/目标/
-                                           # 判决/动作；False 严格删除该尾缀。
+                                           # 实际定向攻击只追加来源、重复数量、实例索引以及本次
+                                           # 选中实例的 target_index/target_hp，不改评分/目标/判决/动作；
+                                           # False 严格删除该尾缀。
     "focus_drift_multi_scaler_obs": True,  # 多强化体重复换线观测（第 1180 局 F35，FOCUS_DRIFT_MULTI_SCALER_OBS，纯观测不改分）：
                                   # CRUSHER 与 ROCKET 原生均有逐轮自挂力量的强化动作；1180-F35 实战
                                   # T1→T2→T5→T7 发生多次非击杀换线，既有 FOCUS_DRIFT_OBS/

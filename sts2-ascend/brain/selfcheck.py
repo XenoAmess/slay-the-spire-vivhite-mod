@@ -13850,8 +13850,8 @@ def main() -> int:
             prefix="sts2-selfcheck-focus-identity-ambiguity-"))),
         random.Random(11))
     ambiguity_enemies = [
-        {"index": 0, "enemy_id": "MYTE", "name": "异螨"},
-        {"index": 1, "enemy_id": "MYTE", "name": "异螨"},
+        {"index": 0, "enemy_id": "MYTE", "name": "异螨", "current_hp": 18},
+        {"index": 1, "enemy_id": "MYTE", "name": "异螨", "current_hp": 22},
     ]
     ambiguity_pol._focus_played_identity = "MYTE"
     assert not ambiguity_pol._record_focus_identity_flip(
@@ -13860,7 +13860,9 @@ def main() -> int:
             in ambiguity_pol._focus_identity_ambiguity_note
             and "来源enemy_id" in ambiguity_pol._focus_identity_ambiguity_note
             and "在场2个同类实例" in ambiguity_pol._focus_identity_ambiguity_note
-            and "索引[0,1]" in ambiguity_pol._focus_identity_ambiguity_note), \
+            and "索引[0,1]" in ambiguity_pol._focus_identity_ambiguity_note
+            and "/target_index=0/target_hp=18" in
+                ambiguity_pol._focus_identity_ambiguity_note), \
         f"同类敌人回退键歧义观测缺失: {ambiguity_pol._focus_identity_ambiguity_note}"
     ambiguity_pol._record_focus_identity_flip(
         ambiguity_enemies[0], ambiguity_enemies, "普通非击杀换线", False)

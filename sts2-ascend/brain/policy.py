@@ -1886,9 +1886,21 @@ class Policy:
                 indices = sorted(
                     str(enemy.get("index")) for enemy in same_identity
                     if isinstance(enemy, dict) and enemy.get("index") is not None)
+                selected_index = "?"
+                selected_hp = "?"
+                if isinstance(target_enemy, dict):
+                    if target_enemy.get("index") is not None:
+                        selected_index = str(target_enemy.get("index"))
+                    try:
+                        _hp = float(target_enemy.get("current_hp"))
+                        if math.isfinite(_hp) and _hp >= 0.0:
+                            selected_hp = f"{_hp:g}"
+                    except (TypeError, ValueError, OverflowError):
+                        pass
                 self._focus_identity_ambiguity_note = (
                     f"；火线身份歧义：键{target_identity}来源{target_source}、"
                     f"在场{len(same_identity)}个同类实例、索引[{','.join(indices)}]"
+                    f"/target_index={selected_index}/target_hp={selected_hp}"
                     "（FOCUS_IDENTITY_AMBIGUITY_OBS）")
         previous_identity = self._focus_played_identity
         flipped = (

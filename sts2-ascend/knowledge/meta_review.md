@@ -15969,3 +15969,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 已复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行完整 selfcheck，退出码 0 且输出 `SELFCHECK OK`。报告前目标三文件 `git diff --check` 通过；无 failed replay package，未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production behavior integrated)`
+
+## 2026-10-04 run 1891-F30：同类敌人身份歧义补记实际目标实例
+
+profile_id：`ironclad`
+requested_run：`1891`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`FOCUS_IDENTITY_AMBIGUITY_OBS` 原先只记录同类键、数量和候选索引集合，不能直接证明本次定向攻击实际选中了哪个实例。若补记 `target_index` 与当时目标 `target_hp`，未来 3—10 局可把同名歧义与 action 参数逐决策对账；若字段与参数不一致、负值/伪造 HP 出现，或该观测改变评分、目标、判决或动作，假设即被证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-044115_0Q70EYPRNA2P.json` 的 D439—D458 在 F30 反复命中 `EXOSKELETON` 同类键，候选从 4 个收缩到 3、再到 2 个；旧 marker 只有 `索引[...]`，没有本次实际目标。D457—D459 还同时出现 `RACE_ESC_LATCH_HOLD`、HP19/来袭19 的致死空过与竞速终局漂移，需先把火线实例和竞速因果分开对账。
+- **EXPECTED_SIGNAL**：有效 `index/current_hp` 输入下，每条歧义 marker 的 `target_index/target_hp` 应分别等于同一决策的目标参数与目标快照；缺失输入只保留 `?`，不臆造数值。稳定 `instance_id/uuid`、关闭 `focus_identity_ambiguity_obs`、非歧义目标均不追加该尾缀；action/params、评分和选目标保持逐位不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有重复键歧义观测尾缀中追加当前选中实例的 `target_index/target_hp`，仅读 `target_enemy`，不进入评分、候选、判决或动作路径。
+- `sts2-ascend/brain/knowledge.py`：明确该两字段属于只读观测，并保留开关关闭时删除尾缀的回滚语义。
+- `sts2-ascend/brain/selfcheck.py`：给两个同键实例加入不同 HP，断言选择实例的索引/HP被准确记录，同时保留原有稳定实例键不误报覆盖。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 局同键歧义，逐条比较 marker 的 `target_index` 与 action 参数、`target_hp` 与同帧目标快照，并记录实际换线/击杀后的候选集合变化。
+- **Adjust**：若出现字段与参数不一致、HP 缺失却被填成数值、稳定实例键误报或 action/params 漂移，先收紧输入边界并停留在观测层，不扩大竞速规则。
+- **Rollback**：将 `focus_identity_ambiguity_obs` 设为 `False`；预期只删除歧义尾缀，恢复原评分、目标、判决、动作和参数。
+- **Validation**：直接入口复现宿主固定 256 槽临时池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 clone 的进程级临时目录适配器运行完整入口，退出码为 0 且输出 `SELFCHECK OK`。目标三文件 `git diff --check` 已通过；无 failed replay package，未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
