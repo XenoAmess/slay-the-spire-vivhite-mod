@@ -206,11 +206,6 @@ DEFAULT_POLICY = {
                                          # 已覆盖生命缺口时，记录 HP/格挡/意图、被过滤攻击数、
                                          # 仍可负担的非攻击牌数与蒸汽喷发层数；纯观测，不改
                                          # 结束回合判决。False = 关闭该尾缀，旧动作与理由恢复。
-    "invuln_idle_leak_veto_obs": True,  # 无敌帧残能审计归因：保留 IDLE_LEAK_RACE
-                                        # 的原始计数，但在全场目标都被禁攻过滤时追加
-                                        # INVULN_IDLE_LEAK_VETO_OBS，区分不可执行攻击与
-                                        # 真实残能漏打；纯观测，不改变评分、动作或参数。
-                                        # False = 仅移除该归因尾缀。
     "waterfall_about_to_blow_end_turn_obs": True,  # 瀑布巨兽自爆相终端观测：原生
                                                     # TriggerAboutToBlowState 将
                                                     # WATERFALL_GIANT 的 HP 设为

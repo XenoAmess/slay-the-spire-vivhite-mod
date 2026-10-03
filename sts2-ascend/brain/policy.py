@@ -378,9 +378,7 @@ def _rescue_block_tradeoff(
 def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                          is_unavailable=None, race_mode: bool = False,
                          character_strategy: CharacterStrategy | None = None,
-                         player_powers=None, enemies: list[dict] | None = None,
-                         invuln_hp_floor=0.0, invuln_attack_veto: bool = False,
-                         invuln_idle_leak_obs: bool = False) -> str:
+                         player_powers=None) -> str:
     """记录残能空过的可负担牌；只增加可观测性，不改变评分或决策。
 
     与残能救场候选保持同一边界：会消耗其他手牌的牌不能作为可负担
@@ -393,7 +391,6 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
         unavailable = is_unavailable or (lambda _card: False)
         best_block = None  # (effective block, negative cost, name)
         best_attack = None  # (estimated damage, name)
-        affordable_attack_count = 0
         for card in hand or []:
             if (not isinstance(card, dict) or not card.get("playable")
                     or unavailable(card) or card.get("costs_x")
@@ -420,29 +417,9 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                 if best_block is None or candidate[:2] > best_block[:2]:
                     best_block = candidate
             elif race_mode and damage > 0:
-                affordable_attack_count += 1
                 candidate = (int(damage) * max(1, int(hits or 1)), card.get("name") or "")
                 if best_attack is None or candidate[0] > best_attack[0]:
                     best_attack = candidate
-        invuln_idle_leak = False
-        try:
-            floor = float(invuln_hp_floor or 0.0)
-            live_enemies = [
-                enemy for enemy in (enemies or [])
-                if isinstance(enemy, dict)
-                and enemy.get("is_alive", True) is not False
-                and enemy.get("is_hittable", True) is not False
-            ]
-            if (invuln_idle_leak_obs and invuln_attack_veto
-                    and floor > 0.0 and live_enemies):
-                invuln_idle_leak = True
-                for enemy in live_enemies:
-                    raw_hp = enemy.get("current_hp", 0)
-                    if raw_hp is None or float(raw_hp) < floor:
-                        invuln_idle_leak = False
-                        break
-        except (TypeError, ValueError, OverflowError):
-            invuln_idle_leak = False
         notes = []
         if best_block is not None:
             notes.append(
@@ -451,15 +428,9 @@ def idle_leak_audit_note(hand: list | None, energy, incoming, my_block,
                 f"扣除謦欬{best_block[4]:g}/余裕机会成本{best_block[5]:g}后"
                 f"净保命{best_block[0]:g}")
         if race_mode and best_attack is not None:
-            veto_note = ""
-            if invuln_idle_leak and affordable_attack_count > 0:
-                veto_note = (
-                    f"；全场敌人均为无敌帧，攻击候选{affordable_attack_count}张"
-                    "仅作被过滤对照（INVULN_IDLE_LEAK_VETO_OBS）")
             notes.append(
                 f"⚠残能空漏审计(IDLE_LEAK_RACE)：竞速态残能{int(energy)}，"
-                f"未打可负担最高伤【{best_attack[1]}】(预估{best_attack[0]}，净缺口{gap})"
-                f"{veto_note}")
+                f"未打可负担最高伤【{best_attack[1]}】(预估{best_attack[0]}，净缺口{gap})")
         return ("；" + "；".join(notes)) if notes else ""
     except Exception:
         # 审计位不得因脏载荷改变 end_turn 保活语义。
@@ -16409,13 +16380,7 @@ class Policy:
                 is_unavailable=self._card_unavailable,
                 race_mode=bool(race_allin or kill_race),
                 character_strategy=self.character_strategy,
-                player_powers=player.get("powers") or [],
-                enemies=enemies,
-                invuln_hp_floor=pol.get("race_invulnerable_hp_floor", 0.0),
-                invuln_attack_veto=bool(pol.get(
-                    "invuln_target_attack_veto", True)),
-                invuln_idle_leak_obs=bool(pol.get(
-                    "invuln_idle_leak_veto_obs", True)))
+                player_powers=player.get("powers") or [])
             # 手牌滞留税披露（HAND_END_TAX，第808~812局批复盘）：毒素/感染型
             # 回合结束手牌伤害不进格挡结算，评估收口与强制收口两侧都需显形。
             _tax_total, _tax_detail = hand_end_turn_tax(hand)
