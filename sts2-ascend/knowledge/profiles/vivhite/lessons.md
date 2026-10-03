@@ -20676,3 +20676,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/6.02563733194719局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/24.121349896457303局)，ENTROPY(21分/4.912521987468879局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.36 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.05 → 2.04（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F33——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F33——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 15.00 → 17.50（行至 F33——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1876 胜，当前目标进阶 4
+
+## 第 1877 局复盘（2026-10-04 00:22）
+- 结果：💀 失败｜进阶 4｜到达层数 5｜当局评分 5
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血6｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血1｜自损8（可行动段8/非行动段5，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血55｜自损30（可行动段30/非行动段24，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=23/dpt=3.2/ttk=7.1875/tsurv=1（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=13/projected_ttk=7.1875/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=13.00（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=6.1875（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T9判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.915165377890242局)，MAYHEM(37分/4.08682313125573局)，JACKPOT(36分/8.945754122517195局)，REND(36分/2.8158583984204286局)，PREP_TIME(33分/5.37301412198877局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/6.004547601285376局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/24.036925171819703局)，ENTROPY(21分/4.895328160512738局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1877 胜，当前目标进阶 4
