@@ -20511,3 +20511,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/5.333334199166706局)，ENTROPY(21分/5.177796309853931局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.33061169833836局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——致命Monster战实测自损18/掉血28（64%≥50%）——謦欬实付加码收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1861 胜，当前目标进阶 4
+
+## 第 1862 局复盘（2026-10-03 19:20）
+- 结果：💀 失败｜进阶 4｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FLYCONID+SNAPPING_JAXFRUIT
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：VAJRA
+- 战斗记录：F2 Monster战 掉血0｜自损6（可行动段6/非行动段4，SELF_LOSS_PHASE_OBS）; F5 Unknown战 掉血30｜自损36（可行动段36/非行动段8，SELF_LOSS_PHASE_OBS）; F6 Unknown战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血38｜自损10（可行动段10/非行动段26，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/3.072583201613538局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.0194025096004746局)，MAYHEM(37分/4.3075100288649155局)，JACKPOT(36分/8.40756177901987局)，REND(36分/2.967913682952214局)
+- 当前低价值卡牌：VIVHITE_CARD_GEODESIC_VEIL(19分/5.314667529469623局)，ENTROPY(21分/5.159674022769442局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.248954557394175局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1862 胜，当前目标进阶 4
