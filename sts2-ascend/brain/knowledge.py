@@ -1493,10 +1493,6 @@ DEFAULT_POLICY = {
                                         # LETHAL_SURVIVABLE_LINE 的格挡优先评分；1419局三例严格
                                         # 负余量因此保持全攻。行为键=False 严格回滚为旁观口径，
                                         # 不影响 COVER/买活审计本身。
-      "race_allin_lethal_cover_round_latch": True,
-                                        # 同一原生回合已实际打出覆盖牌后，若后续覆盖仍可行，
-                                        # 保持本回合格挡优先；下一回合、覆盖不可行或当前回合可
-                                        # 斩杀仍按原门禁处理。关闭即回滚到每次重算严格裕量。
       "race_allin_lethal_cover_behavior_min_margin": -2.0,
                                         # 低池竞速覆盖行为的有界余量宽限：第1625局 F21-T2
                                         # pool=94、need=7、max_block=13、covers=yes，但严格
