@@ -15196,3 +15196,31 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct `py -3 -B sts2-ascend/brain/selfcheck.py` reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; a clone-local process-level temp-directory adapter ran the same `selfcheck.py` to exit 0 with `SELFCHECK OK`. Read-only replay of the full 1835 chain emitted the fallback marker exactly once with `hold_count=7`, `terminal_round=12`, `terminal_hp=1`, `final_hp=0`, `bridge_decisions=10`, and preserved `continue_game_over {}`. Targeted `git diff --check` passed with only existing LF/CRLF notices. No `.runtime/`, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1838: distinguish spent potion reserve at lethal terminal
+
+profile_id: `ironclad`
+requested_runs: `1836-1838`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**: In run 1838 F17, decisions 196-198 use `爆炸安瓿`、`镣铐药水`、`肌肉药水`; decision 215 is a lethal no-card `end_turn` at HP 5, and decision 216 is `GAME_OVER` at final HP 0. The existing terminal reserve marker records `state=present/slots=3/occupied=0/ids=none`, but loses whether the empty reserve came from spending potions in this combat or from never holding them. A bounded same-floor use-history join should emit one `POTION_SPEND_TERMINAL_OUTCOME_OBS` without changing the terminal action or parameters. This is falsifiable: a matching terminal must carry count, names, reserve state, source/final HP, and bridge length; screen/floor boundaries, malformed reserve data, duplicate retry, and the disabled switch must remain silent.
+- **EVIDENCE**: The exact chain is `sts2-ascend/knowledge/runs/20261003-114332_LA2E8R6Q23NY.json` with 217 decisions. A read-only replay of the production helper found the three F17 potion-use rows and `same_combat_use_count=3`, names in chronological order, `bridge_decisions=20`. The pre-change terminal reason had the empty reserve and broad terminal audit but no same-combat use attribution.
+- **EXPECTED_SIGNAL**: Across the next 3-10 independent matching terminals, compare one spend-terminal marker, its source/terminal fields, potion count/names, reserve fields, bridge length, and applied `continue_game_over {}` action/parameters. No score, gate, candidate, or combat choice may consume this marker.
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`: add default-on rollback key `potion_spend_terminal_outcome_obs`.
+- `sts2-ascend/brain/policy.py`: reuse the existing bounded same-floor `COMBAT`/`CARD_SELECTION` potion-use helper only for a valid present reserve with `occupied=0` and a positive use count, then append the spend marker to the existing lethal terminal audit. This is observation-only; action, parameters, scoring, gates, and selection are untouched.
+- `sts2-ascend/brain/selfcheck.py`: add positive, reload, screen-boundary, switch-off, and duplicate-retry coverage; all assert unchanged terminal action/parameters.
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**: collect 3-10 matching terminals and compare marker count, potion names/count, reserve state, source/final HP, bridge length, outcome, and applied action/parameters.
+- **Adjust**: if production traces use a different name field or a distinct same-combat boundary, narrow only this parser/join; do not infer potion effects or alter potion selection.
+- **Rollback**: set `potion_spend_terminal_outcome_obs` to `False`; the existing reserve/ready/terminal markers and `continue_game_over {}` behavior remain unchanged.
+- **Validation**: the mandated direct selfcheck reached the host's fixed 256-slot `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`; the same full `selfcheck.py` then ran through a clone-local process-level 0777 adapter, exited 0, and printed `SELFCHECK OK`. Final target diff review and `git diff --check` passed with only existing LF/CRLF notices. No online process, `.runtime/`, formal runs/archive, protected learning state, or replay package was touched.
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

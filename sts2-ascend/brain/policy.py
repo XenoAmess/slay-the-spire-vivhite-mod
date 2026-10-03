@@ -10629,6 +10629,41 @@ class Policy:
                     f"/classification={_classification}"
                     f"/bridge_decisions={_round(_potion_ready.get('bridge_decisions'))}"
                     "（POTION_READY_TERMINAL_OUTCOME_OBS）")
+        _potion_spend_terminal_tail = ""
+        try:
+            _potion_spend_enabled = bool(int(float(pol.get(
+                "potion_spend_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _potion_spend_enabled = False
+        _potion_spend = _pending.get("potion_spend_terminal")
+        if (_potion_spend_enabled and isinstance(_potion, dict)
+                and isinstance(_potion_spend, dict)):
+            try:
+                _spend_occupied = int(float(_potion.get("occupied")))
+                _spend_count = int(float(
+                    _potion_spend.get("same_combat_use_count", 0)))
+            except (TypeError, ValueError, OverflowError):
+                _spend_occupied = -1
+                _spend_count = 0
+            if (_potion.get("state") == "present"
+                    and _spend_occupied == 0 and _spend_count > 0):
+                _potion_spend_terminal_tail = (
+                    "；终端药水消耗对账："
+                    f"outcome={_result}"
+                    f"/floor={_round(floor)}"
+                    f"/source_round={_round(_pending.get('terminal_round'))}"
+                    f"/source_action={_text(_pending.get('source_action'))}"
+                    f"/source_hp={_num(_pending.get('hp'))}"
+                    f"/final_hp={_num(final_hp)}"
+                    f"/reserve_state={_text(_potion.get('state'))}"
+                    f"/slots={_text(_potion.get('slots'))}"
+                    f"/reserve_occupied={_spend_occupied}"
+                    f"/reserve_ids={_text(_potion.get('ids'))}"
+                    f"/same_combat_use_count={_spend_count}"
+                    f"/same_combat_use_names="
+                    f"{_text(_potion_spend.get('same_combat_use_names'))}"
+                    f"/bridge_decisions={_round(_potion_spend.get('bridge_decisions'))}"
+                    "（POTION_SPEND_TERMINAL_OUTCOME_OBS）")
         return (
             f"；致死无牌终局对账：outcome={_result}"
             f"/floor={_round(floor)}"
@@ -10652,6 +10687,7 @@ class Policy:
             f"/gap={_flag(_pending.get('gap'))}"
             f"{_transition_tail}"
             f"{_potion_ready_terminal_tail}"
+            f"{_potion_spend_terminal_tail}"
             f"{_potion_terminal_tail}"
             "（LETHAL_UNAVAILABLE_TERMINAL_OUTCOME_OBS）")
 
@@ -10908,6 +10944,19 @@ class Policy:
                 _slot_count = -1
                 _occupied_count = -1
                 _ready_count = 0
+            _use_snapshot = None
+            if (_potion.get("state") == "present"
+                    and _slot_count >= _occupied_count >= _ready_count >= 0):
+                _use_snapshot = self._potion_ready_terminal_use_snapshot(
+                    decisions, floor=floor, terminal_index=len(decisions) - 1)
+                if isinstance(_use_snapshot, dict):
+                    try:
+                        _use_count = int(float(
+                            _use_snapshot.get("same_combat_use_count", 0)))
+                    except (TypeError, ValueError, OverflowError):
+                        _use_count = 0
+                    if _occupied_count == 0 and _use_count > 0:
+                        _pending["potion_spend_terminal"] = _use_snapshot
             _ready_ids = [
                 _item.strip() for _item in str(
                     _potion.get("ready_ids") or "").split("|")
@@ -10916,10 +10965,8 @@ class Policy:
             if (_potion.get("state") == "present"
                     and _slot_count >= _occupied_count >= _ready_count > 0
                     and len(_ready_ids) == _ready_count):
-                _ready_snapshot = self._potion_ready_terminal_use_snapshot(
-                    decisions, floor=floor, terminal_index=len(decisions) - 1)
-                if isinstance(_ready_snapshot, dict):
-                    _pending["potion_ready_terminal"] = _ready_snapshot
+                if isinstance(_use_snapshot, dict):
+                    _pending["potion_ready_terminal"] = _use_snapshot
         self._lethal_unavailable_terminal_outcome_pending = _pending
         self._lethal_unavailable_terminal_outcome_reported = False
 
