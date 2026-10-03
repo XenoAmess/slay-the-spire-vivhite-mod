@@ -20225,3 +20225,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.029944668856636局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.5573750750092局)，FASTEN(21分/3.594753654090214局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（77%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：4/1835 胜，当前目标进阶 4
+
+## 第 1836 局复盘（2026-10-03 11:32）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：VIVHITE_CARD_RECURRENT_STARLIGHT, VIVHITE_CARD_CONVERGENCE_VERDICT, VIVHITE_CARD_AXIOM_RING, PROWESS
+- 本局遗物：BRONZE_SCALES, STONE_CALENDAR, RAINBOW_RING
+- 战斗记录：F5 Monster战 掉血0｜自损8（可行动段8/非行动段2，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血4｜自损8（可行动段8/非行动段4，SELF_LOSS_PHASE_OBS）; F9 Elite战 掉血16｜自损20（可行动段20/非行动段10，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损5（可行动段5/非行动段2，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血10｜自损14（可行动段14/非行动段10，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血66｜自损27（可行动段27/非行动段37，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=195/dpt=20.5138/ttk=9.50579/tsurv=3.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=9.50579/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.91（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=27.375/projected_dpt=21.0069/ratio=1.36/min_ratio=0.85（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=27.375/projected_dpt=21.0069/ratio=1.36/min_ratio=0.85（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(42分/2.3155317466088086局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.2121420575076476局)，JACKPOT(37分/8.195888471928356局)，MAYHEM(37分/4.718635365008667局)，THINKING_AHEAD(37分/2.5495880255304955局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.022839862515638局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/25.46792426224667局)，FASTEN(21分/3.5821720163008983局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：4/1836 胜，当前目标进阶 4
