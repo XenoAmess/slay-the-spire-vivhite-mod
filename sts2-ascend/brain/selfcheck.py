@@ -19705,6 +19705,139 @@ def main() -> int:
         f"on={d_race_allin_terminal_fallback} " \
         f"off={d_race_allin_terminal_fallback_off}"
 
+    # 3z-5b-capacity) A defensive capacity snapshot must be joined to the
+    # same-floor GAME_OVER tail without changing the native action contract.
+    race_capacity_terminal_source_reason = (
+        ";race-allin lethal capacity:hp=15/block=3/incoming=12/energy=1"
+        "/block_locked=no/defense=BLOCK:1@9/need=0/max_block=9"
+        "/covers=yes/post_gap=0/survives=yes/selected=candidate"
+        " (RACE_ALLIN_LETHAL_CAPACITY_OBS)")
+    race_capacity_terminal_state = {
+        "screen": "GAME_OVER",
+        "available_actions": ["continue_game_over"],
+        "game_over": {"can_continue": True, "is_victory": False,
+                       "floor": 33},
+        "run": {"current_hp": 2},
+    }
+    race_capacity_terminal_rows = [
+        {"screen": "COMBAT", "action": "play_card", "floor": 33,
+         "turn": 5, "reason": race_capacity_terminal_source_reason},
+        {"screen": "COMBAT", "action": "end_turn", "floor": 33,
+         "turn": 6, "hp": 2, "reason": "terminal end turn"},
+    ]
+    race_capacity_terminal_know = knowledge.Knowledge(tmp)
+    race_capacity_terminal_pol = policy.Policy(race_capacity_terminal_know)
+    race_capacity_terminal_ctx = _SettleCtx()
+    race_capacity_terminal_ctx.decisions = [
+        dict(row) for row in race_capacity_terminal_rows]
+    d_race_capacity_terminal = race_capacity_terminal_pol.decide(
+        race_capacity_terminal_state, race_capacity_terminal_ctx)
+    assert knowledge.DEFAULT_POLICY[
+        "race_allin_lethal_capacity_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY missing race_allin_lethal_capacity_terminal_outcome_obs"
+    assert (d_race_capacity_terminal.action == "continue_game_over"
+            and d_race_capacity_terminal.params == {}
+            and "/source_round=5/source_action=play_card/source_hp=15"
+                "/source_block=3/source_incoming=12/source_energy=1"
+                in d_race_capacity_terminal.reason
+            and "/need=0/max_block=9/covers=yes/post_gap=0/survives=yes"
+                in d_race_capacity_terminal.reason
+            and "/terminal_round=6/terminal_action=end_turn/terminal_hp=2"
+                "/final_hp=2/bridge_decisions=0"
+                in d_race_capacity_terminal.reason
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                in d_race_capacity_terminal.reason), \
+        f"defensive capacity terminal join missing or action drift: " \
+        f"{d_race_capacity_terminal}"
+
+    race_capacity_terminal_replay_pol = policy.Policy(
+        knowledge.Knowledge(tmp))
+    race_capacity_terminal_replay_ctx = _SettleCtx()
+    race_capacity_terminal_replay_ctx.decisions = [
+        dict(row) for row in race_capacity_terminal_rows]
+    d_race_capacity_terminal_replay = race_capacity_terminal_replay_pol.decide(
+        race_capacity_terminal_state, race_capacity_terminal_replay_ctx)
+    assert (d_race_capacity_terminal_replay.action
+            == d_race_capacity_terminal.action
+            and d_race_capacity_terminal_replay.params
+            == d_race_capacity_terminal.params
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                in d_race_capacity_terminal_replay.reason), \
+        f"defensive capacity terminal join failed after reload: " \
+        f"{d_race_capacity_terminal_replay}"
+
+    race_capacity_terminal_replay_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": "continue_game_over", "floor": 33,
+        "reason": d_race_capacity_terminal.reason,
+    })
+    d_race_capacity_terminal_duplicate = \
+        race_capacity_terminal_pol.decide(
+            race_capacity_terminal_state, race_capacity_terminal_replay_ctx)
+    assert (d_race_capacity_terminal_duplicate.action
+            == d_race_capacity_terminal.action
+            and d_race_capacity_terminal_duplicate.params
+            == d_race_capacity_terminal.params
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                not in d_race_capacity_terminal_duplicate.reason), \
+        f"defensive capacity terminal join duplicated after persistence: " \
+        f"{d_race_capacity_terminal_duplicate}"
+
+    race_capacity_terminal_off_know = knowledge.Knowledge(tmp)
+    race_capacity_terminal_off_know.policy[
+        "race_allin_lethal_capacity_terminal_outcome_obs"] = False
+    race_capacity_terminal_off_pol = policy.Policy(
+        race_capacity_terminal_off_know)
+    race_capacity_terminal_off_ctx = _SettleCtx()
+    race_capacity_terminal_off_ctx.decisions = [
+        dict(row) for row in race_capacity_terminal_rows]
+    d_race_capacity_terminal_off = race_capacity_terminal_off_pol.decide(
+        race_capacity_terminal_state, race_capacity_terminal_off_ctx)
+    assert (d_race_capacity_terminal_off.action
+            == d_race_capacity_terminal.action
+            and d_race_capacity_terminal_off.params
+            == d_race_capacity_terminal.params
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                not in d_race_capacity_terminal_off.reason), \
+        f"capacity terminal toggle changed action or leaked marker: " \
+        f"{d_race_capacity_terminal_off}"
+
+    race_capacity_parent_off_know = knowledge.Knowledge(tmp)
+    race_capacity_parent_off_know.policy[
+        "race_allin_lethal_capacity_obs"] = False
+    race_capacity_parent_off_pol = policy.Policy(
+        race_capacity_parent_off_know)
+    race_capacity_parent_off_ctx = _SettleCtx()
+    race_capacity_parent_off_ctx.decisions = [
+        dict(row) for row in race_capacity_terminal_rows]
+    d_race_capacity_parent_off = race_capacity_parent_off_pol.decide(
+        race_capacity_terminal_state, race_capacity_parent_off_ctx)
+    assert (d_race_capacity_parent_off.action
+            == d_race_capacity_terminal.action
+            and d_race_capacity_parent_off.params
+            == d_race_capacity_terminal.params
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                not in d_race_capacity_parent_off.reason), \
+        f"capacity source toggle changed action or leaked marker: " \
+        f"{d_race_capacity_parent_off}"
+
+    race_capacity_boundary_ctx = _SettleCtx()
+    race_capacity_boundary_ctx.decisions = [
+        dict(race_capacity_terminal_rows[0]),
+        {"screen": "REWARD", "action": "wait", "floor": 33,
+         "reason": "room boundary"},
+        dict(race_capacity_terminal_rows[1]),
+    ]
+    race_capacity_boundary_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_race_capacity_boundary = race_capacity_boundary_pol.decide(
+        race_capacity_terminal_state, race_capacity_boundary_ctx)
+    assert (d_race_capacity_boundary.action == d_race_capacity_terminal.action
+            and d_race_capacity_boundary.params
+            == d_race_capacity_terminal.params
+            and "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+                not in d_race_capacity_boundary.reason), \
+        f"capacity terminal join crossed a room boundary: " \
+        f"{d_race_capacity_boundary}"
+
     d_race_terminal_hook_outcome = race_terminal_hook_pol.decide(
         race_terminal_outcome_state, race_terminal_hook_ctx)
     assert (d_race_terminal_hook_outcome.action == "continue_game_over"

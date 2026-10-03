@@ -13034,6 +13034,34 @@ git diff --check -> OK. No replay target: failed_review_replay.requested_package
 - **验证**：受管 256 槽 selfcheck 先按既有门禁失败；随后用 `.review-cache/selfcheck-pool` 继承 ACL 临时根的进程内目录分配器运行同一 `py -3 -B sts2-ascend/brain/selfcheck.py`，输出 **SELFCHECK OK**；目标三文件 `git diff --check` 通过。未写入 `.runtime/`、runs、archive、stats、progression、`policy.json`、`lessons.md` 或 review prompt。
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
 
+## 2026-10-03 run 1830: 将 race-all-in 防御容量接回 GAME_OVER
+
+profile_id: ironclad
+requested_runs: 1830
+production_code_commit: pending local commit (SHA in delivery response)
+failed_review_replay: requested_packages=[20261003-102703-1790994423506562800-9eefca76]
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- HYPOTHESIS: 第 1830 局 F33 的 race-all-in 战斗在同一楼层先产生 RACE_ALLIN_LETHAL_CAPACITY_OBS，随后以 end_turn 进入 GAME_OVER，但权威终局原因没有保留这条防御容量来源。可证伪预测是：同楼层、同战斗尾部应接出且仅接出一个 RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS；跨房间、坏字段、重复提交和关闭开关均不得接出，原生 action/params 必须不变。
+- EVIDENCE: 完整链 sts2-ascend/knowledge/runs/20261003-093919_TBUJ3CR9L9F8.json 的决策 381–383 连续记录 covers=yes；决策 383 的容量为 hp=15/block=5/incoming=18/energy=1/need=0/max_block=6/post_gap=7，决策 388 是同楼层终端 end_turn，决策 389 是 GAME_OVER，原链没有该容量终局 marker。当前 HEAD 重实现后的只读 F33 回放返回 action=continue_game_over、params={}、marker_count=1，并记录 source_round=3/source_hp=15/source_block=5/source_incoming=18/source_energy=1/need=0/max_block=6/covers=yes/post_gap=7/terminal_round=4/terminal_hp=2/final_hp=0/bridge_decisions=4；追加持久 GAME_OVER 后再次调用 marker_count=0。
+- EXPECTED_SIGNAL: 后续 3–10 个独立匹配终局中，比较 covered source 选择、source/terminal floor 与 round、HP/block/incoming/need/max_block/post-gap、outcome、bridge_decisions 和 marker 次数；跨房间/跨楼层/缺失或非有限字段应保持 0 个误接，应用回执的 action/params 与评分、排序、闸门保持不变。
+
+### MINIMUM_CHANGE
+
+- sts2-ascend/brain/knowledge.py：增加默认开启的 race_allin_lethal_capacity_terminal_outcome_obs；关闭它只移除新增终局观测。
+- sts2-ascend/brain/policy.py：新增最多 24 条同楼层 COMBAT/CARD_SELECTION 尾部的有界逆向扫描，跳过已持久化的 GAME_OVER/VICTORY 尾行，优先最近的 covers=yes 合法容量样本；只把结构化 suffix 追加到既有 GAME_OVER 结算原因，不读取它做评分、排序、目标、闸门或动作选择。
+- sts2-ascend/brain/selfcheck.py：加入正向、Policy reload、重复提交、终局开关、父级开关和房间边界夹具，均断言 continue_game_over 与空 params 不漂移。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- Continue：收集 3–10 个独立匹配终局，核对 covered source、容量字段、终局字段、bridge_decisions、marker=1 以及应用动作/参数。
+- Adjust：若真实链改变容量字段约定、source 标签、同战斗尾长或边界语义，只收窄解析/连接逻辑；不把这条观测升级成防御或全攻行为规则。
+- Rollback：将 race_allin_lethal_capacity_terminal_outcome_obs 设为 False，或将父级 race_allin_lethal_capacity_obs 设为 False；既有 source audit、评分、闸门、动作和参数必须保持不变。
+- Validation：直接执行 py -3 -B sts2-ascend/brain/selfcheck.py 复现宿主固定 256-slot bootstrap 限制；随后使用当前 clone 内进程级 0777 临时目录适配完整运行 selfcheck.py，退出码 0 且输出 SELFCHECK OK。精确 F33 只读回放和 git diff --check 均通过；未写入 .runtime、learning memory、formal runs/archive、在线进程或其他工作区。
+
+- `retry_resolution: 20261003-102703-1790994423506562800-9eefca76 integrated`
+
 ## 2026-09-30 runs 1784-1785: bridge same-floor race-mode flip to terminal outcome
 
 profile_id: `ironclad`

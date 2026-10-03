@@ -893,6 +893,8 @@ class Policy:
         self._race_terminal_projection = None  # 最近一次竞速判死投影，供终端资源对账观测使用
         self._race_terminal_outcome_pending = None  # 最近一次终端空过，等待 GAME_OVER 结局对账
         self._race_terminal_outcome_reported = False  # 终端结局 marker 每场只写一次
+        self._race_allin_lethal_capacity_terminal_outcome_pending = None
+        self._race_allin_lethal_capacity_terminal_outcome_reported = False
         self._race_mode_combat = None  # KILL_RACE_MODE_FLIP_OBS 的战斗身份
         self._race_mode_round = None  # 当前回合的模式基线
         self._race_mode_last = None  # 当前回合上一次已观测模式
@@ -9419,6 +9421,205 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             "（RACE_ALLIN_LETHAL_OUTPUT_CAPACITY_TERMINAL_OUTCOME_OBS）")
 
+    def _attach_race_allin_lethal_capacity_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Attach a defensive capacity snapshot to the terminal outcome.
+
+        ``RACE_ALLIN_LETHAL_CAPACITY_OBS`` is emitted before the final
+        end-turn, while the authoritative result arrives on GAME_OVER.  This
+        bounded join is observation-only: it never changes the selected
+        action, target, score, or parameters.
+        """
+        try:
+            _source_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_capacity_obs", 1) or 0)))
+            _terminal_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_capacity_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _source_enabled = False
+            _terminal_enabled = False
+        if not (_source_enabled and _terminal_enabled):
+            return
+
+        _marker = "RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS"
+        _source_marker = "RACE_ALLIN_LETHAL_CAPACITY_OBS"
+        _decisions = getattr(ctx, "decisions", None)
+        _reported = bool(getattr(
+            self, "_race_allin_lethal_capacity_terminal_outcome_reported",
+            False))
+        if _reported:
+            _last_reason = ""
+            if isinstance(_decisions, list) and _decisions:
+                _last = _decisions[-1]
+                if isinstance(_last, dict):
+                    _last_reason = str(_last.get("reason") or "")
+            if _marker in _last_reason:
+                return
+            # GAME_OVER can be observed before its decision is persisted; the
+            # durable marker is the only commit proof for the one-shot guard.
+            self._race_allin_lethal_capacity_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_race_allin_lethal_capacity_terminal_outcome_pending",
+                None), dict):
+            return
+        if not isinstance(_decisions, list) or not _decisions:
+            return
+
+        _terminal_index = len(_decisions) - 1
+        _terminal_row = _decisions[_terminal_index]
+        if isinstance(_terminal_row, dict):
+            _tail_screen = str(_terminal_row.get("screen") or "").upper()
+            if _tail_screen in {"GAME_OVER", "VICTORY"}:
+                _terminal_index -= 1
+                if _terminal_index < 0:
+                    return
+                _terminal_row = _decisions[_terminal_index]
+        if (not isinstance(_terminal_row, dict)
+                or _terminal_row.get("action") != "end_turn"):
+            return
+        if (floor is not None and _terminal_row.get("floor") is not None
+                and str(_terminal_row.get("floor")) != str(floor)):
+            return
+
+        _source = None
+        for _index in range(
+                _terminal_index - 1, max(-1, _terminal_index - 25), -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and str(_row.get("floor")) != str(floor)):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            _marker_at = _reason.rfind(_source_marker)
+            if _marker_at < 0:
+                continue
+            _segment_start = max(
+                _reason.rfind("；", 0, _marker_at),
+                _reason.rfind(";", 0, _marker_at))
+            _capacity_text = _reason[_segment_start + 1:_marker_at]
+
+            def _token(name: str):
+                _match = re.search(
+                    rf"(?:^|/|:|：){re.escape(name)}="
+                    r"([^/;\s\uFF1B\uFF08\uFF09]+)",
+                    _capacity_text)
+                return _match.group(1) if _match else None
+
+            _raw_values = {
+                _key: _token(_key)
+                for _key in (
+                    "hp", "block", "incoming", "energy", "need",
+                    "max_block", "post_gap")
+            }
+            if any(_value is None for _value in _raw_values.values()):
+                continue
+            try:
+                _numeric_values = {
+                    _key: float(_value)
+                    for _key, _value in _raw_values.items()
+                }
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if (not all(math.isfinite(_value) and _value >= 0.0
+                         for _value in _numeric_values.values())
+                    or _token("covers") not in {"yes", "no"}
+                    or _token("survives") not in {"yes", "no"}):
+                continue
+            _candidate = {
+                **_numeric_values,
+                "block_locked": _token("block_locked") or "unknown",
+                "defense": _token("defense") or "none",
+                "covers": _token("covers"),
+                "survives": _token("survives"),
+                "selected": _token("selected") or "?",
+                "source_round": _row.get("turn", _row.get("round")),
+                "source_action": _row.get("action") or "?",
+                "bridge_decisions": _terminal_index - _index - 1,
+            }
+            if _source is None or _candidate["covers"] == "yes":
+                _source = _candidate
+            # Prefer the newest covered snapshot.  If the bounded tail has no
+            # covered sample, the first candidate remains the newest no-cover
+            # snapshot and still records the resource shortfall.
+            if _candidate["covers"] == "yes":
+                break
+        if not isinstance(_source, dict):
+            return
+
+        self._race_allin_lethal_capacity_terminal_outcome_pending = {
+            "source": _source,
+            "terminal_round": _terminal_row.get(
+                "turn", _terminal_row.get("round")),
+            "terminal_action": _terminal_row.get("action") or "?",
+            "terminal_hp": _terminal_row.get("hp"),
+        }
+        self._race_allin_lethal_capacity_terminal_outcome_reported = False
+
+    def _consume_race_allin_lethal_capacity_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Render the defensive-capacity-to-GAME_OVER observation join."""
+        try:
+            _source_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_capacity_obs", 1) or 0)))
+            _terminal_enabled = bool(int(float(pol.get(
+                "race_allin_lethal_capacity_terminal_outcome_obs", 1)
+                or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _source_enabled = False
+            _terminal_enabled = False
+        _pending = getattr(
+            self, "_race_allin_lethal_capacity_terminal_outcome_pending", None)
+        if (not _source_enabled or not _terminal_enabled
+                or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self,
+                    "_race_allin_lethal_capacity_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._race_allin_lethal_capacity_terminal_outcome_reported = True
+        _source = _pending.get("source") or {}
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        return (
+            ";race-allin defensive capacity terminal join:"
+            f"outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_source.get('source_round'))}"
+            f"/source_action={_source.get('source_action') or '?'}"
+            f"/source_hp={_num(_source.get('hp'))}"
+            f"/source_block={_num(_source.get('block'))}"
+            f"/source_incoming={_num(_source.get('incoming'))}"
+            f"/source_energy={_num(_source.get('energy'))}"
+            f"/need={_num(_source.get('need'))}"
+            f"/max_block={_num(_source.get('max_block'))}"
+            f"/covers={_source.get('covers') or '?'}"
+            f"/post_gap={_num(_source.get('post_gap'))}"
+            f"/survives={_source.get('survives') or '?'}"
+            f"/selected={_source.get('selected') or '?'}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_source.get('bridge_decisions', '?')}"
+            " (RACE_ALLIN_LETHAL_CAPACITY_TERMINAL_OUTCOME_OBS)")
+
     def _attach_race_upshift_stale_terminal_outcome_from_decisions(
             self, pol, ctx, floor=None) -> None:
         """Attach a bounded stale-upshift source to the terminal race join.
@@ -13924,6 +14125,8 @@ class Policy:
             self._race_terminal_projection = None
             self._race_terminal_outcome_pending = None
             self._race_terminal_outcome_reported = False
+            self._race_allin_lethal_capacity_terminal_outcome_pending = None
+            self._race_allin_lethal_capacity_terminal_outcome_reported = False
             self._race_mode_combat = ctx.combat
             self._race_mode_round = None
             self._race_mode_last = None
@@ -23073,6 +23276,8 @@ class Policy:
             self.know.policy, ctx, go.get("floor"))
         self._attach_race_allin_lethal_cover_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
+        self._attach_race_allin_lethal_capacity_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
         _kill_race_hp_pay_output_capacity_terminal_note = (
             self._consume_kill_race_hp_pay_output_capacity_terminal_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
@@ -23080,6 +23285,9 @@ class Policy:
             self.know.policy, victory, go.get("floor"))
         _race_allin_output_capacity_terminal_outcome_note = (
             self._consume_race_allin_output_capacity_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
+        _race_allin_lethal_capacity_terminal_outcome_note = (
+            self._consume_race_allin_lethal_capacity_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_lethal_playable_reject_outcome_from_decisions(
             ctx, go.get("floor"))
@@ -23159,6 +23367,7 @@ class Policy:
                             f"{_race_mode_flip_terminal_outcome_note}"
                             f"{_terminal_outcome_note}"
                             f"{_race_allin_output_capacity_terminal_outcome_note}"
+                            f"{_race_allin_lethal_capacity_terminal_outcome_note}"
                             f"{_lethal_playable_reject_outcome_note}"
                             f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                             f"{_lethal_unavailable_terminal_outcome_note}"
@@ -23244,6 +23453,7 @@ class Policy:
                                 f"{_race_mode_flip_terminal_outcome_note}"
                                 f"{_terminal_outcome_note}"
                                 f"{_race_allin_output_capacity_terminal_outcome_note}"
+                                f"{_race_allin_lethal_capacity_terminal_outcome_note}"
                                 f"{_kill_race_lethal_free_energy_terminal_outcome_note}"
                                 f"{_lethal_unavailable_terminal_outcome_note}"
                                 f"{_race_allin_lethal_unavailable_terminal_outcome_note}"
