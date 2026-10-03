@@ -15670,3 +15670,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接运行 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽临时池限制；随后使用当前 clone 的进程级 `0777` 临时目录适配器运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。生产三文件已完成 `git diff --check`、完整 diff 回读并提交为 `cdeafd029`；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1873-F17：重复竞速自付 HP 的累计终局对账
+
+profile_id：`ironclad`
+requested_run：`1873`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：同一楼层、同一场竞速战中多次支付 HP 的 `HEMOKINESIS+`，现有单源终局桥只保留最后一笔，低估了主动自损。若只在末尾同楼层 `COMBAT/CARD_SELECTION` 片段累计至少两笔已验证的 HP-payment/value-audit 行，终局应能对账累计支付而不改变动作。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-225504_LCNZ540JWHN0.json` 的 F17 WATERFALL_GIANT 战中，D158、D167、D171、D179 分别记录 `HEMOKINESIS+` 自付 2 血，合计 8；D187 的单笔桥只接到最后来源，而 `SELF_LOSS_PHASE_TERMINAL_OUTCOME_OBS` 的 own_phase 为 8。本批没有失败回放包。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立匹配窗口应出现一次 `KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS`，字段满足 `pay_count`、`total_pay`、首末 HP 与来源回合的可复算关系；单笔支付、跨 `REWARD/MAP`、跨楼层、重复提交或畸形数值不得产生该 marker，`action/params` 必须保持不变。任一条件不成立即证伪假设。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启、可关闭的累计自付终局观测开关。
+- `sts2-ascend/brain/policy.py`：在既有单笔桥旁增加最多 64 行、限同楼层 `COMBAT/CARD_SELECTION` 的累计回溯；只追加审计 marker，不参与评分、选牌或动作。
+- `sts2-ascend/brain/selfcheck.py`：覆盖三笔正例、重载、重复提交、关闭键和 `REWARD` 边界，并断言动作参数不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个独立匹配窗口，对照累计支付、`SELF_LOSS_PHASE` own_phase、终局血量与 `applied` 回执；证据成熟前保持只读观测。
+- **Adjust**：若真实链误接或字段缺失，只收紧来源屏幕/楼层边界或解析，不升级为策略规则。
+- **Rollback**：将 `kill_race_hp_pay_chain_terminal_outcome_obs` 设为 `False`；预期仅移除累计 marker，既有单笔桥及 action/params 保持。
+- **Validation**：完整 selfcheck 输出 `SELFCHECK OK`；目标 diff 复核与 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; local production observation)`

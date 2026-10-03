@@ -21942,6 +21942,127 @@ def main() -> int:
                 not in d_hp_pay_boundary.reason), \
         f"竞速自付 HP 终局桥接越过 REWARD 边界: {d_hp_pay_boundary}"
 
+    # 3z-5g-chain) 重复竞速自付累计终局观测：1873-F17 在同一场
+    # WATERFALL_GIANT 战中四次 HEMOKINESIS 各付2血，现有单次桥只保留
+    # 最后一笔；链式 marker 只补累计 pay_count/total_pay，不改变结算动作。
+    hp_pay_chain_sources = [
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 23,
+            "turn": 2, "hp": 20,
+            "reason":
+                "战斗：打出【御血术+】；竞速判死自付2血，hp=20->18，incoming=15"
+                "（KILL_RACE_HOPELESS_HP_PAY_OBS）；"
+                "竞速自付价值对账 card=HEMOKINESIS/damage_est=20"
+                "/target_hp=80/target_after_est=60/net=18/post_pay_margin=10"
+                "（KILL_RACE_HP_PAY_VALUE_OBS）",
+        },
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 23,
+            "turn": 4, "hp": 18,
+            "reason":
+                "战斗：打出【御血术+】；竞速判死自付2血，hp=18->16，incoming=20"
+                "（KILL_RACE_HOPELESS_HP_PAY_OBS）；"
+                "竞速自付价值对账 card=HEMOKINESIS/damage_est=20"
+                "/target_hp=60/target_after_est=40/net=18/post_pay_margin=6"
+                "（KILL_RACE_HP_PAY_VALUE_OBS）",
+        },
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 23,
+            "turn": 6, "hp": 16,
+            "reason":
+                "战斗：打出【御血术+】；竞速判死自付2血，hp=16->14，incoming=25"
+                "（KILL_RACE_HOPELESS_HP_PAY_OBS）；"
+                "竞速自付价值对账 card=HEMOKINESIS/damage_est=20"
+                "/target_hp=40/target_after_est=20/net=18/post_pay_margin=1"
+                "（KILL_RACE_HP_PAY_VALUE_OBS）",
+        },
+    ]
+    hp_pay_chain_terminal_row = {
+        "screen": "COMBAT", "action": "end_turn", "floor": 23,
+        "turn": 6, "hp": 14, "reason": "致死无牌空过",
+    }
+    hp_pay_chain_ctx = _SettleCtx()
+    hp_pay_chain_ctx.decisions = [
+        *[dict(row) for row in hp_pay_chain_sources],
+        dict(hp_pay_chain_terminal_row),
+    ]
+    hp_pay_chain_pol = policy.Policy(knowledge.Knowledge(tmp))
+    d_hp_pay_chain = hp_pay_chain_pol.decide(
+        hp_pay_terminal_state, hp_pay_chain_ctx)
+    assert (d_hp_pay_chain.action == "continue_game_over"
+            and d_hp_pay_chain.params == {}
+            and "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+                in d_hp_pay_chain.reason
+            and "outcome=defeat/floor=23/source_round=2"
+                "/last_source_round=6/pay_count=3/total_pay=6"
+                "/first_hp_before=20/last_hp_after=14"
+                "/cards=HEMOKINESIS|HEMOKINESIS|HEMOKINESIS"
+                "/terminal_round=6/terminal_action=end_turn/terminal_hp=14"
+                "/final_hp=0/bridge_decisions=3/bridge_rounds=4"
+                in d_hp_pay_chain.reason), \
+        f"重复竞速自付累计终局桥接缺失或动作漂移: {d_hp_pay_chain}"
+    assert knowledge.DEFAULT_POLICY[
+        "kill_race_hp_pay_chain_terminal_outcome_obs"] is True, \
+        "DEFAULT_POLICY 缺少重复竞速自付累计终局观测开关"
+
+    hp_pay_chain_reload_ctx = _SettleCtx()
+    hp_pay_chain_reload_ctx.decisions = [
+        *[dict(row) for row in hp_pay_chain_sources],
+        dict(hp_pay_chain_terminal_row),
+    ]
+    d_hp_pay_chain_reload = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            hp_pay_terminal_state, hp_pay_chain_reload_ctx)
+    assert (d_hp_pay_chain_reload.action == d_hp_pay_chain.action
+            and d_hp_pay_chain_reload.params == d_hp_pay_chain.params
+            and "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+                in d_hp_pay_chain_reload.reason), \
+        f"重载后未恢复重复竞速自付累计终局桥接: {d_hp_pay_chain_reload}"
+
+    hp_pay_chain_ctx.decisions.append({
+        "screen": "GAME_OVER", "action": d_hp_pay_chain.action,
+        "floor": 23, "reason": d_hp_pay_chain.reason})
+    d_hp_pay_chain_duplicate = hp_pay_chain_pol.decide(
+        hp_pay_terminal_state, hp_pay_chain_ctx)
+    assert (d_hp_pay_chain_duplicate.action == d_hp_pay_chain.action
+            and d_hp_pay_chain_duplicate.params == d_hp_pay_chain.params
+            and "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_chain_duplicate.reason), \
+        f"重复竞速自付累计终局桥接重复提交: {d_hp_pay_chain_duplicate}"
+
+    hp_pay_chain_off_know = knowledge.Knowledge(tmp)
+    hp_pay_chain_off_know.policy[
+        "kill_race_hp_pay_chain_terminal_outcome_obs"] = False
+    hp_pay_chain_off_ctx = _SettleCtx()
+    hp_pay_chain_off_ctx.decisions = [
+        *[dict(row) for row in hp_pay_chain_sources],
+        dict(hp_pay_chain_terminal_row),
+    ]
+    d_hp_pay_chain_off = policy.Policy(hp_pay_chain_off_know).decide(
+        hp_pay_terminal_state, hp_pay_chain_off_ctx)
+    assert (d_hp_pay_chain_off.action == d_hp_pay_chain.action
+            and d_hp_pay_chain_off.params == d_hp_pay_chain.params
+            and "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_chain_off.reason), \
+        f"重复竞速自付累计终局开关关闭后动作或 marker 漂移: {d_hp_pay_chain_off}"
+
+    hp_pay_chain_boundary_ctx = _SettleCtx()
+    hp_pay_chain_boundary_ctx.decisions = [
+        dict(hp_pay_chain_sources[0]),
+        {"screen": "REWARD", "action": "proceed", "floor": 23,
+         "reason": "combat boundary"},
+        dict(hp_pay_chain_sources[1]),
+        dict(hp_pay_chain_terminal_row),
+    ]
+    d_hp_pay_chain_boundary = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            hp_pay_terminal_state, hp_pay_chain_boundary_ctx)
+    assert (d_hp_pay_chain_boundary.action == d_hp_pay_chain.action
+            and d_hp_pay_chain_boundary.params == d_hp_pay_chain.params
+            and "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+                not in d_hp_pay_chain_boundary.reason), \
+        f"重复竞速自付累计终局桥接越过 REWARD 边界: {d_hp_pay_chain_boundary}"
+
     # 3z-5h) 非伤害付血与终局零输出容量的联合观测：当最后一次竞速
     # 付血牌本身不产生伤害、且终局已无攻击候选/原始伤害容量时，追加
     # 一个可关闭、可重试的归因分类；不改变 GAME_OVER 动作。

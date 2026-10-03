@@ -988,6 +988,8 @@ class Policy:
         self._thorns_reflect_terminal_outcome_reported = False  # 荆棘反伤结局 marker 每场只写一次
         self._kill_race_hp_pay_terminal_outcome_pending = None  # 最近一次竞速自付 HP，等待 GAME_OVER 结局对账
         self._kill_race_hp_pay_terminal_outcome_reported = False  # 竞速自付结局 marker 每场只写一次
+        self._kill_race_hp_pay_chain_terminal_outcome_pending = None  # 多次竞速自付 HP，等待 GAME_OVER 累计对账
+        self._kill_race_hp_pay_chain_terminal_outcome_reported = False  # 累计自付结局 marker 每场只写一次
         self._low_pool_burst_terminal_outcome_reported = False  # 低池不可生存牌面结局 marker 每场只写一次
         self._card_burst_terminal_outcome_reported = False  # 拿牌爆发审计结局 marker 每场只写一次
         self._elite_forced_entry_pending = None  # 最近一次被迫精英入场，等待战斗结局对账
@@ -2615,6 +2617,8 @@ class Policy:
             self._thorns_reflect_terminal_outcome_reported = False
             self._kill_race_hp_pay_terminal_outcome_pending = None
             self._kill_race_hp_pay_terminal_outcome_reported = False
+            self._kill_race_hp_pay_chain_terminal_outcome_pending = None
+            self._kill_race_hp_pay_chain_terminal_outcome_reported = False
             self._hp_cost_atk_nonlethal_terminal_outcome_pending = None
             self._hp_cost_atk_nonlethal_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
@@ -8602,6 +8606,199 @@ class Policy:
             f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
             f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
             "（KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS）")
+
+    def _restore_kill_race_hp_pay_chain_terminal_outcome_from_decisions(
+            self, pol, ctx, floor=None) -> None:
+        """Recover a bounded chain of repeated race HP payments.
+
+        A single-payment terminal join is useful but loses the cumulative
+        self-cost when several HP-payment attacks are played in one race.  The
+        chain is reconstructed only from the trailing same-floor
+        COMBAT/CARD_SELECTION segment and is observation-only.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_hp_pay_chain_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if not _enabled:
+            return
+
+        decisions = getattr(ctx, "decisions", None)
+        marker = "KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS"
+        if not isinstance(decisions, list) or not decisions:
+            return
+        _last = decisions[-1]
+        _last_reason = (str(_last.get("reason") or "")
+                        if isinstance(_last, dict) else "")
+        if marker in _last_reason:
+            self._kill_race_hp_pay_chain_terminal_outcome_reported = True
+            return
+        if bool(getattr(
+                self, "_kill_race_hp_pay_chain_terminal_outcome_reported",
+                False)):
+            self._kill_race_hp_pay_chain_terminal_outcome_reported = False
+        if isinstance(getattr(
+                self, "_kill_race_hp_pay_chain_terminal_outcome_pending",
+                None), dict):
+            return
+
+        _terminal = _last
+        if not isinstance(_terminal, dict) or _terminal.get("action") != "end_turn":
+            return
+        if (floor is not None and _terminal.get("floor") is not None
+                and str(_terminal.get("floor")) != str(floor)):
+            return
+
+        def _same_floor(left, right) -> bool:
+            if left is None or right is None:
+                return True
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        def _number(value):
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError, OverflowError):
+                return None
+            return parsed if math.isfinite(parsed) else None
+
+        _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
+        _payments = []
+        _first_source_index = None
+        _lookback_start = max(0, len(decisions) - 64)
+        for _index in range(len(decisions) - 1, _lookback_start - 1, -1):
+            _row = decisions[_index]
+            if not isinstance(_row, dict):
+                break
+            if (floor is not None and _row.get("floor") is not None
+                    and not _same_floor(floor, _row.get("floor"))):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen and _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _reason = str(_row.get("reason") or "")
+            if ("KILL_RACE_HOPELESS_HP_PAY_OBS" not in _reason
+                    or "KILL_RACE_HP_PAY_VALUE_OBS" not in _reason):
+                continue
+            _pay_match = re.search(
+                rf"竞速判死自付(?P<pay>{_number_pattern})血，"
+                rf"hp=(?P<hp_before>{_number_pattern})->"
+                rf"(?P<hp_after>{_number_pattern})，"
+                rf"incoming=(?P<incoming>{_number_pattern})"
+                r"[（(]KILL_RACE_HOPELESS_HP_PAY_OBS[）)]",
+                _reason)
+            _value_marker_at = _reason.rfind("KILL_RACE_HP_PAY_VALUE_OBS")
+            _value_match = re.search(
+                rf"竞速自付价值对账\s+card=(?P<card>[^/；（）()\s]+)"
+                rf"/damage_est=(?P<damage_est>{_number_pattern})"
+                rf"/target_hp=(?P<target_hp>[^/；（）()\s]+)"
+                rf"/target_after_est=(?P<target_after_est>[^/；（）()\s]+)"
+                rf"/net=(?P<net>{_number_pattern})"
+                rf"/post_pay_margin=(?P<post_pay_margin>{_number_pattern})",
+                _reason[:_value_marker_at])
+            if _pay_match is None or _value_match is None:
+                continue
+            _values = {
+                "pay": _number(_pay_match.group("pay")),
+                "hp_before": _number(_pay_match.group("hp_before")),
+                "hp_after": _number(_pay_match.group("hp_after")),
+                "incoming": _number(_pay_match.group("incoming")),
+                "card": _value_match.group("card").strip() or "?",
+                "source_round": _row.get("turn", _row.get("round")),
+            }
+            if any(value is None or not math.isfinite(value)
+                   for value in (_values["pay"], _values["hp_before"],
+                                 _values["hp_after"], _values["incoming"])):
+                continue
+            if (_values["pay"] <= 0.0 or _values["hp_before"] < 0.0
+                    or _values["hp_after"] < 0.0
+                    or _values["incoming"] < 0.0
+                    or abs((_values["hp_before"] - _values["hp_after"])
+                           - _values["pay"]) > 1e-6):
+                continue
+            _payments.append(_values)
+            _first_source_index = _index
+
+        # A single payment is already covered by the existing single-source
+        # bridge; this marker is specifically the cumulative chain.
+        if len(_payments) < 2 or _first_source_index is None:
+            return
+        _payments.reverse()
+        _terminal_round = _terminal.get("turn", _terminal.get("round"))
+        try:
+            _bridge_rounds = max(
+                0, int(float(_terminal_round))
+                - int(float(_payments[0].get("source_round"))))
+        except (TypeError, ValueError, OverflowError):
+            _bridge_rounds = 0
+        self._kill_race_hp_pay_chain_terminal_outcome_pending = {
+            "source_round": _payments[0].get("source_round"),
+            "last_source_round": _payments[-1].get("source_round"),
+            "pay_count": len(_payments),
+            "total_pay": sum(item["pay"] for item in _payments),
+            "first_hp_before": _payments[0].get("hp_before"),
+            "last_hp_after": _payments[-1].get("hp_after"),
+            "cards": [item.get("card") or "?" for item in _payments],
+            "terminal_round": _terminal_round,
+            "terminal_action": _terminal.get("action") or "end_turn",
+            "terminal_hp": _terminal.get("hp"),
+            "bridge_decisions": len(decisions) - _first_source_index - 1,
+            "bridge_rounds": _bridge_rounds,
+        }
+        self._kill_race_hp_pay_chain_terminal_outcome_reported = False
+
+    def _consume_kill_race_hp_pay_chain_terminal_outcome_note(
+            self, pol, victory, floor=None, final_hp=None) -> str:
+        """Join repeated HP payments to the authoritative terminal result."""
+        try:
+            _enabled = bool(int(float(pol.get(
+                "kill_race_hp_pay_chain_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        _pending = getattr(
+            self, "_kill_race_hp_pay_chain_terminal_outcome_pending", None)
+        if (not _enabled or not isinstance(_pending, dict)
+                or bool(getattr(
+                    self, "_kill_race_hp_pay_chain_terminal_outcome_reported",
+                    False))):
+            return ""
+        self._kill_race_hp_pay_chain_terminal_outcome_reported = True
+
+        def _num(value) -> str:
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        def _round(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _result = "victory" if victory else "defeat"
+        _cards = "|".join(str(card or "?") for card in (
+            _pending.get("cards") or [])) or "?"
+        return (
+            f"；竞速自付链终局对账：outcome={_result}"
+            f"/floor={_round(floor)}"
+            f"/source_round={_round(_pending.get('source_round'))}"
+            f"/last_source_round={_round(_pending.get('last_source_round'))}"
+            f"/pay_count={_pending.get('pay_count', '?')}"
+            f"/total_pay={_num(_pending.get('total_pay'))}"
+            f"/first_hp_before={_num(_pending.get('first_hp_before'))}"
+            f"/last_hp_after={_num(_pending.get('last_hp_after'))}"
+            f"/cards={_cards}"
+            f"/terminal_round={_round(_pending.get('terminal_round'))}"
+            f"/terminal_action={_pending.get('terminal_action') or '?'}"
+            f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
+            f"/final_hp={_num(final_hp)}"
+            f"/bridge_decisions={_pending.get('bridge_decisions', '?')}"
+            f"/bridge_rounds={_pending.get('bridge_rounds', '?')}"
+            "（KILL_RACE_HP_PAY_CHAIN_TERMINAL_OUTCOME_OBS）")
 
     def _consume_kill_race_hp_pay_output_capacity_terminal_note(
             self, pol, ctx, victory, floor=None, final_hp=None) -> str:
@@ -15564,6 +15761,8 @@ class Policy:
             self._thorns_reflect_terminal_outcome_reported = False
             self._kill_race_hp_pay_terminal_outcome_pending = None
             self._kill_race_hp_pay_terminal_outcome_reported = False
+            self._kill_race_hp_pay_chain_terminal_outcome_pending = None
+            self._kill_race_hp_pay_chain_terminal_outcome_reported = False
             self._low_pool_burst_terminal_outcome_reported = False
             self._race_prelock_defense_terminal_outcome_pending = None
             self._race_prelock_defense_terminal_outcome_reported = False
@@ -24824,6 +25023,11 @@ class Policy:
         _kill_race_hp_pay_terminal_outcome_note = (
             self._consume_kill_race_hp_pay_terminal_outcome_note(
                 self.know.policy, victory, go.get("floor"), terminal_hp))
+        self._restore_kill_race_hp_pay_chain_terminal_outcome_from_decisions(
+            self.know.policy, ctx, go.get("floor"))
+        _kill_race_hp_pay_chain_terminal_outcome_note = (
+            self._consume_kill_race_hp_pay_chain_terminal_outcome_note(
+                self.know.policy, victory, go.get("floor"), terminal_hp))
         self._restore_hp_cost_atk_nonlethal_terminal_outcome_from_decisions(
             self.know.policy, ctx, go.get("floor"))
         _hp_cost_atk_nonlethal_terminal_outcome_note = (
@@ -24941,6 +25145,7 @@ class Policy:
                             f"{_exhaust_cap_pressure_terminal_outcome_note}"
                             f"{_thorns_reflect_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_terminal_outcome_note}"
+                            f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_output_capacity_terminal_note}"
                             f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                             f"{_race_prelock_defense_terminal_outcome_note}"
@@ -24996,6 +25201,7 @@ class Policy:
                         f"{_exhaust_cap_pressure_terminal_outcome_note}"
                         f"{_thorns_reflect_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_terminal_outcome_note}"
+                        f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
                         f"{_kill_race_hp_pay_output_capacity_terminal_note}"
                         f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                         f"{_race_prelock_defense_terminal_outcome_note}"
@@ -25036,6 +25242,7 @@ class Policy:
                                 f"{_exhaust_cap_pressure_terminal_outcome_note}"
                                 f"{_thorns_reflect_terminal_outcome_note}"
                                 f"{_kill_race_hp_pay_terminal_outcome_note}"
+                                f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
                                 f"{_hp_cost_atk_nonlethal_terminal_outcome_note}"
                                 f"{_race_prelock_defense_terminal_outcome_note}"
                                 f"{_race_mode_flip_terminal_outcome_note}"
@@ -25059,6 +25266,7 @@ class Policy:
                             "结算：返回主菜单，备战下一局"
                             f"{_path_death_valley_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
+                            f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
                             f"{_card_burst_terminal_outcome_note}",
                             tags=[("timeline_check", True)], wait=1.5)
         if phase == "summary_animating" or go.get("showing_summary"):
