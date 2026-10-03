@@ -15614,3 +15614,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 selfcheck 复现宿主固定 256 槽临时池限制；随后用当前 clone 的进程级 0777 临时目录适配运行同一入口，退出码 0 并输出 `SELFCHECK OK`。1868 持久链只读 replay 命中新 marker 一次且保持 `continue_game_over {}`；目标 diff 复核与 `git diff --check` 通过。未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1869-F17：瀑布蒸汽拦截源伤害/血池对账
+
+profile_id：`ironclad`
+requested_run：`1869`
+production_code_commit：本报告随本批本地提交落库，SHA 由交付时回读
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS` 只能说明哪张牌触发了蒸汽拦截、当时蒸汽层数和无敌相时间，不能把源牌伤害与目标血池变化对账。若在同一有界 Steam-veto → invulnerable-pool 终局桥上补记 `source_card_damage`、`source_pool_before`、`source_pool_after` 与 `source_pool_delta`，未来 3—10 个精确匹配终局应能区分“看似斩杀但被自爆相撤销”的实际损伤；不应改变动作或参数。任一字段误接跨战斗/非有限值，或 `action/params` 改变，即证伪假设。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261003-213230_RQQPFE92P85D.json` 的 D173（F17、回合 9）为 `重锤+`，源牌伤害 `44.0`，Boss 血池 `26.0→11.0`，蒸汽喷发×36，并带 `STEAM_ERUPTION_KILL_VETO_OBS`；D176 记录无敌帧下四张攻击均被 veto，D177 进入 `GAME_OVER`。现有终局桥已命中同一来源，但缺少这组数值对账；本批没有失败回放包。
+- **EXPECTED_SIGNAL**：未来匹配终局应在既有 `WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS` 后追加一次 `WATERFALL_STEAM_VETO_DAMAGE_TERMINAL_OBS`，字段应满足 `source_pool_delta = source_pool_before - source_pool_after`，并与来源牌/回合/蒸汽层数同桥；普通 invulnerable 终局、畸形或非有限字段、跨屏/跨楼层尾部不得产生新 marker。关闭键只应移除新对账 marker，既有 Steam-veto marker 与 `continue_game_over {}` 保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启且可关闭的 `waterfall_steam_veto_damage_terminal_obs`。
+- `sts2-ascend/brain/policy.py`：仅在已有 Steam-veto 终局桥中解析有限的源牌伤害/血池前后值并追加审计字段；不参与评分、选牌、目标或动作选择。
+- `sts2-ascend/brain/selfcheck.py`：扩展既有 Waterfall bridge 夹具，覆盖默认开启、跨 `Policy` 重载、关闭键严格回滚，以及 action/params 不变。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个精确 Waterfall Steam-veto 终局，对照源牌伤害、血池 delta、终局结果与 `applied` 回执；暂不把对账字段升级为策略规则。
+- **Adjust**：若真实样本出现格式差异，只扩展有限数值解析或收紧同桥边界；不把缺失值补成猜测值。
+- **Rollback**：将 `waterfall_steam_veto_damage_terminal_obs` 设为 `False`；预期只移除新对账 marker，既有终局观测、动作与参数不变。
+- **Validation**：直连 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽临时池限制；随后用当前 clone 池的进程级 0777 临时目录适配运行同一完整入口，退出码 0 并输出 `SELFCHECK OK`。目标三文件 `git diff --check` 通过，生产差异已回读；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`

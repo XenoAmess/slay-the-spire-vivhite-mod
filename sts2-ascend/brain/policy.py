@@ -11997,6 +11997,35 @@ class Policy:
                 f"/phase_time={_text(_steam_veto_bridge.get('phase_time'))}"
                 f"/terminal_overlap={_text(_pending.get('terminal_overlap'))}"
                 "（WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS）")
+        _steam_veto_damage_tail = ""
+        try:
+            _steam_veto_damage_enabled = bool(int(float(pol.get(
+                "waterfall_steam_veto_damage_terminal_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _steam_veto_damage_enabled = False
+        if (_steam_veto_damage_enabled
+                and isinstance(_steam_veto_bridge, dict)):
+            _source_card_damage = _steam_veto_bridge.get(
+                "source_card_damage")
+            _source_pool_before = _steam_veto_bridge.get(
+                "source_pool_before")
+            _source_pool_after = _steam_veto_bridge.get(
+                "source_pool_after")
+            if (_source_card_damage is not None
+                    and _source_pool_before is not None
+                    and _source_pool_after is not None):
+                _source_pool_delta = (
+                    float(_source_pool_before) - float(_source_pool_after))
+                if all(math.isfinite(float(_value)) for _value in (
+                        _source_card_damage, _source_pool_before,
+                        _source_pool_after, _source_pool_delta)):
+                    _steam_veto_damage_tail = (
+                        "；蒸汽喷发拦截源伤害/血池对账："
+                        f"/source_card_damage={_num(_source_card_damage)}"
+                        f"/source_pool_before={_num(_source_pool_before)}"
+                        f"/source_pool_after={_num(_source_pool_after)}"
+                        f"/source_pool_delta={_num(_source_pool_delta)}"
+                        "（WATERFALL_STEAM_VETO_DAMAGE_TERMINAL_OUTCOME_OBS）")
         _base = (
             f"{_prefix}outcome={_result}"
             f"/floor={_round(floor)}"
@@ -12027,6 +12056,7 @@ class Policy:
             + _terminal_tail_note
             + _overlap_tail
             + _steam_veto_tail
+            + _steam_veto_damage_tail
             + f"（{_marker}）")
         return _base + _ringing_hook_note + _ringing_single_play_note
 
@@ -12185,6 +12215,24 @@ class Policy:
                 r"打出【([^】]+)】", _steam_veto_reason)
             _steam_stack_match = re.search(
                 r"蒸汽喷发[×x](\d+)", _steam_veto_reason)
+
+            def _finite_match(match, group=1):
+                if match is None:
+                    return None
+                try:
+                    value = float(match.group(group))
+                except (IndexError, TypeError, ValueError, OverflowError):
+                    return None
+                return value if math.isfinite(value) else None
+
+            _steam_damage_match = re.search(
+                r"单体伤害≈([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _steam_veto_reason)
+            _steam_pool_match = re.search(
+                r"血池\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))"
+                r"\s*(?:→|->)\s*"
+                r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))",
+                _steam_veto_reason)
             _steam_veto_bridge = {
                 "source_turn": _steam_veto_source.get(
                     "turn", _steam_veto_source.get("round")),
@@ -12195,6 +12243,9 @@ class Policy:
                 "source_energy": _steam_veto_source.get("energy"),
                 "steam_stack": (_steam_stack_match.group(1)
                                  if _steam_stack_match else "?"),
+                "source_card_damage": _finite_match(_steam_damage_match),
+                "source_pool_before": _finite_match(_steam_pool_match, 1),
+                "source_pool_after": _finite_match(_steam_pool_match, 2),
                 "phase_turn": _invulnerable_phase_row.get(
                     "turn", _invulnerable_phase_row.get("round")),
                 "phase_time": _invulnerable_phase_row.get("t"),

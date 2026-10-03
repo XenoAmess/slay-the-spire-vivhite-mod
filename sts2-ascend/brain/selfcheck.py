@@ -19281,7 +19281,9 @@ def main() -> int:
         "t": "01:19:02", "hp": 12, "energy": 2,
         "reason": "Boss state WATERFALL_GIANT powers="
                    "STEAM_ERUPTION_POWERx45；蒸汽喷发×45在账；"
-                   "打出【余烬】→瀑布巨兽；STEAM_ERUPTION_KILL_VETO_OBS",
+                   "打出【余烬】→瀑布巨兽，单体伤害≈20.0；"
+                   "Boss遭遇=WATERFALL_GIANT，血池26.0→6.0；"
+                   "STEAM_ERUPTION_KILL_VETO_OBS",
     })
     d_nonlethal_waterfall_veto = nonlethal_waterfall_veto_pol.decide(
         nonlethal_unavailable_outcome_state,
@@ -19296,6 +19298,11 @@ def main() -> int:
                 in d_nonlethal_waterfall_veto.reason
             and "/source_card=余烬/source_hp=12/source_energy=2/steam_stack=45"
                 in d_nonlethal_waterfall_veto.reason
+            and "/source_card_damage=20/source_pool_before=26/source_pool_after=6"
+                "/source_pool_delta=20"
+                in d_nonlethal_waterfall_veto.reason
+            and "WATERFALL_STEAM_VETO_DAMAGE_TERMINAL_OUTCOME_OBS"
+                in d_nonlethal_waterfall_veto.reason
             and "/phase=invulnerable_pool/phase_turn=7/phase_time=?"
                 in d_nonlethal_waterfall_veto.reason
             and "WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS"
@@ -19304,6 +19311,47 @@ def main() -> int:
     assert knowledge.DEFAULT_POLICY[
         "waterfall_steam_veto_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 waterfall_steam_veto_terminal_outcome_obs"
+    assert knowledge.DEFAULT_POLICY[
+        "waterfall_steam_veto_damage_terminal_obs"] is True, \
+        "DEFAULT_POLICY 缺少 waterfall_steam_veto_damage_terminal_obs"
+    nonlethal_waterfall_damage_reload_pol = policy.Policy(
+        knowledge.Knowledge(tmp), random.Random(7))
+    nonlethal_waterfall_damage_reload_ctx = _SettleCtx()
+    nonlethal_waterfall_damage_reload_ctx.decisions = [
+        dict(row) for row in nonlethal_waterfall_veto_ctx.decisions]
+    d_nonlethal_waterfall_damage_reload = (
+        nonlethal_waterfall_damage_reload_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_waterfall_damage_reload_ctx))
+    assert (d_nonlethal_waterfall_damage_reload.action
+            == d_nonlethal_waterfall_veto.action
+            and d_nonlethal_waterfall_damage_reload.params
+            == d_nonlethal_waterfall_veto.params
+            and "/source_card_damage=20/source_pool_before=26/source_pool_after=6"
+                "/source_pool_delta=20"
+                in d_nonlethal_waterfall_damage_reload.reason), \
+        f"Steam-veto 源伤害/血池观测跨 Policy 恢复失败: {d_nonlethal_waterfall_damage_reload}"
+    nonlethal_waterfall_damage_off_know = knowledge.Knowledge(tmp)
+    nonlethal_waterfall_damage_off_know.policy[
+        "waterfall_steam_veto_damage_terminal_obs"] = False
+    nonlethal_waterfall_damage_off_pol = policy.Policy(
+        nonlethal_waterfall_damage_off_know)
+    nonlethal_waterfall_damage_off_ctx = _SettleCtx()
+    nonlethal_waterfall_damage_off_ctx.decisions = [
+        dict(row) for row in nonlethal_waterfall_veto_ctx.decisions]
+    d_nonlethal_waterfall_damage_off = (
+        nonlethal_waterfall_damage_off_pol.decide(
+            nonlethal_unavailable_outcome_state,
+            nonlethal_waterfall_damage_off_ctx))
+    assert (d_nonlethal_waterfall_damage_off.action
+            == d_nonlethal_waterfall_veto.action
+            and d_nonlethal_waterfall_damage_off.params
+            == d_nonlethal_waterfall_veto.params
+            and "WATERFALL_STEAM_VETO_TERMINAL_OUTCOME_OBS"
+                in d_nonlethal_waterfall_damage_off.reason
+            and "WATERFALL_STEAM_VETO_DAMAGE_TERMINAL_OUTCOME_OBS"
+                not in d_nonlethal_waterfall_damage_off.reason), \
+        f"Steam-veto 源伤害/血池观测关闭未严格回滚: {d_nonlethal_waterfall_damage_off}"
     nonlethal_generic_invuln_pol = policy.Policy(knowledge.Knowledge(tmp))
     nonlethal_generic_invuln_ctx = _SettleCtx()
     nonlethal_generic_invuln_ctx.decisions = [
