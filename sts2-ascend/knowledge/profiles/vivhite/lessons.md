@@ -20181,3 +20181,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0586143138417867局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/24.904207792161177局)，FASTEN(21分/3.645523664057969局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：4/1831 胜，当前目标进阶 4
+
+## 第 1832 局复盘（2026-10-03 10:34）
+- 结果：💀 失败｜进阶 4｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损36（可行动段36/非行动段17，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=19/dpt=2.52/ttk=7.53968/tsurv=0.923077（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=15/projected_ttk=7.53968/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=16.25（RACE_PROJ_SURVIVAL_RATIO_OBS）｜竞速审计：T13判死→实战15回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(42分/2.348234841498835局)，VIVHITE_CARD_LUMINOUS_PROJECTION(37分/2.243384942310605局)，JACKPOT(37分/8.311641978136201局)，MAYHEM(37分/4.785278364103501局)，THINKING_AHEAD(37分/2.58559678215908局)
+- 当前低价值卡牌：VIVHITE_CARD_ISOPERIMETRIC_WARD(16分/2.0514091637433407局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/24.817043064888615局)，FASTEN(21分/3.632764331233766局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（15回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：4/1832 胜，当前目标进阶 4
