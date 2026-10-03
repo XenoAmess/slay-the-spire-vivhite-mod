@@ -12904,6 +12904,8 @@ def main() -> int:
         and "敌血净降10.0/回合" in d_combat_slippery_effective.reason \
         and "vs 投影" in d_combat_slippery_effective.reason \
         and "实际/投影比" in d_combat_slippery_effective.reason \
+        and "phase=slippery/slippery_layers=8" \
+        in d_combat_slippery_effective.reason \
         and "SLIPPERY_TTK_EFFECTIVE_DPT_RATIO_OBS" \
         in d_combat_slippery_effective.reason, \
         f"滑溜跨回合有效火力对账缺失: {d_combat_slippery_effective.reason}"
@@ -12928,6 +12930,8 @@ def main() -> int:
             and "Boss遭遇=CAP_BOSS" in d_combat_boss_effective.reason
             and "血池185.0→175.0" in d_combat_boss_effective.reason
             and "实际/投影比" in d_combat_boss_effective.reason
+            and "phase=clear/slippery_layers=0"
+            in d_combat_boss_effective.reason
             and "BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS"
             in d_combat_boss_effective.reason
             and "BOSS_RACE_EFFECTIVE_DPT_STATE_OBS"
@@ -20287,7 +20291,9 @@ def main() -> int:
             " vs 投影23.0/回合（差-9.0，BOSS_RACE_EFFECTIVE_DPT_OBS）；"
             "Boss遭遇=LAGAVULIN_MATRIARCH，血池93.0→79.0"
             "（BOSS_RACE_EFFECTIVE_DPT_ENCOUNTER_OBS）；"
-            "实际/投影比0.61（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）",
+            "实际/投影比0.61（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）；"
+            ";phase=clear/slippery_layers=0"
+            " (BOSS_RACE_EFFECTIVE_DPT_PHASE_OBS)",
     }
     boss_dpt_terminal_row = {
         "screen": "COMBAT", "action": "end_turn", "floor": 17,
@@ -20314,10 +20320,29 @@ def main() -> int:
             and "outcome=defeat/floor=17/source_round=8"
                 "/source_action=play_card/sample_start=7/sample_end=8"
                 "/actual_dpt=14/projected_dpt=23/ratio=0.61"
+                "/phase=clear/slippery_layers=0"
                 "/encounter=LAGAVULIN_MATRIARCH/terminal_round=8"
                 "/terminal_action=end_turn/terminal_hp=1/final_hp=0"
                 in d_boss_dpt_terminal.reason), \
         f"Boss有效火力终局桥接缺失或动作漂移: {d_boss_dpt_terminal}"
+
+    boss_dpt_slippery_source_row = dict(boss_dpt_source_row)
+    boss_dpt_slippery_source_row["reason"] = (
+        boss_dpt_source_row["reason"].replace(
+            "phase=clear/slippery_layers=0",
+            "phase=slippery/slippery_layers=5"))
+    boss_dpt_slippery_ctx = _SettleCtx()
+    boss_dpt_slippery_ctx.decisions = [
+        dict(boss_dpt_slippery_source_row), dict(boss_dpt_terminal_row)]
+    d_boss_dpt_slippery = policy.Policy(
+        knowledge.Knowledge(tmp)).decide(
+            boss_dpt_terminal_state, boss_dpt_slippery_ctx)
+    assert (d_boss_dpt_slippery.action == d_boss_dpt_terminal.action
+            and d_boss_dpt_slippery.params == d_boss_dpt_terminal.params
+            and "/phase=slippery/slippery_layers=5/encounter="
+                "LAGAVULIN_MATRIARCH"
+                in d_boss_dpt_slippery.reason), \
+        f"Boss有效火力终局未保留滑溜来源阶段: {d_boss_dpt_slippery}"
     assert knowledge.DEFAULT_POLICY[
         "boss_race_effective_dpt_terminal_outcome_obs"] is True, \
         "DEFAULT_POLICY 缺少 Boss 有效火力终局观测开关"
@@ -20358,6 +20383,22 @@ def main() -> int:
             and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
                 not in d_boss_dpt_off.reason), \
         f"Boss有效火力终局开关关闭后动作或 marker 漂移: {d_boss_dpt_off}"
+
+    boss_dpt_phase_off_know = knowledge.Knowledge(tmp)
+    boss_dpt_phase_off_know.policy[
+        "race_audit_effective_dpt_phase_obs"] = False
+    boss_dpt_phase_off_ctx = _SettleCtx()
+    boss_dpt_phase_off_ctx.decisions = [
+        dict(boss_dpt_source_row), dict(boss_dpt_terminal_row)]
+    d_boss_dpt_phase_off = policy.Policy(
+        boss_dpt_phase_off_know).decide(
+            boss_dpt_terminal_state, boss_dpt_phase_off_ctx)
+    assert (d_boss_dpt_phase_off.action == d_boss_dpt_terminal.action
+            and d_boss_dpt_phase_off.params == d_boss_dpt_terminal.params
+            and "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
+                in d_boss_dpt_phase_off.reason
+            and "/phase=" not in d_boss_dpt_phase_off.reason), \
+        f"Boss有效火力来源阶段开关关闭后观测或动作漂移: {d_boss_dpt_phase_off}"
 
     boss_dpt_boundary_ctx = _SettleCtx()
     boss_dpt_boundary_ctx.decisions = [

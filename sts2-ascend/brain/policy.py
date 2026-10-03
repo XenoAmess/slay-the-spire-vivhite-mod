@@ -5764,6 +5764,11 @@ class Policy:
             _enabled = False
         if not _enabled:
             return
+        try:
+            _phase_obs_enabled = bool(int(float(pol.get(
+                "race_audit_effective_dpt_phase_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _phase_obs_enabled = False
 
         decisions = getattr(ctx, "decisions", None)
         marker = "BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS"
@@ -5846,6 +5851,26 @@ class Policy:
                 "ratio": _actual / _projected,
                 "encounter": _encounter or "?",
             }
+            if _phase_obs_enabled:
+                _phase_match = re.search(
+                    r"phase=(?P<phase>slippery|clear)"
+                    r"/slippery_layers=(?P<slippery_layers>"
+                    r"-?\d+(?:\.\d+)?)",
+                    _reason)
+                if _phase_match is not None:
+                    try:
+                        _phase_layers = float(
+                            _phase_match.group("slippery_layers"))
+                    except (TypeError, ValueError, OverflowError):
+                        _phase_layers = -1.0
+                    _phase_name = _phase_match.group("phase")
+                    if (math.isfinite(_phase_layers)
+                            and ((_phase_name == "slippery"
+                                  and _phase_layers > 0.0)
+                                 or (_phase_name == "clear"
+                                     and _phase_layers == 0.0))):
+                        _source["source_phase"] = _phase_name
+                        _source["source_slippery_layers"] = _phase_layers
             break
         if _source is None:
             return
@@ -5895,6 +5920,11 @@ class Policy:
             _ratio = f"{float(_pending.get('ratio')):.2f}"
         except (TypeError, ValueError, OverflowError):
             _ratio = "?"
+        _phase_tail = ""
+        if "source_phase" in _pending:
+            _phase_tail = (
+                f"/phase={_pending.get('source_phase') or '?'}"
+                f"/slippery_layers={_num(_pending.get('source_slippery_layers'))}")
         _result = "victory" if victory else "defeat"
         return (
             f"；Boss竞速有效火力终局对账：outcome={_result}"
@@ -5906,7 +5936,8 @@ class Policy:
             f"/actual_dpt={_num(_pending.get('actual_dpt'))}"
             f"/projected_dpt={_num(_pending.get('projected_dpt'))}"
             f"/ratio={_ratio}"
-            f"/encounter={_pending.get('encounter') or '?'}"
+            + _phase_tail
+            + f"/encounter={_pending.get('encounter') or '?'}"
             f"/terminal_round={_round(_pending.get('terminal_round'))}"
             f"/terminal_action={_pending.get('terminal_action') or '?'}"
             f"/terminal_hp={_num(_pending.get('terminal_hp'))}"
@@ -13845,6 +13876,16 @@ class Policy:
                             _boss_ratio_tail = (
                                 f"；实际/投影比{_boss_ratio:.2f}"
                                 "（BOSS_RACE_EFFECTIVE_DPT_RATIO_OBS）")
+                        _boss_phase_tail = ""
+                        if bool(pol.get(
+                                "race_audit_effective_dpt_phase_obs", True)):
+                            _boss_phase = (
+                                "slippery" if _boss_start_slippery > 0.0
+                                else "clear")
+                            _boss_phase_tail = (
+                                f";phase={_boss_phase}/slippery_layers="
+                                f"{_boss_start_slippery:g}"
+                                " (BOSS_RACE_EFFECTIVE_DPT_PHASE_OBS)")
                         _boss_roster_tail = ""
                         if bool(pol.get(
                                 "boss_race_effective_dpt_roster_obs", True)):
@@ -13925,7 +13966,8 @@ class Policy:
                             f"（差{_boss_gap:+.1f}，"
                             "BOSS_RACE_EFFECTIVE_DPT_OBS）"
                             + _boss_encounter_tail
-                            + _boss_ratio_tail + _boss_focus_tail
+                            + _boss_ratio_tail + _boss_phase_tail
+                            + _boss_focus_tail
                             + _boss_roster_tail
                             + _boss_state_tail + _boss_state_window_tail
                             + _boss_block_tail + _boss_intent_ramp_tail)

@@ -15252,3 +15252,30 @@ failed_review_replay: `requested_packages=[]` (no replay target)
 - **Validation**: the mandated direct selfcheck reached the host fixed 256-slot bootstrap limit; the same full selfcheck completed through a clone-local process-level 0777 temporary-directory adapter with exit code 0 and `SELFCHECK OK`. Read-only replay of the exact 1841 chain emitted the expected marker. Targeted diff review found only the three production/selfcheck files before this report was appended; `git diff --check` had no whitespace errors beyond pre-existing LF/CRLF notices. No runtime, learning memory, formal run/archive, replay package, or online process was touched.
 
 - `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
+
+## 2026-10-03 run 1842: 保留 Boss 有效 DPT 终局来源阶段
+
+profile_id: `ironclad`
+requested_run: `1842`
+production_code_commit: `pending local commit (SHA in delivery response)`
+failed_review_replay: `requested_packages=[]` (no replay target)
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `BOSS_RACE_EFFECTIVE_DPT_TERMINAL_OUTCOME_OBS` 只连接最后一段实际/投影 DPT，却没有携带该段属于 Slippery 还是 clear 阶段；终局 marker 因而不能与同场的 phase 汇总逐样本对齐。该假设可证伪：新终局 marker 必须保留来源样本的 `phase` 与 `slippery_layers`，畸形来源、关闭开关、战斗边界、重复提交仍不产生新字段/marker，action/params 不变。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261003-130354_EGUP19EQ2W0A.json` 的 run 1842 F17 D221/D223 记录 Slippery 实际 DPT 3.0/0.0 对投影 16.0；D236-D250 为 clear 段，D253 汇总为 slippery 4 样本 ratio 0.28、clear 5 样本 ratio 0.84，而终局来源 D250 仅有 actual 8/projected 12.6/ratio 0.63，缺少阶段归属。
+- **EXPECTED_SIGNAL**：未来 3—10 个 Boss 终端窗口中，逐个核对终局 `phase/layers` 与来源 DPT 行；两类阶段均能正确回接，边界/关闭/重复保持静默，应用动作与参数零差异。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：沿用既有 `race_audit_effective_dpt_phase_obs`，在新 Boss DPT 窗口记录 `phase=slippery|clear/slippery_layers=N`；同楼层终局桥接仅解析并转发来源行的合法字段。该字段不进入评分、门控、排序、目标、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：补充 clear/Slippery 终局来源、phase 开关关闭和 action/params 不变断言，并保留既有重载、重复与 REWARD 边界覆盖。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个匹配终端，比较来源回合/动作、phase/layers、实际/投影 DPT、终端 HP 与应用回执。
+- **Adjust**：若真实 reason 使用不同阶段字段或 Slippery 端点语义，保留原链并只收紧解析，不升级为战斗行为。
+- **Rollback**：将 `race_audit_effective_dpt_phase_obs` 或 `boss_race_effective_dpt_terminal_outcome_obs` 设为 `False`；预期仅移除新增阶段字段/终局桥接，既有动作与参数不变。
+- **Validation**：直连 selfcheck 命中宿主固定 256 槽池门禁；使用 clone-local 进程级临时目录适配运行同一完整 selfcheck，退出码 0 并输出 `SELFCHECK OK`；最终目标 diff 与 `git diff --check` 通过。未写入 `.runtime/`、学习记忆、正式 runs/archive、replay 或在线进程。
+
+- `retry_resolution: none (no failed_review_replay packages requested; production observation integrated)`
