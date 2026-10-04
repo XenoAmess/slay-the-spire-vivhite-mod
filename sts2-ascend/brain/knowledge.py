@@ -272,7 +272,6 @@ DEFAULT_POLICY = {
     "kill_race_hp_pay_chain_terminal_outcome_obs": True,  # Audit-only bounded join of repeated kill-race HP payments to the following terminal; False removes only the cumulative payment marker.
     "kill_race_hp_pay_output_capacity_terminal_obs": True,  # Audit-only join when a non-damaging kill-race HP payment reaches a terminal zero-output-capacity frame; False removes only this marker.
     "race_upshift_stale_terminal_outcome_obs": True,  # Audit-only bounded join from RACE_UPSHIFT_STALE to the same-combat terminal outcome; False removes only this tail and never changes the action.
-    "race_terminal_latch_gap_obs": True,  # Audit-only marker when a same-floor durable race source reaches a lethal no-card end-turn without a live latch; False removes only this marker.
     "race_audit_projection_latch_drift_obs": True,  # Audit-only first-latch versus terminal re-projection comparison; False removes only the snapshot/drift tails.
     "race_audit_projection_intent_drift_obs": True,  # Audit-only first-latch versus terminal incoming-intent comparison; False removes only this tail.
     "race_audit_projection_roster_obs": True,  # Audit-only first-latch versus terminal live-enemy roster comparison; False removes only the roster tails.
