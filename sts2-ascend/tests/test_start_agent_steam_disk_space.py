@@ -31,6 +31,13 @@ def ps_literal(value: pathlib.Path | str) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def unrelated_game_dir(userdata_root: pathlib.Path) -> pathlib.PureWindowsPath:
+    # The game install and Steam client can be on different volumes.  Keep
+    # that distinction even when the caller moves the test fixtures to G:.
+    drive = "G:\\" if userdata_root.anchor.casefold() == "c:\\" else "C:\\"
+    return pathlib.PureWindowsPath(drive) / "fixture-game-library"
+
+
 def run_powershell(script: str) -> subprocess.CompletedProcess[str]:
     with tempfile.TemporaryDirectory(prefix="sts2-steam-disk-space-") as root:
         path = pathlib.Path(root) / "check.ps1"
@@ -84,13 +91,20 @@ class StartAgentSteamDiskSpaceTests(unittest.TestCase):
         functions = helper_source()
         with tempfile.TemporaryDirectory(prefix="sts2-steam-fixture-") as root:
             steam_root = pathlib.Path(root)
-            (steam_root / "userdata").mkdir()
+            userdata_root = steam_root / "userdata"
+            userdata_root.mkdir()
+            game_dir = unrelated_game_dir(userdata_root)
             result = run_powershell(
                 f"""
 $ErrorActionPreference = 'Stop'
 {functions}
+$GameDir = {ps_literal(str(game_dir))}
 function Get-SteamInstallRoot {{ return {ps_literal(steam_root)} }}
-function Get-AvailableFreeBytes {{ param([string]$Path); return [UInt64]0 }}
+function Get-AvailableFreeBytes {{
+    param([string]$Path)
+    if ([IO.Path]::GetFullPath($Path) -ne {ps_literal(userdata_root)}) {{ throw 'Expected Steam userdata space probe' }}
+    return [UInt64]0
+}}
 $probe = Get-SteamDiskSpaceStatus -Mode on -ColdLaunch $true -MinimumFreeBytes 1073741824
 $probe | ConvertTo-Json -Depth 6 -Compress
 """
@@ -100,7 +114,8 @@ $probe | ConvertTo-Json -Depth 6 -Compress
             self.assertTrue(probe["required"])
             self.assertFalse(probe["ready"])
             self.assertEqual(probe["free_bytes"], 0)
-            self.assertEqual(probe["drive_root"], "C:\\")
+            self.assertEqual(probe["drive_root"].casefold(), userdata_root.anchor.casefold())
+            self.assertNotEqual(probe["drive_root"].casefold(), game_dir.anchor.casefold())
             self.assertIn("below", probe["reason"])
             self.assertIn("cloud", probe["reason"])
 
@@ -108,13 +123,20 @@ $probe | ConvertTo-Json -Depth 6 -Compress
         functions = helper_source()
         with tempfile.TemporaryDirectory(prefix="sts2-steam-fixture-") as root:
             steam_root = pathlib.Path(root)
-            (steam_root / "userdata").mkdir()
+            userdata_root = steam_root / "userdata"
+            userdata_root.mkdir()
+            game_dir = unrelated_game_dir(userdata_root)
             result = run_powershell(
                 f"""
 $ErrorActionPreference = 'Stop'
 {functions}
+$GameDir = {ps_literal(str(game_dir))}
 function Get-SteamInstallRoot {{ return {ps_literal(steam_root)} }}
-function Get-AvailableFreeBytes {{ param([string]$Path); return [UInt64]2147483648 }}
+function Get-AvailableFreeBytes {{
+    param([string]$Path)
+    if ([IO.Path]::GetFullPath($Path) -ne {ps_literal(userdata_root)}) {{ throw 'Expected Steam userdata space probe' }}
+    return [UInt64]2147483648
+}}
 $probe = Get-SteamDiskSpaceStatus -Mode auto -ColdLaunch $true -MinimumFreeBytes 1073741824
 $probe | ConvertTo-Json -Depth 6 -Compress
 """
@@ -125,7 +147,8 @@ $probe | ConvertTo-Json -Depth 6 -Compress
             self.assertTrue(probe["ready"])
             self.assertEqual(probe["free_bytes"], 2147483648)
             self.assertTrue(probe["userdata_root"].lower().endswith("\\userdata"))
-            self.assertEqual(probe["drive_root"], "C:\\")
+            self.assertEqual(probe["drive_root"].casefold(), userdata_root.anchor.casefold())
+            self.assertNotEqual(probe["drive_root"].casefold(), game_dir.anchor.casefold())
 
     def test_registry_steam_executable_is_normalized_to_client_root(self) -> None:
         functions = helper_source()
