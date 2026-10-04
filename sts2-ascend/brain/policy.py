@@ -977,7 +977,6 @@ class Policy:
         self._kill_race_lethal_free_energy_terminal_outcome_reported = False  # 致死竞速0费回能结局 marker 每场只写一次
         self._lethal_unavailable_terminal_outcome_pending = None  # 最近一次致死无牌空过，等待 GAME_OVER 结局对账
         self._lethal_unavailable_terminal_outcome_reported = False  # 致死无牌空过结局 marker 每场只写一次
-        self._lethal_unavailable_settlement_source_index = None  # 最近一次已写入同场存活结算观测的 source 行
         self._race_allin_lethal_unavailable_terminal_outcome_reported = False  # race-allin 致死无牌补充结局 marker 每场只写一次
         self._nonlethal_unavailable_terminal_outcome_pending = None  # 最近一次非致死无牌空过，等待 GAME_OVER 结局对账
         self._nonlethal_unavailable_terminal_outcome_reported = False  # 非致死无牌空过结局 marker 每场只写一次
@@ -2619,7 +2618,6 @@ class Policy:
             self._path_death_valley_outcome_reported = False
             self._lethal_unavailable_terminal_outcome_pending = None
             self._lethal_unavailable_terminal_outcome_reported = False
-            self._lethal_unavailable_settlement_source_index = None
             self._race_allin_lethal_unavailable_terminal_outcome_reported = False
             self._nonlethal_unavailable_terminal_outcome_pending = None
             self._nonlethal_unavailable_terminal_outcome_reported = False
@@ -2761,12 +2759,6 @@ class Policy:
                                     f"动作 {decision.action} 本进程签名不匹配已拉黑，无安全替代，等待", wait=1.5))
             if screen == "COMBAT":
                 self._remember_hp_pay_result_pending(state, ctx, decision)
-                _lethal_unavailable_settlement_note = (
-                    self._lethal_unavailable_settlement_observation_note(
-                        self.know.policy, state, ctx, decision.action))
-                if _lethal_unavailable_settlement_note:
-                    decision.reason = (f"{decision.reason or ''}"
-                                       f"{_lethal_unavailable_settlement_note}")
             try:
                 decision.trace = trace_builder.finish(decision)
             except Exception:
@@ -4872,144 +4864,6 @@ class Policy:
             f"/final_hp={_num(final_hp)}"
             f"/bridge_rounds={_bridge_rounds}"
             "（KILL_RACE_MODE_FLIP_TERMINAL_OUTCOME_OBS）")
-
-    def _lethal_unavailable_settlement_observation_note(
-            self, pol, state, ctx, settlement_action=None) -> str:
-        """Join a lethal no-card prediction to the next same-floor combat state.
-
-        The preceding ``end_turn`` marker is a prediction based on the raw
-        intent gap.  A following COMBAT snapshot with positive HP is the
-        smallest durable counterexample to that prediction.  This helper only
-        appends an audit note; it is deliberately outside candidate scoring
-        and action selection.
-        """
-        try:
-            _enabled = bool(int(float(pol.get(
-                "lethal_unavailable_settlement_obs", 1) or 0)))
-        except (TypeError, ValueError, OverflowError, AttributeError):
-            _enabled = False
-        if not _enabled:
-            return ""
-
-        decisions = getattr(ctx, "decisions", None)
-        if not isinstance(decisions, list) or not decisions:
-            return ""
-
-        _run = state.get("run") or {}
-        _current_floor = state.get("floor")
-        if _current_floor is None:
-            _current_floor = _run.get("floor")
-        if _current_floor is None:
-            return ""
-
-        def _same_floor(value) -> bool:
-            if value is None:
-                return False
-            try:
-                return int(float(value)) == int(float(_current_floor))
-            except (TypeError, ValueError, OverflowError):
-                return str(value) == str(_current_floor)
-
-        _marker = "LETHAL_UNAVAILABLE_END_TURN_OBS"
-        _settlement_marker = "LETHAL_UNAVAILABLE_SETTLEMENT_OBS"
-        _source_index = None
-        _source = None
-        _start = max(0, len(decisions) - 64)
-        for _index in range(len(decisions) - 1, _start - 1, -1):
-            _row = decisions[_index]
-            if not isinstance(_row, dict):
-                continue
-            if not _same_floor(_row.get("floor")):
-                return ""
-            _screen = _row.get("screen")
-            if _screen not in (None, "COMBAT", "CARD_SELECTION"):
-                return ""
-            _reason = str(_row.get("reason") or "")
-            if _settlement_marker in _reason:
-                return ""
-            if _marker in _reason:
-                if _row.get("action") != "end_turn":
-                    return ""
-                _source_index = _index
-                _source = _row
-                break
-            # A newer same-floor COMBAT decision means the first next-COMBAT
-            # opportunity has already passed without this observation.
-            if _screen == "COMBAT":
-                return ""
-        if _source is None or _source_index is None:
-            return ""
-        if getattr(self, "_lethal_unavailable_settlement_source_index", None) \
-                == _source_index:
-            return ""
-        if any(_settlement_marker in str(row.get("reason") or "")
-               for row in decisions[_source_index + 1:]
-               if isinstance(row, dict)):
-            return ""
-
-        _reason = str(_source.get("reason") or "")
-        _marker_at = _reason.rfind(_marker)
-        _prefix = "致死无牌空过观测："
-        _audit_at = _reason.rfind(_prefix, 0, _marker_at)
-        if _marker_at < 0 or _audit_at < 0:
-            return ""
-        _audit = _reason[_audit_at + len(_prefix):_marker_at]
-
-        def _token(name):
-            _match = re.search(
-                rf"(?:^|/|：){re.escape(name)}=([^/；（）()\s]+)", _audit)
-            return _match.group(1) if _match else None
-
-        def _number(value):
-            try:
-                _value = float(value)
-            except (TypeError, ValueError, OverflowError):
-                return None
-            return _value if math.isfinite(_value) else None
-
-        _source_hp = _number(_token("hp"))
-        _source_block = _number(_token("block"))
-        _source_incoming = _number(_token("incoming"))
-        _source_turn = _source.get("turn", _source.get("round"))
-        _settlement_turn = state.get("turn", state.get("round"))
-        _source_turn_number = _number(_source_turn)
-        _settlement_turn_number = _number(_settlement_turn)
-        if (_source_hp is None or _source_block is None
-                or _source_incoming is None
-                or _source_turn_number is None
-                or _settlement_turn_number is None
-                or _settlement_turn_number <= _source_turn_number):
-            return ""
-
-        _player = (state.get("combat") or {}).get("player") or {}
-        _settlement_hp = _number(_player.get("current_hp"))
-        if _settlement_hp is None:
-            _settlement_hp = _number(_run.get("current_hp"))
-        if _settlement_hp is None or _settlement_hp <= 0:
-            return ""
-
-        def _num(value) -> str:
-            return "?" if value is None else f"{float(value):g}"
-
-        def _round(value) -> str:
-            _value = _number(value)
-            return "?" if _value is None else str(int(_value))
-
-        _action = re.sub(
-            r"[/；（）()\s]+", "_", str(settlement_action or "?")
-        ).strip("_") or "?"
-        self._lethal_unavailable_settlement_source_index = _source_index
-        return (
-            f"；致死无牌空过结算观测：floor={_round(_current_floor)}"
-            f"/source_turn={_round(_source_turn)}/source_action=end_turn"
-            f"/source_hp={_num(_source_hp)}"
-            f"/source_block={_num(_source_block)}"
-            f"/source_incoming={_num(_source_incoming)}"
-            f"/settlement_turn={_round(_settlement_turn)}"
-            f"/settlement_action={_action}"
-            f"/settlement_hp={_num(_settlement_hp)}"
-            f"/actual_hp_delta={_num(_settlement_hp - _source_hp)}"
-            "/survives=yes（LETHAL_UNAVAILABLE_SETTLEMENT_OBS）")
 
     def _potion_reserve_end_turn_observation_note(self, pol, run) -> str:
         """Expose raw potion slots at a lethal no-card boundary.
