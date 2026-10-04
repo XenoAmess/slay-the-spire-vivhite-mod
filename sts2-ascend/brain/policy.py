@@ -11997,13 +11997,23 @@ class Policy:
             return
         if not isinstance(decisions, list) or not decisions:
             return
-        row = decisions[-1]
-        if not isinstance(row, dict) or row.get("action") != "end_turn":
+        row = None
+        reason = ""
+        for candidate in reversed(decisions):
+            if (not isinstance(candidate, dict)
+                    or candidate.get("action") != "end_turn"):
+                continue
+            if (floor is not None and candidate.get("floor") is not None
+                    and str(candidate.get("floor")) != str(floor)):
+                continue
+            candidate_reason = str(candidate.get("reason") or "")
+            if "LETHAL_PLAYABLE_REJECT_OBS" not in candidate_reason:
+                continue
+            row = candidate
+            reason = candidate_reason
+            break
+        if row is None:
             return
-        if (floor is not None and row.get("floor") is not None
-                and str(row.get("floor")) != str(floor)):
-            return
-        reason = str(row.get("reason") or "")
         marker = "LETHAL_PLAYABLE_REJECT_OBS"
         marker_at = reason.rfind(marker)
         if marker_at < 0:

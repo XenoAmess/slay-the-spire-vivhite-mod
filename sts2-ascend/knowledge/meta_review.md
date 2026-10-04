@@ -16381,3 +16381,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 selfcheck 复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的扩容进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。目标源码 AST 解析通过，`git diff --check` 退出码 0；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; minimum DPT sample context integrated)`
+
+## 2026-10-04 run 1919-1920：致死可牌拒绝终局桥回溯修复
+
+profile_id：`ironclad`
+requested_runs：`1919, 1920`
+production_code_commit：`local commit SHA in delivery response`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`LETHAL_PLAYABLE_REJECT_OBS` 记录了一个可负担但被评分拒绝的可出牌；若同一楼层随后又出现新的 `end_turn`，现有 GAME_OVER 恢复器只检查决策链最后一行，可能漏掉这条源证据，导致没有 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`。可证伪条件是：回溯跨楼层误接、同一终局重复追加、或 action/params 改变。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-133930_Y4D7TFSHFGVY.json`（1920，262 条）中，F21 T6 决策 252 记录 `hp=31/block=11/incoming=34/energy=1`、可出 `JUGGLING` 的 `LETHAL_PLAYABLE_REJECT_OBS`；T7/T8 又有新的 `end_turn`，决策 261 才进入 GAME_OVER。该终局已有多类终局审计，但缺少 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`。当前 HEAD 的恢复函数原先只取 `decisions[-1]`，与该缺口一致。
+- **EXPECTED_SIGNAL**：对 1920 原链只读回放，应恢复 `outcome=defeat/floor=21/terminal_round=6` 的 `LETHAL_PLAYABLE_REJECT_OUTCOME_OBS`；未来 3—10 个相关战斗中，源 marker 应最多对应一次同楼层终局 marker，跨楼层、无源证据和关闭开关均静默，动作与参数逐位不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：GAME_OVER 恢复器从决策链尾部向前扫描当前终局楼层最近一条带 `LETHAL_PLAYABLE_REJECT_OBS` 的 `end_turn`，再复用既有字段解析和终局消费逻辑；不改变评分、候选、目标、动作或 params。
+- `sts2-ascend/brain/selfcheck.py`：新增“源 `end_turn` 后有另一条无 marker 的 `end_turn`”回归夹具，并验证终局 round 仍指向源决策；既有重复消费和开关关闭断言保留。
+- 回滚：沿用既有 `lethal_playable_reject_outcome_obs=False`，只移除终局 marker，不回滚行为路径。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个同型终局，统计源 marker→终局 marker 的一对一命中率、source/terminal floor、terminal round、outcome 和重复次数；漏接、跨楼层接入、重复或字段不一致应为 0。
+- **Adjust**：若同楼层存在多个独立战斗且最近源 marker 不能唯一绑定终局，收紧为同一 combat/连续决策边界；不得把观测桥升级为行为门。
+- **Rollback**：将 `lethal_playable_reject_outcome_obs` 设为 `False`，预期 action/params 与既有源 marker 全部不变，仅移除终局后缀。
+- **Validation**：直接 selfcheck 复现宿主固定 256 槽限制；进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。1920 只读回放输出 `terminal_round=6` 与 `RUN1920_REPLAY=OK`；目标 diff `--check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; lethal playable rejection terminal join integrated)`

@@ -22977,6 +22977,27 @@ def main() -> int:
             in d_lethal_playable_replay.reason), \
         f"进程重载后未恢复致死可牌拒绝终局对账: {d_lethal_playable_replay}"
 
+    lethal_playable_late_pol = policy.Policy(knowledge.Knowledge(tmp))
+    lethal_playable_late_ctx = _SettleCtx()
+    lethal_playable_late_ctx.decisions = [{
+        "action": "end_turn", "floor": 33, "turn": 7,
+        "reason": d_lethal_playable.reason,
+    }, {
+        "action": "end_turn", "floor": 33, "turn": 8,
+        "reason": "later end-turn without a lethal playable rejection",
+    }]
+    d_lethal_playable_late = lethal_playable_late_pol.decide(
+        lethal_playable_outcome_state, lethal_playable_late_ctx)
+    assert (d_lethal_playable_late.action
+            == d_lethal_playable_outcome.action
+            and d_lethal_playable_late.params
+            == d_lethal_playable_outcome.params
+            and "LETHAL_PLAYABLE_REJECT_OUTCOME_OBS"
+            in d_lethal_playable_late.reason
+            and "outcome=defeat/floor=33/terminal_round=7"
+            in d_lethal_playable_late.reason), \
+        "后续 end_turn 不应遮蔽同楼层较早的致死可牌拒绝终局对账"
+
     lethal_playable_retry_pol = policy.Policy(knowledge.Knowledge(tmp))
     lethal_playable_retry_ctx = _SettleCtx()
     lethal_playable_retry_ctx.decisions = [{
