@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-04T08:28:50.308351+00:00",
+  "task": "Implement Brain audit optimizations 01-27 with model-owned strategy fixes",
+  "audit_baseline": "117e872e70c066bd9430d181d6da532796a965a6",
+  "completed_p1_p2": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27
+  ],
+  "p3_large_function_refactoring_complete": false,
+  "validation": {
+    "started_at": "2026-10-04T08:14:09.243121+00:00",
+    "source_head": "85020b847ef555ab5eaf41b85a91aff032d20c80",
+    "policy_sha256": "b131e157bd6bc1e908838338a1e38aeb6d21da68883164ddadf20d6f220ab108",
+    "temporary_root": "G:\\sts2-brain-opt-final-tmp-20261004",
+    "checks": [
+      {
+        "name": "full-tests-final",
+        "returncode": 0,
+        "duration_sec": 797.79844709998
+      },
+      {
+        "name": "selfcheck-final",
+        "returncode": 0,
+        "duration_sec": 50.403229099931195
+      }
+    ],
+    "finished_at": "2026-10-04T08:28:17.454478+00:00",
+    "policy_sha256_after": "b131e157bd6bc1e908838338a1e38aeb6d21da68883164ddadf20d6f220ab108"
+  },
+  "full_suite": {
+    "tests": 1086,
+    "duration_sec": 780.053,
+    "failures": 0,
+    "errors": 0,
+    "log": {
+      "path": ".work/brain-opt-20261004/full-tests-final.log",
+      "bytes": 26105,
+      "sha256": "5e832f9dbc11fe02929b720d976154095a03dda8e276e795ca5d433eff00bb1c"
+    }
+  },
+  "selfcheck": {
+    "exit_code": 0,
+    "marker": "SELFCHECK OK",
+    "log": {
+      "path": ".work/brain-opt-20261004/selfcheck-final.log",
+      "bytes": 14224,
+      "sha256": "cf4674e6a35d92f684082514772dd5e530c136db3e803fc7612f532e0e281340"
+    }
+  },
+  "strategy_integration": {
+    "model_commit": "c6d953f02657291749ee4cea179edcc0ad6ba1ae",
+    "artifact": "G:\\workspace\\slay-the-spire-vivhite-mod\\sts2-ascend\\knowledge\\code_backups\\review_work\\brain-opt-20261004\\20261004-160744-249733-strategy-doc-scope-same-session-k3",
+    "patch_sha256": "c55e3f4f11ee985e75886aa56a1a879a338f410c23587ec04bbd67a40fe691b3",
+    "paths": [
+      "sts2-ascend/brain/policy.py",
+      "sts2-ascend/brain/selfcheck.py",
+      "sts2-ascend/docs/2026-10-04-brain策略审计反例闭环实现记录.md",
+      "sts2-ascend/tests/test_policy_audit_contracts.py",
+      "sts2-ascend/tests/test_policy_focus_receipt.py",
+      "sts2-ascend/tests/test_policy_native_damage_order.py"
+    ],
+    "git_transport_sha256": "2324813ee7bff62db1272338edb6404718dc9e2fa998fab84ecd461ee821ed71",
+    "integration": {
+      "created": true,
+      "before_head": "72791cea4b88856e68eaa638d42808ade7b99741",
+      "commit": "85020b847ef555ab5eaf41b85a91aff032d20c80",
+      "pushed": true,
+      "reason": ""
+    }
+  },
+  "strategy_qa": {
+    "evidence": {
+      "path": ".work/brain-opt-20261004/final-strategy-qa.json",
+      "bytes": 6391,
+      "sha256": "39a465959f066001a69aee79025aa345bca89d365c1bed2b6ad96c71c6f464ec"
+    },
+    "result": "passed",
+    "original_test_and_helper_ast": {
+      "unchanged": true,
+      "missing_functions": [],
+      "changed_functions": []
+    },
+    "original_contracts": {
+      "source_revision": "210db1827049a0f4ce9fea67615fc984902577c4",
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "method": "Export original frozen module into an independent in-memory module with its original __file__, then execute against final policy."
+    },
+    "final_contracts": {
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "modules": [
+        "test_policy_audit_contracts",
+        "test_policy_focus_receipt",
+        "test_policy_native_damage_order"
+      ]
+    },
+    "native_damage_order": {
+      "source_evidence": [
+        "sts2-ascend/knowledge/game/v0.111.0/mechanics/rules_commands.jsonl:12",
+        "sts2-ascend/knowledge/game/v0.111.0/mechanics/powers.jsonl:115",
+        "sts2-ascend/knowledge/game/v0.111.0/mechanics/powers.jsonl:138",
+        "sts2-ascend/knowledge/game/v0.111.0/mechanics/powers.jsonl:254"
+      ],
+      "intangible_slippery_block": {
+        "input": "HP=2, block=3, Intangible=1, Slippery=1; damage=6 x 3",
+        "observed_score": 3.0,
+        "certified_kill": false,
+        "slippery_layers_broken": 0
+      },
+      "exhausted_shell_slippery": {
+        "input": "HP=10, HardenedShell amount=20/display_amount=0, Slippery=1; damage=6",
+        "observed_score": 0.0,
+        "certified_kill": false,
+        "slippery_layers_broken": 0
+      },
+      "display_amount_contract": {
+        "native_meaning": "HardenedShell current-turn remaining HP-loss allowance, not remaining hit count; directly sourced from native DisplayAmount.",
+        "missing_observed_remaining": null,
+        "null_observed_remaining": null,
+        "zero_observed_remaining": 0.0,
+        "five_observed_remaining": 5.0,
+        "unknown_does_not_certify_exact_kill": true,
+        "zero_does_not_fallback_to_amount": true
+      }
+    },
+    "focus_receipts": {
+      "tuple_fields": [
+        "_focus_index",
+        "_focus_played_index",
+        "_focus_drift_flips"
+      ],
+      "initial": [
+        0,
+        0,
+        0
+      ],
+      "proposed_without_receipt": [
+        0,
+        0,
+        0
+      ],
+      "retry_without_receipt": [
+        0,
+        0,
+        0
+      ],
+      "after_successfully_applied_receipt": [
+        1,
+        1,
+        1
+      ],
+      "after_reconsuming_same_receipt": [
+        1,
+        1,
+        1
+      ],
+      "updates_only_in_successful_credit_tag_consumer": true,
+      "three_field_commit_is_in_same_focus_commit_handshake": true
+    },
+    "online_72_preservation": {
+      "commit": "72ccabf0851917aca26cca0904e564c054173c9a",
+      "policy_function": "_restore_lethal_playable_reject_outcome_from_decisions",
+      "policy_function_ast_unchanged": true,
+      "late_end_turn_selfcheck_marked_statements": 4,
+      "all_marked_statements_preserved": true
+    }
+  },
+  "native_api": {
+    "production_source_branch": "deploy/brain-audit-display-amount-v0.12.5",
+    "production_source_commit": "f339752f1f4c591da86d19455b0b47eafd374533",
+    "production_source_tests": 428,
+    "upstream_source_tests": 886,
+    "upstream_pr": "https://github.com/CharTyr/STS2-Agent/pull/206",
+    "dll_deployed_by_this_task": false
+  },
+  "private_index_capture_measurement": {
+    "fixture_bytes": 6291456,
+    "before_sec": 1.721,
+    "after_sec": 0.622,
+    "before_clean_reads": 6,
+    "after_clean_reads": 0,
+    "same_final_tree": true,
+    "production_2gib_clone_rerun": false
+  },
+  "source_consistency": [
+    {
+      "path": "sts2-ascend/brain/agent.py",
+      "tested_commit_blob_sha256": "82110da3e08d4d8404d31bfc557c9479e74957889ea8d12b8a9e438ac1301027",
+      "current_worktree_sha256": "acd36b440bc77a5fda09e35cf44509327b21f22afca9e49edb56ea896e84ae29",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/brain/autogit.py",
+      "tested_commit_blob_sha256": "0ce47df409823899c7af6eb3fa5c98c33ed60abd838458bb51d4e28c06c3b044",
+      "current_worktree_sha256": "9f4623829a509cdd234bb593a40d0ba98182208c7cf1e721f55627b59d76cbd6",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/brain/knowledge.py",
+      "tested_commit_blob_sha256": "79dc7d43b36c28f7208d0bcfa9ffbf57318c96603192c79d5ef924ddfd2e1f19",
+      "current_worktree_sha256": "1f6b8f1b842744412cb1555897903212d763b4e8001a64e99eb45500d408c299",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/brain/llm_review.py",
+      "tested_commit_blob_sha256": "69db3c8ea8f16ac5bdb64a47ebe9c12594f88c9e21626d67c3e5eb2a88deeb06",
+      "current_worktree_sha256": "baadd21887b9125348b184c2c1cf187f4a076247b9136701f613a466a4c8a522",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/brain/policy.py",
+      "tested_commit_blob_sha256": "6460ca2bc247d7001a3899ee89e7abb1da1c65cd8096ae2be600ef726d52b175",
+      "current_worktree_sha256": "b131e157bd6bc1e908838338a1e38aeb6d21da68883164ddadf20d6f220ab108",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/brain/selfcheck.py",
+      "tested_commit_blob_sha256": "c0635f3e2e20c47c5e4c43a1dcd60f090b905a430e83d86513c9690e80ad2f47",
+      "current_worktree_sha256": "4a4b6af98e8dd1117cfaf0fc0939a071d27c1fdbc07dc7a4dd00bc92240148e1",
+      "matches_tested_commit_after_git_eol_conversion": true
+    },
+    {
+      "path": "sts2-ascend/scripts/GameColdStart.ps1",
+      "tested_commit_blob_sha256": "969bfd69a475b47ee2c8c9cca114c1eabb986d26182f638fff7e97211c98ea52",
+      "current_worktree_sha256": "86e99f5127694263cd69b4aa57b156f166acf6d8e0b58c83d057e441b5a4977f",
+      "matches_tested_commit_after_git_eol_conversion": true
+    }
+  ],
+  "boundaries": {
+    "production_stack_restarted_by_this_task": false,
+    "broadcast_gui_touched_by_this_task": false,
+    "production_learning_memory_hand_edited": false,
+    "live_performance_or_win_rate_claim": false,
+    "all_five_manual_failure_artifacts_retained": true
+  }
+}
