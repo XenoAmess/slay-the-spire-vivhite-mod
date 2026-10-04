@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -770,10 +771,11 @@ def _remove_progress_index_pending_unlocked(commit: str) -> bool:
 
 
 def _index_matches_commit_unlocked(
-    commit: str, specs: Sequence[str], timeout: float = 90,
+    commit: str, specs: Sequence[str], timeout: float = 90, *,
+    env: dict[str, str] | None = None,
 ) -> bool | None:
     result = _run_git(
-        ["diff", "--cached", "--quiet", commit, "--", *specs], timeout=timeout)
+        ["diff", "--cached", "--quiet", commit, "--", *specs], timeout=timeout, env=env)
     if result.returncode == 0:
         return True
     if result.returncode == 1:
@@ -785,6 +787,71 @@ def _index_lock_error(result: subprocess.CompletedProcess[str]) -> bool:
     detail = ((result.stderr or "") + "\n" + (result.stdout or "")).casefold()
     return ("index.lock" in detail or "could not lock index" in detail
             or "unable to create" in detail and "index" in detail and "lock" in detail)
+
+
+def _index_path_unlocked(timeout: float = 10) -> Path:
+    """Resolve Git's effective index, including linked worktrees/GIT_INDEX_FILE."""
+    result = _run_git([
+        "rev-parse", "--path-format=absolute", "--git-path", "index",
+    ], timeout=timeout)
+    if result.returncode != 0 or not result.stdout.strip():
+        raise RuntimeError(result.stderr.strip() or "Cannot resolve Git index")
+    path = Path(result.stdout.strip())
+    return path if path.is_absolute() else REPO_DIR / path
+
+
+def _restore_index_snapshot_unlocked(
+    commit: str, specs: Sequence[str], expected_index: bytes, *, timeout: float = 10,
+) -> subprocess.CompletedProcess[str]:
+    """Compare and publish exact entries while holding Git's native index lock.
+
+    Git edits a temporary copy of the existing index, preserving unrelated staged
+    content and index extensions. The native lock covers the last snapshot read
+    and atomic replacement; ordinary concurrent ``git add`` must respect it too.
+    """
+    args = ["restore", "--staged", f"--source={commit}", "--", *specs]
+    index_path = _index_path_unlocked(timeout=timeout)
+    lock_path = index_path.with_name(index_path.name + ".lock")
+    try:
+        lock_fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+    except FileExistsError:
+        return subprocess.CompletedProcess(
+            args, 128, "", f"Could not lock index: '{lock_path}' already exists")
+    lock_identity = os.fstat(lock_fd)
+    temp_name = ""
+    try:
+        if _index_entries_unlocked(specs, timeout=timeout) != expected_index:
+            return subprocess.CompletedProcess(
+                args, 128, "", "Target staged snapshot changed; preserving user index")
+        temp_fd, temp_name = tempfile.mkstemp(
+            prefix=".sts2-autogit-index-", suffix=".tmp", dir=index_path.parent)
+        os.close(temp_fd)
+        if index_path.exists():
+            shutil.copyfile(index_path, temp_name)
+        else:
+            Path(temp_name).unlink()
+        env = os.environ.copy()
+        env["GIT_INDEX_FILE"] = temp_name
+        restored = _run_git(args, timeout=timeout, env=env)
+        if restored.returncode != 0:
+            return restored
+        if _index_matches_commit_unlocked(commit, specs, timeout=timeout, env=env) is not True:
+            return subprocess.CompletedProcess(
+                args, 128, "", "Temporary index verification failed; preserving real index")
+        os.replace(temp_name, index_path)
+        return restored
+    finally:
+        if temp_name:
+            Path(temp_name).unlink(missing_ok=True)
+            Path(temp_name + ".lock").unlink(missing_ok=True)
+        os.close(lock_fd)
+        try:
+            current_lock = lock_path.stat()
+            if (current_lock.st_dev, current_lock.st_ino) == \
+                    (lock_identity.st_dev, lock_identity.st_ino):
+                lock_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _sync_progress_index_unlocked(
@@ -807,9 +874,8 @@ def _sync_progress_index_unlocked(
         if current_index != expected_index:
             log("[git] private index 重试前发现目标暂存内容已被外部修改；保留用户 index")
             return False
-        synced = _run_git([
-            "restore", "--staged", f"--source={commit}", "--", *specs,
-        ], timeout=10)
+        synced = _restore_index_snapshot_unlocked(
+            commit, specs, expected_index, timeout=10)
         if synced.returncode == 0:
             verified = _index_matches_commit_unlocked(commit, specs, timeout=10)
             if verified is True:
@@ -1661,9 +1727,12 @@ def sync_prepared_index(
                 return False
             if parent_index.returncode != 0:
                 raise RuntimeError(parent_index.stderr.strip() or "无法比较 prepared index")
-            synced = _run_git([
-                "restore", "--staged", f"--source={current_head}", "--", *claimed,
-            ], timeout=remaining())
+            expected_index = _index_entries_unlocked(claimed, timeout=remaining())
+            # Recheck this exact snapshot before entering the native index lock.
+            if _index_matches_commit_unlocked(parent, claimed, timeout=remaining()) is not True:
+                return False
+            synced = _restore_index_snapshot_unlocked(
+                current_head, claimed, expected_index, timeout=remaining())
             if synced.returncode != 0:
                 raise RuntimeError(synced.stderr.strip() or "prepared index 同步失败")
             log(f"[git] 已补齐 prepared commit {commit[:8]} 的真实 index 同步")
