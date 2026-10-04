@@ -77,6 +77,61 @@ def packet_fixture():
 
 
 class PacketBudgetTests(unittest.TestCase):
+    def test_small_history_excerpts_are_trimmed_before_larger_failure_decisions(self):
+        summaries = [{
+            "run_id": f"run-{i}", "run_number": i,
+            "combat_notes_total": 5, "key_reasons_total": 3,
+            "combat_notes": ["note " * 40 for _ in range(5)],
+            "key_reasons": ["reason " * 28 for _ in range(3)],
+        } for i in range(100)]
+        decisions = [{
+            "decision_id": f"decision-{i}", "floor": i,
+            "action": "play_card", "reason": "cause " * 50,
+            "candidates": [{"score": j, "reason": "candidate " * 20}
+                           for j in range(20)],
+        } for i in range(38)]
+        packet = {
+            "profile_id": "test",
+            "run_evidence_scope": {"requested": list(range(100)), "missing": []},
+            "runs_summary": summaries,
+            "decision_chain_evidence": {"full_failure_run": {
+                "run_id": "run-99", "decisions": decisions,
+                "decision_count": 38, "kept_decisions": 38,
+                "omitted_decisions": 0, "complete_persisted_chain": True,
+                "full_chain_available_in": "runs/run-99.json",
+            }},
+        }
+        original = copy.deepcopy(packet)
+
+        result = enforce_packet_budget(packet)
+
+        self.assertLessEqual(serialized_size(result), 200_000)
+        self.assertEqual(result["decision_chain_evidence"],
+                         packet["decision_chain_evidence"])
+        self.assertEqual(result["run_evidence_scope"], packet["run_evidence_scope"])
+        self.assertEqual(len(result["runs_summary"]), 100)
+        self.assertEqual([row["run_id"] for row in result["runs_summary"]],
+                         [row["run_id"] for row in summaries])
+        self.assertNotEqual(result["runs_summary"], summaries)
+        self.assertEqual(packet, original)
+
+    def test_failure_chain_only_shrinks_after_discretionary_evidence_is_exhausted(self):
+        packet = packet_fixture()
+
+        result = enforce_packet_budget(packet, 90_000)
+
+        full = result["decision_chain_evidence"]["full_failure_run"]
+        self.assertLess(full["kept_decisions"], full["decision_count"])
+        summary = result["runs_summary"][0]
+        self.assertEqual(summary["combat_notes"], [])
+        self.assertEqual(summary["key_reasons"], [])
+        self.assertEqual(result["stats_digest"]["cards"], [])
+        self.assertEqual(result["stats_digest"]["events"], {})
+        self.assertEqual(result["recent_review_context"], "")
+        self.assertEqual(result["historical_zero_code_debt"], "")
+        self.assertEqual(result["failed_review_replay"]["packages"][0]["candidate_patch"], "")
+        self.assertEqual(full["full_chain_available_in"], "runs/run-10.json")
+
     def test_default_budget_includes_note_and_preserves_source(self):
         packet = packet_fixture()
         original = copy.deepcopy(packet)
