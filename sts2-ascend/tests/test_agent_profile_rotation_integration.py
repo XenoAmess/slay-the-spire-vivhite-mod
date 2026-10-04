@@ -543,5 +543,48 @@ class AgentProfileRotationIntegrationTests(unittest.TestCase):
             self.assertEqual(real_rotation.target_character, IRONCLAD)
 
 
+    def test_cleanup_failure_after_rotation_retries_complete_handoff_once(self):
+        with tempfile.TemporaryDirectory(prefix="sts2-terminal-cleanup-") as raw:
+            rotation = CharacterRotation.from_knowledge_root(Path(raw))
+            rotation.observe_active_run("run-v", VIVHITE_CHARACTER_ID)
+            events = []
+            instance = _finalizing_agent(rotation, _FinalKnowledge(events))
+            instance._finish_run_learning = mock.Mock(
+                side_effect=[OSError("journal temporarily locked"), None])
+            instance._rotation_unresolved_run_id = "run-v"
+            instance._native_save_transition_blocked = True
+            instance.ctx.native_save_wait = {"old_run_id": "run-v"}
+            review = mock.Mock()
+            review.terminal_review_handoff.return_value = {
+                "state": "pending", "run_id": "run-v", "profile_id": "vivhite"}
+            git = mock.Mock()
+            with mock.patch.object(agent_module, "finalize_run", return_value="lesson") as reflect, \
+                    mock.patch.object(agent_module, "llm_review", review), \
+                    mock.patch.object(agent_module, "autogit", git), \
+                    mock.patch.object(agent_module, "log"):
+                instance._finalize(False, 12, native_save_state=_verified_state())
+                self.assertFalse(instance.ctx.run_finalized)
+                self.assertTrue(instance.ctx.finalize_requested)
+                self.assertIn("run-v", rotation.snapshot().finalized_run_ids)
+                self.assertEqual(instance.runs_played, 0)
+                review.enqueue_review.assert_not_called()
+                git.commit_progress.assert_not_called()
+                self.assertEqual(instance.know.saved_log["review_handoff"]["state"], "pending")
+                instance._finalize(False, 12, native_save_state=_verified_state())
+                instance._finalize(False, 12, native_save_state=_verified_state())
+            reflect.assert_called_once()
+            review.terminal_review_handoff.assert_called_once()
+            review.enqueue_review.assert_called_once_with(instance, log=mock.ANY)
+            git.commit_progress.assert_called_once()
+            instance._mark_review_run_healthy.assert_called_once()
+            self.assertEqual(instance.runs_played, 1)
+            self.assertTrue(instance.ctx.run_finalized)
+            self.assertFalse(instance.ctx.finalize_requested)
+            self.assertIsNone(instance.ctx.pending_terminal_persistence)
+            self.assertIsNone(instance.ctx.native_save_wait)
+            self.assertEqual(instance._rotation_unresolved_run_id, "")
+            self.assertFalse(instance._native_save_transition_blocked)
+
+
 if __name__ == "__main__":
     unittest.main()

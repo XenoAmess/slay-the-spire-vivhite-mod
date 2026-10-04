@@ -4019,7 +4019,8 @@ class Agent:
         rotation = getattr(self, "rotation", None)
         if rotation is not None and self.ctx.run_id != "run_unknown":
             try:
-                if self.ctx.run_id in rotation.snapshot().finalized_run_ids:
+                if (self.ctx.run_id in rotation.snapshot().finalized_run_ids
+                        and self.ctx.pending_terminal_persistence is None):
                     self._finish_run_learning(self.know, self.ctx.run_id)
                     self.ctx.run_finalized = True
                     self.ctx.finalize_requested = False
@@ -4102,6 +4103,11 @@ class Agent:
                     self.ctx.attribution_tags),
                 "native_save": native_save_proof,
             }
+            handoff_builder = getattr(llm_review, "terminal_review_handoff", None)
+            if callable(handoff_builder):
+                handoff = handoff_builder(self, payload)
+                if isinstance(handoff, dict):
+                    payload["review_handoff"] = handoff
             if final_deck is not None:
                 payload["final_deck"] = copy.deepcopy(final_deck)
             deck_changes = getattr(self.ctx, "deck_changes", None)
