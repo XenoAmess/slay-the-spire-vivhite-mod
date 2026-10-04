@@ -40,6 +40,7 @@ class ControlSnapshot:
     source: str = "default"
     hotkeys_registered: bool | None = None
     error: str = ""
+    acknowledged_pause_generation: int = 0
 
     @property
     def paused(self) -> bool:
@@ -56,6 +57,45 @@ def control_path(runtime_dir: Path | None = None,
     sid = str(session_id or SESSION_ID or "legacy").strip().lower() or "legacy"
     safe_sid = "".join(ch for ch in sid if ch.isalnum() or ch in "-_") or "legacy"
     return root / f"brain-control.{safe_sid}.json"
+
+
+def acknowledgement_path(runtime_dir: Path | None = None,
+                         session_id: str | None = None) -> Path:
+    return control_path(runtime_dir, session_id).with_suffix(".ack.json")
+
+
+def _read_acknowledgement(runtime_dir: Path | None = None,
+                          session_id: str | None = None) -> int:
+    """The single Brain writer confirms epochs only after durable exclusion.
+
+    A separate session leaf avoids racing the runner's control-state writer.
+    Missing/old acknowledgements replay the exclusion, which is idempotent.
+    """
+    try:
+        data = json.loads(acknowledgement_path(runtime_dir, session_id).read_text(
+            encoding="utf-8"))
+        expected = str(session_id or SESSION_ID or "legacy")
+        generation = data.get("pause_generation")
+        if (data.get("session_id") == expected and type(generation) is int
+                and generation >= 0):
+            return generation
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return 0
+
+
+def acknowledge_pause_generation(generation: int, *,
+                                  runtime_dir: Path | None = None,
+                                  session_id: str | None = None) -> None:
+    """Persist a consumed pause epoch without modifying the runner's mode."""
+    if type(generation) is not int or generation < 0:
+        raise ValueError("pause acknowledgement must be a non-negative integer")
+    _atomic_write(acknowledgement_path(runtime_dir, session_id), {
+        "schema": "sts2.ascend-brain-control-ack/v1",
+        "session_id": str(session_id or SESSION_ID or "legacy"),
+        "pause_generation": generation,
+        "acknowledged_at": _now(),
+    })
 
 
 def read_control_state(runtime_dir: Path | None = None,
@@ -89,6 +129,8 @@ def read_control_state(runtime_dir: Path | None = None,
             changed_at=str(data.get("changed_at") or ""),
             source=str(data.get("source") or "unknown"),
             hotkeys_registered=registered,
+            acknowledged_pause_generation=min(
+                generation, _read_acknowledgement(runtime_dir, session_id)),
         )
     except (json.JSONDecodeError, TypeError, ValueError) as exc:
         return ControlSnapshot(enabled=False, source="invalid-state", error=str(exc))

@@ -85,6 +85,11 @@ class ManualControlStateTests(unittest.TestCase):
 
 
 class ManualControlIntegrationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        acknowledgement = mock.patch.object(agent_module, "acknowledge_pause_generation")
+        acknowledgement.start()
+        self.addCleanup(acknowledgement.stop)
+
     @staticmethod
     def _disk_stats(root: Path) -> dict:
         return json.loads((root / "stats.json").read_text(encoding="utf-8"))

@@ -41,7 +41,7 @@ from lifecycle import (mark_pid_stage, pid_file, read_git_head, request_stop,
                        stop_requested, wait_for_stop)
 from live_dashboard import LiveDashboardPublisher
 from manual_control import (BrainControlPaused, PAUSE_HOTKEY, RESUME_HOTKEY,
-                            read_control_state)
+                            acknowledge_pause_generation, read_control_state)
 from policy import Decision, Policy
 from reflect import finalize_run
 from runtime_paths import resolve_knowledge_dir
@@ -501,11 +501,10 @@ class Agent:
         initial_control = read_control_state()
         self._manual_pause_active = False
         self._manual_run_ids: set[str] = set()
-        # An enabled inherited session has already acknowledged its prior pause
-        # epochs.  A child born while paused must still observe the current epoch.
-        self._seen_pause_generation = (
-            initial_control.pause_generation if initial_control.enabled
-            else max(0, initial_control.pause_generation - 1))
+        # F10 resumes actions, not learning.  The runner's mode cannot prove a
+        # prior child consumed F9; only a durable acknowledgement survives a crash
+        # between those two hotkeys and the next state GET.
+        self._seen_pause_generation = initial_control.acknowledged_pause_generation
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
         self._native_continue_recovery_expected = ""
@@ -1609,8 +1608,37 @@ class Agent:
         check = getattr(knowledge, "run_learning_is_excluded", None)
         return bool(callable(check) and check(run_id))
 
+    def _restore_manual_takeover_context(self) -> None:
+        """Recover the old scheduler identity before consuming an unseen F9."""
+        if self.ctx.run_id not in ("", "run_unknown"):
+            return
+        rotation = getattr(self, "rotation", None)
+        profiles = getattr(self, "profile_store", None)
+        if rotation is None or profiles is None:
+            return
+        snapshot = rotation.snapshot()
+        if not snapshot.active_run_id or not snapshot.active_character_id:
+            return
+        profile = profiles.for_character(snapshot.active_character_id)
+        knowledge = self._profile_knowledge[profile.profile_id]
+        prior = knowledge.load_run_log(snapshot.active_run_id)
+        number = int(knowledge.stats.get("global", {}).get("runs", 0)) + 1
+        self._activate_profile(profile)
+        self.ctx.reset_for(str(snapshot.active_run_id), 0, number)
+        self.ctx.profile_id = profile.profile_id
+        self.ctx.character_id = str(snapshot.active_character_id)
+        self.ctx.profile_run_number = number
+        if isinstance(prior, dict):
+            self.ctx.decisions = copy.deepcopy(prior.get("decisions") or [])
+            self.ctx.combat_notes = copy.deepcopy(prior.get("combat_notes") or [])
+            self.ctx.attribution_tags = _durable_attribution_tags(
+                prior.get("attribution_tags"))
+            self.ctx.started_at = str(prior.get("started_at") or self.ctx.started_at)
+            self.ctx.ascension = int(prior.get("ascension", 0) or 0)
+
     def _mark_manual_takeover(self, state: dict, *, source: str) -> str:
         """Mark every run straddling a human-control boundary as non-learning."""
+        self._restore_manual_takeover_context()
         ctx = self.ctx
         current_run_id = self._state_run_identity(state)
         ctx_run_id = str(getattr(ctx, "run_id", "") or "").strip()
@@ -1688,7 +1716,13 @@ class Agent:
         snapshot = read_control_state()
         seen = int(getattr(self, "_seen_pause_generation", 0) or 0)
         if snapshot.pause_generation > seen:
-            self._mark_manual_takeover(state, source=snapshot.source)
+            try:
+                self._mark_manual_takeover(state, source=snapshot.source)
+                acknowledge_pause_generation(snapshot.pause_generation)
+            except (OSError, ValueError, CharacterRotationError) as exc:
+                log(f"[agent] ??????/???????????????{exc}")
+                self._dashboard_connection("paused", "??????????")
+                return True
         self._seen_pause_generation = max(seen, snapshot.pause_generation)
 
         if (not self._state_run_identity(state)
@@ -1716,7 +1750,7 @@ class Agent:
         return False
 
     def _exclude_human_assisted_run(self, *, victory: bool, floor: int) -> None:
-        """Close a mixed run without mutating autonomous stats, policy or quota."""
+        """Close a mixed run only after its durable audit replaces the journal."""
         if self.ctx.run_finalized:
             return
         run_id = str(self.ctx.run_id or "run_unknown")
@@ -1724,36 +1758,43 @@ class Agent:
         self._manual_run_ids.add(run_id)
         knowledge, _profile = self._knowledge_for_run_learning(
             profile_id=str(getattr(self.ctx, "profile_id", "") or ""))
-        # Re-apply the rollback at close so even a legacy/direct stats mutation
-        # after F10 cannot survive the mixed run.
         self._begin_run_learning(knowledge, run_id)
         self._exclude_run_learning(knowledge, run_id)
-        # Preserve the partial evidence as in-progress/excluded.  Existing floor
-        # statistics and LLM packet builders already omit in-progress logs.
         try:
-            self._save_run_progress({"floor": int(floor or 0)}, force=True)
+            saved = self._save_run_progress({"floor": int(floor or 0)}, force=True)
         except Exception as exc:
-            log(f"[agent] 人工接管局审计存档失败：{exc}")
-        try:
-            self._finish_run_learning(knowledge, run_id)
-        except Exception as exc:
-            # The exclusion marker and restored stats were persisted first.  A
-            # leftover journal therefore remains fail-closed on the next process.
-            log(f"[agent] 人工接管局学习快照清理失败（隔离仍有效）：{exc}")
-        self.ctx.run_finalized = True
-        self.ctx.finalize_requested = False
-        self.ctx.combat = None
-        self.ctx.combat_agg = None
+            saved = False
+            log(f"[agent] ????????????{exc}")
+        if not saved:
+            self.ctx.finalize_requested = True
+            self._native_save_transition_blocked = True
+            log("[agent] ???????????????????????????")
+            return
         rotation = getattr(self, "rotation", None)
         if rotation is not None and run_id != "run_unknown":
             try:
                 rotation.release_human_controlled_run(run_id)
-            except CharacterRotationError as exc:
-                log(f"[agent] 人工接管局释放轮换身份失败：{exc}")
-        result = "胜利" if victory else "结束"
+            except (CharacterRotationError, OSError, ValueError) as exc:
+                self.ctx.finalize_requested = True
+                self._native_save_transition_blocked = True
+                log(f"[agent] ???????????????????????{exc}")
+                return
+        try:
+            self._finish_run_learning(knowledge, run_id)
+        except Exception as exc:
+            # The audit remains durable even if the excluded journal survives.
+            log(f"[agent] ?????????????????????{exc}")
+        self.ctx.run_finalized = True
+        self.ctx.finalize_requested = False
+        self.ctx.combat = None
+        self.ctx.combat_agg = None
+        self._rotation_unresolved_run_id = ""
+        self._native_save_transition_blocked = False
+        self._native_continue_recovery_expected = ""
+        result = "??" if victory else "??"
         log(
-            f"[agent] 人工接管局 {run_id} 已{result}于 F{int(floor or 0)}；"
-            "不增加局数、不更新平均/最高楼层、不进入 LLM 复盘，轮换配额保持原位")
+            f"[agent] ????? {run_id} ?{result}? F{int(floor or 0)}?"
+            "???????????/???????? LLM ???????????")
 
     # ---------------- quipper（白绮碎碎念） ----------------
 
@@ -2177,6 +2218,8 @@ class Agent:
                     victory=False,
                     floor=(self.ctx.decisions[-1].get("floor", 0)
                            if self.ctx.decisions else 0))
+                if not self.ctx.run_finalized:
+                    return
             else:
                 self._hold_disappeared_run_for_native_save(state)
                 return
@@ -3294,7 +3337,8 @@ class Agent:
         中途崩溃/自杀重启（218 局 F23 签名故障）时，前半局决策与战斗记录全灭，
         重连进程另起新账把深局记成残缺局。现在每 15 条决策（或换层）落盘一次，
         重连时按 run_id 接续，崩溃最多丢失最近十几条决策。"""
-        if not self.ctx.decisions or self.ctx.run_id == "run_unknown":
+        if (self.ctx.run_id == "run_unknown"
+                or (not self.ctx.decisions and not self.ctx.human_assisted)):
             return False
         # 终局定稿后禁止增量覆盖（第 369 局复盘）：结算屏之后的「回主菜单/
         # 检查时间线」等后继决策会以增量稿格式（in_progress=true/victory=
