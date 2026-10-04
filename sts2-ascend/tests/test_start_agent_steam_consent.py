@@ -9,11 +9,13 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 START_AGENT = ROOT / "sts2-ascend" / "scripts" / "Start-Agent.ps1"
+GAME_START = START_AGENT.with_name("GameColdStart.ps1")
 
 
 def function_source(name: str, next_name: str) -> str:
-    source = START_AGENT.read_text(encoding="utf-8")
+    source = GAME_START.read_text(encoding="utf-8-sig")
     start = source.index(f"function {name}")
+    next_name = "Get-AscendGameProcesses" if next_name == "Normalize-SessionId" else next_name
     end = source.index(f"function {next_name}", start)
     return source[start:end]
 
@@ -124,12 +126,14 @@ $probe | ConvertTo-Json -Depth 6 -Compress
     def test_off_preflight_precedes_deploy_and_game_launch(self) -> None:
         source = START_AGENT.read_text(encoding="utf-8")
         game_probe = source.index("$game = @(Get-GameProcesses)")
-        preflight = source.index("Test-LocalModConsent", game_probe)
+        preflight = source.index("Get-AscendGameStartupPlan", game_probe)
         deploy = source.index("if (-not $SkipDeploy)", game_probe)
-        launch = source.index("Start-Process -FilePath $gameLauncher", game_probe)
+        launch = source.index("Invoke-AscendGameLaunch", game_probe)
         self.assertLess(preflight, deploy)
         self.assertLess(preflight, launch)
-        preflight_block = source[preflight:deploy]
+        helper = GAME_START.read_text(encoding="utf-8-sig")
+        preflight_block = helper[helper.index("if ($Mode -eq \"off\" -and $coldLaunch)"):
+                                 helper.index("$disk = Get-SteamDiskSpaceStatus")]
         self.assertRegex(preflight_block, r"(?i)(人工|manual)")
         self.assertRegex(preflight_block, r"(?i)(UAC|GUI)")
 

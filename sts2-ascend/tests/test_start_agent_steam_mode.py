@@ -8,12 +8,13 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 START_AGENT = ROOT / "sts2-ascend" / "scripts" / "Start-Agent.ps1"
+GAME_START = START_AGENT.with_name("GameColdStart.ps1")
 
 
 def helper_source() -> str:
-    source = START_AGENT.read_text(encoding="utf-8")
+    source = GAME_START.read_text(encoding="utf-8-sig")
     start = source.index("function Get-GameLaunchArguments")
-    end = source.index("function Normalize-SessionId", start)
+    end = source.index("function Get-AscendGameProcesses", start)
     return source[start:end]
 
 
@@ -74,19 +75,13 @@ foreach ($mode in @('auto', 'on', 'off')) {{
         self.assertEqual(rows, ["auto|", "on|", "off|--force-steam,off"])
 
     def test_cold_launch_branch_is_the_only_argument_forwarding_branch(self) -> None:
-        source = START_AGENT.read_text(encoding="utf-8")
-        launch = source[source.index("if ($game.Count -eq 0)") :]
-        self.assertIn(
-            "Start-Process -FilePath $gameLauncher -ArgumentList $gameLaunchArguments",
-            launch,
-        )
-        self.assertIn(
-            "Start-Process -FilePath $gameLauncher -WorkingDirectory $GameDir",
-            launch,
-        )
+        source = GAME_START.read_text(encoding="utf-8-sig")
+        launch = source[source.index("if ($plan.ColdLaunch)") :]
+        self.assertIn("Start-Process @launchParams", launch)
+        self.assertIn("$launchParams.ArgumentList = $plan.LaunchArguments", launch)
         self.assertLess(
-            launch.index("if ($gameLaunchArguments.Count -gt 0)"),
-            launch.index("Start-Process -FilePath $gameLauncher -ArgumentList"),
+            launch.index("if ($plan.LaunchArguments.Count -gt 0)"),
+            launch.index("Start-Process @launchParams"),
         )
         self.assertNotIn("steam_appid.txt", launch)
         self.assertNotRegex(launch, r"(?i)(Set-Content|Out-File|Copy-Item).*Steam")

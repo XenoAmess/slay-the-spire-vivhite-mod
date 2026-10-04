@@ -17,10 +17,11 @@ import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 START_AGENT = ROOT / "sts2-ascend" / "scripts" / "Start-Agent.ps1"
+GAME_START = START_AGENT.with_name("GameColdStart.ps1")
 
 
 def helper_source() -> str:
-    source = START_AGENT.read_text(encoding="utf-8")
+    source = GAME_START.read_text(encoding="utf-8-sig")
     start = source.index("function Get-SteamInstallRoot")
     end = source.index("function Get-GameLaunchArguments", start)
     return source[start:end]
@@ -73,9 +74,9 @@ class StartAgentSteamDiskSpaceTests(unittest.TestCase):
         ):
             self.assertIn(field, source)
 
-        status_call = source.index("$steamDiskStatus = Get-SteamDiskSpaceStatus")
+        status_call = source.index("$startupPlan = Get-AscendGameStartupPlan")
         deploy = source.index("if (-not $SkipDeploy)", status_call)
-        launch = source.index("Start-Process -FilePath $gameLauncher", status_call)
+        launch = source.index("$launchResult = Invoke-AscendGameLaunch", status_call)
         self.assertLess(status_call, deploy)
         self.assertLess(status_call, launch)
 
@@ -205,9 +206,9 @@ $running = Get-SteamDiskSpaceStatus -Mode on -ColdLaunch $false -MinimumFreeByte
             source,
             r"(?i)\b(?:Set-Content|Out-File|Add-Content|Copy-Item|Move-Item|Remove-Item|Start-Process|Invoke-MouseClick|UAC)\b",
         )
-        gate = START_AGENT.read_text(encoding="utf-8")
-        gate_start = gate.index("$steamDiskStatus = Get-SteamDiskSpaceStatus")
-        gate_end = gate.index("if (-not $SkipDeploy)", gate_start)
+        gate = GAME_START.read_text(encoding="utf-8-sig")
+        gate_start = gate.index("$disk = Get-SteamDiskSpaceStatus")
+        gate_end = gate.index("function Invoke-AscendGameLaunch", gate_start)
         gate_block = gate[gate_start:gate_end]
         self.assertRegex(gate_block, r"(?i)delete files")
         self.assertRegex(gate_block, r"(?i)UAC")
