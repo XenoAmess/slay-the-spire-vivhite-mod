@@ -18679,6 +18679,9 @@ def main() -> int:
     assert abs(float(nonlethal_rescue_know.policy[
         "no_play_nonlethal_potion_rescue_gap_pct"]) - 0.50) < 1e-9, \
         "DEFAULT_POLICY missing nonlethal rescue gap threshold"
+    assert nonlethal_rescue_know.policy[
+        "no_play_nonlethal_potion_gate_obs"] is True, \
+        "DEFAULT_POLICY missing nonlethal rescue gate observation"
     d_nonlethal_rescue = nonlethal_rescue_pol.decide(
         _no_play_nonlethal_potion_state(
             "BLOCK_P", "Block Potion", "Gain 12 Block"),
@@ -18686,6 +18689,10 @@ def main() -> int:
     assert (d_nonlethal_rescue.action == "use_potion"
             and d_nonlethal_rescue.params == {"option_index": 0}
             and "NO_PLAY_NONLETHAL_POTION_RESCUE" in d_nonlethal_rescue.reason
+            and "NO_PLAY_NONLETHAL_POTION_GATE_OBS" in d_nonlethal_rescue.reason
+            and ("gap=28/threshold=27.5/pressure=yes/"
+                 "rescue_enabled=yes/decision=use_defensive_potion")
+                in d_nonlethal_rescue.reason
             and "NO_PLAY_LETHAL_POTION_RESCUE" not in d_nonlethal_rescue.reason), \
         f"nonlethal potion rescue marker/action mismatch: {d_nonlethal_rescue}"
 
@@ -18711,6 +18718,10 @@ def main() -> int:
             and "NO_PLAY_NONLETHAL_POTION_RESCUE"
                 not in d_nonlethal_rescue_off.reason), \
         f"nonlethal rescue rollback changed the prior end_turn path: {d_nonlethal_rescue_off}"
+    assert ("NO_PLAY_NONLETHAL_POTION_GATE_OBS" in d_nonlethal_rescue_off.reason
+            and "/rescue_enabled=no/decision=rescue_disabled"
+                in d_nonlethal_rescue_off.reason), \
+        f"nonlethal rescue disable was not observable: {d_nonlethal_rescue_off}"
 
     nonlethal_threshold_know = knowledge.Knowledge(tmp)
     nonlethal_threshold_know.policy[
@@ -18734,6 +18745,24 @@ def main() -> int:
             and "NO_PLAY_NONLETHAL_POTION_RESCUE"
                 not in d_nonlethal_threshold.reason), \
         f"nonlethal rescue threshold did not close the narrow gate: {d_nonlethal_threshold}"
+    assert ("NO_PLAY_NONLETHAL_POTION_GATE_OBS" in d_nonlethal_threshold.reason
+            and "/gap=28/threshold=44/pressure=no/"
+                "rescue_enabled=yes/decision=below_threshold"
+                in d_nonlethal_threshold.reason), \
+        f"nonlethal rescue threshold decision was not observable: {d_nonlethal_threshold}"
+
+    nonlethal_gate_off_know = knowledge.Knowledge(tmp)
+    nonlethal_gate_off_know.policy[
+        "no_play_nonlethal_potion_gate_obs"] = False
+    d_nonlethal_gate_off = policy.Policy(nonlethal_gate_off_know).decide(
+        _no_play_nonlethal_potion_state(
+            "BLOCK_P", "Block Potion", "Gain 12 Block"),
+        _SettleCtx())
+    assert (d_nonlethal_gate_off.action == d_nonlethal_rescue.action
+            and d_nonlethal_gate_off.params == d_nonlethal_rescue.params
+            and "NO_PLAY_NONLETHAL_POTION_GATE_OBS"
+                not in d_nonlethal_gate_off.reason), \
+        f"nonlethal gate observation switch changed action or remained visible: {d_nonlethal_gate_off}"
 
     # A native card hook is a different boundary from energy exhaustion:
     # 1634-F17 T9 had energy=2 but every remaining card was blocked by

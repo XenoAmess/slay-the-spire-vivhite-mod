@@ -14478,6 +14478,7 @@ class Policy:
                     "no_play_nonlethal_potion_rescue_gap_pct", 0.50))))
             except (TypeError, ValueError, OverflowError):
                 _nonlethal_rescue_gap_pct = 0.50
+            _nonlethal_gap = 0.0
             try:
                 _nonlethal_gap = max(0.0, float(incoming) - float(my_block))
                 _nonlethal_rescue_pressure = (
@@ -14488,6 +14489,47 @@ class Policy:
                         1.0, float(my_hp) * _nonlethal_rescue_gap_pct))
             except (TypeError, ValueError, OverflowError):
                 _nonlethal_rescue_pressure = False
+
+            # Keep the new nonlethal rescue threshold falsifiable in both
+            # directions: a rescue, a below-threshold skip, and a pressure
+            # window with no immediately defensive potion must all be visible
+            # without changing the action or candidate ordering.
+            _nonlethal_rescue_gate_note = ""
+            _nonlethal_rescue_gate_decision = None
+            try:
+                _nonlethal_rescue_gate_obs = bool(int(float(pol.get(
+                    "no_play_nonlethal_potion_gate_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _nonlethal_rescue_gate_obs = False
+            _nonlethal_rescue_gate_threshold = max(
+                1.0, float(my_hp) * _nonlethal_rescue_gap_pct)
+
+            def _nonlethal_rescue_gate_observation(decision):
+                return (
+                    "; nonlethal no-card potion gate:"
+                    f"hp={float(my_hp):g}/block={float(my_block):g}"
+                    f"/incoming={float(incoming):g}/gap={_nonlethal_gap:g}"
+                    f"/threshold={_nonlethal_rescue_gate_threshold:g}"
+                    f"/pressure={'yes' if _nonlethal_rescue_pressure else 'no'}"
+                    f"/rescue_enabled={'yes' if _no_play_nonlethal_potion_rescue else 'no'}"
+                    f"/decision={decision}"
+                    " (NO_PLAY_NONLETHAL_POTION_GATE_OBS)")
+
+            if (_nonlethal_rescue_gate_obs
+                    and not affordable_playable
+                    and not _lethal_by_gap
+                    and not bool(combat.get("end_turn_will_kill_player"))
+                    and _nonlethal_gap > 0.0):
+                if not _no_play_nonlethal_potion_rescue:
+                    _nonlethal_rescue_gate_decision = "rescue_disabled"
+                elif _nonlethal_rescue_pressure:
+                    _nonlethal_rescue_gate_decision = "eligible_window"
+                else:
+                    _nonlethal_rescue_gate_decision = "below_threshold"
+                _nonlethal_rescue_gate_note = (
+                    _nonlethal_rescue_gate_observation(
+                        _nonlethal_rescue_gate_decision))
+
             if (_no_play_nonlethal_potion_rescue
                     and not affordable_playable
                     and _nonlethal_rescue_pressure):
@@ -14495,7 +14537,21 @@ class Policy:
                     state, ctx, hard=True, premium=True, rescue_only=True,
                     nonlethal_rescue=True)
                 if _rescue_decision is not None:
+                    if (_nonlethal_rescue_gate_obs
+                            and _nonlethal_rescue_gate_decision
+                            == "eligible_window"):
+                        _nonlethal_rescue_gate_note = (
+                            _nonlethal_rescue_gate_observation(
+                                "use_defensive_potion"))
+                        _rescue_decision.reason += (
+                            _nonlethal_rescue_gate_note)
                     return _rescue_decision
+                if (_nonlethal_rescue_gate_obs
+                        and _nonlethal_rescue_gate_decision
+                        == "eligible_window"):
+                    _nonlethal_rescue_gate_note = (
+                        _nonlethal_rescue_gate_observation(
+                            "no_immediate_defensive_potion"))
 
             def _count_energy_locked_cards() -> int:
                 _count = 0
@@ -15111,7 +15167,8 @@ class Policy:
                     "end_turn", {},
                     f"战斗：确认无牌可出（能量耗尽或全部不可用），结束回合"
                     f"｜能量{energy}｜[{_audit}]{_settle_note}"
-                    f"{_lethal_unavailable_note}{_nonlethal_unavailable_note}"
+                    f"{_lethal_unavailable_note}{_nonlethal_rescue_gate_note}"
+                    f"{_nonlethal_unavailable_note}"
                     f"{_ff_tax_note}"
                     f"{_sandpit_end_turn_note}{_low_pool_burst_note}",
                     wait=1.2)
