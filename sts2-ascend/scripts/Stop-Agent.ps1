@@ -399,6 +399,8 @@ try {
         }
     }
 
+    # Game-only recovery inherits this session's stop sentinel and releases its
+    # transient cold-start mutex on return; there is no extra persistent owner.
     $session = Read-JsonFile $sessionFile
     $sessionId = Normalize-SessionId (Get-ObjectProperty $session "session_id" "legacy")
     $defaultStopFile = if ($sessionId -eq "legacy") { Join-Path $runtimeDir "stop.request" } else {

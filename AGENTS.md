@@ -112,6 +112,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 用户说“启动/停止整套”“游戏 + brain + 播报员”时，AI **只使用上述统一入口**。不要分别拉起组件，不要泛杀 `python` / `uv` / `opencode`，也不要按 8080–8084 端口杀进程。
 - `Start-Agent.ps1` 默认后台运行且幂等。`-SkipDeploy` 复用已部署 DLL；游戏已经运行时必须使用它，否则脚本会拒绝部署以避免 DLL 锁。`-Foreground` 仅用于调试，完整停止仍使用 `Stop-Agent.ps1`。
 - Brain 的游戏进程探针是三态门禁：只有成功确认进程数为 0 才能冷启动游戏；`tasklist` 超时、返回失败或其他不确定结果一律按“可能已有游戏”失败关闭并等待 API/下轮复核，禁止把探针失败当作 0 而启动第二个 Vulkan 进程。发现重复实例只记录并等待统一 `Stop-Agent.ps1` 清理，不得由 Brain 泛杀。
+- `Start-Agent.ps1` 与 Brain 内部游戏自愈共用 `scripts/GameColdStart.ps1` 的游戏启动和 Steam 预检。内部 `Invoke-GameRecovery.ps1` 仅读取当前 GUID session，继承模式、启动参数、空间阈值及 Stop sentinel；不启动 runner/Brain、不递归调用 Start。auto/on 恢复重新检查 userdata 所在卷，off 仍须已实际应用且原生同意有效；探针失败、重复实例或 Stop 请求不走备用启动。共用瞬态命名 mutex 随调用释放，不是新增驻留组件。
 - **Steam 本地存档模式**：统一入口支持可审计的 `-SteamMode auto|on|off`（默认 `auto`）。`auto` 和 `on`
   不覆盖游戏默认 Steam 初始化；只有用户显式指定 `off` 时，冷启动才向 `launch_vulkan.bat` 传
   `--force-steam off`。它只作用于本次游戏进程，不改游戏目录、Steam 客户端或云同步文件，也不需要

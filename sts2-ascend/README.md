@@ -265,6 +265,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Instal
 
 启动默认在后台运行，不占住当前终端。Brain 内部的游戏进程探针采用三态语义：只有明确得到 0 个进程才允许冷启动；`tasklist` 超时或失败属于“不确定”，只能等待 API/下轮复核，绝不能据此启动第二个 Vulkan 实例。重复实例统一由 `Stop-Agent.ps1` 的精确身份流程清理。
 
+游戏自愈与统一 Start 复用 `scripts/GameColdStart.ps1`。内部恢复工具只继承当前 GUID
+session 的 SteamMode、参数与空间阈值；auto/on 再查 userdata 所在卷，off 再查独立
+profile 原生同意。启动锁内复查进程与 Stop 请求，已有游戏保持原模式，重复或不确定时等待。
+它只恢复游戏，不启动第二套 runner/Brain；人工全栈操作仍使用统一 Start/Stop。
+
 常用参数：
 
 - `-Version <版本>`：`Deploy-Mod.ps1` 使用的上游 release 版本，默认 `0.9.1`；`-Source fork` 时仅作
