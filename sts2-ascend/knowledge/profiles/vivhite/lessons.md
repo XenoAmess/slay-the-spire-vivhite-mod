@@ -20984,3 +20984,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.169544415024816局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.462198442143559局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.841519248402328局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
 - 生涯战绩：4/1904 胜，当前目标进阶 4
+
+## 第 1905 局复盘（2026-10-04 09:11）
+- 结果：💀 失败｜进阶 4｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_CHROMATIC_LIMIT
+- 本局遗物：BLOOD_VIAL, RED_MASK
+- 战斗记录：F6 Monster战 掉血0｜自损6（可行动段6/非行动段8，SELF_LOSS_PHASE_OBS）; F9 Monster战 掉血7｜自损14（可行动段14/非行动段4，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损13（可行动段13/非行动段9，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损7（可行动段7/非行动段4，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血0｜自损12（可行动段12/非行动段12，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血105｜自损22（可行动段22/非行动段59，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=218/dpt=22.95/ttk=9.49891/tsurv=5.66667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=9.49891/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.76（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.83224（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=8/actual_dpt=20/projected_dpt=27.2786/ratio=0.71/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=8/actual_dpt=20/projected_dpt=27.2786/ratio=0.71/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=8/layers_max=0/actual_dpt=20/projected_dpt=27.2786/ratio=0.71/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.642577192835686局)，MAYHEM(36分/4.650123079418608局)，JACKPOT(36分/8.10926405622598局)，REND(36分/2.5525561048292658局)，PREP_TIME(33分/4.870600029500683局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.1619510095722294局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.443080747596057局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.75807393103292局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））
+- 生涯战绩：4/1905 胜，当前目标进阶 4
