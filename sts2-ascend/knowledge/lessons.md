@@ -16782,3 +16782,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.140468057743076局)，STOKE(18分/2.6491852934985136局)，DEFEND_IRONCLAD(18分/2.394308803614673局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.53 → 0.50（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1926 胜，当前目标进阶 0
+
+## 第 1927 局复盘（2026-10-04 16:11）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：SHRUG_IT_OFF, HEADBUTT, TWIN_STRIKE, SWORD_BOOMERANG, FLAME_BARRIER, RAMPAGE, FLAME_BARRIER, UNRELENTING, SHRUG_IT_OFF
+- 本局遗物：REGAL_PILLOW, ANCHOR
+- 战斗记录：F4 Monster战 掉血0; F5 Monster战 掉血18; F6 Monster战 掉血26｜竞速投影审计：pool=68/dpt=12.6/ttk=5.39683/tsurv=3.22727（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=5.39683/actual_over_projected=1.48（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=2.16955（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战8回合获胜; F11 Monster战 掉血19; F14 Monster战 掉血4; F15 Monster战 掉血21（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.625386844829616局)，PROWESS(26分/13.529332733427884局)，FEED(25分/30.79723845520758局)，MANGLE(25分/41.16767988198932局)，PYRE(25分/21.29994004080538局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.104976419540977局)，STOKE(18分/2.639913144971269局)，DEFEND_IRONCLAD(18分/2.385928722802022局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1927 胜，当前目标进阶 0
