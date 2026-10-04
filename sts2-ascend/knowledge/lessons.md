@@ -16672,3 +16672,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.50231332885792局)，STOKE(18分/2.7437169428564014局)，DEFEND_IRONCLAD(18分/2.479745621051819局)
 - 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.37 → 0.40（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.04 → 2.03（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1916 胜，当前目标进阶 0
+
+## 第 1917 局复盘（2026-10-04 12:37）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：HOWL_FROM_BEYOND, SWORD_BOOMERANG, HEADBUTT, BREAKTHROUGH, MOLTEN_FIST, STONE_ARMOR, TRUE_GRIT, COLOSSUS, DISMANTLE, PYRE, SWORD_BOOMERANG, MOLTEN_FIST, ROLLING_BOULDER, SHRUG_IT_OFF, TWIN_STRIKE, DISMANTLE, EXPECT_A_FIGHT, ONE_TWO_PUNCH, HEMOKINESIS
+- 本局遗物：CHANDELIER, PETRIFIED_TOAD, BAG_OF_MARBLES
+- 战斗记录：F20 Monster战 掉血19; F22 Monster战 掉血11; F25 Monster战 掉血4; F29 Monster战 掉血10｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F31 Monster战 掉血27｜自损2（可行动段2/非行动段31，SELF_LOSS_PHASE_OBS）; F33 Boss战 掉血71｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=249/dpt=22.95/ttk=10.8497/tsurv=4（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=10.8497/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.50（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=6.84967（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=37.25/projected_dpt=35.2375/ratio=1.04/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=37.25/projected_dpt=35.2375/ratio=1.04/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=37.25/projected_dpt=35.2375/ratio=1.04/min_ratio=0.58（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.7547525780771913局)，PROWESS(26分/12.990844178393862局)，MANGLE(25分/42.63667817706239局)，FEED(25分/29.86080223972655局)，HELLRAISER(25分/2.985501146782867局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.465555232206917局)，STOKE(18分/2.734113933556404局)，DEFEND_IRONCLAD(18分/2.471066511378138局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（72%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.39（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）；kill_race_prior_eff: 0.39 → 0.39（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.01，步长 0.03→0.007）；block_safety: 2.03 → 2.02（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1917 胜，当前目标进阶 0
