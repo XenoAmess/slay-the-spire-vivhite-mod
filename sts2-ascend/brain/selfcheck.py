@@ -24173,6 +24173,52 @@ def main() -> int:
         f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
         f"on={d_rpre_on} off={d_rpre_off}"
 
+    # 3rpre-free) 1908-F33-T1 选择 INFERNAL_BLADE 的免费攻击生成机会观测：
+    #      原生牌面会加入一张本回合可免费打出的随机攻击牌，但旧理由只显示
+    #      能力/增益牌，无法把这次潜在输出与竞速上下文相邻核对。新增 marker
+    #      必须只出现在已进入 kill_race 且实际选中该牌的生产决策上；开关关闭
+    #      必须逐位恢复旧 action/params/reason（除 marker 外），不得把观测变成
+    #      评分或出牌行为。
+    def free_attack_generator_decide(enabled):
+        free_state = rpre_state()
+        free_state["combat"]["player"]["current_hp"] = 20
+        free_state["run"]["current_hp"] = 20
+        free_state["combat"]["hand"] = [{
+            "index": 0, "card_id": "INFERNAL_BLADE", "name": "地狱之刃",
+            "playable": True, "energy_cost": 1, "card_type": "Skill",
+            "rules_text": "将一张随机攻击牌加入你的手牌。那张牌在本回合内可以免费打出。消耗。",
+        }]
+        free_ctx = type("FREEGENCTX", (), {
+            "combat": {"comp_id": "KNOWLEDGE_DEMON", "node_type": "Boss"},
+            "current_combat_is_hard": True,
+            "credit_tags": [],
+        })()
+        free_pol = policy.Policy(
+            knowledge.Knowledge(Path(tempfile.mkdtemp(
+                prefix="sts2-selfcheck-race-free-generator-"))),
+            random.Random(19), profile="ironclad")
+        free_pol.know.policy["play_threshold"] = -100.0
+        free_pol.know.policy["race_free_attack_generator_obs"] = enabled
+        free_pol.decide(free_state, free_ctx)
+        free_pol._krace_turns = 2
+        free_pol._krace_dmg = free_pol._krace_dmg_sustained = 6.0
+        free_pol._krace_latch = True
+        free_pol._krace_latch_round = 1
+        return free_pol.decide(free_state, free_ctx)
+
+    d_freegen_on = free_attack_generator_decide(True)
+    d_freegen_off = free_attack_generator_decide(False)
+    assert (d_freegen_on.action == "play_card"
+            and d_freegen_on.params.get("card_index") == 0
+            and "RACE_FREE_ATTACK_GENERATOR_OBS" in d_freegen_on.reason
+            and "card=INFERNAL_BLADE" in d_freegen_on.reason
+            and "/generated_attack=expected/free_this_turn=yes" in d_freegen_on.reason), \
+        f"免费攻击生成牌竞速观测正例缺失: {d_freegen_on}"
+    assert (d_freegen_off.action == d_freegen_on.action
+            and d_freegen_off.params == d_freegen_on.params
+            and "RACE_FREE_ATTACK_GENERATOR_OBS" not in d_freegen_off.reason), \
+        f"免费攻击生成牌观测关闭后动作漂移或 marker 残留: on={d_freegen_on} off={d_freegen_off}"
+
     # 3rpre-b) 竞速未锁前行为门：当当前回合非致死、投影缺口达到窄门槛且
     #      存在可支付攻击时，纯格挡候选不得再消耗输出窗口；攻击+格挡牌、
     #      致死回合和无可支付攻击仍走旧路径。开关关闭必须恢复旧 action/params。

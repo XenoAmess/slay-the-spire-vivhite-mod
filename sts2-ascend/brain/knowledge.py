@@ -944,6 +944,9 @@ DEFAULT_POLICY = {
     "race_prelock_defense_behavior": True,  # 竞速未锁前出现明显生存缺口且有可支付攻击时，
                                              # 跳过纯格挡候选；致死、无攻击或已锁定时不触发，False 回滚
     "race_prelock_defense_gap": 8.0,  # 仅在 TTK-TSURV 达到该窄门槛时触发上述行为
+    "race_free_attack_generator_obs": True,  # Ironclad 斩杀竞速选中 INFERNAL_BLADE 时，
+                                               # 只记录其原生本回合免费攻击生成机会与当帧输出上下文；
+                                               # 不改评分、候选、目标、动作或参数，False 严格回滚
     "race_prelock_defense_terminal_outcome_obs": True,  # 将竞速未锁前格挡来源回接同战斗 GAME_OVER；
                                                          # 只记录首尾字段，False 严格回滚，不改变 action/params
     "lethal_survivable_line_terminal_outcome_obs": True,  # 在同楼层、同战斗终局桥中标记

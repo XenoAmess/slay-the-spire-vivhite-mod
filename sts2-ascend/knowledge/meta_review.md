@@ -16240,3 +16240,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接固定 256 槽入口复现宿主既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 临时池耗尽；随后用同一 clone 的 0777 进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；生产目标 diff `--check` 通过，未写入在线状态、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-10-04 run 1908-F33：INFERNAL_BLADE 免费攻击生成机会观测
+
+profile_id：`ironclad`
+requested_run：`1908`
+production_code_commit：`dc13b24691e602632f5b763ef2f69634741f2c67`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 斩杀竞速中选中 `INFERNAL_BLADE` 时，现有理由只把牌归为能力/增益牌，无法核对其原生“加入一张本回合可免费打出的随机攻击牌”是否实际转化为输出；这可能是输出饥饿证据中的一个未切片机会，而不是新的评分缺陷。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-094321_X556AKBXUHXH.json` 的 run `X556AKBXUHXH`（1908，392 条决策）中，F33 Boss D363 已进入 `pool=268/dpt=13.5/ttk=19.8519/tsurv=4.64706` 的竞速压力，D364/T1 选中 `INFERNAL_BLADE`，随后 D365-D367 连续出现攻击牌；终局有效火力审计的 `min_ratio=0.37`，但既有决策链没有把生成牌机会与后续兑现相邻标出。原生快照 `sts2-ascend/knowledge/game/v0.111.0/runtime/cards.jsonl` 将 `INFERNAL_BLADE` 定义为消耗 1 能量、生成随机攻击且该攻击本回合免费打出的 Skill。
+- **EXPECTED_SIGNAL**：未来 3—10 局同型 Boss 竞速中，实际选中该牌的决策应追加 `RACE_FREE_ATTACK_GENERATOR_OBS`，披露来源牌、能量、敌血、敌意图及当帧可支付攻击基线；紧邻后续决策可直接核对生成攻击是否出现并被兑现。若 marker 出现但后续没有新攻击，或同型链持续显示生成机会未兑现，假设得到支持；若生成机会稳定兑现且输出仍不足，则停止沿该机会继续行为化。关闭开关时 action/params 和原理由恢复不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_free_attack_generator_obs`，作为只读观测和单键回滚点。
+- `sts2-ascend/brain/policy.py`：仅在实际选中 `INFERNAL_BLADE` 且已进入 `kill_race` 的出牌收口追加 marker，记录来源费用、能量、敌血、敌意图和当前手牌即时攻击基线；不参与评分、候选排序、目标、竞速判定、action 或 params。
+- `sts2-ascend/brain/selfcheck.py`：新增正例和开关关闭回归，锁定 `play_card/card_index=0` 不变，并验证 marker 只在竞速选中该牌时出现。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 局真实 `RACE_FREE_ATTACK_GENERATOR_OBS`，逐条对照下一决策的新增攻击牌、实际 `play_card` 回执、敌血净降、回合数和终局；本批不把观测升级为评分行为。
+- **Adjust**：若相邻载荷不能区分生成牌与原手牌，补充原生实例/临时费用字段的只读对账；若生成牌稳定被兑现但 `min_ratio` 仍低，转查抽牌/能量供给，不扩大本门。
+- **Rollback**：将 `race_free_attack_generator_obs` 设为 `False`，或回退 `dc13b24691e602632f5b763ef2f69634741f2c67`；预期只移除 marker，不改变动作路径。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 在宿主预置固定 256 槽环境复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（池耗尽）；随后用同一 clone 的进程级受控临时槽适配器运行完整 selfcheck，退出码 0 且末尾为 `SELFCHECK OK`。限定目标 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; free-attack generator observation integrated)`

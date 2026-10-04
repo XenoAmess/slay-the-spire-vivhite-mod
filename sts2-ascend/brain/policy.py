@@ -18691,6 +18691,66 @@ class Policy:
                 if "所有敌人" in _text(card) or "all enemies" in _text(card).lower() \
                         or (card.get("target_type") or "") == "AllEnemies":
                     _est *= max(1, len(enemies))
+            # 可验证假设：1908-F33-T1 选择 INFERNAL_BLADE 后，旧理由只把它
+            # 归为能力/增益牌，无法区分「原生生成的本回合免费攻击」是否真正
+            # 成为输出。这里仅在已进入斩杀竞速且实际选中该牌时记录生成机会、
+            # 当前能量/敌血/敌意图及手中最高即时攻击估计；后续回合可用相邻
+            # 决策核对生成牌是否被兑现。观测键关闭时严格保持旧理由和动作。
+            try:
+                _free_attack_generator_obs = bool(int(float(pol.get(
+                    "race_free_attack_generator_obs", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _free_attack_generator_obs = False
+            if (_free_attack_generator_obs
+                    and kill_race
+                    and commit_cid == "INFERNAL_BLADE"):
+                try:
+                    _generator_source_cost = float(
+                        energy if card.get("costs_x")
+                        else (card.get("energy_cost") or 0))
+                except (TypeError, ValueError, OverflowError):
+                    _generator_source_cost = 0.0
+                _generator_attack_count = 0
+                _generator_attack_max = 0.0
+                for _generator_candidate in hand:
+                    if (_generator_candidate is card
+                            or not _generator_candidate.get("playable")
+                            or self._card_unavailable(_generator_candidate)):
+                        continue
+                    try:
+                        _generator_damage, _, _generator_hits = card_numbers(
+                            _generator_candidate)
+                        _generator_cost = float(
+                            energy if _generator_candidate.get("costs_x")
+                            else (_generator_candidate.get("energy_cost") or 0))
+                        _generator_est = max(
+                            0.0, float(_generator_damage or 0.0)) * max(
+                                1, int(_generator_hits or 1))
+                    except (TypeError, ValueError, OverflowError):
+                        continue
+                    if _generator_cost > float(energy) or _generator_est <= 0.0:
+                        continue
+                    if ("所有敌人" in _text(_generator_candidate)
+                            or "all enemies" in _text(_generator_candidate).lower()
+                            or (_generator_candidate.get("target_type") or "")
+                            == "AllEnemies"):
+                        _generator_est *= max(1, len(enemies))
+                    _generator_attack_count += 1
+                    _generator_attack_max = max(
+                        _generator_attack_max, _generator_est)
+                try:
+                    _generator_enemy_hp = float(enemy_hp_total)
+                except (TypeError, ValueError, OverflowError):
+                    _generator_enemy_hp = 0.0
+                why += (
+                    f"｜竞速免费攻击生成牌：card={commit_cid}"
+                    f"/round={round_no}/source_cost={_generator_source_cost:g}"
+                    f"/energy={float(energy):g}/enemy_hp={_generator_enemy_hp:g}"
+                    f"/incoming={float(incoming):g}"
+                    f"/hand_attack_count={_generator_attack_count}"
+                    f"/hand_attack_max={_generator_attack_max:g}"
+                    "/generated_attack=expected/free_this_turn=yes"
+                    "（RACE_FREE_ATTACK_GENERATOR_OBS）")
             # 记录"预测击杀"：同一敌人实例本场被预测击杀 ≥2 次仍存活 → 重生召唤物，
             # 后续击杀奖励大幅衰减（第 52~53 局利齿之眼实证）；坐实键实例化口径见
             # _kill_confirm_key（RESPAWN_INSTANCE_CONFIRM，第1473~1477局批复盘）
