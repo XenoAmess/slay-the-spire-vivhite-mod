@@ -16584,3 +16584,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.801064181129206局)，DEFEND_IRONCLAD(18分/2.5502849483893106局)，THE_GAMBIT(18分/4.34492991207066局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（94%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 2.06 → 2.05（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1908 胜，当前目标进阶 0
+
+## 第 1909 局复盘（2026-10-04 10:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：CINDER, ARMAMENTS, HEMOKINESIS, EVIL_EYE, BLUDGEON, SHRUG_IT_OFF, TRUE_GRIT, EVIL_EYE, SWORD_BOOMERANG, CINDER, DISMANTLE, MOLTEN_FIST, SHRUG_IT_OFF
+- 本局遗物：MINIATURE_CANNON
+- 战斗记录：F7 Monster战 掉血2; F9 Monster战 掉血1｜自损2（可行动段2/非行动段5，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0; F15 Monster战 掉血4; F17 Boss战 掉血73（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.8615610018637954局)，PROWESS(26分/13.360384264324692局)，MANGLE(25分/43.849529436071535局)，FEED(25分/30.710228441295868局)，HELLRAISER(25分/3.0704272943971724局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.763260456495255局)，DEFEND_IRONCLAD(18分/2.5413589510699484局)，THE_GAMBIT(18分/4.329722657378413局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
+- 生涯战绩：0/1909 胜，当前目标进阶 0
