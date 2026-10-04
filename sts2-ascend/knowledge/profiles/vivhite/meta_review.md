@@ -6038,3 +6038,39 @@ production_code_commit: `d12ac8d95`（本地提交，未 push）
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-04 第1922局批：低池竞速覆盖严格余量边界行为
+
+profile_id: `vivhite`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### ATTRIBUTION
+
+- 本批只处理「低池、真实可执行格挡覆盖却被严格余量边界留在全攻」这一生产行为边界，不把第1922局 F7 阵亡直接归因于该门；生命支付、输出容量、终端锁和竞速终局审计继续作为独立证据。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1922局 `G62L3C8033BC` 的 F7-T8 已出现 `coverage=yes`、`strict_margin=-2.5`、`pool=28`、`cap=100`，且本回合 `current_turn_lethal=no`；现有 `margin_floor=-2.0` 仍记录 `decision=all_in`。若只把既有低池覆盖行为门的有效下界扩到 `-2.5`，同型窗口应选择格挡，直接斩杀 override、幻影覆盖和大池口径保持不变。
+- **EVIDENCE**：已通过 `json.loads` 解析完整 packet，并逐条检查 `sts2-ascend/knowledge/profiles/vivhite/runs/20261004-143846_G62L3C8033BC.json` 的 114 条 decisions。decision 111 的 `RACE_ALLIN_LETHAL_COVER_DECISION_OBS` 记录了可执行的 9 甲/实付 2 血覆盖却选择全攻；随后 decision 112/113 出现低血格挡与 1 生命终端锁，decision 114 为 F7 defeat。该证据支持边界修正，不证明改动必然获胜。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite 竞速战中，仅当真实覆盖成立、低池不超过 `kill_race_min_enemy_hp×1.25`、当前回合不能直接斩杀且严格余量落在 `[-2.5,-2.0)` 时，新增行为门才应选择格挡；应能在 applied 回执中对账 action、支付后 HP/格挡、后续意图及终局。大池、幻影覆盖、当前回合斩杀、余量低于 `-2.5` 或非目标语义不得触发，动作参数也不得漂移。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认 `race_allin_lethal_cover_behavior_min_margin_floor=-2.5`，作为本批独立回滚旋钮。
+- `sts2-ascend/brain/policy.py`：读取有限 floor，并与既有 `race_allin_lethal_cover_behavior_min_margin` 取较小值；只改变既有低池覆盖行为门的边界，不改变评分、候选、等待、动作参数或学习统计。
+- `sts2-ascend/brain/selfcheck.py`：更新既有低池夹具并新增 F7-T8 形状夹具；默认 `-2.5` 选择格挡，显式改回 `-2.0` 恢复全攻，验证可证伪与可撤回。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；当前 clone 的既有删除项和 `.review-cache` 证据未加入本批提交。
+
+### VALIDATION
+
+- 直接执行 `py -3 -B sts2-ascend/brain/selfcheck.py` 的业务断言完成，但宿主固定 256 槽临时池耗尽并报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用同一 selfcheck 的进程级继承 ACL/扩容临时目录适配执行，退出码 0，输出 `SELFCHECK OK`。
+- 已回读三处生产源码与 selfcheck 完整 diff；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite 竞速战，按 run/floor/turn、pool/cap、strict_margin、覆盖是否真实可执行、action/params、支付后 HP/格挡、后续意图、终端锁和胜负分层；一次切换到格挡不等于假设成立。
+- 若出现当前回合可斩杀仍切格挡、幻影或大池误放行、余量越界、动作参数漂移，或 3~10 局内生存结果没有可区分改善，将 `race_allin_lethal_cover_behavior_min_margin_floor` 设回 `-2.0`；必要时关闭 `race_allin_lethal_cover_behavior` 或回滚本地 commit，保留原有观测。
+
+### REPLAY
+
+retry_resolution: 20261004-151054-1791097854313751400-53c6e790 integrated

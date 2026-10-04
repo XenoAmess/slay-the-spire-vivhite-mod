@@ -1531,12 +1531,19 @@ DEFAULT_POLICY = {
                                         # 负余量因此保持全攻。行为键=False 严格回滚为旁观口径，
                                         # 不影响 COVER/买活审计本身。
       "race_allin_lethal_cover_behavior_min_margin": -2.0,
-                                        # 低池竞速覆盖行为的有界余量宽限：第1625局 F21-T2
-                                        # pool=94、need=7、max_block=13、covers=yes，但严格
-                                        # 买活余量=-1.8，旧门仍全攻并随后终端阵亡。只有当前
-                                        # 敌血池不超过 kill_race_min_enemy_hp×1.25 时，才允许
-                                        # 将该负余量窗口接入格挡优先；大池仍要求严格余量>=0。
-                                        # 设为0恢复旧严格口径，行为总开关仍可一键回滚。
+                                         # 低池竞速覆盖行为的有界余量宽限：第1625局 F21-T2
+                                         # pool=94、need=7、max_block=13、covers=yes，但严格
+                                         # 买活余量=-1.8，旧门仍全攻并随后终端阵亡。只有当前
+                                         # 敌血池不超过 kill_race_min_enemy_hp×1.25 时，才允许
+                                         # 将该负余量窗口接入格挡优先；大池仍要求严格余量>=0。
+                                         # 设为0恢复旧严格口径，行为总开关仍可一键回滚。
+      "race_allin_lethal_cover_behavior_min_margin_floor": -2.5,
+                                         # 低池覆盖行为的额外下界：20261004 的 F7-T8
+                                         # 出现可执行的9甲/实付2血覆盖，但严格余量=-2.5；
+                                         # 现有 -2.0 门把它留在全攻，随后生命支付把余牌锁死。
+                                         # 仅对既有低池、非本回合直接斩杀的真实覆盖生效；
+                                         # 实际门取两个余量下界的较小值。设回-2.0可回滚本批
+                                         # 行为，或关闭 race_allin_lethal_cover_behavior 全部回滚。
       "race_allin_lethal_cover_decision_obs": True,
       # Audit-only marker for an all-in cover rejection when the current
       # affordable raw attack capacity cannot clear the live output pool.

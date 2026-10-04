@@ -25344,8 +25344,34 @@ def main() -> int:
         and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv_relief.reason \
         and "RACE_ALLIN_LETHAL_COVER_DECISION_OBS" in d_rallcv_relief.reason \
         and "decision=cover" in d_rallcv_relief.reason \
-        and "pool=94/cap=100/margin_floor=-2.0" in d_rallcv_relief.reason, \
+        and "pool=94/cap=100/margin_floor=-2.5" in d_rallcv_relief.reason, \
         f"低池负余量覆盖未恢复格挡优先: {d_rallcv_relief.action}（{d_rallcv_relief.reason}）"
+    # ⑥ F7-T8 形状的低池边界夹具：80 血池、当前回合不能直接斩杀、
+    #    9 甲实付2血可覆盖，严格余量=-2.4。新的低池下界应把动作切到
+    #    格挡；显式回到-2.0 必须恢复旧全攻，保证这是一枚可证伪且可回滚
+    #    的行为门。
+    d_rallcv_f7 = rallc_v_decide(
+        rallc_v_policy(), 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=60.0, measured_turns=2, enemy_hp=80, latched=True)
+    assert d_rallcv_f7.action == "play_card" \
+        and d_rallcv_f7.params.get("card_index") == 1 \
+        and "mode=low_pool_relief" in d_rallcv_f7.reason \
+        and "margin_floor=-2.5" in d_rallcv_f7.reason \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" in d_rallcv_f7.reason, \
+        f"F7形状未由-2.5低池下界切到格挡: {d_rallcv_f7.action}（{d_rallcv_f7.reason}）"
+    pol_rallcv_f7_rb = rallc_v_policy()
+    pol_rallcv_f7_rb.know.policy[
+        "race_allin_lethal_cover_behavior_min_margin_floor"] = -2.0
+    d_rallcv_f7_rb = rallc_v_decide(
+        pol_rallcv_f7_rb, 10, 13, 2,
+        [rallc_v_atk, _rallc_v_blk(1, 9)],
+        measured_damage=60.0, measured_turns=2, enemy_hp=80, latched=True)
+    assert d_rallcv_f7_rb.action == "play_card" \
+        and d_rallcv_f7_rb.params.get("card_index") == 0 \
+        and "RACE_ALLIN_LETHAL_COVER_BEHAVIOR" not in d_rallcv_f7_rb.reason \
+        and "decision=all_in" in d_rallcv_f7_rb.reason, \
+        f"F7形状回滚-2.0未恢复全攻: {d_rallcv_f7_rb.action}（{d_rallcv_f7_rb.reason}）"
     pol_rallcv_relief_rb = rallc_v_policy(False)
     d_rallcv_relief_rb = rallc_v_decide(
         pol_rallcv_relief_rb, 10, 13, 2,

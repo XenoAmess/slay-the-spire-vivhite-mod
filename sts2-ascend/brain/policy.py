@@ -17390,6 +17390,15 @@ class Policy:
                         except (TypeError, ValueError, OverflowError):
                             _ralc_min_margin = 0.0
                         try:
+                            _ralc_min_margin_floor = float(pol.get(
+                                "race_allin_lethal_cover_behavior_min_margin_floor",
+                                _ralc_min_margin))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_min_margin_floor = _ralc_min_margin
+                        if math.isfinite(_ralc_min_margin_floor):
+                            _ralc_min_margin = min(
+                                _ralc_min_margin, _ralc_min_margin_floor)
+                        try:
                             _ralc_low_pool_cap = max(0.0, float(pol.get(
                                 "kill_race_min_enemy_hp", 80.0)) * 1.25)
                         except (TypeError, ValueError, OverflowError):
