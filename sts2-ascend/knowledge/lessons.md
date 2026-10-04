@@ -17123,3 +17123,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.4942654661839776局)，BODY_SLAM(16分/2.5070365553629097局)，STOKE(18分/2.376340827442426局)
 - 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.38（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.91 → 1.90（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1957 胜，当前目标进阶 0
+
+## 第 1958 局复盘（2026-10-05 01:45）
+- 结果：💀 失败｜进阶 0｜到达层数 30｜当局评分 30
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：MOLTEN_FIST, POMMEL_STRIKE, FEEL_NO_PAIN, RAMPAGE, SWORD_BOOMERANG, FLAME_BARRIER, PILLAGE, BREAKTHROUGH, CINDER, JUGGLING, UNRELENTING, STONE_ARMOR, OMNISLICE, IMPERVIOUS, RUPTURE, TWIN_STRIKE, CINDER, CONFLAGRATION, BATTLE_TRANCE, EVIL_EYE, UNRELENTING, INFLAME, RAMPAGE
+- 本局遗物：BLOOD_VIAL, MINIATURE_CANNON, REPTILE_TRINKET
+- 战斗记录：F19 Monster战 掉血24｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血23; F23 Monster战 掉血28｜竞速投影审计：pool=93/dpt=3.375/ttk=27.5556/tsurv=2.05556（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=27.5556/actual_over_projected=0.29（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=25.5（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战8回合获胜; F25 Monster战 掉血28｜自损5（可行动段5/非行动段28，SELF_LOSS_PHASE_OBS）; F28 Elite战 掉血17; F30 Elite战 掉血42｜竞速投影审计：pool=81/dpt=4.725/ttk=17.1429/tsurv=5.41667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=17.1429/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.92（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=11.7262（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(26分/6.1663872427921405局)，PROWESS(26分/12.135921870546179局)，FEED(25分/30.42010049489463局)，MASTER_OF_STRATEGY(25分/4.2108007268292305局)，MANGLE(25分/39.74998877933884局)
+- 当前低价值卡牌：HAVOC(16分/2.4855355370523338局)，BODY_SLAM(16分/2.4982619274191395局)，STOKE(18分/2.3680236345463777局)
+- 策略进化：elite_grey_safety_mult: 2.15 → 2.35（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.38 → 0.41（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.90 → 1.89（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.35 → 2.30（行至 F30——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1958 胜，当前目标进阶 0
