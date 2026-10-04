@@ -16837,3 +16837,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/9.964247733947165局)，STOKE(18分/2.603147942208875局)，DEFEND_IRONCLAD(18分/2.3527006776151826局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（76%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.50（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1931 胜，当前目标进阶 0
+
+## 第 1932 局复盘（2026-10-04 18:00）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：DEMON_FORM, SHRUG_IT_OFF, CINDER, UNRELENTING, HOWL_FROM_BEYOND, DISMANTLE, VICIOUS, INFLAME, RAMPAGE, BURNING_PACT, ANGER, MANGLE, EVIL_EYE, WHIRLWIND, SWORD_BOOMERANG, MANGLE, DISMANTLE, BLUDGEON, CINDER, FLAME_BARRIER, HOWL_FROM_BEYOND
+- 本局遗物：STRAWBERRY, TUNING_FORK, VAMBRACE
+- 战斗记录：F15 Monster战 掉血3; F17 Boss战 掉血58｜竞速投影审计：pool=141/dpt=24/ttk=5.875/tsurv=3.68421（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=5.875/actual_over_projected=1.70（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=2.19079（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战10回合获胜｜竞速Boss有效火力收官对账：samples=5/actual_dpt=27.8/projected_dpt=22.0098/ratio=1.20/min_ratio=0.00/min_sample=5->6/min_actual_dpt=0/min_projected_dpt=19.2（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=27.8/projected_dpt=22.0098/ratio=1.20/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：intangible_samples=1/layers_max=1/actual_dpt=0/projected_dpt=19.2/ratio=0.00/min_ratio=0.00|non_intangible_samples=4/layers_max=0/actual_dpt=34.75/projected_dpt=22.7123/ratio=1.50/min_ratio=0.78（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血14; F21 Monster战 掉血13; F28 Monster战 掉血18; F31 Elite战 掉血52｜竞速投影审计：pool=111/dpt=27/ttk=4.11111/tsurv=1.47619（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=4.11111/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.74（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.63492（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战7回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.562385133267249局)，PROWESS(26分/13.294220963295455局)，FEED(25分/31.25505851272761局)，MANGLE(25分/42.452270905064324局)，PYRE(25分/20.929791216367423局)
+- 当前低价值卡牌：STOKE(18分/2.594036924411144局)，DEFEND_IRONCLAD(18分/2.3444662252435298局)，THE_GAMBIT(18分/3.994275791155627局)
+- 策略进化：elite_grey_safety_mult: 1.60 → 1.80（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.50 → 0.51（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.99 → 1.98（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.80 → 1.75（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1932 胜，当前目标进阶 0
