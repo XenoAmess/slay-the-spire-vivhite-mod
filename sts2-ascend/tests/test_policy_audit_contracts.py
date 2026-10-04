@@ -3,9 +3,9 @@
 These are ordinary regression contracts, deliberately failing on the audited
 baseline. They do not submit game actions, load learned production memory, or
 invoke providers. Native per-hit limits come from the versioned v0.111.0
-mechanics snapshot. The separate cross-card Hardened Shell remaining-allowance
-payload gap is documented in the frozen task prompt; this test does not invent
-an API field for it.
+mechanics snapshot. Hardened Shell display_amount is the optional native
+remaining HP-loss allowance agreed with the Agent API implementation. A missing
+or unreadable value is unknown; it is not the original total Amount.
 """
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ class CombatAuditContracts(unittest.TestCase):
     def test_hardened_shell_exhausted_within_multihit_never_resumes_hp_damage(self) -> None:
         p = self.make_policy()
         target = enemy(hp=25, powers=[
-            {"id": "HARDENED_SHELL_POWER", "amount": 20}])
+            {"id": "HARDENED_SHELL_POWER", "amount": 20, "display_amount": 20}])
         c = card(0, "MULTIHIT_AUDIT", damage=10, hits=3, targets=[0])
         score, target_index, why = self.score(p, c, [target])
         self.assertEqual(target_index, 0)
@@ -105,6 +105,45 @@ class CombatAuditContracts(unittest.TestCase):
             why.startswith("可击杀"),
             "Native per-turn HP-loss cap 20 cannot kill an enemy at 25 HP")
         self.assertLessEqual(score, 20.0)
+
+    def test_hardened_shell_prices_the_native_remaining_allowance(self) -> None:
+        p = self.make_policy()
+        target = enemy(hp=8, powers=[
+            {"id": "HARDENED_SHELL_POWER", "amount": 20, "display_amount": 5}])
+        score, _, why = self.score(
+            p, card(0, "STRIKE", damage=10, targets=[0]), [target])
+        self.assertFalse(
+            why.startswith("可击杀"),
+            "Amount 20 is a total cap; native remaining allowance 5 cannot kill HP 8")
+        self.assertAlmostEqual(score, 5.0)
+
+    def test_hardened_shell_zero_native_remaining_allowance_stays_zero(self) -> None:
+        p = self.make_policy()
+        target = enemy(hp=8, powers=[
+            {"id": "HARDENED_SHELL_POWER", "amount": 20, "display_amount": 0}])
+        score, _, why = self.score(
+            p, card(0, "STRIKE", damage=10, targets=[0]), [target])
+        self.assertFalse(why.startswith("可击杀"))
+        self.assertAlmostEqual(
+            score, 0.0, msg="A known exhausted cap permits zero further HP removal")
+
+    def assert_unknown_hardened_shell_does_not_claim_certain_kill(self,
+                                                              power: dict) -> None:
+        p = self.make_policy()
+        _, _, why = self.score(
+            p, card(0, "STRIKE", damage=12, targets=[0]),
+            [enemy(hp=10, powers=[power])])
+        self.assertFalse(
+            why.startswith("可击杀"),
+            "Unknown native remaining allowance must not certify a lethal attack")
+
+    def test_missing_native_remaining_allowance_is_not_the_total_cap(self) -> None:
+        self.assert_unknown_hardened_shell_does_not_claim_certain_kill(
+            {"id": "HARDENED_SHELL_POWER", "amount": 20})
+
+    def test_null_native_remaining_allowance_is_not_the_total_cap(self) -> None:
+        self.assert_unknown_hardened_shell_does_not_claim_certain_kill(
+            {"id": "HARDENED_SHELL_POWER", "amount": 20, "display_amount": None})
 
     def test_intangible_remains_active_after_last_slippery_layer_breaks(self) -> None:
         p = self.make_policy()
