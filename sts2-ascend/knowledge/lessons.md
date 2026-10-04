@@ -16518,3 +16518,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.030691241712587局)，DEFEND_IRONCLAD(18分/2.6045031649028103局)，THE_GAMBIT(18分/4.43730168835292局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1902 胜，当前目标进阶 0
+
+## 第 1903 局复盘（2026-10-04 08:26）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：SWORD_BOOMERANG, BATTLE_TRANCE, MOLTEN_FIST, THUNDERCLAP, TRUE_GRIT, CINDER, CINDER, SHRUG_IT_OFF, JUGGLING, CINDER
+- 本局遗物：BAG_OF_PREPARATION
+- 战斗记录：F5 Monster战 掉血11; F6 Monster战 掉血3; F7 Monster战 掉血41｜竞速投影审计：pool=32/dpt=3.6/ttk=8.88889/tsurv=2.04762（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=8.88889/actual_over_projected=0.90（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=6.84127（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T6判死→实战8回合获胜; F14 Monster战 掉血6; F15 Monster战 掉血5; F17 Boss战 掉血78｜竞速投影审计：pool=182/dpt=20.4/ttk=8.92157/tsurv=3.45（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=12/projected_ttk=8.92157/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.48（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=5.47157（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战12回合阵亡｜竞速Boss有效火力收官对账：samples=8/actual_dpt=13.9167/projected_dpt=14.9927/ratio=0.94/min_ratio=0.42（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=8/actual_dpt=13.9167/projected_dpt=14.9927/ratio=0.94/min_ratio=0.42（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=8/layers_max=0/actual_dpt=13.9167/projected_dpt=14.9927/ratio=0.94/min_ratio=0.42（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.9436565146069382局)，PROWESS(26分/13.644421625406327局)，MANGLE(25分/44.78175596333923局)，HELLRAISER(25分/3.1357035655611956局)，FEED(24分/30.345432503648198局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.992083822366594局)，DEFEND_IRONCLAD(18分/2.595387403825651局)，THE_GAMBIT(18分/4.421771132443685局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1903 胜，当前目标进阶 0
