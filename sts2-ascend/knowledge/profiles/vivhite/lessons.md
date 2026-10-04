@@ -21468,3 +21468,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.7722593645790226局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.681325158194857局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/24.975845138154682局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.40 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；vivhite_life_cost_deck_cap: 22.50 → 17.50（双旋钮全尽，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：5/1948 胜，当前目标进阶 5
+
+## 第 1949 局复盘（2026-10-04 23:13）
+- 结果：💀 失败｜进阶 5｜到达层数 24｜当局评分 24
+- 死因：敌人组合 SPINY_TOAD
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_CONSERVED_RECURRENCE, VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_VIVHITES_CRIMSON_TRANSFORMATION_RITUAL
+- 本局遗物：SPARKLING_ROUGE, STURDY_CLAMP
+- 战斗记录：F17 Boss战 掉血22｜自损44（可行动段44/非行动段10，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血12｜自损30（可行动段30/非行动段28，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血0｜自损7（可行动段7/非行动段0，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血10｜自损27（可行动段27/非行动段18，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血39｜自损35（可行动段35/非行动段49，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血34｜自损10（可行动段10/非行动段3，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.264795617795043局)，FLASH_OF_STEEL(38分/4.9880728553379905局)，DRAMATIC_ENTRANCE(38分/10.609350829531792局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/4.06591366619294局)，MAYHEM(36分/3.9853437019842235局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.7625564568029963局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.664940520141176局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/24.888429680171143局)
+- 策略进化：block_safety: 2.03 → 2.08（普通战斗阵亡，略微上调防御权重）；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕；kill_race_prior_eff: 0.37 → 0.38（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 2.08 → 2.07（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F24——灰区悲观系数部分胜利回收）；vivhite_param_life_cost_weight: -3.00 → -2.98（行至 F24——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 2.75 → 2.50（行至 F24——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 17.50 → 20.00（行至 F24——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
+- 生涯战绩：5/1949 胜，当前目标进阶 5
