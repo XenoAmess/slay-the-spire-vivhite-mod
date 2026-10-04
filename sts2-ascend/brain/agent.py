@@ -841,8 +841,8 @@ class Agent:
         if active_id:
             candidate_ids.append(active_id)
         # A CAS may have completed immediately before process death.  Inspect a
-        # bounded tail of the audit ledger so recovery cannot become an
-        # unbounded filesystem scan.
+        # bounded tail ordered by actual release time, rather than serialized
+        # run-ID order, so recovery cannot become an unbounded filesystem scan.
         candidate_ids.extend(
             run_id for run_id in reversed(snapshot.orphaned_run_ids[-8:])
             if run_id not in candidate_ids)

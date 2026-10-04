@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sys
@@ -14,6 +15,7 @@ BRAIN = Path(__file__).resolve().parents[1] / "brain"
 sys.path.insert(0, str(BRAIN))
 
 import agent as agent_module  # noqa: E402
+import character_rotation as rotation_module  # noqa: E402
 from character_profiles import VIVHITE_CHARACTER_ID  # noqa: E402
 from character_rotation import (  # noqa: E402
     ORPHAN_EVIDENCE_VERSION,
@@ -91,6 +93,32 @@ def _menu(*, continue_run: bool = False) -> dict:
 
 
 class OrphanRotationTests(unittest.TestCase):
+    def test_snapshot_orders_release_times_and_retains_legacy_timestamps(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="sts2-orphan-order-") as raw:
+            root = Path(raw)
+            rotation = CharacterRotation(root / "character_rotation.json")
+            releases = {
+                "a-newest": "2026-10-04T02:00:00Z",
+                "z-offset": "2026-10-04T09:00:00+08:00",
+                "m-legacy-local": "2026-10-02 08:00:00",
+                "x-legacy-unparsed": "historical release time unavailable",
+            }
+            for run_id in releases:
+                rotation.observe_active_run(run_id, VIVHITE_CHARACTER_ID)
+                rotation.release_orphan_run(run_id, evidence=_evidence(run_id))
+            path = root / "character_rotation.json"
+            state = json.loads(path.read_text(encoding="utf-8"))
+            for run_id, released_at in releases.items():
+                state["orphaned_runs"][run_id]["released_at"] = released_at
+            path.write_text(json.dumps(state, sort_keys=True), encoding="utf-8")
+            before = path.read_bytes()
+
+            snapshot = CharacterRotation(path).snapshot()
+
+            self.assertEqual(snapshot.orphaned_run_ids, (
+                "x-legacy-unparsed", "m-legacy-local", "z-offset", "a-newest"))
+            self.assertEqual(path.read_bytes(), before)
+
     def test_release_is_audit_only_and_idempotent(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-orphan-rotation-") as raw:
             rotation = CharacterRotation(Path(raw) / "character_rotation.json")
@@ -308,6 +336,65 @@ class OrphanAgentTests(unittest.TestCase):
             self.assertEqual(audit["orphan_release"]["state"], "released")
             self.assertEqual(
                 audit["native_save_wait"]["state"], "orphan_released")
+
+    def test_restart_finds_latest_release_at_either_end_of_sorted_ids(self) -> None:
+        """A CAS crash after nine releases must use time, not JSON key order."""
+        for newest_id in ("a-newest", "zz-newest"):
+            with self.subTest(newest_id=newest_id), \
+                    tempfile.TemporaryDirectory(prefix="sts2-orphan-tail-") as raw:
+                root = Path(raw)
+                with mock.patch.object(agent_module, "KNOWLEDGE_DIR", root), \
+                        mock.patch.object(agent_module, "log"):
+                    original = agent_module.Agent({"api_ports": [], "seed": 906})
+                base = datetime(2026, 10, 4, tzinfo=timezone.utc)
+                for index in range(8):
+                    run_id = f"m-old-{index}"
+                    original.rotation.observe_active_run(
+                        run_id, VIVHITE_CHARACTER_ID)
+                    with mock.patch.object(
+                            rotation_module, "datetime", wraps=datetime) as clock:
+                        clock.now.return_value = base + timedelta(microseconds=index)
+                        original.rotation.release_orphan_run(
+                            run_id, evidence=_evidence(run_id))
+                before = original.rotation.snapshot()
+                original.rotation.observe_active_run(newest_id, VIVHITE_CHARACTER_ID)
+                knowledge = original._profile_knowledge["vivhite"]
+                before_stats = copy.deepcopy(knowledge.stats)
+                save = knowledge.save_run_log
+
+                def interrupt_after_cas(run_id, payload):
+                    if payload.get("orphan_release", {}).get("state") == "released":
+                        raise SystemExit("simulated process death after rotation CAS")
+                    return save(run_id, payload)
+
+                with mock.patch.object(knowledge, "save_run_log",
+                                       side_effect=interrupt_after_cas), \
+                        mock.patch.object(agent_module, "log"), \
+                        mock.patch.object(
+                            rotation_module, "datetime", wraps=datetime) as clock:
+                    clock.now.return_value = base + timedelta(microseconds=8)
+                    with self.assertRaises(SystemExit):
+                        original.release_unrecoverable_orphan(_evidence(newest_id))
+                audit = knowledge.load_run_log(newest_id)
+                self.assertEqual(audit["orphan_release"]["state"], "prepared")
+                self.assertIsNone(original.rotation.snapshot().active_run_id)
+                self.assertTrue(knowledge._run_learning_journal_path.exists())
+
+                with mock.patch.object(agent_module, "KNOWLEDGE_DIR", root), \
+                        mock.patch.object(agent_module, "log"):
+                    restarted = agent_module.Agent({"api_ports": [], "seed": 907})
+                knowledge = restarted._profile_knowledge["vivhite"]
+                audit = knowledge.load_run_log(newest_id)
+                after = restarted.rotation.snapshot()
+                self.assertEqual(audit["orphan_release"]["state"], "released")
+                self.assertEqual(
+                    audit["native_save_wait"]["state"], "orphan_released")
+                self.assertFalse(knowledge._run_learning_journal_path.exists())
+                self.assertEqual(after.orphaned_run_ids[-1], newest_id)
+                self.assertEqual(after.finalized_run_ids, before.finalized_run_ids)
+                self.assertEqual(after.catchup_index, before.catchup_index)
+                self.assertEqual(after.next_character, before.next_character)
+                self.assertEqual(knowledge.stats, before_stats)
 
     def test_provider_proof_must_bind_latest_state_version(self) -> None:
         with tempfile.TemporaryDirectory(prefix="sts2-orphan-freshness-") as raw:

@@ -86,6 +86,7 @@ class RotationSnapshot:
     # Run IDs explicitly released as unrecoverable orphans.  They are kept out
     # of ``finalized_run_ids`` on purpose: an orphan is not a terminal game
     # result and must never be counted as a played loss or consume a slot.
+    # Ordered oldest release first, independent of JSON object/run-ID ordering.
     orphaned_run_ids: tuple[str, ...] = ()
 
     @property
@@ -854,6 +855,27 @@ def _persisted_run_total(path: Path, profile_label: str) -> int:
     return runs
 
 
+def _orphan_release_sort_key(
+        item: tuple[str, Mapping[str, Any]],
+) -> tuple[datetime, str]:
+    """Order audit rows by release time while retaining historical entries."""
+    run_id, row = item
+    released_at = row["released_at"]
+    candidate = (
+        released_at[:-1] + "+00:00"
+        if released_at.endswith(("Z", "z")) else released_at)
+    try:
+        # Legacy releases used time.strftime in the host's local timezone.
+        # astimezone honours that meaning for naive historical timestamps and
+        # normalizes the explicit UTC timestamps written by newer releases.
+        instant = datetime.fromisoformat(candidate).astimezone(timezone.utc)
+    except (ValueError, OSError, OverflowError):
+        # Old schema validation accepted any bounded audit string.  Preserve
+        # those rows without inventing a recent release time or blocking loads.
+        instant = datetime.min.replace(tzinfo=timezone.utc)
+    return instant, run_id
+
+
 def _snapshot(
         state: Mapping[str, Any], counts: PersistedRunCounts
 ) -> RotationSnapshot:
@@ -869,7 +891,10 @@ def _snapshot(
         catchup_completed=state["catchup_completed"],
         vivhite_runs=counts.vivhite,
         ironclad_runs=counts.ironclad,
-        orphaned_run_ids=tuple(state.get("orphaned_runs", {})),
+        orphaned_run_ids=tuple(
+            run_id for run_id, _row in sorted(
+                state.get("orphaned_runs", {}).items(),
+                key=_orphan_release_sort_key)),
     )
 
 
@@ -1188,7 +1213,8 @@ class CharacterRotation:
                 "character": active["character"],
                 "character_id": active["character_id"],
                 "reason": ORPHAN_RELEASE_REASON,
-                "released_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "released_at": datetime.now(timezone.utc).isoformat(
+                    timespec="microseconds"),
                 "evidence": normalized_evidence,
             }
             updated = dict(state)
