@@ -25213,12 +25213,16 @@ def main() -> int:
 
     def rallc_decide(pol_r, hp_now, incoming, energy_now, hand,
                      measured_damage=40.0, measured_turns=2, enemy_hp=253,
-                     escalating=False, latched=False, decision_ctx=None):
+                     escalating=False, latched=False, decision_ctx=None,
+                     sandpit=0):
         # 首 tick 绑定 _race_combat（同回合无回合边界采样，注入值不被覆盖）
         decision_ctx = decision_ctx or lsl_ctx
         first_state = lsl_state(hp_now, incoming, energy_now, hand)
         first_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
         first_state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
+        if sandpit:
+            first_state["combat"]["enemies"][0]["powers"] = [
+                {"power_id": "SANDPIT_POWER", "amount": sandpit}]
         pol_r.decide(first_state, decision_ctx)
         pol_r._race_rounds = 2
         pol_r._race_loss_rate = 15.0
@@ -25230,6 +25234,9 @@ def main() -> int:
         second_state = lsl_state(hp_now, incoming, energy_now, hand)
         second_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
         second_state["combat"]["enemies"][0]["max_hp"] = max(enemy_hp, 1)
+        if sandpit:
+            second_state["combat"]["enemies"][0]["powers"] = [
+                {"power_id": "SANDPIT_POWER", "amount": sandpit}]
         return pol_r.decide(second_state, decision_ctx)
 
     d_rallc1 = rallc_decide(rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld])
@@ -25260,6 +25267,32 @@ def main() -> int:
         f"on={d_rallc1.action}/{d_rallc1.params} " \
         f"off={d_rallc_rejection_off.action}/{d_rallc_rejection_off.params}/" \
         f"{d_rallc_rejection_off.reason}"
+    # 3rallc-sandpit) F35 形状的纯观测：可执行覆盖被现有大池/余量门拒绝，
+    #      同时敌方持有 SANDPIT_POWER。该标记必须把 clock、覆盖成立和
+    #      all-in 决策绑定起来，但不改变现有动作；键=False 精确移除新尾缀。
+    assert knowledge.DEFAULT_POLICY.get(
+        "race_allin_sandpit_cover_rejection_obs") is True, \
+        "DEFAULT_POLICY 缺少 race_allin_sandpit_cover_rejection_obs"
+    d_rallc_sandpit = rallc_decide(
+        rallc_policy(), 25, 27, 1, [lsl_hit, lsl_shld], sandpit=4)
+    assert d_rallc_sandpit.action == d_rallc1.action \
+        and d_rallc_sandpit.params == d_rallc1.params \
+        and "RACE_ALLIN_SANDPIT_COVER_REJECTION_OBS" in d_rallc_sandpit.reason \
+        and "clock=4/gate=margin/coverage=yes/decision=all_in" in d_rallc_sandpit.reason, \
+        f"沙坑覆盖拒绝观测缺失或改变动作: {d_rallc_sandpit.action}/" \
+        f"{d_rallc_sandpit.params}（{d_rallc_sandpit.reason}）"
+    pol_rallc_sandpit_off = rallc_policy()
+    pol_rallc_sandpit_off.know.policy[
+        "race_allin_sandpit_cover_rejection_obs"] = False
+    d_rallc_sandpit_off = rallc_decide(
+        pol_rallc_sandpit_off, 25, 27, 1, [lsl_hit, lsl_shld], sandpit=4)
+    assert d_rallc_sandpit_off.action == d_rallc_sandpit.action \
+        and d_rallc_sandpit_off.params == d_rallc_sandpit.params \
+        and "RACE_ALLIN_SANDPIT_COVER_REJECTION_OBS" not in d_rallc_sandpit_off.reason, \
+        f"沙坑覆盖拒绝观测关闭改变动作/参数或未回滚: " \
+        f"on={d_rallc_sandpit.action}/{d_rallc_sandpit.params} " \
+        f"off={d_rallc_sandpit_off.action}/{d_rallc_sandpit_off.params}/" \
+        f"{d_rallc_sandpit_off.reason}"
     # 3rallc-lethal) 1798-F5-T6 形状：14 血对 24 意图、能量 3，单敌剩
     #      15 血且手牌有 32 伤重锤+15 甲防御。旧覆盖行为会因投影 margin
     #      =-1.8 选防御；本回合原始输出已经足以击穿当前目标时，必须保留全攻。

@@ -6110,3 +6110,39 @@ production_code_commit: `9fcd5a9aaed85919f732efd7948936a5161382d7`（本地提�
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-04 第1927~1928局批：F35 沙坑竞速覆盖拒绝形态补齐观测
+
+profile_id: `vivhite`
+production_code_commit: `21bccfddb091f62a9474c27b6a86aba4433f5811`（本地提交，未 push）
+
+### ATTRIBUTION
+
+- 本批只处理 1928 `5SWWFZCHTP28` F35 Boss 终局暴露的「可执行生还覆盖存在，但大池/严格余量门仍维持 race_allin」证据缺口；不把一次终局直接升级为格挡行为改动。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当敌方持有 `SANDPIT_POWER`、本回合格挡组合真实可执行且能覆盖致死缺口，但既有 race-allin 行为门因大池/严格余量拒绝覆盖时，沙坑时钟会使 `tsurv` 的剩余视界成为独立的终局风险。若只记录这组条件，后续可区分「覆盖被余量门拒绝」与「没有覆盖/本回合可斩杀」两类失败，而不预先改变出牌。
+- **EVIDENCE**：完整运行 `sts2-ascend/knowledge/profiles/vivhite/runs/20261004-162522_5SWWFZCHTP28.json` 共 519 条 decision。F35-T2 投影为 `pool=270/dpt=26.4137/ttk=10.222/tsurv=4`，沙坑封底为 4 回合并出现 `JOINT_FLIP_TTK_CAP`，随后进入全攻；终局为第 13 回合，实战 13 回合对投影 10.222，沙坑时钟为 1、格挡覆盖为 yes、rescue 为 unavailable，最终 HP 0。终局对账还显示 self-loss=20、有效火力聚合 `actual_dpt=19/projected_dpt=20.8168/ratio=0.92`，并有 9 次非致死空过不可用观测；这些证据支持补齐拒绝形态观测，但不单独证明改格挡必胜。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite Boss/Sandpit 战斗中，只有 `clock>0`、`coverage=yes`、`decision=all_in`、`current_turn_lethal=no` 且既有行为门未放行时出现 `RACE_ALLIN_SANDPIT_COVER_REJECTION_OBS`；应能按 marker 对账终端死因、实战/投影回合比、有效 DPT、self-loss 与实际 applied action/params。若 marker 缺失、在无真实覆盖或可本回合斩杀时出现，或 3~10 局后与无 marker 样本无可区分关联，则假设不成立。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_allin_sandpit_cover_rejection_obs`，可单独关闭。
+- `sts2-ascend/brain/policy.py`：在已有覆盖执行模拟和买活对账之后读取敌方沙坑层数；仅在真实覆盖成立、沙坑可见、all-in 被既有行为门保留且非本回合斩杀时追加 `RACE_ALLIN_SANDPIT_COVER_REJECTION_OBS` 及 clock/余量/资源字段。评分、候选、等待、目标、动作、参数和学习统计零改动。
+- `sts2-ascend/brain/selfcheck.py`：增加 `SANDPIT_POWER=4` 的覆盖拒绝夹具，并验证开关关闭时 action/params 不变且新 marker 消失。
+- 未修改 `runs/`、stats、progression、profile `policy.json`、`lessons.md`、`.runtime`、归档、资产或在线进程；既有工作区删除项与 `.review-cache` 未加入提交。
+
+### VALIDATION
+
+- 直接执行 `py -3 -B sts2-ascend/brain/selfcheck.py` 的业务断言完成，但宿主固定 256 槽池在收尾报告既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 clone 的进程级 0777 临时目录适配运行同一入口，退出码 0，末尾输出 `SELFCHECK OK`。
+- 已回读完整生产 diff、selfcheck diff，目标源码与 staged diff 的 `git diff --check` 均通过；生产代码提交为 `21bccfddb091f62a9474c27b6a86aba4433f5811`。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite Boss/Sandpit 战斗，按 run/floor/turn、clock、coverage、strict_margin、pool、ttk/tsurv、effective DPT、self-loss、terminal cause、applied action/params 分层；marker 本身不升级为行为门。
+- 若出现无覆盖/可斩杀误触发、字段与状态不符或动作参数漂移，将 `race_allin_sandpit_cover_rejection_obs=False` 关闭；必要时回滚本地提交，保留本批证据。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

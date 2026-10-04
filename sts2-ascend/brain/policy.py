@@ -17384,6 +17384,14 @@ class Policy:
                         if _ralc_invuln_floor > 0.0 and _ehp >= _ralc_invuln_floor:
                             continue
                         _ralc_pool += _ehp
+                    _ralc_sandpit_clock = 0.0
+                    for _ralc_enemy in enemies:
+                        if (isinstance(_ralc_enemy, dict)
+                                and _ralc_enemy.get("is_alive", True)):
+                            _ralc_sandpit_clock = max(
+                                _ralc_sandpit_clock,
+                                self._enemy_power_stack(
+                                    _ralc_enemy, "sandpit", "沙坑"))
                     _ralc_loss = max(1.0, float(self._race_loss_rate))
                     _ralc_post_hp = _ralc_sim_hp + _ralc_sum - gap_now
                     _ralc_surv = _ralc_post_hp / _ralc_loss
@@ -17581,6 +17589,37 @@ class Policy:
                                     f"/raw_damage_cap={_ralc_rejection_raw_cap:g}"
                                     "/current_turn_lethal=no"
                                     " (RACE_ALLIN_LETHAL_COVER_REJECTION_OBS)")
+                        try:
+                            _ralc_sandpit_rejection_obs = bool(int(float(
+                                pol.get(
+                                    "race_allin_sandpit_cover_rejection_obs",
+                                    True) or 0)))
+                        except (TypeError, ValueError, OverflowError):
+                            _ralc_sandpit_rejection_obs = False
+                        if (_ralc_sandpit_rejection_obs
+                                and _ralc_sandpit_clock > 0.0
+                                and _ralc_sum > _ralc_need
+                                and _ralc_decision == "all_in"
+                                and not _ralc_current_turn_lethal
+                                and not _ralc_behavior_eligible):
+                            _ralc_gate = (
+                                "behavior_off"
+                                if not bool(pol.get(
+                                    "race_allin_lethal_cover_behavior", True))
+                                else "margin")
+                            danger_note += (
+                                f"；败局竞速沙坑覆盖拒绝观测："
+                                f"clock={_ralc_sandpit_clock:g}/gate={_ralc_gate}"
+                                f"/coverage=yes/decision={_ralc_decision}"
+                                f"/strict_margin={_ralc_strict_margin:+.1f}"
+                                f"/pool={_ralc_pool:.0f}"
+                                f"/cover_need={_ralc_need:.0f}"
+                                f"/cover_block={_ralc_sum:.0f}"
+                                f"/post_hp={_ralc_post_hp:.0f}"
+                                f"/hp={my_hp:g}/block={my_block:g}"
+                                f"/incoming={incoming:g}/energy={energy:g}"
+                                f"/ttk={_ralc_ttk:.1f}/tsurv={_ralc_surv:.1f}"
+                                "（RACE_ALLIN_SANDPIT_COVER_REJECTION_OBS）")
                         _ralc_verdict = ("买活可翻盘" if _ralc_ttk <= _ralc_surv + 1.0
                                          else "买活仍必败")
                         danger_note += (
