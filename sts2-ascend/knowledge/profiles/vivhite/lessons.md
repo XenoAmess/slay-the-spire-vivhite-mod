@@ -21215,3 +21215,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/3.0050789706422676局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.07447173499446局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/26.066327120682615局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；power_longfight_hp_div: 14.00 → 12.00（常规锻造线触底，非 Boss 长战磨死证据改接能力牌长战加成折算（走廊血池够不到加成封顶，减小血池分母让同血池折算更高加成））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿6张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，致命Unknown战实测自损16/掉血24（67%≥50%）——謦欬实付加码收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））；kill_race_prior_eff: 0.38 → 0.41（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；行至 F21 但致命战自损16/掉血24≥50%——生命支付权重部分胜利回收让位于同局謦欬实付证据
 - 生涯战绩：5/1925 胜，当前目标进阶 5
+
+## 第 1926 局复盘（2026-10-04 16:03）
+- 结果：💀 失败｜进阶 5｜到达层数 2｜当局评分 2
+- 死因：敌人组合 SHRINKER_BEETLE
+- 本局拿牌：无
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血62｜自损44（可行动段44/非行动段12，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=11/dpt=2.24/ttk=4.91071/tsurv=0.461538（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=17/projected_ttk=4.91071/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=36.83（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.44918（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T17判死→实战17回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.4549974547104267局)，FLASH_OF_STEEL(43分/4.374922286931754局)，DRAMATIC_ENTRANCE(38分/11.500344259756325局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/4.407376817204407局)，MAYHEM(36分/4.320040434396021局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.9945611942450197局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.0567110839219795局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/25.97509497576023局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（17回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：5/1926 胜，当前目标进阶 5
