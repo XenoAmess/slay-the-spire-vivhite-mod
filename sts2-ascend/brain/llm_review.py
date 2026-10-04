@@ -5753,6 +5753,212 @@ def _recover_salvage_replay_queue(log=print) -> None:
             log(f"[llm] target attempt 索引暂未回写（队列已耐久）：{target}（{exc}）")
 
 
+_TERMINAL_REVIEW_HANDOFF_SCHEMA = "sts2-ascend-review-handoff/v1"
+_terminal_handoff_scan_cache: dict[str, tuple[int, int, str]] = {}
+
+
+def terminal_review_handoff(agent, payload: dict) -> dict | None:
+    """Embed review intent in the terminal archive before the queue can fail."""
+    if _run_is_excluded_from_review(payload) or _run_is_excluded_from_review(
+            getattr(agent, "ctx", None)):
+        return None
+    if not load_llm_config().get("enabled"):
+        return None
+    run_id = str(payload.get("run_id") or "").strip()
+    run_number = payload.get("profile_run_number") or payload.get("run_number")
+    if (not run_id or run_id == "run_unknown" or isinstance(run_number, bool)
+            or not isinstance(run_number, int) or run_number <= 0):
+        return None
+    profile_id = _profile_id_from(agent)
+    know = getattr(agent, "know", None)
+    with _review_profile_scope(profile_id, know=know):
+        epoch = _profile_review_epoch(know)
+    identity = json.dumps([profile_id, epoch, run_id], ensure_ascii=False)
+    return {
+        "schema": _TERMINAL_REVIEW_HANDOFF_SCHEMA, "state": "pending",
+        "profile_id": profile_id, "run_id": run_id, "run_number": run_number,
+        "review_epoch": epoch,
+        "queue_id": "terminal-" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:32],
+    }
+
+
+def _terminal_handoff(data: dict, binding: _ReviewProfileBinding) -> dict | None:
+    handoff = data.get("review_handoff")
+    if (not isinstance(handoff, dict)
+            or handoff.get("schema") != _TERMINAL_REVIEW_HANDOFF_SCHEMA
+            or handoff.get("state") not in {"pending", "queued"}
+            or data.get("in_progress") or _run_is_excluded_from_review(data)):
+        return None
+    profile_id = binding.paths.profile_id
+    run_id = str(data.get("run_id") or "").strip()
+    run_number = data.get("profile_run_number") or data.get("run_number")
+    if (handoff.get("profile_id") != profile_id
+            or data.get("profile_id", profile_id) != profile_id
+            or not run_id or run_id == "run_unknown"
+            or handoff.get("run_id") != run_id
+            or isinstance(run_number, bool) or not isinstance(run_number, int)
+            or run_number <= 0 or handoff.get("run_number") != run_number
+            or not str(handoff.get("queue_id") or "")
+            or str(handoff.get("review_epoch") or "") != _profile_review_epoch(
+                binding.know, profile_id=profile_id)):
+        return None
+    return handoff
+
+
+def _terminal_handoff_ready(binding: _ReviewProfileBinding, run_id: str) -> bool:
+    # Agent publishes the archive before saving stats/rotation and closing its
+    # learning transaction.  Do not race ahead of that existing terminal chain.
+    loader = getattr(binding.know, "_load_run_learning_journal", None)
+    if callable(loader):
+        data = loader()  # Reuse Knowledge's existing durable-journal validation.
+    else:
+        journal = binding.paths.root / ".active_run_learning.json"
+        try:
+            data = json.loads(journal.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            data = None
+    if data is None:
+        return True
+    if not isinstance(data, dict) or not str(data.get("run_id") or "").strip():
+        raise ReviewQueueError("active learning journal has no trustworthy run identity")
+    return str(data["run_id"]).strip() != run_id
+
+
+def _ack_terminal_review_handoff(path: Path, handoff: dict) -> None:
+    """Change metadata only, preserving the freshest full terminal evidence."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    current = data.get("review_handoff") if isinstance(data, dict) else None
+    if (not isinstance(current, dict)
+            or any(current.get(key) != handoff.get(key) for key in (
+                "schema", "queue_id", "profile_id", "run_id", "run_number", "review_epoch"))):
+        raise ReviewQueueError("terminal review handoff identity changed before acknowledgement")
+    if current.get("state") == "queued":
+        return
+    data["review_handoff"] = {**current, "state": "queued"}
+    temp = path.with_name(f".{path.name}.review-{os.getpid()}-{threading.get_ident()}.tmp")
+    try:
+        with temp.open("w", encoding="utf-8", newline="\n") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        _replace_with_retry(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _queue_terminal_review_handoff(
+    binding: _ReviewProfileBinding, path: Path, data: dict, cfg: dict, log=print,
+) -> bool:
+    handoff = _terminal_handoff(data, binding)
+    if handoff is None:
+        return False
+    queue_id = handoff["queue_id"]
+    with _queue_lock:
+        q = _load_queue_unlocked()
+        receipts = q.get("terminal_handoff_receipts", {})
+        if not isinstance(receipts, dict):
+            raise ReviewQueueError("terminal_handoff_receipts must be an object")
+        receipt = receipts.get(queue_id)
+        had_receipt = receipt is not None
+        if receipt is not None and not isinstance(receipt, dict):
+            raise ReviewQueueError("terminal handoff receipt must be an object")
+        if receipt is not None and any(receipt.get(key) != handoff.get(key) for key in (
+                "profile_id", "run_id", "run_number", "review_epoch")):
+            raise ReviewQueueError("terminal handoff receipt identity mismatch")
+        if handoff["state"] == "pending":
+            if not _terminal_handoff_ready(binding, handoff["run_id"]):
+                return False
+            if receipt is None:
+                plans = review_plans_from_config(cfg) if cfg.get("enabled") else []
+                if not plans:
+                    return False
+                existing = [*q.get("pending", []), *_reviewing_items(q.get("reviewing"))]
+                same_run = any(
+                    _queue_item_profile_id(item) == handoff["profile_id"]
+                    and str(item.get("run_id") or "") == handoff["run_id"]
+                    and str(item.get("review_epoch") or "") == handoff["review_epoch"]
+                    for item in existing)
+                if not same_run:
+                    q["pending"].append({
+                        "run": handoff["run_number"], "run_id": handoff["run_id"],
+                        "profile_id": handoff["profile_id"],
+                        "review_epoch": handoff["review_epoch"], "queue_id": queue_id,
+                        "time": time.strftime("%Y-%m-%d %H:%M"),
+                        **plans[0].as_queue_fields(), "source": "queued",
+                    })
+                receipts[queue_id] = {
+                    **handoff, "run_file": path.name,
+                }
+                q["terminal_handoff_receipts"] = receipts
+                # This receipt survives queue consumption if the host dies before
+                # the terminal archive is acknowledged; recovery never pays twice.
+                _save_queue_unlocked(q)
+            _ack_terminal_review_handoff(path, handoff)
+        if queue_id in receipts:
+            receipts.pop(queue_id)
+            q["terminal_handoff_receipts"] = receipts
+            _save_queue_unlocked(q)
+    if handoff["state"] == "pending" or had_receipt:
+        log(f"[llm] 终局复盘交接已耐久完成：profile={handoff['profile_id']} "
+            f"run_id={handoff['run_id']} 第{handoff['run_number']}局")
+    return True
+
+
+def _recover_terminal_review_handoffs(binding: _ReviewProfileBinding, log=print) -> int:
+    """Recover only explicit terminal outboxes, never infer historical missing runs."""
+    if getattr(binding.know, "root", None) is None:
+        return 0
+    cfg = load_llm_config()
+    recovered = 0
+    with _review_profile_paths_scope(binding.paths):
+        epoch = _profile_review_epoch(binding.know, profile_id=binding.paths.profile_id)
+        for path in sorted(binding.paths.runs.glob("*.json")):
+            try:
+                signature = path.stat()
+            except OSError as exc:
+                log(f"[llm] 终局 outbox 文件暂不可读：{path.name}（{exc}）")
+                continue
+            stamp = (signature.st_mtime_ns, signature.st_size, epoch)
+            cache_key = str(path)
+            if _terminal_handoff_scan_cache.get(cache_key) == stamp:
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                log(f"[llm] 保留暂不可解析的终局 outbox 文件：{path.name}（{exc}）")
+                continue
+            if not isinstance(data, dict):
+                continue
+            handoff = _terminal_handoff(data, binding)
+            if handoff is None:
+                _terminal_handoff_scan_cache[cache_key] = stamp
+                continue
+            if _queue_terminal_review_handoff(binding, path, data, cfg, log=log):
+                recovered += int(handoff["state"] == "pending")
+                updated = path.stat()
+                _terminal_handoff_scan_cache[cache_key] = (
+                    updated.st_mtime_ns, updated.st_size, epoch)
+    return recovered
+
+
+def _enqueue_live_terminal_handoff(agent, know, cfg: dict, log=print) -> bool:
+    run_id = str(getattr(getattr(agent, "ctx", None), "run_id", "") or "")
+    path_lookup = getattr(know, "_run_log_path", None)
+    if not run_id or not callable(path_lookup):
+        return False
+    path = path_lookup(run_id)
+    if path is None:
+        return False
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not isinstance(data.get("review_handoff"), dict):
+        return False
+    binding = _ReviewProfileBinding(_current_profile_paths(), know)
+    if not _queue_terminal_review_handoff(binding, path, data, cfg, log=log):
+        raise ReviewQueueError("terminal outbox is still waiting for its exact lifecycle handoff")
+    return True
+
+
 def _enqueue_review_scoped(agent, log=print, know=None) -> None:
     """agent.py 每局结束后调用：按节奏入队复盘请求并确保工作线程存活。
 
@@ -5772,6 +5978,21 @@ def _enqueue_review_scoped(agent, log=print, know=None) -> None:
         return
     queued_plan = plans[0]
     source = "queued"
+    try:
+        handoff_done = _enqueue_live_terminal_handoff(agent, review_know, cfg, log=log)
+    except (ReviewQueueError, OSError, ValueError) as exc:
+        log(f"[llm] 终局复盘交接暂未完成，保留归档 outbox 供 worker 补队：{exc}")
+        if not _review_stop_requested():
+            _ensure_worker(agent, log)
+        return
+    if handoff_done:
+        review_know.progression["last_llm_review_run"] = max(
+            int(review_know.progression.get("last_llm_review_run", 0)), runs)
+        review_know.progression["last_review_attempt_source"] = source
+        review_know.save()
+        if not _review_stop_requested():
+            _ensure_worker(agent, log)
+        return
     last_ok = review_know.progression.get("last_successful_review_run", 0)
     starve_every = max(1, int(cfg.get("review_every_runs", 5)))
     starved = runs - last_ok >= starve_every
@@ -5956,7 +6177,8 @@ def _resume_review_queue_scoped(agent, log=print) -> None:
         if llm_enabled or host_recovery:
             _ensure_worker(agent, log)
         return
-    if host_recovery or (llm_enabled and has_work):
+    if host_recovery or (llm_enabled and (
+            has_work or getattr(getattr(agent, "know", None), "root", None) is not None)):
         _ensure_worker(agent, log)
 
 
@@ -11426,7 +11648,7 @@ def _claim_profile_review_batch(
                     log("[llm] pending sticky review execution approval "
                         "refreshed from exact current backend config")
                 if accumulation_refreshed:
-                    log("[llm] ???????????????????????")
+                    log("[llm] 尚未启动的积累批次已按当前后端配置重评合批门槛")
             cap = max(1, min(
                 int(worker_cfg.get("review_queue_max", 100)),
                 int(worker_cfg.get("max_runs_in_packet", 100))))
@@ -11505,13 +11727,14 @@ def _restore_profile_review_queue(binding: _ReviewProfileBinding, log=print) -> 
                 if q.get("reviewing"):
                     recovered = _restore_interrupted_reviewing(q)
                     _save_queue_unlocked(q)
-                    log("[llm] ?????????????????"
+                    log("[llm] 上场复盘随进程中断，优先恢复追及："
                         f"profile={binding.paths.profile_id} "
-                        f"? {[item.get('run') for item in recovered]} ?")
+                        f"第 {[item.get('run') for item in recovered]} 局")
+            _recover_terminal_review_handoffs(binding, log=log)
         return True
-    except (ReviewQueueError, OSError) as exc:
-        log("[llm] profile ?????????????????30s ????"
-            f"profile={binding.paths.profile_id}?{exc}?")
+    except (ReviewQueueError, OSError, ValueError) as exc:
+        log("[llm] profile 复盘队列暂不可读，原文件保持不变，30s 后重试："
+            f"profile={binding.paths.profile_id}（{exc}）")
         return False
 
 
@@ -11539,7 +11762,7 @@ def _worker_loop_body(agent, log) -> None:
             with _review_profile_paths_scope(binding.paths):
                 _recover_unpointed_review_sandboxes(log=log)
         except (ReviewQueueError, OSError) as exc:
-            log(f"[llm] profile={binding.paths.profile_id} ??????????{exc}")
+            log(f"[llm] profile={binding.paths.profile_id} 的复盘现场恢复暂缓：{exc}")
         if _review_stop_requested():
             return
     # Operator-preserved packages may be the only surviving copy after an older
@@ -11561,7 +11784,7 @@ def _worker_loop_body(agent, log) -> None:
             with _review_profile_paths_scope(binding.paths):
                 _recover_salvage_replay_queue(log=log)
         except (ReviewQueueError, OSError) as exc:
-            log(f"[llm] profile={binding.paths.profile_id} ???????????{exc}")
+            log(f"[llm] profile={binding.paths.profile_id} 的失败包队列恢复暂缓：{exc}")
         if _review_stop_requested():
             return
     _backfill_rejection_ledger(log=log)
@@ -11605,10 +11828,11 @@ def _worker_loop_body(agent, log) -> None:
                 for binding in bindings:
                     try:
                         with _review_profile_paths_scope(binding.paths):
+                            _recover_terminal_review_handoffs(binding, log=log)
                             _recover_salvage_replay_queue(log=log)
-                    except (ReviewQueueError, OSError) as exc:
+                    except (ReviewQueueError, OSError, ValueError) as exc:
                         profile_retry_at[binding.paths.profile_id] = time.monotonic() + 30.0
-                        log(f"[llm] profile={binding.paths.profile_id} ????????{exc}")
+                        log(f"[llm] profile={binding.paths.profile_id} 的队列维护暂缓：{exc}")
                     if _review_stop_requested():
                         return
                 _resume_host_salvage_closures(log=log)
@@ -11649,7 +11873,7 @@ def _worker_loop_body(agent, log) -> None:
                     except (ReviewQueueError, OSError) as exc:
                         profile_retry_at[profile_id] = time.monotonic() + 30.0
                         profile_waits.append(30.0)
-                        log(f"[llm] profile={profile_id} ??????????{exc}")
+                        log(f"[llm] profile={profile_id} 的复盘队列认领暂缓：{exc}")
                         continue
                     if candidate:
                         batch = candidate

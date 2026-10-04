@@ -337,6 +337,11 @@ def _run_summary(data: dict, name: str, size: int, sha256: str) -> dict:
     final_deck = _final_deck_summary(data)
     if final_deck is not None:
         summary["final_deck"] = final_deck
+    handoff = data.get("review_handoff")
+    if (isinstance(handoff, dict)
+            and handoff.get("schema") == "sts2-ascend-review-handoff/v1"
+            and handoff.get("state") == "pending"):
+        summary["review_handoff_pending"] = True
     for key in ("human_assisted", "excluded_from_learning", "orphaned"):
         if key in data:
             summary[key] = bool(data.get(key))
@@ -457,6 +462,8 @@ def _select_working_set(records: list[RunRecord], options: CompactionOptions) ->
     for record in valid:
         if record.summary.get("in_progress"):
             _mark(keep, record, "in_progress")
+        if record.summary.get("review_handoff_pending"):
+            _mark(keep, record, "review_handoff_pending")
 
     for record in quality_candidates:
         summary = record.summary
