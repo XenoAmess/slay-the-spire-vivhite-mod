@@ -21226,3 +21226,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.9945611942450197局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.0567110839219795局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/25.97509497576023局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（17回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：5/1926 胜，当前目标进阶 5
+
+## 第 1927 局复盘（2026-10-04 16:17）
+- 结果：💀 失败｜进阶 5｜到达层数 8｜当局评分 8
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：VIVHITE_CARD_PARALLEL_STARFALL
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血3｜自损12（可行动段12/非行动段2，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损4（可行动段4/非行动段2，SELF_LOSS_PHASE_OBS）; F4 Monster战 掉血8｜自损12（可行动段12/非行动段6，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血7｜自损18（可行动段18/非行动段12，SELF_LOSS_PHASE_OBS）; F8 Monster战 掉血63｜自损42（可行动段42/非行动段29，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=70/dpt=15.6831/ttk=4.4634/tsurv=2.20833（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=13/projected_ttk=4.4634/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=5.89（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.25507（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战13回合阵亡（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.4464049636189404局)，FLASH_OF_STEEL(43分/4.359610058927493局)，DRAMATIC_ENTRANCE(38分/11.460093054847178局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/4.391950998344193局)，MAYHEM(36分/4.304920292875635局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.984080230065162局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.039012595128253局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/26.88418214334507局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（13回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：5/1927 胜，当前目标进阶 5
