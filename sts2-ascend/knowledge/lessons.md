@@ -17244,3 +17244,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.399899234638942局)，BODY_SLAM(16分/2.4121871516876894局)，STOKE(18分/2.2864360711955167局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.52（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1968 胜，当前目标进阶 0
+
+## 第 1969 局复盘（2026-10-05 05:34）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 SLITHERING_STRANGLER+TWIG_SLIME_M
+- 本局拿牌：SPITE, CINDER, MOLTEN_FIST, SHRUG_IT_OFF, SHRUG_IT_OFF, HOWL_FROM_BEYOND, PILLAGE, HOWL_FROM_BEYOND, INFLAME, CINDER, CONFLAGRATION
+- 本局遗物：REGAL_PILLOW
+- 战斗记录：F6 Monster战 掉血6; F7 Monster战 掉血5; F9 Monster战 掉血13; F12 Monster战 掉血13; F13 Unknown战 掉血30｜竞速投影审计：pool=67/dpt=19.8/ttk=3.38384/tsurv=1.625（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.38384/actual_over_projected=1.77（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=1.75884（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战6回合获胜; F14 Monster战 掉血13（阵亡）
+- 当前高价值卡牌：PANACHE(27分/6.908848372502192局)，PROWESS(26分/11.676780199872075局)，FEED(25分/32.203522605415216局)，MASTER_OF_STRATEGY(25分/4.051492344555914局)，MANGLE(25分/38.24611651878011局)
+- 当前低价值卡牌：HAVOC(16分/2.391499587317706局)，BODY_SLAM(16分/2.4037444966567825局)，STOKE(18分/2.2784335449463327局)
+- 策略进化：block_safety: 1.89 → 1.94（普通战斗阵亡，略微上调防御权重）
+- 生涯战绩：0/1969 胜，当前目标进阶 0
