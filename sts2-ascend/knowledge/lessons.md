@@ -17079,3 +17079,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.5294928822368963局)，BODY_SLAM(16分/2.542444342141421局)，STOKE(18分/2.4099027510414914局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（70%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.39 → 0.36（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1953 胜，当前目标进阶 0
+
+## 第 1954 局复盘（2026-10-05 00:36）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 PHANTASMAL_GARDENER
+- 本局拿牌：CINDER, SECOND_WIND, BATTLE_TRANCE, SPITE, STOMP, MOLTEN_FIST, CINDER, ANGER, ANGER, JUGGLING
+- 本局遗物：PERMAFROST
+- 战斗记录：F7 Monster战 掉血8; F9 Monster战 掉血16; F12 Monster战 掉血12; F13 Monster战 掉血0; F14 Monster战 掉血16; F15 Elite战 掉血23｜竞速投影审计：pool=84/dpt=22.275/ttk=3.77104/tsurv=0.533333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=2/projected_ttk=3.77104/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.75（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.23771（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战2回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(26分/5.24290343586286局)，PROWESS(26分/12.307321897814935局)，FEED(25分/30.849734610041462局)，MASTER_OF_STRATEGY(25分/4.270271393095917局)，MANGLE(25分/39.300818360428096局)
+- 当前低价值卡牌：HAVOC(16分/2.5206396571490672局)，BODY_SLAM(16分/2.533545786943926局)，STOKE(18分/2.401468091412846局)
+- 策略进化：elite_grey_safety_mult: 1.80 → 2.00（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1954 胜，当前目标进阶 0
