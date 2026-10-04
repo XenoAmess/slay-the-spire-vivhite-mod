@@ -17255,3 +17255,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.391499587317706局)，BODY_SLAM(16分/2.4037444966567825局)，STOKE(18分/2.2784335449463327局)
 - 策略进化：block_safety: 1.89 → 1.94（普通战斗阵亡，略微上调防御权重）
 - 生涯战绩：0/1969 胜，当前目标进阶 0
+
+## 第 1970 局复盘（2026-10-05 05:52）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：ULTIMATE_DEFEND, CINDER, DISMANTLE, STONE_ARMOR, FIGHT_ME, HEMOKINESIS, FLAME_BARRIER, BLUDGEON, OFFERING, PACTS_END, FIGHT_ME, JUGGLING, SALVO, FEEL_NO_PAIN, SWORD_BOOMERANG, CRUELTY, BLUDGEON, DISMANTLE, ANGER
+- 本局遗物：ORNAMENTAL_FAN, WAR_PAINT, PENDULUM, RED_MASK
+- 战斗记录：F19 Monster战 掉血12｜自损2（可行动段2/非行动段16，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血17｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血17; F24 Monster战 掉血15｜自损2（可行动段2/非行动段16，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血34; F31 Monster战 掉血38（阵亡）
+- 当前高价值卡牌：PANACHE(27分/6.884667403198434局)，PROWESS(26分/11.635911469172523局)，FEED(25分/32.09081027629627局)，MASTER_OF_STRATEGY(25分/4.037312121349968局)，MANGLE(25分/38.112255110964384局)
+- 当前低价值卡牌：HAVOC(16分/2.383129338762094局)，BODY_SLAM(16分/2.395331390918484局)，STOKE(18分/2.2704590275390206局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.52 → 0.52（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.94 → 1.93（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1970 胜，当前目标进阶 0
