@@ -123,6 +123,30 @@ class AgentTakeoverRecoveryTests(unittest.TestCase):
                 self.assertFalse(journal.exists())
                 self.assertFalse(instance.rotation.snapshot().has_active_run)
 
+    def test_unreadable_frame_keeps_epoch_pending_until_touched_run_is_identified(self):
+        instance = self.create()
+        manual_control.set_brain_enabled(False, source="hotkey-pause")
+        manual_control.set_brain_enabled(True, source="hotkey-resume")
+        self.assertTrue(instance._manual_control_blocks({"screen": "UNKNOWN", "run": None}))
+        self.assertEqual(instance._seen_pause_generation, 0)
+        self.assertEqual(manual_control.read_control_state().acknowledged_pause_generation, 0)
+        self.assertFalse(instance._manual_control_blocks(live("first-human-run")))
+        self.assertTrue(instance.ctx.human_assisted)
+        self.assertTrue(instance.know.run_learning_is_excluded("first-human-run"))
+        self.assertEqual(instance._seen_pause_generation, 1)
+
+    def test_same_live_mixed_run_reappearing_cancels_failed_close_wait(self):
+        instance = self.active()
+        with patch.object(instance, "_save_run_progress", return_value=False):
+            instance._exclude_human_assisted_run(victory=False, floor=5)
+        self.assertTrue(instance.ctx.finalize_requested)
+        instance._track(live())
+        self.assertFalse(instance.ctx.finalize_requested)
+        self.assertFalse(instance.ctx.run_finalized)
+        self.assertTrue(instance.ctx.human_assisted)
+        self.assertTrue(instance.know.run_learning_is_excluded("mixed-run"))
+        self.assertEqual(instance.rotation.snapshot().active_run_id, "mixed-run")
+
     def test_acknowledgement_is_scoped_and_runner_mode_writes_preserve_it(self):
         manual_control.set_brain_enabled(False, source="hotkey-pause")
         manual_control.acknowledge_pause_generation(1)

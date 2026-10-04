@@ -414,6 +414,8 @@ class RunContext:
     combat_agg: dict | None = None                    # 同层多段战斗聚合账（第 97~98 批复盘）
     combat_notes: list = field(default_factory=list)
     pending_event: tuple | None = None                # (event_id, option_key, hp_before, gold_before, floor, deck_size_before, relic_ids, potion_slots)
+    event_checkpoint_dirty: bool = False               # failed sparse checkpoints remain due
+    pending_event_page: str = ""                        # page of the accepted event choice
     pending_event_own: tuple | None = None            # (hp, gold) 事件自身即时效果快照：离开事件屏瞬间采样（106 局复盘）
     event_chain: list = field(default_factory=list)   # 同事件内已先行结算的祖先选项 [(event_id, key)]（第 237~238 批复盘）
     pending_event_fight_loss: float = 0.0             # 事件触发战斗的掉血暂存（死亡时战斗账先于事件账落库）
@@ -805,6 +807,7 @@ class Agent:
                 copy.deepcopy(row) for row in raw_changes
                 if isinstance(row, dict)
             ]
+        self._restore_event_checkpoint(prior)
         self.ctx.native_save_wait = copy.deepcopy(wait)
         self.ctx.finalize_requested = True
         log(f"[agent] 恢复待原生存档验证旧局：{run_id}；统计、轮换与复盘保持阻塞")
@@ -1718,6 +1721,14 @@ class Agent:
         if snapshot.pause_generation > seen:
             try:
                 self._mark_manual_takeover(state, source=snapshot.source)
+                observed_run_id = self._state_run_identity(state)
+                empty_menu = (state.get("screen") in ("MAIN_MENU", "CHARACTER_SELECT")
+                              and not state.get("run"))
+                if observed_run_id in ("", "run_unknown") and not empty_menu:
+                    # An unavailable API frame cannot establish which run F9
+                    # touched.  Keep the epoch pending until identity is known.
+                    self._dashboard_connection("paused", "人工接管等待可确认的对局身份")
+                    return True
                 acknowledge_pause_generation(snapshot.pause_generation)
             except (OSError, ValueError, CharacterRotationError) as exc:
                 log(f"[agent] 人工接管排除/确认尚未落盘，保持停手并重试：{exc}")
@@ -2093,6 +2104,84 @@ class Agent:
             # archival is diagnostic and must not deadlock a playable native save.
             log(f"[agent] 旧 run_id {old_run_id} 排除证据保存失败：{exc}")
 
+    def _event_checkpoint(self) -> dict | None:
+        """Persist material event/combat attribution, never volatile success tags."""
+        if getattr(self.ctx, "pending_event", None) is None:
+            return None
+        return {
+            "schema": "sts2.pending-event/v1", "run_id": self.ctx.run_id,
+            "pending_event": copy.deepcopy(self.ctx.pending_event),
+            "pending_event_page": getattr(self.ctx, "pending_event_page", ""),
+            "pending_event_own": copy.deepcopy(self.ctx.pending_event_own),
+            "event_chain": copy.deepcopy(self.ctx.event_chain),
+            "pending_event_fight_loss": self.ctx.pending_event_fight_loss,
+            "combat": copy.deepcopy(self.ctx.combat),
+            "combat_agg": copy.deepcopy(self.ctx.combat_agg),
+            "combat_bridge": copy.deepcopy(self.ctx.combat_bridge),
+            "last_hp": self.ctx.last_hp, "last_gold": self.ctx.last_gold,
+        }
+
+    def _event_checkpoint_signature(self) -> str:
+        checkpoint = self._event_checkpoint()
+        if checkpoint is not None:
+            # Repeated live combat observations need not force disk writes.  Its
+            # structural boundary and accumulated losses do need a checkpoint.
+            for key in ("combat", "combat_agg"):
+                value = checkpoint.get(key)
+                if isinstance(value, dict):
+                    checkpoint[key] = {field: value.get(field) for field in (
+                        "comp_id", "floor", "hp_start", "hp_lost_sum", "won", "died")}
+            bridge = checkpoint.get("combat_bridge")
+            if isinstance(bridge, (list, tuple)):
+                checkpoint["combat_bridge"] = bridge[:2]  # polling timestamp is not progress
+        return self._stable_sig(checkpoint)
+
+    def _restore_event_checkpoint(self, prior: dict) -> None:
+        checkpoint = prior.get("event_checkpoint")
+        if not isinstance(checkpoint, dict):
+            return  # old logs intentionally have no resumable event material
+        pending = checkpoint.get("pending_event")
+        if (checkpoint.get("schema") != "sts2.pending-event/v1"
+                or checkpoint.get("run_id") != self.ctx.run_id
+                or not isinstance(pending, (list, tuple)) or len(pending) != 8
+                or not all(isinstance(value, str) for value in pending[:2])
+                or not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                           for value in pending[2:6])
+                or not isinstance(pending[6], (list, tuple))
+                or not all(isinstance(value, str) for value in pending[6])
+                or type(pending[7]) is not int):
+            log("[agent] 忽略不匹配/无效的事件材料快照，保留既有局史")
+            return
+        self.ctx.pending_event = tuple(pending[:6]) + (tuple(pending[6]), pending[7])
+        self.ctx.pending_event_page = str(checkpoint.get("pending_event_page") or "")
+        own = checkpoint.get("pending_event_own")
+        if (isinstance(own, (list, tuple)) and len(own) == 2
+                and all(isinstance(value, (int, float)) for value in own)):
+            self.ctx.pending_event_own = tuple(own)
+        chain = checkpoint.get("event_chain")
+        if isinstance(chain, list):
+            self.ctx.event_chain = [tuple(row) for row in chain
+                                    if isinstance(row, (list, tuple)) and len(row) == 2
+                                    and all(isinstance(value, str) for value in row)]
+        loss = checkpoint.get("pending_event_fight_loss")
+        if isinstance(loss, (int, float)) and math.isfinite(loss):
+            self.ctx.pending_event_fight_loss = float(loss)
+        combat = checkpoint.get("combat")
+        if isinstance(combat, dict) and all(key in combat for key in (
+                "comp_id", "floor", "hp_start", "hp_start_pct", "node_type")):
+            self.ctx.combat = copy.deepcopy(combat)
+            self.ctx.current_combat_is_hard = combat.get("node_type") in ("Elite", "Boss")
+        agg = checkpoint.get("combat_agg")
+        if isinstance(agg, dict) and all(key in agg for key in (
+                "comp_id", "floor", "hp_lost_sum", "won", "died")):
+            self.ctx.combat_agg = copy.deepcopy(agg)
+        bridge = checkpoint.get("combat_bridge")
+        if isinstance(bridge, (list, tuple)) and len(bridge) == 3:
+            self.ctx.combat_bridge = tuple(bridge)
+        for key in ("last_hp", "last_gold"):
+            if isinstance(checkpoint.get(key), (int, float)):
+                setattr(self.ctx, key, checkpoint[key])
+
     def _track(self, state: dict, decision=None) -> None:
         """Apply observations from the state returned by the game.
 
@@ -2102,6 +2191,7 @@ class Agent:
         the optional argument preserves the small direct-call test helpers and makes
         the observation-only contract explicit.
         """
+        event_checkpoint_before = self._event_checkpoint_signature()
         run = state.get("run") or {}
         run_id = self._state_run_identity(state) or "run_unknown"
         screen = state.get("screen", "UNKNOWN")
@@ -2243,6 +2333,11 @@ class Agent:
                 return
 
         self._resume_temporarily_missing_run(state)
+        if (run and run_id == self.ctx.run_id and self.ctx.human_assisted
+                and screen != "GAME_OVER"):
+            # A failed exclusion audit must not force an authoritative live mixed
+            # run through the GAME_OVER save barrier after it reappears.
+            self.ctx.finalize_requested = False
         self._bind_profile_for_state(state)
         hp = run.get("current_hp", self.ctx.last_hp)
         gold = run.get("gold", self.ctx.last_gold)
@@ -2261,6 +2356,9 @@ class Agent:
         # 零决策幻影局（第 19/26/42/51 局四次实证，生涯统计被灌水 4 局 56 层）
         if run_id != self.ctx.run_id and screen not in ("MAIN_MENU", "GAME_OVER") and run:
             self._bind_profile_for_state(state)
+            # A read error is not an absent log.  Load before replacing the old
+            # context so the next poll retries without writing an empty history.
+            prior = self.know.load_run_log(run_id)
             # Capture the character-local baseline before any event/combat/card
             # observation from this run can mutate Knowledge.  Reconnect reuses
             # the durable journal instead of replacing the original baseline.
@@ -2291,7 +2389,6 @@ class Agent:
             # 新进程遇同 run_id 旧账另起——218 局 F23 重启把 23 层深局记成
             # 24 决策/1 拿牌/0 遗物的残缺局，复盘数据全被带歪。增量落盘的
             # 决策与战斗记录在此接回，重连不再丢局史。
-            prior = self.know.load_run_log(run_id)
             if prior and (prior.get("decisions") or prior.get("combat_notes")):
                 # Resuming a persisted run is not a complete boot-validation run,
                 # even if a transient menu-like screen was observed first.
@@ -2325,6 +2422,7 @@ class Agent:
                     self.ctx.human_assisted = True
                     self._manual_run_ids.add(str(run_id))
                     self._exclude_run_learning(self.know, str(run_id))
+                self._restore_event_checkpoint(prior)
                 log(f"[agent] 断线重连：接续对局日志（{len(self.ctx.decisions)} 条决策 / "
                     f"{len(self.ctx.combat_notes)} 条战斗记录 / "
                     f"{len(self.ctx.attribution_tags)} 条长期归因）")
@@ -2449,6 +2547,7 @@ class Agent:
                 if died_here and not through_combat:
                     self.ctx.died_to_event = (event_id, key)
                 self.ctx.pending_event = None
+                self.ctx.pending_event_page = ""
                 self.ctx.pending_event_own = None
                 self.ctx.event_chain = []
                 self.ctx.pending_event_fight_loss = 0.0
@@ -2458,9 +2557,10 @@ class Agent:
         # tags/ctx 副作用则统一留给 _commit_successful_action；否则 409/断线也会
         # 伪造拿牌、路线、休息和事件选择样本。
         self.ctx.last_hp, self.ctx.last_gold = hp, gold
-        if deck_changed:
-            # A permanent deck transition is sparse and materially important.
-            # Persist it immediately instead of waiting for the 15-decision cadence.
+        if event_checkpoint_before != self._event_checkpoint_signature():
+            self.ctx.event_checkpoint_dirty = True
+        if deck_changed or getattr(self.ctx, "event_checkpoint_dirty", False):
+            # An I/O failure keeps this sparse checkpoint due on unchanged polls.
             self._save_run_progress(run, force=True)
 
     def _commit_successful_action(self, state: dict, decision,
@@ -2488,10 +2588,20 @@ class Agent:
                 # 其他选项（滑脚木桥「再撑一会」单局八连后才换跨越），旧逻辑直接
                 # 覆盖 pending_event——除最后一次外全部选择永不入账，n 恒 0 被
                 # 「样本最少」规则反复选中。改选时按当前观测增量把上一次选择落库。
-                # 同键重挂（同选项的 tick 级重试）不结算也不刷新快照——点击未落地
-                # 的重试不应产生幻影样本，最终结算仍从首次选择起量
+                # Same-key retries without material progress keep the original
+                # snapshot.  A changed page/resource proves the preceding choice
+                # completed and starts a distinct accepted sample.
                 prev = self.ctx.pending_event
-                if prev is not None and prev[0] == tag[1] and prev[1] != tag[2]:
+                page = self._stable_sig(self._event_page_material(state))
+                repeated_progress = bool(
+                    prev is not None and prev[0] == tag[1] and prev[1] == tag[2]
+                    and ((hp, gold, len(run.get("deck", []) or [])) != prev[2:4] + (prev[5],)
+                         or _event_reward_sig(run) != (prev[6] if len(prev) > 6 else (),
+                                                      prev[7] if len(prev) > 7 else 0)
+                         or (getattr(self.ctx, "pending_event_page", "")
+                             and self.ctx.pending_event_page != page)))
+                if (prev is not None and prev[0] == tag[1]
+                        and (prev[1] != tag[2] or repeated_progress)):
                     deck_now = len(run.get("deck", []) or [])
                     # 兼容旧格式 6 元组（进程热替换/测试桩）：缺签名位按空处理
                     _rel0 = prev[6] if len(prev) > 6 else ()
@@ -2509,10 +2619,12 @@ class Agent:
                     self.ctx.event_chain.append((prev[0], prev[1]))
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
                                               deck_now) + _event_reward_sig(run)
+                    self.ctx.pending_event_page = page
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
                 elif prev is None or prev[0] != tag[1]:
                     self.ctx.pending_event = (tag[1], tag[2], hp, gold, run.get("floor", 0),
                                               len(run.get("deck", []) or [])) + _event_reward_sig(run)
+                    self.ctx.pending_event_page = page
                     self.ctx.pending_event_own = None  # 新选项重置自身效果快照
                     self.ctx.event_chain = []  # 新事件重置祖先链
                     self.ctx.pending_event_fight_loss = 0.0
@@ -2534,7 +2646,10 @@ class Agent:
         decision_row["hp"] = hp
         decision_row["gold"] = gold
         self.ctx.decisions.append(decision_row)
-        self._save_run_progress(run)
+        if any(tag and tag[0] == "event_choice" for tag in transaction_tags):
+            self.ctx.event_checkpoint_dirty = True
+        self._save_run_progress(
+            run, force=getattr(self.ctx, "event_checkpoint_dirty", False))
 
     @staticmethod
     def _stable_sig(value) -> str:
@@ -3405,11 +3520,15 @@ class Agent:
             deck_changes = getattr(self.ctx, "deck_changes", None)
             if isinstance(deck_changes, list) and deck_changes:
                 payload["deck_changes"] = copy.deepcopy(deck_changes)
+            event_checkpoint = self._event_checkpoint()
+            if event_checkpoint is not None:
+                payload["event_checkpoint"] = event_checkpoint
             native_save_wait = getattr(self.ctx, "native_save_wait", None)
             if isinstance(native_save_wait, dict):
                 payload["native_save_wait"] = copy.deepcopy(native_save_wait)
             knowledge.save_run_log(self.ctx.run_id, payload)
             self._rlog_mark = (len(self.ctx.decisions), floor, len(attribution_tags))
+            self.ctx.event_checkpoint_dirty = False
             return True
         except OSError:
             return False
@@ -4714,7 +4833,14 @@ class Agent:
             # and then immediately erased by Policy's new-combat resets on the next
             # tick, reopening one-per-combat trials and corrupting race counters.
             if native_profile_decision is None:
-                self._track(state)
+                try:
+                    self._track(state)
+                except (OSError, ValueError) as exc:
+                    self._dashboard_connection("degraded", f"局史/观察尚未就绪：{exc}")
+                    log(f"[agent] 局史/观察读取失败，保留上下文并等待下轮重试：{exc}")
+                    if wait_for_stop(self.cfg["poll_interval"]):
+                        return
+                    continue
 
             # run finalization hook (policy asked for it on GAME_OVER)
             native_continue_first = \
