@@ -16903,3 +16903,14 @@
 - 当前低价值卡牌：STOKE(18分/2.5489579375088343局)，DEFEND_IRONCLAD(18分/2.303724259982318局)，THE_GAMBIT(18分/3.9248635540439323局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（97%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
 - 生涯战绩：0/1937 胜，当前目标进阶 0
+
+## 第 1938 局复盘（2026-10-04 19:40）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 WATERFALL_GIANT
+- 本局拿牌：HEADBUTT, DISMANTLE, DEMON_FORM, SWORD_BOOMERANG, SHRUG_IT_OFF, HOWL_FROM_BEYOND, BREAKTHROUGH, SPITE, VICIOUS
+- 本局遗物：POTION_BELT
+- 战斗记录：F7 Unknown战 掉血28; F9 Monster战 掉血10; F12 Monster战 掉血9; F14 Monster战 掉血5｜自损1（可行动段1/非行动段10，SELF_LOSS_PHASE_OBS）; F15 Monster战 掉血4｜自损2（可行动段2/非行动段8，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血73｜自损1（可行动段1/非行动段67，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=196/dpt=5.4/ttk=36.2963/tsurv=4.86667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=15/projected_ttk=36.2963/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.08（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=31.4296（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战15回合阵亡｜竞速Boss有效火力收官对账：samples=11/actual_dpt=15.9545/projected_dpt=13.0982/ratio=1.38/min_ratio=0.52/min_sample=9->10/min_actual_dpt=7/min_projected_dpt=13.5556（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=11/actual_dpt=15.9545/projected_dpt=13.0982/ratio=1.38/min_ratio=0.52（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=11/layers_max=0/actual_dpt=15.9545/projected_dpt=13.0982/ratio=1.38/min_ratio=0.52（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.4882265869991107局)，PROWESS(26分/13.017473766256375局)，FEED(25分/31.59049199865419局)，MANGLE(25分/41.568537513438194局)，PYRE(25分/20.49409354970949局)
+- 当前低价值卡牌：STOKE(18分/2.5400365847275537局)，DEFEND_IRONCLAD(18分/2.29566122507238局)，THE_GAMBIT(18分/3.9111265316047787局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.48（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1938 胜，当前目标进阶 0
