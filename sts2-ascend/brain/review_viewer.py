@@ -301,18 +301,27 @@ class StreamSource:
 
     def __init__(self) -> None:
         self.offset = 0
+        self._signature: tuple[int, int, int] | None = None
+        self._header = ""
 
     def poll(self) -> list[str]:
         try:
-            size = STREAM_FILE.stat().st_size
+            stat = STREAM_FILE.stat()
+            size = stat.st_size
+            signature = (stat.st_mtime_ns, size, stat.st_ino)
             if size < self.offset:      # 文件被截断（新一场复盘）
                 self.offset = 0
-            if size == self.offset:
+            if size == self.offset and signature == self._signature:
                 return []
             with STREAM_FILE.open("r", encoding="utf-8", errors="replace") as f:
+                header = f.readline()
+                if header.startswith("[LIVE-START] ") and header != self._header:
+                    self.offset = 0
+                self._header = header
                 f.seek(self.offset)
                 data = f.read()
                 self.offset = f.tell()
+            self._signature = signature
             return [_ANSI_RE.sub("", ln) for ln in data.splitlines()]
         except OSError:
             return []
@@ -631,6 +640,10 @@ class Viewer:
         self.floor_stats: dict = {}
         self._dash_dirty = True
         self._review_dirty = True
+        self._text_cursor_id = None
+        self._text_cursor_position = None
+        self._text_error_items: list[int] = []
+        self._text_error_color = None
         self._decision_key: object = None
         self._decision_signature = ""
         self._decision_seen_at = 0.0
@@ -954,6 +967,11 @@ class Viewer:
                 self._review_dirty = True
                 self.canvas.delete("dash" if page == "REVIEW" else "txt")
                 self.canvas.delete("review")
+                if page != "REVIEW":
+                    self.canvas.delete("txt_cursor")
+                    self._text_cursor_id = None
+                    self._text_cursor_position = None
+                    self._text_error_items = []
             if page == "REVIEW":
                 self.canvas.delete("dash")
                 self.canvas.delete("review")
@@ -1168,37 +1186,65 @@ class Viewer:
     def _render_text(self, dt: float, now: float) -> None:
         total = sum(len(t) for t, _ in self.lines)
         if total == 0:
-            self.canvas.delete("txt")
+            if self._review_dirty or getattr(self, "_text_cursor_id", None) is not None:
+                self.canvas.delete("txt")
+                self.canvas.delete("txt_cursor")
+                self._text_cursor_id = None
+                self._text_cursor_position = None
+                self._text_error_items = []
+                self._review_dirty = False
             return
         # 追加滚动式：最后一行之前的所有内容瞬时上屏（老行只往上顶、不被改写），
         # 打字机动画只作用于最新一行——终端式观感。
         last_len = len(self.lines[-1][0])
         floor = float(total - last_len)
+        previous_shown = int(self.reveal)
         if self.reveal < floor:
             self.reveal = floor
         self.reveal = min(float(total), self.reveal + 220.0 * dt)
 
-        self.canvas.delete("txt")
         max_visible = (self.win_h - 130) // LINE_H   # 顶部 HUD(~78px) + 底部横幅(~50px) 避让
         visible = self.lines[-max_visible:]
         base = total - sum(len(t) for t, _ in visible)   # 可见区之前的字符数
         y0 = 78
-        acc = base
-        for i, (text, style) in enumerate(visible):
-            shown = int(max(0, min(len(text), self.reveal - acc)))
-            acc += len(text)
-            if shown <= 0:
-                break
-            y = y0 + i * LINE_H
-            color, font = self._style_of(style, now)
-            # 深色衬底提升游戏画面上的可读性
-            self.canvas.create_text(10, y + 1, anchor="nw", text=text[:shown],
-                                    fill=BG, font=font, tags="txt")
-            self.canvas.create_text(10, y, anchor="nw", text=text[:shown],
-                                    fill=color, font=font, tags="txt")
-        # 光标
-        self.canvas.create_text(10, y0 + len(visible) * LINE_H + 2, anchor="nw",
-                                text="▌", fill=CYAN, font=self.font_bold, tags="txt")
+        if self._review_dirty or int(self.reveal) != previous_shown:
+            self._review_dirty = False
+            self.canvas.delete("txt")
+            self._text_error_items = []
+            self._text_error_color = None
+            acc = base
+            for i, (text, style) in enumerate(visible):
+                shown = int(max(0, min(len(text), self.reveal - acc)))
+                acc += len(text)
+                if shown <= 0:
+                    break
+                y = y0 + i * LINE_H
+                color, font = self._style_of(style, now)
+                # 深色衬底提升游戏画面上的可读性
+                self.canvas.create_text(10, y + 1, anchor="nw", text=text[:shown],
+                                        fill=BG, font=font, tags="txt")
+                item = self.canvas.create_text(10, y, anchor="nw", text=text[:shown],
+                                               fill=color, font=font, tags="txt")
+                if style == "error":
+                    self._text_error_items.append(item)
+                    self._text_error_color = color
+        # Keep the cursor independent of body refreshes, and preserve the error
+        # pulse by changing existing items rather than recreating static text.
+        error_items = getattr(self, "_text_error_items", [])
+        if error_items:
+            color, _font = self._style_of("error", now)
+            if color != self._text_error_color:
+                for item in error_items:
+                    self.canvas.itemconfigure(item, fill=color)
+                self._text_error_color = color
+        position = (10, y0 + len(visible) * LINE_H + 2)
+        if getattr(self, "_text_cursor_id", None) is None:
+            self._text_cursor_id = self.canvas.create_text(
+                *position, anchor="nw", text="▌", fill=CYAN,
+                font=self.font_bold, tags="txt_cursor")
+        elif position != self._text_cursor_position:
+            self.canvas.coords(self._text_cursor_id, *position)
+        self._text_cursor_position = position
 
     @staticmethod
     def _metric(value: object, decimals: int = 1) -> str:

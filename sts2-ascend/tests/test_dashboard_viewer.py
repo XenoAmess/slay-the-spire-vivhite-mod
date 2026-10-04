@@ -17,6 +17,52 @@ import lifecycle  # noqa: E402
 import review_viewer  # noqa: E402
 
 
+class ReviewStreamSourceTests(unittest.TestCase):
+    def test_replacement_resets_offset_for_short_equal_and_long_streams(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-viewer-stream-") as root:
+            path = Path(root) / "review.stream"
+            for suffix in ("", "b" * 20, "b" * 60):
+                with self.subTest(new_body_length=len(suffix)), \
+                        mock.patch.object(review_viewer, "STREAM_FILE", path):
+                    source = review_viewer.StreamSource()
+                    old = '[LIVE-START] {"stream_generation":"1"}\n' + "a" * 20 + "\n"
+                    new = '[LIVE-START] {"stream_generation":"2"}\n' + suffix + "\n"
+                    path.write_text(old, encoding="utf-8")
+                    self.assertEqual(source.poll(), old.splitlines())
+                    self.assertEqual(source.poll(), [])
+                    path.write_text(new, encoding="utf-8")
+                    self.assertEqual(source.poll(), new.splitlines())
+                    self.assertEqual(source.poll(), [])
+                    with path.open("a", encoding="utf-8") as stream:
+                        stream.write("after\n")
+                    self.assertEqual(source.poll(), ["after"])
+                    self.assertEqual(source.poll(), [])
+
+    def test_start_writer_marks_identical_metadata_without_mutating_it(self) -> None:
+        import llm_review
+
+        with tempfile.TemporaryDirectory(prefix="ascend-stream-begin-") as root:
+            path = Path(root) / "review.stream"
+            meta = {"review_id": "same-review", "run": [7], "model": "review-model"}
+            with mock.patch.object(llm_review, "LIVE_STREAM", path), \
+                    mock.patch.object(review_viewer, "STREAM_FILE", path), \
+                    mock.patch.object(llm_review.time, "time_ns", side_effect=[100, 101]):
+                source = review_viewer.StreamSource()
+                llm_review._stream_begin(meta)
+                first = source.poll()
+                llm_review._stream_begin(meta)
+                second = source.poll()
+            self.assertEqual(len(first), 1)
+            self.assertEqual(len(second), 1)
+            first_meta = json.loads(first[0][len("[LIVE-START] "):])
+            second_meta = json.loads(second[0][len("[LIVE-START] "):])
+            self.assertNotEqual(first_meta.pop("stream_generation"),
+                                second_meta.pop("stream_generation"))
+            self.assertEqual(first_meta, meta)
+            self.assertEqual(second_meta, meta)
+            self.assertNotIn("stream_generation", meta)
+
+
 class DashboardSourceTests(unittest.TestCase):
     def test_utf8_signature_preserves_chinese_telemetry(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-dashboard-utf8-") as root:
@@ -451,6 +497,66 @@ class DashboardSourceTests(unittest.TestCase):
                       if call.kwargs.get("text") == "review-line-3"
                       and call.kwargs.get("fill") == review_viewer.MAGENTA]
         self.assertTrue(tool_calls)
+
+    @staticmethod
+    def _review_text_fixture(lines: list[tuple[str, str]], *, reveal: float = 10_000.0):
+        viewer = object.__new__(review_viewer.Viewer)
+        viewer.canvas = mock.MagicMock()
+        viewer.canvas.create_text.side_effect = range(1, 10_000)
+        viewer.font = viewer.font_bold = viewer.font_dim = object()
+        viewer.win_h = 768
+        viewer.lines = list(lines)
+        viewer.reveal = reveal
+        viewer._review_dirty = True
+        return viewer
+
+    def test_static_review_retains_text_and_its_independent_cursor(self) -> None:
+        viewer = self._review_text_fixture([("static review", "body")] * 40)
+        viewer._render_text(0.033, 100.0)
+        self.assertEqual(viewer.canvas.delete.call_args_list, [mock.call("txt")])
+        cursor = viewer._text_cursor_id
+        viewer.canvas.reset_mock()
+
+        for index in range(30):
+            viewer._render_text(0.033, 100.0 + index * 0.033)
+
+        viewer.canvas.delete.assert_not_called()
+        viewer.canvas.create_text.assert_not_called()
+        viewer.canvas.coords.assert_not_called()
+        self.assertEqual(viewer._text_cursor_id, cursor)
+
+    def test_review_typing_refreshes_changed_text_and_reuses_cursor(self) -> None:
+        viewer = self._review_text_fixture([("a" * 30, "body")], reveal=0.0)
+        viewer._render_text(0.033, 100.0)
+        first_text = viewer.canvas.create_text.call_args_list[0].kwargs["text"]
+        cursor = viewer._text_cursor_id
+        viewer.canvas.reset_mock()
+
+        viewer._render_text(0.033, 100.033)
+
+        second_text = viewer.canvas.create_text.call_args_list[0].kwargs["text"]
+        self.assertGreater(len(second_text), len(first_text))
+        self.assertEqual(viewer._text_cursor_id, cursor)
+        self.assertTrue(all(call.kwargs["tags"] == "txt"
+                            for call in viewer.canvas.create_text.call_args_list))
+        viewer._review_dirty = True
+        viewer.lines.clear()
+        viewer._render_text(0.033, 100.066)
+        self.assertIsNone(viewer._text_cursor_id)
+        self.assertIn(mock.call("txt_cursor"), viewer.canvas.delete.call_args_list)
+
+    def test_static_review_error_pulse_updates_existing_items(self) -> None:
+        viewer = self._review_text_fixture([("failure", "error")])
+        viewer._render_text(0.033, 100.0)
+        error_item = viewer._text_error_items[0]
+        viewer.canvas.reset_mock()
+
+        viewer._render_text(0.033, 100.3)
+
+        viewer.canvas.delete.assert_not_called()
+        viewer.canvas.create_text.assert_not_called()
+        viewer.canvas.itemconfigure.assert_called_once_with(
+            error_item, fill=viewer._style_of("error", 100.3)[0])
 
 
 class StatsSourceProfileTests(unittest.TestCase):

@@ -2634,7 +2634,11 @@ def _launch_speaker(cfg: dict, log) -> None:
 
 def _stream_begin(meta: dict) -> None:
     try:
-        LIVE_STREAM.write_text("[LIVE-START] " + json.dumps(meta, ensure_ascii=False) + "\n",
+        # A new review may overwrite the previous stream with equal or greater
+        # length before a tail reader sees the truncation.  Give each beginning
+        # its own identity without changing review_id or the caller's metadata.
+        payload = dict(meta, stream_generation=f"{os.getpid()}-{time.time_ns()}")
+        LIVE_STREAM.write_text("[LIVE-START] " + json.dumps(payload, ensure_ascii=False) + "\n",
                                encoding="utf-8")
     except OSError:
         pass
