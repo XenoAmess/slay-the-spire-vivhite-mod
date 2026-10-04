@@ -21083,3 +21083,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.102152762302585局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.292528451539268局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.100940086053008局)
 - 策略进化：potion_block_hp_pct: 0.35 → 0.40（普通战斗短时阵亡（3回合）且 block_safety 顶格——证据改接药水提前交药线（更早喝下防御/回复药水，不再加码已顶格的格挡权重））；vivhite_hp_cost_play_margin: 2.50 → 3.00（生命支付权重触底，白绮謦欬卡组（本局拿5张生命支付牌）阵亡——生命支付权重向保守收紧——证据改接謦欬出牌余量门（非致死回合謦欬实付每点抬高出牌门槛））；kill_race_prior_eff: 0.37 → 0.37（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；potion_block_hp_pct: 0.40 → 0.37（行至 F22——药水交药线部分胜利回收）；vivhite_param_life_cost_weight: -2.98 → -2.95（行至 F22——白绮生命支付权重部分胜利回收（锚点-1.25））；vivhite_hp_cost_play_margin: 3.00 → 2.75（行至 F22——謦欬出牌余量门部分胜利回收（锚点0.0，半量步长））；vivhite_life_cost_deck_cap: 20.00 → 22.50（行至 F22——謦欬血税软顶部分胜利回收（锚点60.0，半量步长））
 - 生涯战绩：4/1913 胜，当前目标进阶 4
+
+## 第 1914 局复盘（2026-10-04 11:50）
+- 结果：💀 失败｜进阶 4｜到达层数 11｜当局评分 11
+- 死因：敌人组合 LEAF_SLIME_S+SLITHERING_STRANGLER+TWIG_SLIME_S
+- 本局拿牌：VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_SCALE_TRANSFORMATION, PANACHE
+- 本局遗物：CENTENNIAL_PUZZLE, AMETHYST_AUBERGINE
+- 战斗记录：F2 Monster战 掉血0｜自损16（可行动段16/非行动段2，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血24｜自损16（可行动段16/非行动段4，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损6（可行动段6/非行动段2，SELF_LOSS_PHASE_OBS）; F11 Unknown战 掉血65｜自损20（可行动段20/非行动段61，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.560491920352691局)，MAYHEM(36分/4.505678246893606局)，JACKPOT(36分/7.8573693711827115局)，REND(36分/2.4732671198334466局)，PREP_TIME(33分/4.719306613489541局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.094795227634526局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.274004601958881局)，VIVHITE_CARD_PARALLEL_STARFALL(21分/23.020086795751823局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（11回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；vivhite_param_life_cost_weight: -2.95 → -3.00（白绮謦欬卡组（本局拿2张生命支付牌）阵亡——生命支付权重向保守收紧）
+- 生涯战绩：4/1914 胜，当前目标进阶 4
