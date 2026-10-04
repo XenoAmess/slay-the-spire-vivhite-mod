@@ -16936,3 +16936,14 @@
 - 当前低价值卡牌：STOKE(18分/2.522287444082624局)，DEFEND_IRONCLAD(18分/2.2796197183468805局)，THE_GAMBIT(18分/3.883796557183558局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.45 → 0.42（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1940 胜，当前目标进阶 0
+
+## 第 1941 局复盘（2026-10-04 20:30）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：ANGER, RUPTURE, MOLTEN_FIST, ANGER, UNRELENTING, PYRE, INFLAME, IRON_WAVE, EVIL_EYE, INFLAME, JUGGERNAUT, CINDER, BREAKTHROUGH, BOLAS, BREAKTHROUGH
+- 本局遗物：BAG_OF_MARBLES, SELF_FORMING_CLAY
+- 战斗记录：F15 Monster战 掉血1; F17 Boss战 掉血34｜竞速投影审计：pool=175/dpt=16.2/ttk=10.8025/tsurv=4.1875（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=10.8025/actual_over_projected=0.83（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=6.61497（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战9回合获胜｜竞速Boss有效火力收官对账：samples=1/actual_dpt=24/projected_dpt=20.25/ratio=1.19/min_ratio=1.19/min_sample=2->3/min_actual_dpt=24/min_projected_dpt=20.25（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=1/actual_dpt=24/projected_dpt=20.25/ratio=1.19/min_ratio=1.19（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=1/layers_max=0/actual_dpt=24/projected_dpt=20.25/ratio=1.19/min_ratio=1.19（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血13; F20 Monster战 掉血17; F21 Monster战 掉血32｜自损15（可行动段15/非行动段23，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血18｜自损1（可行动段1/非行动段9，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=136/dpt=47.4/ttk=2.8692/tsurv=0.684211（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=2.8692/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=7.31（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.18499（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.4517282506049782局)，PROWESS(26分/12.881268125747406局)，FEED(25分/31.259951428806936局)，MANGLE(25分/41.13359373104967局)，PYRE(24分/21.279657846691237局)
+- 当前低价值卡牌：STOKE(18分/2.513459438028335局)，DEFEND_IRONCLAD(18分/2.2716410493326666局)，THE_GAMBIT(18分/3.870203269233416局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.42 → 0.43（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.97 → 1.96（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.70 → 1.65（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1941 胜，当前目标进阶 0
