@@ -18543,7 +18543,9 @@ class Policy:
                     if _prelock_damage > 0.0:
                         why += (
                             f"；竞速未锁前混合攻防对账：伤害{_prelock_damage:g}"
-                            f"/命中{_prelock_hits:g}/格挡{_prelock_block:g}"
+                            f"/命中{_prelock_hits:g}"
+                            f"/总伤害{_prelock_damage * _prelock_hits:g}"
+                            f"/格挡{_prelock_block:g}"
                             "（RACE_PRELOCK_HYBRID_ATTACK_OBS）")
             if self._hp_gate_stall_rearm_pending:
                 why += self._consume_hp_gate_stall_rearm_note()

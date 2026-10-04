@@ -24135,7 +24135,7 @@ def main() -> int:
         }
 
     def rpre_decide(enabled, behavior=False, affordable_attack=False,
-                    hybrid=False):
+                    hybrid=False, hybrid_hits=1):
         rpre_ctx = type("RPRECTX", (), {
             "combat": {"comp_id": "RPRE_RACE_COMP", "node_type": "Elite"},
             "current_combat_is_hard": False,
@@ -24153,6 +24153,7 @@ def main() -> int:
                 "requires_target": True, "valid_target_indices": [0],
                 "dynamic_values": [
                     {"name": "Damage", "current_value": 6},
+                    {"name": "Hits", "current_value": hybrid_hits},
                     {"name": "Block", "current_value": 5},
                 ],
             }
@@ -24193,7 +24194,7 @@ def main() -> int:
             and d_rpre_hybrid_on.params.get("card_index") == 1
             and "RACE_PRELOCK_DEFENSE_OBS" in d_rpre_hybrid_on.reason
             and "RACE_PRELOCK_HYBRID_ATTACK_OBS" in d_rpre_hybrid_on.reason
-            and "伤害6/命中1/格挡5" in d_rpre_hybrid_on.reason), \
+            and "伤害6/命中1/总伤害6/格挡5" in d_rpre_hybrid_on.reason), \
         f"竞速未锁前混合攻防观测未与纯格挡分账: " \
         f"pure={d_rpre_on} hybrid={d_rpre_hybrid_on}"
     assert (d_rpre_hybrid_off.action == d_rpre_hybrid_on.action
@@ -24203,6 +24204,20 @@ def main() -> int:
                 not in d_rpre_hybrid_off.reason), \
         f"混合攻防观测关闭后动作漂移或 marker 残留: " \
         f"on={d_rpre_hybrid_on} off={d_rpre_hybrid_off}"
+    d_rpre_hybrid_multi_on = rpre_decide(
+        True, hybrid=True, hybrid_hits=2)
+    d_rpre_hybrid_multi_off = rpre_decide(
+        False, hybrid=True, hybrid_hits=2)
+    assert ("伤害6/命中2/总伤害12/格挡5"
+            in d_rpre_hybrid_multi_on.reason
+            and d_rpre_hybrid_multi_off.action
+            == d_rpre_hybrid_multi_on.action
+            and d_rpre_hybrid_multi_off.params
+            == d_rpre_hybrid_multi_on.params
+            and "RACE_PRELOCK_HYBRID_ATTACK_OBS"
+                not in d_rpre_hybrid_multi_off.reason), \
+        f"多段混合攻防总伤害对账或回滚失效: " \
+        f"on={d_rpre_hybrid_multi_on} off={d_rpre_hybrid_multi_off}"
 
     # 3rpre-free) 1908-F33-T1 选择 INFERNAL_BLADE 的免费攻击生成机会观测：
     #      原生牌面会加入一张本回合可免费打出的随机攻击牌，但旧理由只显示
