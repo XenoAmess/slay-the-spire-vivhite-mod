@@ -16107,3 +16107,52 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：固定 256 槽宿主入口按预期复现 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（槽耗尽）；同一 clone 的一次性 0777 进程级临时目录适配器运行同一 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；`git diff --check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆或在线进程。
 
 - `retry_resolution: none (no failed_review_replay packages requested; persisted GAME_OVER cover observation integrated)`
+
+## 2026-10-04 run 1901-F33：Boss组合门终局补齐来源分账与实际编制
+
+profile_id：`ironclad`
+requested_run：`1901`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `BOSS_RACE_COMBO_GATE_TERMINAL_OUTCOME_OBS` 只保存
+  `known_viable=0/3`，不能直接把前夜的失败组合分账与实际进入的 Boss 编制对上；
+  因此无法证伪“组合门确实覆盖了本次终局对象”。若补齐来源分账和终局编制，未来
+  3—10 个同类终局应能逐条核对来源组合、实际 roster 与胜负；若字段错配、跨边界或
+  动作参数漂移，假设即被证伪。
+- **EVIDENCE**：精确链
+  `sts2-ascend/knowledge/runs/20261004-074225_QU1SST45XYEF.json` 的 run 1901
+  D364/F32 REST 记录 `BOSS_RACE_COMBO_GATE：已知组合可行0/3`，分账为
+  `THE_INSATIABLE285池必败、KNOWLEDGE_DEMON343池必败、CRUSHER+ROCKET372池必败`；
+  D389/F33 终局战斗帧记录 `terminal_roster=CRUSHER#0、ROCKET#1`，D390 原终局桥
+  只有聚合计数，缺少两者的稳定同一条对账输出。
+- **EXPECTED_SIGNAL**：同楼层 REST→下一楼层 COMBAT 的终局 marker 在来源字段合法时
+  追加 `source_combo_verdicts`、`terminal_roster` 和可选 `terminal_roster_count`；
+  缺失/畸形字段只保留旧计数，REWARD 等边界、重复终局和关闭开关不追加；
+  `continue_game_over` 与 `{}` 必须保持不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有有界、同楼层终局桥中读取来源 `分账` 与尾部
+  `terminal_roster`，经过长度、分隔符、数值范围校验后只追加三项观测字段；不进入评分、
+  选路、目标、判决或动作参数。
+- `sts2-ascend/brain/knowledge.py`：明确既有观测开关同时控制来源分账与终局编制字段。
+- `sts2-ascend/brain/selfcheck.py`：扩展组合门终局夹具，断言两类字段、marker 去重、
+  关闭回滚和 REWARD 边界，并保留动作/参数不漂移断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集未来 3—10 个匹配 Boss 终局，统计 marker 命中数、来源组合与实际
+  roster 的交集、胜负分层及字段缺失率；不把该观测直接接入策略。
+- **Adjust**：若出现 roster 与来源错配、重复 marker、跨房间/跨楼层串接或字段污染，
+  收紧解析并维持只读；若真实载荷没有稳定 roster，则停用编制字段而保留旧计数。
+- **Rollback**：将 `boss_race_combo_gate_terminal_outcome_obs` 设为 `False`，预期
+  删除整条组合门终局观测，恢复原动作、参数和前夜判定。
+- **Validation**：直接入口复现宿主固定 256 槽的
+  `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 clone 的精确临时槽适配器运行完整
+  `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；目标 diff `--check` 通过，未写入
+  `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`

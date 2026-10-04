@@ -5796,6 +5796,60 @@ class Policy:
         if _source is None:
             return ""
 
+        _source_combo_verdicts = ""
+        _source_reason = str(_source.get("reason") or "")
+        _verdict_match = re.search(
+            r"分账[：:]\s*(?P<items>[^；;。]+)", _source_reason)
+        if _verdict_match:
+            _verdict_items = []
+            for _item in re.split(r"[,，]\s*",
+                                  _verdict_match.group("items")):
+                _item = re.sub(r"\s+", "", _item).strip()
+                if not _item:
+                    continue
+                if (len(_item) > 96
+                        or "/" in _item
+                        or "|" in _item
+                        or re.search(r"池(?:必败|可行)$", _item) is None):
+                    _verdict_items = []
+                    break
+                _verdict_items.append(_item)
+            if _verdict_items and len(_verdict_items) <= 32:
+                _source_combo_verdicts = "|".join(_verdict_items)
+
+        _terminal_roster = ""
+        _terminal_roster_count = None
+        for _tail_row in reversed(_decisions[_source_index + 1:]):
+            if not isinstance(_tail_row, dict):
+                continue
+            _tail_reason = str(_tail_row.get("reason") or "")
+            _roster_match = re.search(
+                r"terminal_roster=(?P<roster>[^；;（）()]*)",
+                _tail_reason)
+            if _roster_match is None:
+                continue
+            _candidate_roster = _roster_match.group("roster").strip()
+            _candidate_roster = _candidate_roster.split(
+                "/terminal_roster_count=", 1)[0].strip(" ,，")
+            if (not _candidate_roster
+                    or len(_candidate_roster) > 256
+                    or "/" in _candidate_roster):
+                continue
+            _count_match = re.search(
+                r"/terminal_roster_count=(?P<count>\d+)", _tail_reason)
+            _candidate_count = None
+            if _count_match:
+                try:
+                    _candidate_count = int(_count_match.group("count"))
+                except (TypeError, ValueError, OverflowError):
+                    _candidate_count = None
+                if (_candidate_count is not None
+                        and not 0 <= _candidate_count <= 32):
+                    _candidate_count = None
+            _terminal_roster = re.sub(r"\s+", "", _candidate_roster)
+            _terminal_roster_count = _candidate_count
+            break
+
         def _num(value) -> str:
             try:
                 return f"{float(value):g}"
@@ -5811,11 +5865,21 @@ class Policy:
         _terminal_round = _terminal.get("turn", _terminal.get("round"))
         _terminal_action = _terminal.get("action") or "?"
         _result = "victory" if victory else "defeat"
+        _combo_detail_tail = ""
+        if _source_combo_verdicts:
+            _combo_detail_tail += (
+                f"/source_combo_verdicts={_source_combo_verdicts}")
+        if _terminal_roster:
+            _combo_detail_tail += f"/terminal_roster={_terminal_roster}"
+        if _terminal_roster_count is not None:
+            _combo_detail_tail += (
+                f"/terminal_roster_count={_terminal_roster_count}")
         return (
             f"；Boss组合门终局对账：outcome={_result}"
             f"/source_floor={_source.get('floor', '?')}"
             f"/source_action={_source.get('action') or '?'}"
             f"/known_viable={_alive}/{_total}"
+            f"{_combo_detail_tail}"
             f"/terminal_floor={_terminal_floor}"
             f"/terminal_round={_round(_terminal_round)}"
             f"/terminal_action={_terminal_action}"

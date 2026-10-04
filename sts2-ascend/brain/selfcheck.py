@@ -14470,7 +14470,9 @@ def main() -> int:
         {"screen": "MAP", "floor": 16, "action": "choose_map_node",
          "reason": "路径规划：Boss(16,3)"},
         {"screen": "COMBAT", "floor": 17, "turn": 6, "hp": 1,
-         "action": "end_turn", "reason": "战斗：终端回合"},
+         "action": "end_turn",
+         "reason": "战斗：终端回合；终端编制="
+                   "VANTOM#0/terminal_roster=VANTOM#0/terminal_roster_count=1"},
     ]
     combo_gate_terminal_state = {
         "screen": "GAME_OVER",
@@ -14493,6 +14495,10 @@ def main() -> int:
             and "outcome=defeat" in d_combo_gate_terminal.reason
             and "/source_floor=16" in d_combo_gate_terminal.reason
             and "/known_viable=0/6" in d_combo_gate_terminal.reason
+            and "/source_combo_verdicts=VANTOM173池必败|"
+            "CEREMONIAL_BEAST252池必败" in d_combo_gate_terminal.reason
+            and "/terminal_roster=VANTOM#0" in d_combo_gate_terminal.reason
+            and "/terminal_roster_count=1" in d_combo_gate_terminal.reason
             and "/terminal_floor=17" in d_combo_gate_terminal.reason
             and "/terminal_round=6" in d_combo_gate_terminal.reason
             and "/final_hp=0" in d_combo_gate_terminal.reason), \
