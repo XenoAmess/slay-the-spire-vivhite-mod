@@ -2274,14 +2274,25 @@ class Knowledge:
             self._repair_phantom_runs()
             self._repair_boss_act_trunc_counters()
 
-    def _repair_phantom_runs(self) -> None:
-        """一次性修复：把历史上误入账的幻影局从生涯统计中扣除。
+    def _complete_phantom_progression_repair(self, target: dict) -> None:
+        """Complete the one-shot progression write using durable target values."""
+        self.progression["runs_by_ascension"] = copy.deepcopy(target)
+        _save_json(self.root / "progression.json", self.progression)
+        self.stats.pop("phantom_repair_pending_progression_v1", None)
+        _save_json(self.root / "stats.json", self.stats)
 
-        幻影局指纹：runs/ 日志零决策且非胜利——真实对局至少有涅奥事件一条决策。
-        每个幻影局曾使 global.runs/floors_total、progression.runs_by_ascension
-        各 +1，并多衰减一次探索率。标记键 stats.phantom_repair_v1 防重复执行；
-        以 runs/ 文件（不可变历史）为准而非计数器本身，对中途漂移稳健。
+    def _repair_phantom_runs(self) -> None:
+        """Remove legacy closed, autonomous zero-decision runs exactly once.
+
+        The marker and corrected aggregate share one atomic stats replacement.
+        Progression is a different file: persist its exact target alongside that
+        marker, then replay the target after an interrupted progression write.
+        Legacy stores already marked repaired are never recalculated.
         """
+        pending = self.stats.get("phantom_repair_pending_progression_v1")
+        if isinstance(pending, dict):
+            self._complete_phantom_progression_repair(pending)
+            return
         if self.stats.get("phantom_repair_v1"):
             return
         n_phantom, lost_floors, by_asc = 0, 0.0, {}
@@ -2290,30 +2301,31 @@ class Knowledge:
                 d = json.loads(p.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 continue
-            if d.get("decisions") or d.get("victory") or not d.get("run_id"):
+            if (not isinstance(d, dict)
+                    or any(bool(d.get(key)) for key in (
+                        "in_progress", "human_assisted", "excluded_from_learning"))
+                    or d.get("decisions") or d.get("victory") or not d.get("run_id")):
                 continue
             n_phantom += 1
             lost_floors += float(d.get("floor") or 0)
             asc = str(d.get("ascension", 0))
             by_asc[asc] = by_asc.get(asc, 0) + 1
+        self.stats["phantom_repair_v1"] = True
         if n_phantom:
             g = self.stats["global"]
             g["runs"] = max(0, int(g.get("runs", 0)) - n_phantom)
             g["floors_total"] = max(0.0, float(g.get("floors_total", 0.0)) - lost_floors)
             g["floor_sum_raw"] = max(
                 0.0, float(g.get("floor_sum_raw", 0.0)) - lost_floors)
-            # A phantom may also have polluted the raw maximum.  Recompute from
-            # non-phantom active/catalog evidence instead of trying to subtract a
-            # maximum.  If no evidence survived, retain zero rather than inventing
-            # a floor from the learning score.
             g["best_floor_raw"] = self._best_raw_floor_from_history()
-            rba = self.progression.setdefault("runs_by_ascension", {})
+            rba = copy.deepcopy(self.progression.get("runs_by_ascension", {}))
             for asc, cnt in by_asc.items():
                 rba[asc] = max(0, int(rba.get(asc, 0)) - cnt)
-            # 幻影修复不再反向补偿 exploration_rate（该 legacy 死键已移除，
-            # 伪变异通道一并关闭）
-            self.save()
-        self.stats["phantom_repair_v1"] = True
+            self.stats["phantom_repair_pending_progression_v1"] = rba
+            _save_json(self.root / "stats.json", self.stats)
+            self._complete_phantom_progression_repair(rba)
+        else:
+            _save_json(self.root / "stats.json", self.stats)
 
     def _repair_boss_act_trunc_counters(self) -> None:
         """一次性修复：作废被 int() 截断计数器污染的 Boss 分幕子账本。
@@ -2366,14 +2378,13 @@ class Knowledge:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 continue
-            if not isinstance(data, dict):
+            if (not isinstance(data, dict)
+                    or any(bool(data.get(key)) for key in (
+                        "in_progress", "human_assisted", "excluded_from_learning"))):
                 continue
             decisions = ([row for row in data.get("decisions", []) if isinstance(row, dict)]
                          if isinstance(data.get("decisions"), list) else [])
             if not decisions and not bool(data.get("victory")):
-                continue
-            game_over = any(row.get("screen") == "GAME_OVER" for row in decisions)
-            if bool(data.get("in_progress")) and not bool(data.get("victory")) and not game_over:
                 continue
             values = [data.get("floor")]
             values.extend(row.get("floor") for row in decisions)
@@ -2397,10 +2408,9 @@ class Knowledge:
                 continue
             if not isinstance(row, dict) or not row.get("file"):
                 continue
-            if bool(row.get("phantom_candidate")):
-                continue
-            if (bool(row.get("in_progress")) and not bool(row.get("victory"))
-                    and row.get("last_screen") != "GAME_OVER"):
+            if (bool(row.get("phantom_candidate"))
+                    or any(bool(row.get(key)) for key in (
+                        "in_progress", "human_assisted", "excluded_from_learning"))):
                 continue
             try:
                 floor = int(float(row.get("floor")))
