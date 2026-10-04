@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import random
@@ -18,7 +19,8 @@ from unittest import mock
 BRAIN = Path(__file__).resolve().parents[1] / "brain"
 sys.path.insert(0, str(BRAIN))
 
-from decision_trace import DecisionTraceBuilder, ensure_decision_trace  # noqa: E402
+from decision_trace import (DecisionTraceBuilder, build_decision_trace,
+                            ensure_decision_trace)  # noqa: E402
 from live_dashboard import (JSON_ENCODING, LiveDashboardPublisher, MAX_BYTES,
                             SCHEMA)  # noqa: E402
 from policy import Decision, Policy  # noqa: E402
@@ -98,7 +100,7 @@ class DecisionTraceTests(unittest.TestCase):
             "decision_trace.py": {"__future__", "re", "typing"},
             "live_dashboard.py": {
                 "__future__", "copy", "json", "os", "queue", "threading",
-                "time", "pathlib", "typing", "lifecycle",
+                "datetime", "pathlib", "typing", "lifecycle",
             },
         }
         banned_roots = {
@@ -172,8 +174,64 @@ class DecisionTraceTests(unittest.TestCase):
                 self.assertEqual(decision.trace["selected"]["action"], None)
                 self.assertTrue(decision.trace["gates"])
 
+    def test_late_low_scoring_choice_keeps_its_computed_score(self) -> None:
+        cards = [{"index": index, "name": f"Card {index}"} for index in range(40)]
+        state = {"screen": "CARD_SELECTION", "selection": {"cards": cards}}
+        decision = Decision("select_deck_card", {"option_index": 39}, "forced choice")
+        original = (decision.action, dict(decision.params), decision.reason)
+        rng = random.Random(73)
+        rng_before = rng.getstate()
+        builder = DecisionTraceBuilder(state)
+        for card in cards:
+            builder.candidate(card["name"], -card["index"], index=card["index"],
+                              action="select_deck_card", status="forced_risk")
+
+        trace = builder.finish(decision)
+
+        self.assertEqual(trace["selected"]["label"], "Card 39")
+        self.assertEqual(trace["selected"]["score"], -39)
+        self.assertEqual(len(trace["candidates"]), 8)
+        self.assertEqual(trace["candidates"][0]["index"], 39)
+        self.assertEqual(sum(row["status"] == "chosen" for row in trace["candidates"]), 1)
+        self.assertEqual(original, (decision.action, decision.params, decision.reason))
+        self.assertEqual(rng_before, rng.getstate())
+
+    def test_generic_pool_keeps_late_choice_without_reason_scores(self) -> None:
+        state = {"screen": "CARD_SELECTION", "selection": {"cards": [
+            {"index": index, "name": f"Card {index}"} for index in range(40)]}}
+        decision = Decision("select_deck_card", {"option_index": 39}, "forced choice")
+        for parse_scores in (True, False):
+            with self.subTest(parse_scores=parse_scores):
+                trace = build_decision_trace(state, decision, parse_reason_scores=parse_scores)
+                self.assertEqual(trace["selected"]["label"], "Card 39")
+                self.assertEqual(trace["candidates"][0]["index"], 39)
+                self.assertEqual(trace["candidates"][0]["status"], "chosen")
+                self.assertIsNone(trace["candidates"][0]["score"])
+
 
 class LiveDashboardPublisherTests(unittest.TestCase):
+    def test_same_second_receipts_have_strictly_ordered_timezone_timestamps(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-dashboard-time-") as root:
+            publisher = LiveDashboardPublisher(Path(root), "time-test", autostart=False)
+            decision = Decision("end_turn", {}, "end")
+            first_at = datetime(2026, 10, 4, 12, 0, 0, 100, tzinfo=timezone.utc)
+            second_at = first_at.replace(microsecond=200)
+            ids = []
+            for at in (first_at, second_at):
+                decision_id = publisher.propose(reward_state(), decision)
+                ids.append(decision_id)
+                with mock.patch("live_dashboard.datetime") as clock:
+                    clock.now.return_value = at
+                    publisher.outcome("applied", decision_id=decision_id)
+            events = [event for event in publisher._queue.queue if event["kind"] == "outcome"]
+            timestamps = [datetime.fromisoformat(event["at"]) for event in events]
+            self.assertEqual([event["decision_id"] for event in events], ids)
+            self.assertNotEqual(*ids)
+            self.assertIsNotNone(timestamps[0].utcoffset())
+            self.assertEqual(timestamps[0].replace(microsecond=0),
+                             timestamps[1].replace(microsecond=0))
+            self.assertGreater(timestamps[1], timestamps[0])
+
     def test_atomic_snapshot_lifecycle_history_and_bounds(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-dashboard-") as root:
             publisher = LiveDashboardPublisher(Path(root), "session-test")

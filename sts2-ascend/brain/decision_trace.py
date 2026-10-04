@@ -148,7 +148,7 @@ def _state_candidates(state: dict, decision) -> list[dict]:
 def _merge_scores(candidates: list[dict], reason: str) -> list[dict]:
     ranked = _ranked_values(reason)
     if not ranked:
-        return candidates[:MAX_CANDIDATES]
+        return sorted(candidates, key=lambda row: row.get("status") != "chosen")[:MAX_CANDIDATES]
     used: set[int] = set()
     for row in candidates:
         label = row["label"].casefold()
@@ -204,6 +204,8 @@ def build_decision_trace(state: dict, decision, *, parse_reason_scores: bool = T
     candidates = _state_candidates(state, decision)
     if parse_reason_scores:
         candidates = _merge_scores(candidates, reason)
+    else:
+        candidates = sorted(candidates, key=lambda row: row.get("status") != "chosen")[:MAX_CANDIDATES]
     selected_row = next((row for row in candidates if row.get("status") == "chosen"), None)
     legal = not action or action in actions or not actions
     gates = [
@@ -256,8 +258,9 @@ class DecisionTraceBuilder:
     def candidate(self, label: Any, score: Any, *, index: Any = None,
                   action: str = "", status: str = "eligible", why: Any = "",
                   target: Any = None) -> None:
-        if len(self._candidates) >= 32:
-            return
+        # The final choice is not known until finish().  Collect the already
+        # computed rows before bounding the published pool so a late, forced,
+        # or low-scoring choice keeps its actual score without another evaluation.
         row = _candidate(label, index, score=score, status=status,
                          why=why, action=action)
         if target is not None:

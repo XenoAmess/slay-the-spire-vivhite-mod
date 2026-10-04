@@ -6,7 +6,7 @@ import json
 import os
 import queue
 import threading
-import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +22,7 @@ PROFILE_LABELS = {"ironclad": "Ironclad", "vivhite": "Vivhite"}
 
 
 def _now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    return datetime.now().astimezone().isoformat(timespec="microseconds")
 
 
 def _safe(value: Any, *, depth: int = 0) -> Any:
