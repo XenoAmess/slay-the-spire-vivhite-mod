@@ -847,7 +847,7 @@ class ReviewResolverTests(unittest.TestCase):
                                 return_value={
                                     "opencode-go/glm-5.3-flash",
                                     "amd-radeon/DeepSeek-V4-Flash",
-                                    "kimi-for-coding/k3",
+                                    "kimi-code-plan-cn/k3",
                                 })):
             selected = llm_review.resolve_review_plan(cfg, log=lambda _message: None)
 

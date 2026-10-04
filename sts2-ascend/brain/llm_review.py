@@ -61,6 +61,7 @@ from review_runners import (
     bind_review_workdir,
     build_review_command,
     review_plans_from_config,
+    resolve_opencode_model_id,
     runner_binary,
     translator_for_runner,
 )
@@ -2549,7 +2550,7 @@ def resolve_review_plan(
         if plan.runner == "opencode":
             if opencode_models is None:
                 opencode_models = _query_available_models(selected_binary, cfg, log) or set()
-            if plan.model not in opencode_models:
+            if resolve_opencode_model_id(plan.model) not in opencode_models:
                 log(f"[llm] 后端 {plan.key} 的模型不在 OpenCode 可用清单，看下一优先")
                 reasons.append(f"{plan.key}:model-unavailable")
                 continue
