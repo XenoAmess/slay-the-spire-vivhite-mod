@@ -110,6 +110,7 @@ VIEW_PAGES = ("LIVE", "TREND", "REVIEW")
 STATS_PROFILE_IDS = frozenset(("ironclad", "vivhite"))
 PROFILE_DISPLAY_LABELS = {"ironclad": "战士", "vivhite": "白绮"}
 PROFILE_COMPARISON_WINDOW = 20
+STREAM_HEADER_CHARS = 512
 
 
 class _ProcessMemoryCounters(ctypes.Structure):
@@ -311,13 +312,16 @@ class StreamSource:
             signature = (stat.st_mtime_ns, size, stat.st_ino)
             if size < self.offset:      # 文件被截断（新一场复盘）
                 self.offset = 0
-            if size == self.offset and signature == self._signature:
-                return []
             with STREAM_FILE.open("r", encoding="utf-8", errors="replace") as f:
-                header = f.readline()
+                # Windows can retain mtime across same-size overwrites.  Read a
+                # small prefix before the stat fast path; modern writers place
+                # stream_generation first even when review metadata is large.
+                header = f.readline(STREAM_HEADER_CHARS)
                 if header.startswith("[LIVE-START] ") and header != self._header:
                     self.offset = 0
                 self._header = header
+                if size == self.offset and signature == self._signature:
+                    return []
                 f.seek(self.offset)
                 data = f.read()
                 self.offset = f.tell()

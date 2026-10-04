@@ -18,6 +18,53 @@ import review_viewer  # noqa: E402
 
 
 class ReviewStreamSourceTests(unittest.TestCase):
+    def test_same_size_generation_change_ignores_fixed_mtime(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ascend-viewer-fixed-mtime-") as root:
+            path = Path(root) / "review.stream"
+            old = '[LIVE-START] {"stream_generation":"1"}\nold\n'
+            new = '[LIVE-START] {"stream_generation":"2"}\nnew\n'
+            path.write_text(old, encoding="utf-8")
+            previous_stat = path.stat()
+            with mock.patch.object(review_viewer, "STREAM_FILE", path):
+                source = review_viewer.StreamSource()
+                self.assertEqual(source.poll(), old.splitlines())
+                path.write_text(new, encoding="utf-8")
+                os.utime(path, ns=(previous_stat.st_atime_ns, previous_stat.st_mtime_ns))
+                current_stat = path.stat()
+                self.assertEqual(current_stat.st_size, previous_stat.st_size)
+                self.assertEqual(current_stat.st_mtime_ns, previous_stat.st_mtime_ns)
+                self.assertEqual(current_stat.st_ino, previous_stat.st_ino)
+                self.assertEqual(source.poll(), new.splitlines())
+                self.assertEqual(source.poll(), [])
+
+    def test_generation_prefix_is_bounded_and_precedes_large_metadata(self) -> None:
+        import llm_review
+
+        with tempfile.TemporaryDirectory(prefix="ascend-stream-prefix-") as root:
+            path = Path(root) / "review.stream"
+            meta = {"padding": "x" * (review_viewer.STREAM_HEADER_CHARS * 4),
+                    "review_id": "same-review"}
+            with mock.patch.object(llm_review, "LIVE_STREAM", path), \
+                    mock.patch.object(review_viewer, "STREAM_FILE", path), \
+                    mock.patch.object(llm_review.time, "time_ns", side_effect=[100, 101]):
+                source = review_viewer.StreamSource()
+                llm_review._stream_begin(meta)
+                previous_stat = path.stat()
+                first = source.poll()
+                llm_review._stream_begin(meta)
+                os.utime(path, ns=(previous_stat.st_atime_ns, previous_stat.st_mtime_ns))
+                second = source.poll()
+                self.assertNotEqual(first, second)
+                self.assertTrue(second[0].startswith('[LIVE-START] {"stream_generation":'))
+                reader = mock.Mock()
+                reader.readline.return_value = second[0][:review_viewer.STREAM_HEADER_CHARS]
+                context = mock.MagicMock()
+                context.__enter__.return_value = reader
+                with mock.patch.object(Path, "open", return_value=context):
+                    self.assertEqual(source.poll(), [])
+                reader.readline.assert_called_once_with(review_viewer.STREAM_HEADER_CHARS)
+                reader.read.assert_not_called()
+
     def test_replacement_resets_offset_for_short_equal_and_long_streams(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ascend-viewer-stream-") as root:
             path = Path(root) / "review.stream"

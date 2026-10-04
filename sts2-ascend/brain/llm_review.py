@@ -2643,6 +2643,9 @@ def _stream_begin(meta: dict) -> None:
         # length before a tail reader sees the truncation.  Give each beginning
         # its own identity without changing review_id or the caller's metadata.
         payload = dict(meta, stream_generation=f"{os.getpid()}-{time.time_ns()}")
+        # Keep the generation in a bounded prefix for readers that must detect
+        # equal-size overwrites without relying on filesystem timestamp changes.
+        payload = {"stream_generation": payload["stream_generation"], **payload}
         LIVE_STREAM.write_text("[LIVE-START] " + json.dumps(payload, ensure_ascii=False) + "\n",
                                encoding="utf-8")
     except OSError:
