@@ -494,6 +494,8 @@ DEFAULT_POLICY = {
     "vivhite_hp_pay_phase_audit_obs": True,
     "ringing_hook_lock_end_turn_obs": 1,  # Audit-only snapshot when RINGING_POWER locks every non-curse card at end_turn; 0 removes only the marker.
     "no_play_lethal_potion_rescue": True,  # If play_card is unavailable at a lethal boundary, allow only an identified immediate defensive potion; False restores the prior end_turn path.
+    "no_play_nonlethal_potion_rescue": True,  # When no card is playable and the nonlethal gap is severe, allow only an immediate defensive potion; False restores the prior end_turn path.
+    "no_play_nonlethal_potion_rescue_gap_pct": 0.50,  # Minimum incoming-after-block gap as a fraction of current HP for the narrow nonlethal rescue gate.
     "potion_self_harm_gate": True,  # 自伤型攻击药水计价门（第 315~319 局批复盘新增）：
                                     # 描述含「所有玩家」/"all players" 的药水（v0.111.0
                                     # 原生词表仅 FOUL_POTION 污浊药水命中）对自己同额扣血，

@@ -18598,6 +18598,84 @@ def main() -> int:
             in d_nonlethal_empty.reason, \
         f"非致死资源耗尽先兆观测缺失: {d_nonlethal_empty and d_nonlethal_empty.reason}"
 
+    # 3z-4b-rescue) A severe but mathematically nonlethal no-card gap may use
+    # an immediately usable defensive potion before end_turn. This is the
+    # production action change; the threshold and key are explicit rollback
+    # controls, while delayed/unknown potions remain excluded by _maybe_potion.
+    def _no_play_nonlethal_potion_state(potion_id, name, description):
+        state = _nonlethal_unavailable_state(False)
+        state["available_actions"] = ["end_turn", "use_potion"]
+        state["run"]["potions"] = [{
+            "index": 0, "occupied": True, "can_use": True,
+            "potion_id": potion_id, "name": name,
+            "description": description, "usage": "CombatOnly",
+        }]
+        return state
+
+    nonlethal_rescue_know = knowledge.Knowledge(tmp)
+    nonlethal_rescue_pol = policy.Policy(nonlethal_rescue_know)
+    nonlethal_rescue_ctx = _SettleCtx()
+    assert nonlethal_rescue_know.policy["no_play_nonlethal_potion_rescue"] is True, \
+        "DEFAULT_POLICY missing no_play_nonlethal_potion_rescue"
+    assert abs(float(nonlethal_rescue_know.policy[
+        "no_play_nonlethal_potion_rescue_gap_pct"]) - 0.50) < 1e-9, \
+        "DEFAULT_POLICY missing nonlethal rescue gap threshold"
+    d_nonlethal_rescue = nonlethal_rescue_pol.decide(
+        _no_play_nonlethal_potion_state(
+            "BLOCK_P", "Block Potion", "Gain 12 Block"),
+        nonlethal_rescue_ctx)
+    assert (d_nonlethal_rescue.action == "use_potion"
+            and d_nonlethal_rescue.params == {"option_index": 0}
+            and "NO_PLAY_NONLETHAL_POTION_RESCUE" in d_nonlethal_rescue.reason
+            and "NO_PLAY_LETHAL_POTION_RESCUE" not in d_nonlethal_rescue.reason), \
+        f"nonlethal potion rescue marker/action mismatch: {d_nonlethal_rescue}"
+
+    nonlethal_rescue_off_know = knowledge.Knowledge(tmp)
+    nonlethal_rescue_off_know.policy["no_play_nonlethal_potion_rescue"] = False
+    nonlethal_rescue_off_pol = policy.Policy(nonlethal_rescue_off_know)
+    nonlethal_rescue_off_ctx = _SettleCtx()
+    assert nonlethal_rescue_off_pol.decide(
+        _nonlethal_unavailable_state(True),
+        nonlethal_rescue_off_ctx).action == "play_card", \
+        "nonlethal rescue rollback fixture did not enter the playable state"
+    d_nonlethal_rescue_off = None
+    for _ in range(6):
+        d_candidate = nonlethal_rescue_off_pol.decide(
+            _no_play_nonlethal_potion_state(
+                "BLOCK_P", "Block Potion", "Gain 12 Block"),
+            nonlethal_rescue_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_nonlethal_rescue_off = d_candidate
+            break
+    assert (d_nonlethal_rescue_off is not None
+            and d_nonlethal_rescue_off.params == {}
+            and "NO_PLAY_NONLETHAL_POTION_RESCUE"
+                not in d_nonlethal_rescue_off.reason), \
+        f"nonlethal rescue rollback changed the prior end_turn path: {d_nonlethal_rescue_off}"
+
+    nonlethal_threshold_know = knowledge.Knowledge(tmp)
+    nonlethal_threshold_know.policy[
+        "no_play_nonlethal_potion_rescue_gap_pct"] = 0.80
+    nonlethal_threshold_pol = policy.Policy(nonlethal_threshold_know)
+    nonlethal_threshold_ctx = _SettleCtx()
+    assert nonlethal_threshold_pol.decide(
+        _nonlethal_unavailable_state(True),
+        nonlethal_threshold_ctx).action == "play_card", \
+        "nonlethal rescue threshold fixture did not enter the playable state"
+    d_nonlethal_threshold = None
+    for _ in range(6):
+        d_candidate = nonlethal_threshold_pol.decide(
+            _no_play_nonlethal_potion_state(
+                "BLOCK_P", "Block Potion", "Gain 12 Block"),
+            nonlethal_threshold_ctx)
+        if d_candidate.action == "end_turn":
+            d_nonlethal_threshold = d_candidate
+            break
+    assert (d_nonlethal_threshold is not None
+            and "NO_PLAY_NONLETHAL_POTION_RESCUE"
+                not in d_nonlethal_threshold.reason), \
+        f"nonlethal rescue threshold did not close the narrow gate: {d_nonlethal_threshold}"
+
     # A native card hook is a different boundary from energy exhaustion:
     # 1634-F17 T9 had energy=2 but every remaining card was blocked by
     # RINGING_POWER after the single-card action.  Keep that attribution in

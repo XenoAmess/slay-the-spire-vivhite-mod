@@ -16296,3 +16296,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接入口复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的 0777 进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。目标 diff 无空白错误；未写入在线进程、正式 runs/archive、学习记忆或回放包。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; hybrid attack total-damage observation integrated)`
+
+## 2026-10-04 runs 1911-1912：无牌高压非致死药水提前救援
+
+profile_id：`ironclad`
+requested_runs：`1911, 1912`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当本回合没有可负担的 `play_card`、伤害缺口仍未达到数学致死但已吞掉当前生命的显著比例时，`_combat_readiness_wait` 会直接收口 `end_turn`，跳过仍在动作集合中的即时防御药水；若用窄门提前尝试该药水，应在掉血前得到 `use_potion`，而致死、低压力、延迟/未知药水及关闭开关都保持旧路径。这个行为差异可由 action、marker 和随后真实 HP/block 回执证伪。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-105959_17ATUM89914R.json`（1912，209 条）D194 为 F17 `end_turn`，`hp=47/block=0/incoming=27/energy=0`，四张手牌均 `not_enough_energy`，非致死缺口为 27；其 `turn_end_state.available_actions` 仍含 `use_potion`。随后 D195 已掉至 `hp=26` 才执行 `use_potion option_index=1` 的“格挡药水”。1911 的 `sts2-ascend/knowledge/runs/20261004-104239_0W6KYBBGQ824.json` D130-D133 则是致死输出/格挡容量边界，继续走原有致死审计和 `end_turn`，作为不应被新门误触发的对照。
+- **EXPECTED_SIGNAL**：未来 3—10 个同型窗口中，满足非致死缺口阈值且存在可用即时防御/回复药水的帧应先出现 `use_potion` 与 `NO_PLAY_NONLETHAL_POTION_RESCUE`，并可用下一帧的实际 HP/block 对账；无即时药水、延迟/未知药水、缺口低于阈值、致死帧和关闭开关不得出现该 marker，`end_turn`/params 保持旧值。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `no_play_nonlethal_potion_rescue` 与 `no_play_nonlethal_potion_rescue_gap_pct=0.50`，提供单键和阈值回滚。
+- `sts2-ascend/brain/policy.py`：在无可负担牌、非致死、`incoming-block` 缺口至少为当前 HP 50% 的窄条件下，调用现有 `_maybe_potion(..., rescue_only=True)`；只允许已有即时防御/回复分类，追加独立 marker，不改评分、候选排序、目标或致死救援路径。
+- `sts2-ascend/brain/selfcheck.py`：加入正例、关闭键回滚和 80% 阈值负例，锁定 `use_potion/option_index=0` 与 marker，并确认旧 `end_turn` 路径可恢复。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个真实命中，统计 `use_potion` 接受率、使用前后 HP/block、实际减少的掉血、随后 `end_turn`/战斗结果和误触发数；将 D194 型非致死窗口与 D130 型致死窗口分开。
+- **Adjust**：若药水使用后仍频繁出现同回合不可生存、或低压力场景误用，按真实效果收紧 50% 缺口阈值或补充原生效果/动作可用性条件；不把延迟药水纳入本门。
+- **Rollback**：将 `no_play_nonlethal_potion_rescue` 设为 `False`，预期恢复原 `end_turn` 行为；必要时提高 `no_play_nonlethal_potion_rescue_gap_pct` 或回退本地提交。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行同一完整 selfcheck，退出码 0 且末尾为 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; nonlethal no-play potion rescue integrated)`

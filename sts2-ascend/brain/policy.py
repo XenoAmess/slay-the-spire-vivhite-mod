@@ -14416,6 +14416,41 @@ class Policy:
                 if _rescue_decision is not None:
                     return _rescue_decision
 
+            # A nonlethal but large gap is still an actionable resource boundary:
+            # 1912-F17 ended a no-card turn at hp=47 against 27 incoming while
+            # an immediate block potion remained available, then paid that gap
+            # before the next decision. Keep this narrower than the lethal
+            # rescue: only a configured fraction of current HP can open it, and
+            # only the immediate defensive potion classifier may answer it.
+            try:
+                _no_play_nonlethal_potion_rescue = bool(int(float(pol.get(
+                    "no_play_nonlethal_potion_rescue", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _no_play_nonlethal_potion_rescue = False
+            try:
+                _nonlethal_rescue_gap_pct = min(1.0, max(0.0, float(pol.get(
+                    "no_play_nonlethal_potion_rescue_gap_pct", 0.50))))
+            except (TypeError, ValueError, OverflowError):
+                _nonlethal_rescue_gap_pct = 0.50
+            try:
+                _nonlethal_gap = max(0.0, float(incoming) - float(my_block))
+                _nonlethal_rescue_pressure = (
+                    not _lethal_by_gap
+                    and not bool(combat.get("end_turn_will_kill_player"))
+                    and _nonlethal_gap > 0.0
+                    and _nonlethal_gap >= max(
+                        1.0, float(my_hp) * _nonlethal_rescue_gap_pct))
+            except (TypeError, ValueError, OverflowError):
+                _nonlethal_rescue_pressure = False
+            if (_no_play_nonlethal_potion_rescue
+                    and not affordable_playable
+                    and _nonlethal_rescue_pressure):
+                _rescue_decision = self._maybe_potion(
+                    state, ctx, hard=True, premium=True, rescue_only=True,
+                    nonlethal_rescue=True)
+                if _rescue_decision is not None:
+                    return _rescue_decision
+
             def _count_energy_locked_cards() -> int:
                 _count = 0
                 for _card in hand:
@@ -22062,7 +22097,8 @@ class Policy:
         return pol["kill_bonus"] * (0.4 + 0.6 * share)
 
     def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False,
-                      rescue_only: bool = False):
+                      rescue_only: bool = False,
+                      nonlethal_rescue: bool = False):
         run = state.get("run") or {}
         pol = self.know.policy
         if pol.get("potion_hard_only") and not hard:
@@ -22269,10 +22305,13 @@ class Policy:
                 _gap_now = max(0, _incoming_now - (cb_def.get("block", 0) or 0))
                 _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
                                   or _gap_now >= _hp_now)
-                if (_hp_now < _pot_line * _max_now) or _def_emergency:
+                if ((_hp_now < _pot_line * _max_now) or _def_emergency
+                        or (rescue_only and nonlethal_rescue)):
                     _rescue_note = (
                         "（NO_PLAY_LETHAL_POTION_RESCUE）"
                         if rescue_only else "")
+                    if rescue_only and nonlethal_rescue:
+                        _rescue_note = "(NO_PLAY_NONLETHAL_POTION_RESCUE)"
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
                                     f"（交药线 {_pot_line:.0%}）{_rescue_note}",
