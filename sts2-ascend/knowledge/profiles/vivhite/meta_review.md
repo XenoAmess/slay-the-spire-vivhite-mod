@@ -6110,3 +6110,39 @@ production_code_commit: `9fcd5a9aaed85919f732efd7948936a5161382d7`（本地提�
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-04 第1929局批：自付主导滚雪球锁持行为化破门
+
+profile_id: `vivhite`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### ATTRIBUTION
+
+- 本批主归因收窄为「白绮 Boss 竞速在自付主导时，`RACE_ESC_LATCH_HOLD` 仍把静态可行的防守复核锁成全攻」，不把 F33 阵亡直接归因于某一张生命支付牌、Boss 意图或单次格挡缺口。生命支付、有效火力、终局输出容量和终端锁继续独立保留。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当白绮已进入滚雪球竞速锁、实测自付速率达到敌方净损，且 `ttk > 1.5 × (HP / (敌方净损+自付))` 时，继续锁持全攻比恢复攻防节奏更危险；该窄条件应解除锁持并同步关闭本 tick 的 `race_allin`。
+- **EVIDENCE**：已完整读取任务书 packet，并直接读取完整失败链 `sts2-ascend/knowledge/profiles/vivhite/runs/20261004-165451_24AF6HCFJ92G.json`（496 条 decisions；packet 明确 `complete_persisted_chain=false`）。F33 T5 的三条连续决策均含 `RACE_ESC_LATCH_HOLD`：自付 `6.3/回合`、敌方净损 `5.8/回合`，并入后可存活 `2.1` 回合；同时投影击杀还需 `7/7/6` 回合。GAME_OVER 对账还记录竞速锁持3次、11次付血共26 HP、终局自付损失32、实际战斗6回合且失败。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Vivhite Boss 竞速中，仅在 Boss、滚雪球、已入锁、DOMINATES 且上述比值超限时出现 `VIVHITE_RACE_SELF_LOSS_LATCH_BREAK`；同一决策不再出现 `RACE_ESC_LATCH_HOLD`，后续评分走非 `race_allin` 路径。非 Boss、非 DOMINATES、未入锁、未超阈值和关闭键时不得触发；若 marker 缺失、误触发、后续仍全攻或 action/params 漂移，即证伪。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_race_self_loss_latch_break` 与阈值 `vivhite_race_self_loss_latch_break_ttk_ratio=1.5`，分别控制行为门和比值；关闭键或阈值≤0严格回滚。
+- `sts2-ascend/brain/policy.py`：在既有 Boss 联合复核可行、翻盘比上限未否决的出口，仅当白绮已入滚雪球锁且自付主导、并入存活视界超过阈值时清除 latch、设置 `race_lost=False` 并回写 `race_allin=False`；追加行为 marker，其余评分、目标、参数和非命中路径不变。
+- `sts2-ascend/brain/selfcheck.py`：新增开启、关闭和非 DOMINATES 三组夹具，验证 marker、锁持回滚边界及行为出口。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、资产或在线进程；`failed_review_replay.requested_packages=[]`，已按要求复核完整失败链，无需额外 replay 包。
+
+### VALIDATION
+
+- 直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 的新增业务断言通过，随后因宿主固定256槽临时池耗尽报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；用同一 selfcheck 代码的进程级继承 ACL 临时目录适配重跑，退出码0并输出 `SELFCHECK OK`。
+- 已回读知识默认值、投影返回契约、调用方解包、行为分支和 selfcheck 完整 diff；`git diff --check` 通过，仅有 Git 的 LF/CRLF 提示。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续3~10个独立 Vivhite Boss 竞速，按 run/floor/turn、latch、self/enemy rate、exclusive/inclusive tsurv、ttk、marker、race_allin、action/params、后续付血和终局自付损失分层；marker 本身不等于假设成立。
+- 若出现非目标场景触发、超阈值仍锁持、解除后仍全攻、误转防守或 action/params 漂移，将 `vivhite_race_self_loss_latch_break=False`；必要时将阈值设为 `0` 或回滚本地提交，保留既有锁持与观测。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

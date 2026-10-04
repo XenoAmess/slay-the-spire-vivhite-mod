@@ -15208,8 +15208,9 @@ class Policy:
             race_allin, danger_note):
         """斩杀竞速投影与竞速姿态改写（从 _combat 提取，行为严格等价）。
 
-        返回 (kill_race, all_respawn, stance, danger_note)：stance 在段内被
-        竞速姿态改写原地调整并显式返回；danger_note 累加竞速对账留痕。
+        返回 (kill_race, all_respawn, stance, danger_note, race_allin)：stance
+        在段内被竞速姿态改写原地调整并显式返回；danger_note 累加竞速对账
+        留痕；race_allin 仅在窄行为门解除白绮 Boss 自付主导锁持时回写。
         """
         self._race_prelock_projection = None
         # 斩杀竞速投影（第 90~91 批复盘，88~89 批遗留核对项⑤落地）：
@@ -16296,6 +16297,51 @@ class Policy:
                                 f"＞{_flip_cap:.1f}×可存活{tsurv:.0f}回合，"
                                 f"翻盘比超限不予放行（{_flip_cap_tag}）")
                         if _feas:
+                            # 白绮自付主导的锁持破门（VIVHITE_RACE_SELF_LOSS_LATCH_BREAK）：
+                            # F33 1929 的失败链显示，RACE_ESC_LATCH_HOLD 可以在静态
+                            # 联合复核仍报可行时继续全攻，但把自付并入生存账后只剩约
+                            # 2 回合，远短于仍需约 6 回合的击杀投影。该行为门只接在
+                            # 「Boss+滚雪球+已入锁+自付达到敌方净损」这条交集，且需要
+                            # ttk 超过并入存活视界的显式比值，避免覆盖普通翻盘与非 Boss
+                            # 的迟滞语义；False 严格回滚现有锁持。
+                            _self_loss_latch_break = False
+                            try:
+                                _self_loss_latch_break_ratio = float(pol.get(
+                                    "vivhite_race_self_loss_latch_break_ttk_ratio",
+                                    1.5) or 0.0)
+                            except (TypeError, ValueError, OverflowError):
+                                _self_loss_latch_break_ratio = 0.0
+                            if (_kr_latched and esc_gate
+                                    and bool(pol.get(
+                                        "race_esc_latch_hold", True))
+                                    and bool(pol.get(
+                                        "vivhite_race_self_loss_latch_break",
+                                        True))
+                                    and cctx.get("node_type") == "Boss"
+                                    and self.character_strategy.profile_id
+                                    == VIVHITE_PROFILE_ID
+                                    and _self_loss_latch_break_ratio > 0.0
+                                    and _vivhite_race_self_loss_dominates(
+                                        self._race_self_paid_rate, loss_rate)):
+                                _inclusive_tsurv = float(my_hp) / max(
+                                    1.0, float(loss_rate)
+                                    + max(0.0, float(
+                                        self._race_self_paid_rate)))
+                                _self_loss_latch_break = (
+                                    math.isfinite(_inclusive_tsurv)
+                                    and ttk > (
+                                        _inclusive_tsurv
+                                        * _self_loss_latch_break_ratio))
+                            if _self_loss_latch_break:
+                                race_lost = False
+                                race_allin = False
+                                self._krace_latch = False
+                                self._krace_latch_round = None
+                                danger_note += (
+                                    f"；自付主导锁持解除：击杀需{ttk:.1f}回合"
+                                    f"＞{_self_loss_latch_break_ratio:.1f}×"
+                                    f"并入自付可存活{_inclusive_tsurv:.1f}回合，"
+                                    "恢复攻防节奏（VIVHITE_RACE_SELF_LOSS_LATCH_BREAK）")
                             # 滚雪球锁持（RACE_ESC_LATCH_HOLD，第271~294局批复盘）：
                             # 实测口径入锁后，esc（滚雪球）局的静态联合复核逐 tick
                             # 在「可行/判死」边界翻案解锁——294-F11 终局战 9 个回合
@@ -16313,7 +16359,7 @@ class Policy:
                             # 未入锁（判死当 tick）与非滚雪球局的联合复核出口
                             # 完全不变。race_esc_latch_hold=False 一键回滚旧版
                             # 逐 tick 翻案（零行为差异）。
-                            if (_kr_latched and esc_gate and bool(
+                            elif (_kr_latched and esc_gate and bool(
                                     pol.get("race_esc_latch_hold", True))):
                                 self._race_esc_latch_hold_count = max(
                                     0, int(getattr(
@@ -16492,7 +16538,7 @@ class Policy:
             danger_note, enemies, all_respawn, round_no, pol)
         if all_respawn:
             danger_note += "；全场均为已证实重生体，解除重生压制以终结战斗"
-        return kill_race, all_respawn, stance, danger_note
+        return kill_race, all_respawn, stance, danger_note, race_allin
 
 
     def _combat(self, state: dict, ctx) -> Decision:
@@ -16987,7 +17033,7 @@ class Policy:
 
         # 斩杀竞速投影（提取段，行为与原内联实现严格等价）：
         # 投影/迟滞锁/联合复核/竞速姿态改写全部分支见 _combat_kill_race_projection
-        kill_race, all_respawn, stance, danger_note = (
+        kill_race, all_respawn, stance, danger_note, race_allin = (
             self._combat_kill_race_projection(
                 state, cctx, pol, enemies, hand, incoming, my_hp, my_max_hp,
                 my_block, round_no, stance, stance_defensive_tone, race_allin,

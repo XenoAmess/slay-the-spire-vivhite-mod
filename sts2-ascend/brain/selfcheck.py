@@ -13161,6 +13161,8 @@ def main() -> int:
                           longfight_effective_dpt_obs=True,
                           hp_pay_audit_fixture=False, hp_pay_audit_obs=True,
                           longfight_joint_survival_obs=True,
+                          self_loss_paid_rate=None,
+                          self_loss_latch_break=True,
                           joint_player_hp=None, joint_incoming=None,
                           joint_energy=None):
         # latch_hold 默认 False：本探针服务翻盘比上限/滑溜守卫夹具，显式关闭
@@ -13223,6 +13225,8 @@ def main() -> int:
         cap_pol._race_rounds = 2
         cap_pol._race_loss_rate = 20.0
         cap_pol._incoming_ema = 20.0
+        if vivhite and self_loss_paid_rate is not None:
+            cap_pol._race_self_paid_rate = float(self_loss_paid_rate)
         if vivhite and hp_pay_audit_fixture:
             cap_pol._race_same_round_heal = 12.0
             cap_pol._race_same_round_loss = 28.0
@@ -13232,6 +13236,8 @@ def main() -> int:
         cap_pol._esc_rounds = esc_rounds
         cap_pol.know.policy["boss_race_joint_flip_max_ttk_ratio"] = cap
         cap_pol.know.policy["race_esc_latch_hold"] = latch_hold
+        cap_pol.know.policy["vivhite_race_self_loss_latch_break"] = (
+            self_loss_latch_break)
         cap_state["combat"]["enemies"][0]["current_hp"] = enemy_hp
         if hand_override is not None:
             cap_state["combat"]["hand"] = hand_override
@@ -14159,6 +14165,30 @@ def main() -> int:
         and "手牌税3/回合计入对账火力" in d_hold_tax.reason, \
         f"锁持+税负同场手牌税注记未去重（应恰好 1 条）: " \
         f"{d_hold_tax.action}（{d_hold_tax.reason}）"
+
+    # ⑥ 白绮 Boss 自付主导的锁持破门：仅在已入滚雪球锁、DOMINATES 且
+    #    ttk 超过「敌方净损+自付」存活视界 1.5 倍时恢复防守出口；该门必须
+    #    关闭时逐字回到锁持，非 DOMINATES 也不得误触发。
+    d_self_loss_break = hold_pol(
+        0.0, latch_hold=True, vivhite=True, self_loss_paid_rate=30.0)
+    assert ("VIVHITE_RACE_SELF_LOSS_LATCH_BREAK" in d_self_loss_break.reason
+            and "RACE_ESC_LATCH_HOLD" not in d_self_loss_break.reason
+            and "恢复攻防节奏" in d_self_loss_break.reason
+            and d_self_loss_break.action == "play_card"), \
+        f"白绮自付主导锁持未解除为防守出口: {d_self_loss_break.action}（{d_self_loss_break.reason}）"
+    d_self_loss_break_rb = hold_pol(
+        0.0, latch_hold=True, vivhite=True, self_loss_paid_rate=30.0,
+        self_loss_latch_break=False)
+    assert ("VIVHITE_RACE_SELF_LOSS_LATCH_BREAK" not in
+                d_self_loss_break_rb.reason
+            and "RACE_ESC_LATCH_HOLD" in d_self_loss_break_rb.reason), \
+        f"自付主导锁持关闭键未严格回滚: {d_self_loss_break_rb.action}（{d_self_loss_break_rb.reason}）"
+    d_self_loss_break_non_dom = hold_pol(
+        0.0, latch_hold=True, vivhite=True, self_loss_paid_rate=19.0)
+    assert ("VIVHITE_RACE_SELF_LOSS_LATCH_BREAK" not in
+                d_self_loss_break_non_dom.reason
+            and "RACE_ESC_LATCH_HOLD" in d_self_loss_break_non_dom.reason), \
+        f"非 DOMINATES 的白绮锁持被误解除: {d_self_loss_break_non_dom.action}（{d_self_loss_break_non_dom.reason}）"
 
     # 3br-2) per-Boss 血池组合门（第731~740批拒合成果补合 + 第1119~1153局复核）：
     #        Boss 未知时默认要求全部重复实证组合可行，避免「任一组合可赢」把

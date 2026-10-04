@@ -663,6 +663,13 @@ DEFAULT_POLICY = {
                                                # 披露「可存活 excl→incl」双读数，验证隔离
                                                # 口径在放血局是否高估存活视界；纯观测不改
                                                # 判定，False=回滚（无该留痕）。
+    "vivhite_race_self_loss_latch_break": True,  # 白绮 Boss 滚雪球锁持在自付主导且
+                                                  # 并入自付后的存活视界显著短于击杀
+                                                  # 投影时，解除锁持并恢复防守复核出口；
+                                                  # 仅作用于已入锁的 Boss，False=严格回滚。
+    "vivhite_race_self_loss_latch_break_ttk_ratio": 1.5,  # 解除门阈值：击杀回合数
+                                                            # 必须超过并入自付存活回合数
+                                                            # 的此倍数；≤0 关闭该行为门。
     "vivhite_race_self_loss_payback_gate": 1,  # 自付占主导时单体低回报门：仅拦
                                                 # 实付血量大于实际移除且未斩杀的
                                                 # 白绮攻击；0=关闭并回滚旧竞速豁免。
