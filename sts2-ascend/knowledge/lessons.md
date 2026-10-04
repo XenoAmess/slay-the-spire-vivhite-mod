@@ -16639,3 +16639,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.613364065463868局)，STOKE(18分/2.7727288165266715局)，DEFEND_IRONCLAD(18分/2.505966280176176局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（96%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1913 胜，当前目标进阶 0
+
+## 第 1914 局复盘（2026-10-04 11:45）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：CINDER, HEADBUTT, RAMPAGE, UPPERCUT, INFERNAL_BLADE, CINDER, STONE_ARMOR, THUNDERCLAP, TRUE_GRIT, CINDER, INFLAME, BREAKTHROUGH, JUGGLING
+- 本局遗物：ETERNAL_FEATHER
+- 战斗记录：F5 Monster战 掉血2; F6 Monster战 掉血8; F8 Monster战 掉血3; F9 Monster战 掉血28; F15 Monster战 掉血23｜自损1（可行动段1/非行动段28，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血52｜竞速投影审计：pool=171/dpt=15/ttk=11.4/tsurv=1.84615（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=11.4/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.79（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=9.55385（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=3.6/projected_dpt=17.4678/ratio=0.20/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=5/actual_dpt=3.6/projected_dpt=17.4678/ratio=0.20/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=5/layers_max=0/actual_dpt=3.6/projected_dpt=17.4678/ratio=0.20/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.7944550728049786局)，PROWESS(26分/13.128208468524084局)，MANGLE(25分/43.087515470688295局)，FEED(25分/30.17654830257295局)，HELLRAISER(25分/3.0170696299452513局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.576217291234745局)，STOKE(18分/2.7630242656688284局)，DEFEND_IRONCLAD(18分/2.4971953981955597局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1914 胜，当前目标进阶 0
