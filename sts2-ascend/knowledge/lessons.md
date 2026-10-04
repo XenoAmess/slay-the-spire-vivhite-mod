@@ -16694,3 +16694,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.428925788894194局)，STOKE(18分/2.7245445347889565局)，DEFEND_IRONCLAD(18分/2.4624177785883146局)
 - 策略进化：block_safety: 2.02 → 2.07（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.39 → 0.40（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.004）；block_safety: 2.07 → 2.06（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F21——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1918 胜，当前目标进阶 0
+
+## 第 1919 局复盘（2026-10-04 13:30）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：MOLTEN_FIST, ARMAMENTS, HOWL_FROM_BEYOND, CINDER, BATTLE_TRANCE, SHRUG_IT_OFF, UNRELENTING, MOLTEN_FIST, TAUNT, THUNDERCLAP, SWORD_BOOMERANG, DRUM_OF_BATTLE, EVIL_EYE, SWORD_BOOMERANG
+- 本局遗物：JOSS_PAPER
+- 战斗记录：F5 Monster战 掉血17; F8 Unknown战 掉血31; F11 Monster战 掉血5; F14 Monster战 掉血14; F15 Unknown战 掉血5; F17 Boss战 掉血51｜竞速投影审计：pool=268/dpt=9.45/ttk=28.3598/tsurv=2.92308（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=28.3598/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.71（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=25.4367（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=23.25/projected_dpt=16.1241/ratio=1.46/min_ratio=1.06/min_sample=4->5/min_actual_dpt=18/min_projected_dpt=17（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=23.25/projected_dpt=16.1241/ratio=1.46/min_ratio=1.06（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=23.25/projected_dpt=16.1241/ratio=1.46/min_ratio=1.06（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.728515305749733局)，PROWESS(26分/12.900067406986292局)，MANGLE(25分/42.338743729130634局)，FEED(25分/29.652142418875904局)，HELLRAISER(25分/2.9646392111444353局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.392424548633064局)，STOKE(18分/2.7150086289171953局)，DEFEND_IRONCLAD(18分/2.4537993163632557局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1919 胜，当前目标进阶 0
