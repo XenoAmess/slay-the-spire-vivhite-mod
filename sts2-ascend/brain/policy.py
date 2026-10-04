@@ -14388,6 +14388,25 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 _nonlethal_unavailable_obs = False
 
+            # 1902-F17 exposed a real action gap: RINGING_POWER removed
+            # play_card while a lethal end_turn was still available, so the
+            # ordinary potion path below could never run.  Reuse the existing
+            # defensive classification, but do not spend unknown/delayed
+            # potions as if they repaired this turn's damage.
+            try:
+                _no_play_lethal_potion_rescue = bool(int(float(pol.get(
+                    "no_play_lethal_potion_rescue", 1) or 0)))
+            except (TypeError, ValueError, OverflowError):
+                _no_play_lethal_potion_rescue = False
+            if (_no_play_lethal_potion_rescue
+                    and not affordable_playable
+                    and (_lethal_by_gap
+                         or bool(combat.get("end_turn_will_kill_player")))):
+                _rescue_decision = self._maybe_potion(
+                    state, ctx, hard=True, premium=True, rescue_only=True)
+                if _rescue_decision is not None:
+                    return _rescue_decision
+
             def _count_energy_locked_cards() -> int:
                 _count = 0
                 for _card in hand:
@@ -21887,13 +21906,25 @@ class Policy:
         share = 1.0 if incoming <= 0 else min(1.0, max(0.0, threat) / incoming)
         return pol["kill_bonus"] * (0.4 + 0.6 * share)
 
-    def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False):
+    def _maybe_potion(self, state, ctx, hard: bool, premium: bool = False,
+                      rescue_only: bool = False):
         run = state.get("run") or {}
         pol = self.know.policy
         if pol.get("potion_hard_only") and not hard:
             return None
         combat = state.get("combat") or {}
         enemies = [e for e in combat.get("enemies", []) if e.get("is_alive") and e.get("is_hittable")]
+
+        def _is_delayed_demise(potion: dict) -> bool:
+            _id = str(potion.get("potion_id") or "").upper().rstrip("+")
+            _desc = str(potion.get("description") or "")
+            _desc_l = _desc.casefold()
+            return (
+                _id == "POWDERED_DEMISE"
+                or ("回合结束" in _desc and "失去" in _desc and "生命" in _desc)
+                or ("end of each of its turns" in _desc_l
+                    and ("lose" in _desc_l or "damage" in _desc_l)))
+
         for p in run.get("potions", []):
             if not p.get("occupied") or not p.get("can_use"):
                 continue
@@ -21933,6 +21964,12 @@ class Policy:
             # 尊重：识别为防御/回复的药水不得再经兜底通道流失
             is_defensive = bool("格挡" in desc or "生命" in desc or "回复" in desc
                                 or "block" in desc_l or "heal" in desc_l)
+            _delayed_demise = _is_delayed_demise(p)
+            if rescue_only and (_delayed_demise or not is_defensive):
+                # A delayed-effect or otherwise unknown potion is not an
+                # immediate answer to this turn's lethal gap.  In particular,
+                # POWDERED_DEMISE belongs here: it resolves at enemy turn end.
+                continue
             # 自伤型攻击药水（第 315~319 局批复盘新增）：描述含「所有玩家」/
             # "all players" 的药水（v0.111.0 原生词表中仅 FOUL_POTION 污浊药水
             # 「对所有玩家和敌人造成12点伤害」命中）对使用者同额扣血，但
@@ -22078,9 +22115,12 @@ class Policy:
                 _def_emergency = (bool(state.get("combat", {}).get("end_turn_will_kill_player"))
                                   or _gap_now >= _hp_now)
                 if (_hp_now < _pot_line * _max_now) or _def_emergency:
+                    _rescue_note = (
+                        "（NO_PLAY_LETHAL_POTION_RESCUE）"
+                        if rescue_only else "")
                     return Decision("use_potion", {"option_index": p["index"]},
                                     f"战斗：低血量使用防御/回复药水【{name}】"
-                                    f"（交药线 {_pot_line:.0%}）",
+                                    f"（交药线 {_pot_line:.0%}）{_rescue_note}",
                                     tags=[("use_potion", p.get("potion_id")),
                                           ("potion_attempt", p["index"],
                                            potion_key[1])], wait=0.6)
@@ -22122,7 +22162,14 @@ class Policy:
         # turn while the rescue potion is still in the belt.
         cooling = [p for p in run.get("potions", [])
                    if p.get("occupied") and p.get("can_use")
-                   and self._potion_cooldowns.get(self._potion_key(p), 0) > 0]
+                   and self._potion_cooldowns.get(self._potion_key(p), 0) > 0
+                   and (not rescue_only
+                        or (not _is_delayed_demise(p)
+                            and any(k in str(p.get("description") or "").casefold()
+                                for k in ("格挡", "生命", "回复", "block", "heal"))
+                            and (not p.get("usage")
+                                 or any(k in str(p.get("usage") or "").lower()
+                                        for k in ("combat", "战斗", "anytime", "任意", "any")))))]
         if cooling:
             return Decision(None, {},
                             "战斗：救命药水刚遇到状态刷新竞争，等待短冷却后重试",

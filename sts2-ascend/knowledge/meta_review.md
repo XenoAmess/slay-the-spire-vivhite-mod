@@ -16156,3 +16156,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
   `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-10-04 run 1902-F17：RINGING_POWER 锁牌下的即时药水救援门
+
+profile_id：`ironclad`
+requested_run：`1902`
+production_code_commit：`c7e6b0c0cc8fa76e21ac9d721ca398e0d42e0890`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：当原生 `RINGING_POWER` 使 `play_card` 不可用、且本回合 `end_turn` 会致死时，`_combat_readiness_wait` 会在普通 `_maybe_potion` 路径前收口，导致可用的即时防御药水也不会被尝试。若存在真正可救本回合的防御/回复药水，旧动作应从 `end_turn` 变为 `use_potion`；若只有延迟药水，仍应 `end_turn`。两种夹具和回滚键可证伪该假设。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261004-080446_AP9M3GKRGNJ9.json` 的 run `AP9M3GKRGNJ9`（1902，F17）中，T8 为 `hp=5/block=0/incoming=18/energy=2`，4 张手牌均 `blocked_by_hook`、`unplayable_preventer_id=RINGING_POWER`，`play_card` 已不在可用动作；同一帧仍有 `end_turn`/`use_potion`，并保留两瓶 `POWDERED_DEMISE`。原生 `sts2-ascend/knowledge/game/v0.111.0/runtime/potions.jsonl` 与 `mechanics/potions.jsonl` 将其定义为敌方回合结束生效的 `DemisePower`，所以 1902 的两瓶药水不是本回合即时救援，不能据此声称该局可被挽回；它们反而提供了“ready 但延迟”的必要负例。
+- **EXPECTED_SIGNAL**：未来同型致死无 `play_card` 帧若有可识别即时防御/回复药水，应在 `end_turn` 前发出 `use_potion`，reason 含 `NO_PLAY_LETHAL_POTION_RESCUE`；`POWDERED_DEMISE` 或其他延迟/未知药水不得触发该 marker，也不得因冷却过滤阻塞 `end_turn`。关闭 `no_play_lethal_potion_rescue` 后动作恢复旧路径。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增 `no_play_lethal_potion_rescue=True`，作为窄行为闸门和一键回滚点。
+- `sts2-ascend/brain/policy.py`：在致死缺口且无可负担牌的 no-`play_card` 分支调用 `_maybe_potion(..., rescue_only=True)`；只复用已识别防御/回复分类，排除 `POWDERED_DEMISE` 及延迟语义，并保留既有 cooldown 竞争等待。正常药水选择路径不变。
+- `sts2-ascend/brain/selfcheck.py`：新增即时防御正例、`POWDERED_DEMISE` 延迟负例和关闭键回滚，分别锁定 action/params、marker 与旧收口行为。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个真实 `play_card` 被 hook 锁住且 `end_turn` 致死的战斗，分层统计即时防御药水的 `use_potion` 回执、实际阻挡/回血、同回合生还与误触发率；单独核对 ready 延迟药水不被误用。
+- **Adjust**：若原生载荷出现新的已证实即时防御药水 ID/描述，只增加精确别名；若药水动作不在 `available_actions`、目标契约不满足或效果无法覆盖当前缺口，收紧候选门，不把未知药水扩大为救援。
+- **Rollback**：将 `no_play_lethal_potion_rescue` 设为 `False`，预期恢复原 `end_turn`/确认等待路径；必要时回退本地 commit `c7e6b0c0cc8fa76e21ac9d721ca398e0d42e0890`。
+- **Validation**：直接固定 256 槽入口复现宿主 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（本轮为 `selfcheck temp pool exhausted after 256 allocations`）；随后使用同一 clone 的进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`。提交级 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包，未管理在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; immediate no-play potion rescue integrated)`

@@ -18466,6 +18466,75 @@ def main() -> int:
             and "POTION_RESERVE_END_TURN_OBS" not in d_potion_reserve_off.reason), \
         f"药水储备观测关闭后动作或既有标记漂移: {d_potion_reserve_off and d_potion_reserve_off.reason}"
 
+    # 3z-4a-rescue) 当 RINGING_POWER/原生接口锁住 play_card 且本回合致死时，
+    #             允许即时防御药水抢在 end_turn 前兑现；延迟药水不能冒充救援。
+    def _no_play_lethal_potion_state(potion_id, name, description):
+        state = _lethal_unavailable_state(False)
+        state["available_actions"] = ["end_turn", "use_potion"]
+        state["run"]["potions"] = [{
+            "index": 0, "occupied": True, "can_use": True,
+            "potion_id": potion_id, "name": name,
+            "description": description, "usage": "CombatOnly",
+        }]
+        return state
+
+    rescue_know = knowledge.Knowledge(tmp)
+    rescue_pol = policy.Policy(rescue_know)
+    rescue_ctx = _SettleCtx()
+    assert rescue_pol.decide(
+        _lethal_unavailable_state(True), rescue_ctx).action == "play_card", \
+        "无 play_card 致死药水救援夹具热身帧未进入出牌状态"
+    d_rescue = rescue_pol.decide(
+        _no_play_lethal_potion_state(
+            "BLOCK_P", "格挡药水", "获得12点格挡"), rescue_ctx)
+    assert (d_rescue.action == "use_potion"
+            and d_rescue.params == {"option_index": 0}
+            and "NO_PLAY_LETHAL_POTION_RESCUE" in d_rescue.reason), \
+        f"play_card 缺失时未抢先使用即时防御药水: {d_rescue}"
+    assert rescue_know.policy["no_play_lethal_potion_rescue"] is True, \
+        "DEFAULT_POLICY 缺少 no_play_lethal_potion_rescue"
+
+    delayed_know = knowledge.Knowledge(tmp)
+    delayed_pol = policy.Policy(delayed_know)
+    delayed_ctx = _SettleCtx()
+    assert delayed_pol.decide(
+        _lethal_unavailable_state(True), delayed_ctx).action == "play_card", \
+        "延迟药水救援负例热身帧未进入出牌状态"
+    d_delayed = None
+    for _ in range(6):
+        d_candidate = delayed_pol.decide(
+            _no_play_lethal_potion_state(
+                "POWDERED_DEMISE", "消亡粉末",
+                "敌人在其回合结束时失去9点生命"), delayed_ctx)
+        if d_candidate.action == "end_turn":
+            d_delayed = d_candidate
+            break
+    assert (d_delayed is not None
+            and d_delayed.action == "end_turn"
+            and "NO_PLAY_LETHAL_POTION_RESCUE" not in d_delayed.reason
+            and "POTION_RESERVE_END_TURN_OBS" in d_delayed.reason), \
+        f"延迟消亡药水被错误当成立即救援: {d_delayed}"
+
+    rescue_off_know = knowledge.Knowledge(tmp)
+    rescue_off_know.policy["no_play_lethal_potion_rescue"] = False
+    rescue_off_pol = policy.Policy(rescue_off_know)
+    rescue_off_ctx = _SettleCtx()
+    assert rescue_off_pol.decide(
+        _lethal_unavailable_state(True), rescue_off_ctx).action == "play_card", \
+        "致死药水救援关闭夹具热身帧未进入出牌状态"
+    d_rescue_off = None
+    for _ in range(6):
+        d_candidate = rescue_off_pol.decide(
+            _no_play_lethal_potion_state(
+                "BLOCK_P", "格挡药水", "获得12点格挡"), rescue_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_rescue_off = d_candidate
+            break
+    assert (d_rescue_off is not None
+            and d_rescue_off.action == "end_turn"
+            and "NO_PLAY_LETHAL_POTION_RESCUE" not in d_rescue_off.reason), \
+        f"致死药水救援关闭后动作或 marker 漂移: {d_rescue_off}"
+
     lethal_empty_off_know = knowledge.Knowledge(tmp)
     lethal_empty_off_know.policy["lethal_unavailable_end_turn_obs"] = False
     lethal_empty_off_pol = policy.Policy(lethal_empty_off_know)
