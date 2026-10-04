@@ -215,6 +215,10 @@ def create_isolated_repository(
     # Keep the complete frozen tree even when the evaluation directory makes
     # Windows paths exceed MAX_PATH. This setting belongs only to the new repo.
     _git(destination, ['config', '--local', 'core.longpaths', 'true'])
+    # Packing this history-free snapshot must not delay provider startup.
+    # Disable implicit maintenance only; explicit Git maintenance still works.
+    _git(destination, ['config', '--local', 'gc.auto', '0'])
+    _git(destination, ['config', '--local', 'maintenance.auto', 'false'])
     _git(destination, ['config', 'core.autocrlf', 'false'])
     _git(destination, ['config', 'user.name', 'sts2 review evaluator'])
     _git(destination, ['config', 'user.email', 'review-eval@localhost'])

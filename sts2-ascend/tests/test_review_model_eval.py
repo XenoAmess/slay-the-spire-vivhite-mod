@@ -181,11 +181,17 @@ class IsolationTests(unittest.TestCase):
             base = Path(root)
             source = _source_repo(base)
             source_head = _git(source, 'rev-parse', 'HEAD')
+            source_config = (source / '.git' / 'config').read_bytes()
             isolated = base / 'output' / 'sandbox' / 'repo'
             local_head = review_model_eval.create_isolated_repository(
                 source, source_head, isolated)
 
             self.assertEqual(_git(isolated, 'remote'), '')
+            self.assertEqual(_git(isolated, 'config', '--local', '--get', 'gc.auto'), '0')
+            self.assertEqual(_git(isolated, 'config', '--local', '--get',
+                                  'maintenance.auto'), 'false')
+            self.assertEqual((source / '.git' / 'config').read_bytes(), source_config)
+            self.assertEqual(_git(source, 'rev-parse', 'HEAD'), source_head)
             self.assertEqual(
                 (isolated / 'tracked.txt').read_text(encoding='utf-8'),
                 'baseline\n',
