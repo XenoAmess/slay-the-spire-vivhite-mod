@@ -16212,3 +16212,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：规定的直接 selfcheck 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的进程级临时目录扩展适配运行同一入口，退出码 0 且输出 `SELFCHECK OK`。AST 与限定目标 `git diff --check` 通过；真实 1903/1904 只读 marker 对照完成。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; cold-reload terminal observation integrated)`
+
+## 2026-10-04 run 1905-F17：竞速未锁前高缺口纯格挡行为门
+
+profile_id：`ironclad`
+requested_run：`1905`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速尚未锁定的第一个输出回合，若 TTK−TSURV 已出现明显缺口、当前回合并不致死且有可支付攻击，继续选择纯格挡会消耗唯一输出窗口；应只跳过纯格挡候选而保留攻击路径。若无攻击、已锁定、致死或只有攻击+格挡牌，旧路径必须保持不变；这些边界可证伪该假设。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261004-085736_AU0UBHHR9WL7.json` 的 run `AU0UBHHR9WL7`（1905，F17）D164 为 `防御`，`sample_turns=1`，当前 `hp=68/incoming=13` 非致死，竞速投影 `ttk=14.7724/tsurv=5.23077/ttk_minus_tsurv=9.54162`；此前 1627、1742 等同型帧已形成 `RACE_PRELOCK_DEFENSE_OBS`，但尚未改变候选行为。
+- **EXPECTED_SIGNAL**：未来 3—10 个同型窗口中，符合窄门的决策应出现 `RACE_PRELOCK_DEFENSE_BEHAVIOR`，纯格挡候选被跳过并选择可支付攻击；致死、无攻击、已锁定和攻击+格挡牌不得误触发，关闭开关后 action/params 恢复旧路径。若实际回执显示攻击仍不足以改善输出或出现误触发，假设即被证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_prelock_defense_behavior` 与可调阈值 `race_prelock_defense_gap=8.0`，作为窄行为门和一键回滚点。
+- `sts2-ascend/brain/policy.py`：仅在竞速未锁前第 1 个回合、非致死、未 all-in/未 latch、未锁定、投影缺口达到阈值且存在可支付正伤害牌时，跳过纯格挡候选并追加 marker；攻击+格挡牌、其他回合与其他边界不变。
+- `sts2-ascend/brain/selfcheck.py`：增加行为开启、关闭和无可支付攻击夹具；隔离既有竞速地板夹具，避免把新行为门混入旧契约断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个真实同型窗口，统计行为门命中率、纯格挡跳过次数、实际攻击回执、回合后 HP/承伤、后续终局与误触发数；致死/无攻击/已锁定/攻击+格挡牌误触发应为 0。
+- **Adjust**：若门命中后仍无输出改善，先按实际 TTK−TSURV 与可支付伤害分层调阈值；若出现误触发，收紧回合、锁定或卡牌可支付性条件，不扩大到普通防御路径。
+- **Rollback**：将 `race_prelock_defense_behavior` 设为 `False`；预期移除新增 marker 与纯格挡跳过，恢复原 action/params。必要时回退本地提交。
+- **Validation**：直接固定 256 槽入口复现宿主既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 临时池耗尽；随后用同一 clone 的 0777 进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；生产目标 diff `--check` 通过，未写入在线状态、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[])`

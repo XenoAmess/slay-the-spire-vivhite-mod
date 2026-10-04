@@ -941,6 +941,9 @@ DEFAULT_POLICY = {
     "race_prelock_defense_obs": True,  # 竞速判死但实测样本尚未达到入锁门槛时，
                                         # 记录实际选中的格挡牌/样本回合；只读观测，
                                         # 不改变评分、目标、判决或动作，False 严格回滚
+    "race_prelock_defense_behavior": True,  # 竞速未锁前出现明显生存缺口且有可支付攻击时，
+                                             # 跳过纯格挡候选；致死、无攻击或已锁定时不触发，False 回滚
+    "race_prelock_defense_gap": 8.0,  # 仅在 TTK-TSURV 达到该窄门槛时触发上述行为
     "race_prelock_defense_terminal_outcome_obs": True,  # 将竞速未锁前格挡来源回接同战斗 GAME_OVER；
                                                          # 只记录首尾字段，False 严格回滚，不改变 action/params
     "lethal_survivable_line_terminal_outcome_obs": True,  # 在同楼层、同战斗终局桥中标记

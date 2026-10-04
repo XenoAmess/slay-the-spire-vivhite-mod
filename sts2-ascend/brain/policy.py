@@ -17069,6 +17069,67 @@ class Policy:
                           and bool(kill_race) and not reserve_lethal)
         if race_blk_floor:
             min_blk_cost = min(min_blk_cost, min(race_floor_costs))
+        # Bounded behavior for the matured pre-lock observation: a large
+        # projection deficit is not a reason to spend the only affordable
+        # energy on a pure block when an attack is available. Keep lethal
+        # turns, attack+block cards, attackless hands, and locked races on the
+        # existing path; the two static keys are the rollback anchor.
+        race_prelock_attack_only = False
+        try:
+            _prelock_behavior_on = bool(int(float(pol.get(
+                "race_prelock_defense_behavior", 1) or 0)))
+            _prelock_gap_floor = float(pol.get(
+                "race_prelock_defense_gap", 8.0) or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            _prelock_behavior_on = False
+            _prelock_gap_floor = 8.0
+        if not math.isfinite(_prelock_gap_floor):
+            _prelock_gap_floor = 8.0
+        _prelock_projection_gap = None
+        _prelock_projection = getattr(self, "_race_prelock_projection", None)
+        if isinstance(_prelock_projection, dict):
+            try:
+                _prelock_ttk = float(_prelock_projection.get("ttk"))
+                _prelock_tsurv = float(_prelock_projection.get("tsurv"))
+            except (TypeError, ValueError, OverflowError):
+                _prelock_ttk = _prelock_tsurv = None
+            if (_prelock_ttk is not None and _prelock_tsurv is not None
+                    and math.isfinite(_prelock_ttk)
+                    and math.isfinite(_prelock_tsurv)
+                    and _prelock_ttk >= 0.0 and _prelock_tsurv >= 0.0):
+                _prelock_projection_gap = _prelock_ttk - _prelock_tsurv
+        if (_prelock_behavior_on and kill_race and not race_allin
+                and not bool(getattr(self, "_krace_latch", False))
+                and int(getattr(self, "_krace_turns", 0) or 0) == 1
+                and not block_locked and not reserve_lethal
+                and _prelock_projection_gap is not None
+                and _prelock_projection_gap >= _prelock_gap_floor):
+            _prelock_attack_available = False
+            for _prelock_card in hand:
+                if (not _prelock_card.get("playable")
+                        or self._card_unavailable(_prelock_card)):
+                    continue
+                try:
+                    _prelock_cost = float(
+                        energy if _prelock_card.get("costs_x")
+                        else (_prelock_card.get("energy_cost") or 0))
+                    _prelock_damage = float(card_numbers(_prelock_card)[0] or 0)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if (not math.isfinite(_prelock_cost)
+                        or _prelock_cost < 0.0
+                        or _prelock_cost > float(energy)):
+                    continue
+                if _prelock_damage > 0.0:
+                    _prelock_attack_available = True
+                    break
+            if _prelock_attack_available:
+                race_prelock_attack_only = True
+                danger_note += (
+                    f"；竞速未锁前纯格挡门：投影缺口"
+                    f"{_prelock_projection_gap:.2f}>={_prelock_gap_floor:.2f}，"
+                    "存在可支付攻击，跳过纯格挡候选"
+                    "（RACE_PRELOCK_DEFENSE_BEHAVIOR）")
         # 致死生还线（LETHAL_SURVIVABLE_LINE，第 1414~1419 局批复盘）：
         # kill_race 致死回合的「非斩杀攻击让位格挡」豁免（攻击评分段致死守卫的
         # kill_race 例外）与 reserve_for_block 的 not kill_race 屏蔽，都建立在
@@ -17947,6 +18008,22 @@ class Policy:
                 cost = energy  # dump all energy
             if cost > energy:
                 continue
+            if race_prelock_attack_only:
+                try:
+                    _prelock_candidate_damage, _prelock_candidate_block, _ = (
+                        card_numbers(c))
+                except (TypeError, ValueError, OverflowError):
+                    _prelock_candidate_damage = _prelock_candidate_block = 0.0
+                if (_prelock_candidate_block > 0.0
+                        and _prelock_candidate_damage <= 0.0):
+                    self._trace_candidate(
+                        c.get("name") or c.get("card_id")
+                        or f"手牌 {c.get('index')}",
+                        None, index=c.get("index"), action="play_card",
+                        status="skipped",
+                        why=("竞速未锁前纯格挡候选跳过：存在可支付攻击"
+                              "（RACE_PRELOCK_DEFENSE_BEHAVIOR）"))
+                    continue
             score, target, why = self._score_play(c, enemies, incoming, my_block, round_no, pol,
                                                    my_hp, my_max_hp, stance, forced_kill,
                                                    (reserve_for_block and not race_allin

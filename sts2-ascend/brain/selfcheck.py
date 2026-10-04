@@ -12012,6 +12012,10 @@ def main() -> int:
                                            "node_type": "Boss"},
                                 "current_combat_is_hard": False,
                                 "credit_tags": []})()
+    # This legacy fixture isolates the one-energy race floor; keep the newly
+    # matured pre-lock behavior disabled so the assertion remains about the
+    # existing floor contract rather than the separate production gate.
+    rf_pol.know.policy["race_prelock_defense_behavior"] = False
     d_floor = rf_pol.decide(rfloor_state(1, 30, 16), rf_ctx)
     assert d_floor.action == "play_card" \
         and d_floor.params.get("card_index") == 1, \
@@ -24129,23 +24133,29 @@ def main() -> int:
                     ]},
         }
 
-    def rpre_decide(enabled):
+    def rpre_decide(enabled, behavior=False, affordable_attack=False):
         rpre_ctx = type("RPRECTX", (), {
             "combat": {"comp_id": "RPRE_RACE_COMP", "node_type": "Elite"},
             "current_combat_is_hard": False,
             "credit_tags": [],
         })()
+        rpre_input = rpre_state()
+        if affordable_attack:
+            rpre_input["combat"]["hand"][0]["energy_cost"] = 1
+            rpre_input["combat"]["hand"][0]["dynamic_values"][0][
+                "current_value"] = 1
         rpre_pol = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rpre-"))),
             random.Random(13))
         # Bind the combat identity without pretending the first decision was
         # accepted; then inject exactly one measured output turn.
-        rpre_pol.decide(rpre_state(), rpre_ctx)
+        rpre_pol.decide(rpre_input, rpre_ctx)
         rpre_pol._krace_turns = 1
         rpre_pol._krace_dmg = rpre_pol._krace_dmg_sustained = 6.0
         rpre_pol._krace_latch = False
         rpre_pol.know.policy["race_prelock_defense_obs"] = enabled
-        return rpre_pol.decide(rpre_state(), rpre_ctx)
+        rpre_pol.know.policy["race_prelock_defense_behavior"] = behavior
+        return rpre_pol.decide(rpre_input, rpre_ctx)
 
     d_rpre_on = rpre_decide(True)
     d_rpre_off = rpre_decide(False)
@@ -24162,6 +24172,28 @@ def main() -> int:
             and "RACE_PRELOCK_DEFENSE_OBS" not in d_rpre_off.reason), \
         f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
         f"on={d_rpre_on} off={d_rpre_off}"
+
+    # 3rpre-b) 竞速未锁前行为门：当当前回合非致死、投影缺口达到窄门槛且
+    #      存在可支付攻击时，纯格挡候选不得再消耗输出窗口；攻击+格挡牌、
+    #      致死回合和无可支付攻击仍走旧路径。开关关闭必须恢复旧 action/params。
+    d_rpre_behavior_on = rpre_decide(
+        True, behavior=True, affordable_attack=True)
+    d_rpre_behavior_off = rpre_decide(
+        True, behavior=False, affordable_attack=True)
+    d_rpre_no_attack_guard = rpre_decide(True, behavior=True)
+    assert (d_rpre_behavior_on.action == "play_card"
+            and d_rpre_behavior_on.params.get("card_index") == 0
+            and "RACE_PRELOCK_DEFENSE_BEHAVIOR" in d_rpre_behavior_on.reason
+            and "跳过纯格挡候选" in d_rpre_behavior_on.reason), \
+        f"竞速未锁前行为门未保留可支付攻击: {d_rpre_behavior_on}"
+    assert (d_rpre_behavior_off.action == "play_card"
+            and d_rpre_behavior_off.params.get("card_index") == 1
+            and "RACE_PRELOCK_DEFENSE_BEHAVIOR" not in d_rpre_behavior_off.reason), \
+        f"竞速未锁前行为门关闭未恢复旧格挡: {d_rpre_behavior_off}"
+    assert (d_rpre_no_attack_guard.action == "play_card"
+            and d_rpre_no_attack_guard.params.get("card_index") == 1
+            and "RACE_PRELOCK_DEFENSE_BEHAVIOR" not in d_rpre_no_attack_guard.reason), \
+        f"无可支付攻击时误触竞速未锁前行为门: {d_rpre_no_attack_guard}"
 
     # 3rpre-a) 将未锁前格挡来源接到同一 COMBAT 的 GAME_OVER：只读记录
     #          来源牌面、终端回合和最终 HP；跨屏边界与关闭开关必须不命中，
