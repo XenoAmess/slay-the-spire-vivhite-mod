@@ -17156,3 +17156,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.4681672361032967局)，BODY_SLAM(16分/2.480804697635817局)，STOKE(18分/2.3514764773940766局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1960 胜，当前目标进阶 0
+
+## 第 1961 局复盘（2026-10-05 02:50）
+- 结果：💀 失败｜进阶 0｜到达层数 33｜当局评分 33
+- 死因：敌人组合 THE_INSATIABLE
+- 本局拿牌：TAUNT, CINDER, HEMOKINESIS, CINDER, UNRELENTING, TAUNT, CINDER, PILLAGE, BREAKTHROUGH, SHRUG_IT_OFF, PACTS_END, HEMOKINESIS, UNRELENTING, VICIOUS, TAUNT, IMPERVIOUS, IRON_WAVE, SWORD_BOOMERANG, SWORD_BOOMERANG, SPITE, DRAMATIC_ENTRANCE, ANGER, SHRUG_IT_OFF, SWORD_BOOMERANG, RUPTURE, SPITE
+- 本局遗物：VAMBRACE, JUZU_BRACELET, VENERABLE_TEA_SET, ART_OF_WAR, BAG_OF_PREPARATION, SCREAMING_FLAGON
+- 战斗记录：F20 Monster战 掉血0; F22 Monster战 掉血22｜自损4（可行动段4/非行动段15，SELF_LOSS_PHASE_OBS）; F27 Monster战 掉血35｜自损2（可行动段2/非行动段2，SELF_LOSS_PHASE_OBS）; F29 Monster战 掉血19｜自损4（可行动段4/非行动段21，SELF_LOSS_PHASE_OBS）; F30 Monster战 掉血40｜自损4（可行动段4/非行动段40，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=95/dpt=26.88/ttk=3.53423/tsurv=1.34375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=3.53423/actual_over_projected=2.26（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=2.19048（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战8回合获胜; F33 Boss战 掉血34｜自损5（可行动段5/非行动段0，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=256/dpt=43.875/ttk=5.83476/tsurv=1.9375（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=5.83476/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.58（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.89726（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=16.3333/projected_dpt=13.6333/ratio=1.27/min_ratio=1.14/min_sample=3->4/min_actual_dpt=20/min_projected_dpt=17.6（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=16.3333/projected_dpt=13.6333/ratio=1.27/min_ratio=1.14（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=16.3333/projected_dpt=13.6333/ratio=1.27/min_ratio=1.14（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：PANACHE(26分/6.101866527090143局)，PROWESS(26分/12.008940165706537局)，FEED(25分/31.09481832412962局)，MASTER_OF_STRATEGY(25分/4.166741885586155局)，MANGLE(25分/39.33407300496266局)
+- 当前低价值卡牌：HAVOC(16分/2.459528650776935局)，BODY_SLAM(16分/2.472121881194092局)，STOKE(18分/2.3432463097231975局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码；kill_race_prior_eff: 0.44 → 0.47（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.88 → 1.87（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.25 → 2.20（行至 F33——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1961 胜，当前目标进阶 0
