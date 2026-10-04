@@ -21835,6 +21835,186 @@ class Policy:
                 + f";returned_after={','.join(
                     f'{kid}:{elapsed}' for kid, elapsed in sorted(returned_after.items())) or '-'}")
 
+    @staticmethod
+    def _parse_decimillipede_reattach_window_observation(reason):
+        """Parse one reattach-window sample without treating it as a decision."""
+        _marker = "DECIMILLIPEDE_REATTACH_WINDOW_OBS:"
+        _text = str(reason or "")
+        _start = _text.rfind(_marker)
+        if _start < 0:
+            return None
+        _tail = _text[_start + len(_marker):]
+
+        def _field(name):
+            _match = re.search(
+                rf"(?:^|;){re.escape(name)}=([^;；（）()\s]+)", _tail)
+            return _match.group(1) if _match else ""
+
+        try:
+            _round = int(float(_field("round")))
+            _live = int(float(_field("live")))
+            _window_turns = int(float(_field("window_turns")))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if _round < 0 or _live < 2 or _window_turns <= 0:
+            return None
+        return {
+            "round": _round,
+            "live": _live,
+            "segments": _field("segments") or "?",
+            "missing": _field("missing") or "-",
+            "returned": _field("returned") or "-",
+            "missing_since": _field("missing_since") or "-",
+            "returned_after": _field("returned_after") or "-",
+            "window_turns": _window_turns,
+        }
+
+    def _decimillipede_reattach_window_terminal_outcome_note(
+            self, pol, ctx, victory, floor=None, final_hp=None) -> str:
+        """Join reattach lifecycle samples to this same-floor terminal.
+
+        This is deliberately a bounded, read-only evidence join.  It does not
+        reopen the combat gate or alter the terminal action; it only makes the
+        native two-turn missing/returned lifecycle distinguishable at GAME_OVER.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "decimillipede_reattach_window_terminal_outcome_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError):
+            _enabled = False
+        if not _enabled:
+            return ""
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list) or not _decisions:
+            return ""
+
+        _marker = "DECIMILLIPEDE_REATTACH_WINDOW_TERMINAL_OUTCOME_OBS"
+
+        def _same_floor(left, right):
+            if left is None or right is None:
+                return False
+            try:
+                return int(float(left)) == int(float(right))
+            except (TypeError, ValueError, OverflowError):
+                return str(left) == str(right)
+
+        # A subsequent GAME_OVER poll sees the already persisted terminal
+        # decision.  Keep the observation idempotent.
+        for _row in reversed(_decisions):
+            if not isinstance(_row, dict):
+                continue
+            if (_marker in str(_row.get("reason") or "")
+                    and _same_floor(floor, _row.get("floor"))):
+                return ""
+
+        _rows = []
+        _stop = len(_decisions)
+        for _index in range(_stop - 1, max(-1, _stop - 97), -1):
+            _row = _decisions[_index]
+            if not isinstance(_row, dict):
+                continue
+            _screen = str(_row.get("screen") or "").upper()
+            if _screen in {"GAME_OVER", "VICTORY"}:
+                break
+            if not _same_floor(floor, _row.get("floor")):
+                break
+            if _screen not in {"COMBAT", "CARD_SELECTION"}:
+                break
+            _parsed = self._parse_decimillipede_reattach_window_observation(
+                _row.get("reason"))
+            if _parsed is not None:
+                _rows.append({"index": _index, "row": _row, "data": _parsed})
+        if not _rows:
+            return ""
+        _rows.reverse()
+        _lifecycle_rows = [
+            _entry for _entry in _rows
+            if _entry["data"]["missing"] != "-"
+            or _entry["data"]["returned"] != "-"
+        ]
+        if not _lifecycle_rows:
+            return ""
+
+        _terminal_row = _decisions[-1]
+        if not isinstance(_terminal_row, dict):
+            return ""
+        if not _same_floor(floor, _terminal_row.get("floor")):
+            return ""
+        if str(_terminal_row.get("screen") or "").upper() not in {
+                "COMBAT", "CARD_SELECTION"}:
+            return ""
+        try:
+            _terminal_round = int(float(_terminal_row.get(
+                "turn", _terminal_row.get("round"))))
+        except (TypeError, ValueError, OverflowError):
+            _terminal_round = _lifecycle_rows[-1]["data"]["round"]
+
+        def _split_tokens(value):
+            return sorted({
+                _token for _token in str(value or "").split(",")
+                if _token and _token != "-"
+            })
+
+        _missing = sorted({
+            _token
+            for _entry in _lifecycle_rows
+            for _token in _split_tokens(_entry["data"]["missing"])
+        })
+        _returned = sorted({
+            _token
+            for _entry in _lifecycle_rows
+            for _token in _split_tokens(_entry["data"]["returned"])
+        })
+        _returned_rows = [
+            _entry for _entry in _lifecycle_rows
+            if _entry["data"]["returned"] != "-"
+        ]
+        _window_turns = sorted({
+            str(_entry["data"]["window_turns"])
+            for _entry in _rows
+        })
+        _missing_since = sorted({
+            _value
+            for _entry in _lifecycle_rows
+            for _value in _split_tokens(_entry["data"]["missing_since"])
+        })
+        _returned_after = sorted({
+            _value
+            for _entry in _lifecycle_rows
+            for _value in _split_tokens(_entry["data"]["returned_after"])
+        })
+
+        def _num(value):
+            try:
+                return f"{float(value):g}"
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _terminal_action = str(_terminal_row.get("action") or "?")
+        _terminal_action = re.sub(r"[/；（）()\s]+", "_", _terminal_action)
+        _result = "victory" if victory else "defeat"
+        _source = _lifecycle_rows[0]["data"]
+        _return_round = (
+            _returned_rows[-1]["data"]["round"] if _returned_rows else "-")
+        return (
+            "；千足虫重接终局对账："
+            f"outcome={_result}"
+            f"/floor={floor}"
+            f"/source_round={_source['round']}"
+            f"/return_round={_return_round}"
+            f"/missing={','.join(_missing) or '-'}"
+            f"/returned={','.join(_returned) or '-'}"
+            f"/missing_since={','.join(_missing_since) or '-'}"
+            f"/returned_after={','.join(_returned_after) or '-'}"
+            f"/window_turns={','.join(_window_turns) or '-'}"
+            f"/sample_count={len(_rows)}"
+            f"/terminal_round={_terminal_round}"
+            f"/terminal_action={_terminal_action}"
+            f"/terminal_hp={_num(final_hp)}"
+            f"/bridge_decisions={max(0, _stop - 1 - _lifecycle_rows[0]['index'])}"
+            f"/bridge_rounds={max(0, _terminal_round - _source['round'])}"
+            f"（{_marker}）")
+
     def _respawn_read_obs_flush(self, danger_note: str) -> str:
         """把本场名册读侧首判快照一次性并入 danger_note（每敌每场至多一次）。
 
@@ -26245,6 +26425,9 @@ class Policy:
         _sleep_guard_pass_terminal_outcome_note = (
             self._consume_sleep_guard_pass_terminal_outcome_note(
                 self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
+        _decimillipede_reattach_terminal_outcome_note = (
+            self._decimillipede_reattach_window_terminal_outcome_note(
+                self.know.policy, ctx, victory, go.get("floor"), terminal_hp))
 
         # Continue is the native NGameOverContinueButton, not main-menu
         # continue_run. Clicking it starts AnimateRunSummary, whose score bar
@@ -26296,7 +26479,8 @@ class Policy:
                             f"{_sandpit_terminal_outcome_note}"
                             f"{_low_pool_burst_terminal_outcome_note}"
                             f"{_card_burst_terminal_outcome_note}"
-                            f"{_sleep_guard_pass_terminal_outcome_note}",
+                            f"{_sleep_guard_pass_terminal_outcome_note}"
+                            f"{_decimillipede_reattach_terminal_outcome_note}",
                             wait=1.0)
 
         # MainMenuButton becomes actionable only after the native summary
@@ -26354,7 +26538,8 @@ class Policy:
                         f"{_ritual_window_outcome_note}"
                         f"{_sandpit_terminal_outcome_note}"
                         f"{_low_pool_burst_terminal_outcome_note}"
-                        f"{_card_burst_terminal_outcome_note}",
+                        f"{_card_burst_terminal_outcome_note}"
+                        f"{_decimillipede_reattach_terminal_outcome_note}",
                         wait=0.5)
                 # Reconnecting to an old GAME_OVER echo must finish the native UI
                 # without manufacturing a zero-history duplicate terminal record.
@@ -26396,7 +26581,8 @@ class Policy:
                                 f"{_ritual_window_outcome_note}"
                                 f"{_sandpit_terminal_outcome_note}"
                                 f"{_low_pool_burst_terminal_outcome_note}"
-                                f"{_card_burst_terminal_outcome_note}",
+                                f"{_card_burst_terminal_outcome_note}"
+                                f"{_decimillipede_reattach_terminal_outcome_note}",
                                 tags=[("timeline_check", True)], wait=1.5)
             return Decision("return_to_main_menu", {},
                             "结算：返回主菜单，备战下一局"
@@ -26404,7 +26590,8 @@ class Policy:
                             f"{_boss_race_combo_gate_terminal_outcome_note}"
                             f"{_ovicopter_summon_pressure_terminal_outcome_note}"
                             f"{_kill_race_hp_pay_chain_terminal_outcome_note}"
-                            f"{_card_burst_terminal_outcome_note}",
+                            f"{_card_burst_terminal_outcome_note}"
+                            f"{_decimillipede_reattach_terminal_outcome_note}",
                             tags=[("timeline_check", True)], wait=1.5)
         if phase == "summary_animating" or go.get("showing_summary"):
             return Decision(None, {}, "结算：原生分数、解锁与存档动画进行中，等待", wait=0.8)

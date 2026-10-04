@@ -16324,3 +16324,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的 `.review-cache/selfcheck-pool` 进程级临时目录适配运行同一完整 selfcheck，退出码 0 且末尾为 `SELFCHECK OK`。目标三文件 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; nonlethal no-play potion rescue integrated)`
+
+## 2026-10-04 run 1915-1916：千足虫重接窗口终局对账
+
+profile_id：`ironclad`
+requested_runs：`1915, 1916`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`DECIMILLIPEDE_REATTACH_WINDOW_OBS` 已能记录节段离场、缺失回合和回场，但尚未把这个原生两回合重接生命周期接到同楼层终局；因此无法区分“普通重生战阵亡”和“节段在重接窗口内回场后仍未结束战斗”。可证伪条件是：终局桥接跨楼层/跨屏、无 `missing/returned` 生命周期仍误命中、重复轮询追加多个 marker，或改动 action/params。
+- **EVIDENCE**：完整失败链 `sts2-ascend/knowledge/runs/20261004-120959_RAC7DYP6GJJ2.json`（run 1916，341 条决策）F31 D335 在 round 4 记录 `DECIMILLIPEDE_SEGMENT_BACK` 离场并给出原生 `return_due=6`；D337 round 5 记录同节段 `returned_after=1`；D340 为 F31 失败终局，但既有理由没有 `reattach→outcome` 对账。原生 v0.111.0 快照 `runtime/powers.jsonl` 的 `REATTACH_POWER` 明确为“其他身体部分存活时，2 回合后以 25 点生命复活”。
+- **EXPECTED_SIGNAL**：未来 3—10 个同型终局中，只要同楼层连续战斗链出现 `missing` 或 `returned`，应最多追加一次 `DECIMILLIPEDE_REATTACH_WINDOW_TERMINAL_OUTCOME_OBS`，包含 outcome、source/return/terminal round、节段、window、terminal HP 和桥接长度；无生命周期、跨楼层/跨屏、重复轮询或关闭开关时静默，action/params 逐位不变。若真实链仍出现生命周期却无终局 marker，假设得到支持；若 marker 稳定、字段可对账，则停止把该缺口升级为行为改动。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `decimillipede_reattach_window_terminal_outcome_obs`，提供单键回滚。
+- `sts2-ascend/brain/policy.py`：解析既有重接样本，并在同楼层、最多 96 条连续 `COMBAT/CARD_SELECTION` 决策内只读汇总一次终局对账；接入 Continue、终局提交和返回主菜单理由，不改变评分、候选、目标、动作或 params。
+- `sts2-ascend/brain/selfcheck.py`：新增离场/回场正例，验证 source/return/terminal 字段、动作参数不变、重复静默、跨楼层静默和关闭开关回滚。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个真实命中，核对 `missing/returned` 节段、原生 2 回合窗口、终局 outcome/HP、实际终局 round 与 action/params；重复 marker、跨界误接和字段缺失应为 0。
+- **Adjust**：若 CARD_SELECTION 或重连持久化使连续链被截断，只收紧同楼层证据边界或补充只读字段；不得把终局 marker 升级为战斗行为门。
+- **Rollback**：将 `decimillipede_reattach_window_terminal_outcome_obs` 设为 `False`；预期只移除终局对账，不改变原有重接窗口 marker 或动作路径。
+- **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的进程级 0777 临时目录适配器运行完整 selfcheck，退出码 0，末尾为 `SELFCHECK OK`。目标 diff `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; decimillipede reattach terminal observation integrated)`

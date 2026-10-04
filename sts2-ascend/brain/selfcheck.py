@@ -15690,10 +15690,57 @@ def main() -> int:
     assert "returned=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_returned \
         and "returned_after=DECIMILLIPEDE_SEGMENT_MIDDLE:2" in rw_returned, \
         "重生窗口未记录节段回场"
+    _rw_rows = [
+        {"screen": "COMBAT", "floor": 7, "turn": 1,
+         "action": "play_card", "params": {}, "reason": rw_first},
+        {"screen": "COMBAT", "floor": 7, "turn": 2,
+         "action": "play_card", "params": {}, "reason": rw_missing},
+        {"screen": "COMBAT", "floor": 7, "turn": 3,
+         "action": "play_card", "params": {}, "reason": rw_missing_later},
+        {"screen": "COMBAT", "floor": 7, "turn": 4,
+         "action": "play_card", "params": {}, "reason": rw_returned},
+        {"screen": "COMBAT", "floor": 7, "turn": 4,
+         "action": "end_turn", "params": {}, "hp": 10,
+         "reason": "terminal"},
+    ]
+    rw_ctx = SimpleNamespace(decisions=[dict(row) for row in _rw_rows])
+    rw_terminal = rw_pol._decimillipede_reattach_window_terminal_outcome_note(
+        rw_know.policy, rw_ctx, False, 7, 0)
+    assert "DECIMILLIPEDE_REATTACH_WINDOW_TERMINAL_OUTCOME_OBS" in rw_terminal \
+        and "outcome=defeat" in rw_terminal \
+        and "source_round=2" in rw_terminal \
+        and "return_round=4" in rw_terminal \
+        and "missing=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_terminal \
+        and "returned=DECIMILLIPEDE_SEGMENT_MIDDLE" in rw_terminal \
+        and "terminal_round=4" in rw_terminal \
+        and "terminal_action=end_turn" in rw_terminal \
+        and "terminal_hp=0" in rw_terminal, \
+        "重生窗口未桥接同楼层终局结果"
+    assert rw_ctx.decisions[-1]["action"] == "end_turn" \
+        and rw_ctx.decisions[-1]["params"] == {}, \
+        "重生终局观测不得改变终局动作或参数"
+    rw_ctx.decisions[-1]["reason"] += rw_terminal
+    assert rw_pol._decimillipede_reattach_window_terminal_outcome_note(
+        rw_know.policy, rw_ctx, False, 7, 0) == "", \
+        "重生终局观测不得在重复轮询中重复"
+    rw_cross_ctx = SimpleNamespace(decisions=[
+        {"screen": "COMBAT", "floor": 6, "turn": 4,
+         "action": "play_card", "params": {}, "reason": rw_returned},
+        {"screen": "COMBAT", "floor": 7, "turn": 4,
+         "action": "end_turn", "params": {}, "reason": "terminal"},
+    ])
+    assert rw_pol._decimillipede_reattach_window_terminal_outcome_note(
+        rw_know.policy, rw_cross_ctx, False, 7, 0) == "", \
+        "跨楼层重生窗口不得桥接到终局"
     rw_know.policy["decimillipede_reattach_window_obs"] = False
     assert rw_pol._decimillipede_reattach_window_obs(
         "", rw_enemies, True, 4, rw_know.policy) == "", \
         "关闭重生窗口观测键未严格回滚"
+    rw_know.policy["decimillipede_reattach_window_terminal_outcome_obs"] = False
+    rw_off_ctx = SimpleNamespace(decisions=[dict(row) for row in _rw_rows])
+    assert rw_pol._decimillipede_reattach_window_terminal_outcome_note(
+        rw_know.policy, rw_off_ctx, False, 7, 0) == "", \
+        "关闭重生终局观测键未严格回滚"
 
     rd3_pol = policy.Policy(ra_know)
     rd3_pol._combat_kills["SPRING_ADD#0"] = 2
