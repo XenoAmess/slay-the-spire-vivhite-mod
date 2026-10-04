@@ -16771,3 +16771,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.176084352978501局)，STOKE(18分/2.658490008528363局)，DEFEND_IRONCLAD(18分/2.4027183177267166局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.55 → 0.53（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1925 胜，当前目标进阶 0
+
+## 第 1926 局复盘（2026-10-04 16:01）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：BODY_SLAM, TWIN_STRIKE, DISMANTLE, INFLAME, INFLAME, TAUNT, CINDER, THUNDERCLAP, HOWL_FROM_BEYOND, CINDER, ARMAMENTS
+- 本局遗物：CANDELABRA
+- 战斗记录：F6 Monster战 掉血0; F7 Monster战 掉血20; F9 Monster战 掉血15; F11 Unknown战 掉血0; F14 Monster战 掉血2; F17 Boss战 掉血60｜竞速投影审计：pool=275/dpt=28.35/ttk=9.70018/tsurv=6.5（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=9.70018/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=0.77（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.20018（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=28.25/projected_dpt=35.9048/ratio=0.78/min_ratio=0.69/min_sample=4->5/min_actual_dpt=18/min_projected_dpt=26.25（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=28.25/projected_dpt=35.9048/ratio=0.78/min_ratio=0.69（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=28.25/projected_dpt=35.9048/ratio=0.78/min_ratio=0.69（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.638120265759775局)，PROWESS(26分/13.576851714428383局)，FEED(25分/30.905407381041222局)，MANGLE(25分/41.31227283691854局)，PYRE(25分/21.374751671656178局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.140468057743076局)，STOKE(18分/2.6491852934985136局)，DEFEND_IRONCLAD(18分/2.394308803614673局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（75%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.53 → 0.50（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1926 胜，当前目标进阶 0
