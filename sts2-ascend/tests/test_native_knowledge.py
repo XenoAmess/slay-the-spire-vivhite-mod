@@ -134,6 +134,90 @@ class NativeKnowledgeTests(unittest.TestCase):
         self.assertIn("DamageCmd", json.dumps(digest, ensure_ascii=False))
         self.assertIn("<category>.jsonl", digest["corpus_paths"]["mechanics"])
 
+    def test_review_digest_preserves_statistical_priority_before_limits(self) -> None:
+        index = NativeGameKnowledge.from_knowledge_root(self.knowledge)
+        index._runtime["relics"] = {
+            record_id: {"data": {"name": record_id}}
+            for record_id in ("AA_RELIC", "BB_RELIC", "ZZ_RELIC")
+        }
+        digest = index.review_digest({
+            "relics": {
+                "AA_RELIC": {"picked": 1},
+                "BB_RELIC": {"picked": 2},
+                "ZZ_RELIC": {"picked": 100},
+            },
+        })
+        self.assertEqual(
+            [row["id"] for row in digest["entities"]["relics"]],
+            ["ZZ_RELIC", "BB_RELIC"],
+        )
+
+    def test_review_digest_mentions_precede_ranked_candidates_without_duplicates(self) -> None:
+        index = NativeGameKnowledge.from_knowledge_root(self.knowledge)
+        index._runtime["cards"] = {
+            record_id: {"data": {"name": record_id}}
+            for record_id in ("AA_CARD", "MM_CARD", "ZZ_CARD")
+        }
+        digest = index.review_digest({
+            "cards": {
+                "AA_CARD": {"picked": 1},
+                "MM_CARD": {"picked": 100},
+                "ZZ_CARD": {"picked": 90},
+            },
+        }, ["ZZ_CARD was discussed twice: ZZ_CARD"], limits={"cards": 2})
+        self.assertEqual(
+            [row["id"] for row in digest["entities"]["cards"]],
+            ["ZZ_CARD", "MM_CARD"],
+        )
+
+    def test_upgraded_enrichment_prefers_live_text_and_leaves_base_numbers_unknown(self) -> None:
+        index = NativeGameKnowledge.from_knowledge_root(self.knowledge)
+        runtime = index.runtime_records("cards")["TEST_CARD"]["data"]
+        runtime["upgrade"] = {"description": "Deal 10 damage."}
+        for live in (
+            {"card_id": "TEST_CARD", "upgraded": True},
+            {"card_id": "TEST_CARD+"},
+            {"card_id": "TEST_CARD", "upgraded": True,
+             "rules_text": "Deal 10 damage."},
+            {"card_id": "TEST_CARD", "upgraded": True,
+             "resolved_rules_text": "Deal 10 damage."},
+        ):
+            with self.subTest(live=live):
+                before = dict(live)
+                enriched = index.enrich_card(live)
+                self.assertEqual(live, before)
+                self.assertEqual(enriched["card_type"], "Attack")
+                self.assertNotIn("energy_cost", enriched)
+                self.assertNotIn("dynamic_values", enriched)
+                if live.get("rules_text") or live.get("resolved_rules_text"):
+                    self.assertEqual(enriched["rules_text"], "Deal 10 damage.")
+                    self.assertEqual(enriched["resolved_rules_text"], "Deal 10 damage.")
+                else:
+                    self.assertNotIn("rules_text", enriched)
+                    self.assertNotIn("resolved_rules_text", enriched)
+
+    def test_changed_instances_do_not_receive_missing_base_effects_or_costs(self) -> None:
+        index = NativeGameKnowledge.from_knowledge_root(self.knowledge)
+        for changes in (
+            {"energy_cost": 0},
+            {"dynamic_values": [{"name": "Damage", "current_value": 12}]},
+            {"dynamic_values": [{"name": "Damage", "is_modified": True}]},
+            {"rules_text": "Deal 12 damage."},
+            {"is_modified": True},
+        ):
+            with self.subTest(changes=changes):
+                live = {"card_id": "TEST_CARD", **changes}
+                enriched = index.enrich_card(live)
+                for key, value in changes.items():
+                    self.assertEqual(enriched[key], value)
+                for field in ("energy_cost", "dynamic_values"):
+                    if field not in live:
+                        self.assertNotIn(field, enriched)
+                if "rules_text" in live:
+                    self.assertEqual(enriched["resolved_rules_text"], live["rules_text"])
+                else:
+                    self.assertNotIn("resolved_rules_text", enriched)
+
     def test_validation_failure_is_explicit_and_non_throwing(self) -> None:
         (self.snapshot / "validation.json").write_text(
             json.dumps({"counts": {"fail": 1}}), encoding="utf-8")

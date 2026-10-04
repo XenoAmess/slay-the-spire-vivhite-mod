@@ -377,28 +377,70 @@ class NativeGameKnowledge:
         }
 
     def enrich_card(self, card: dict[str, Any]) -> dict[str, Any]:
-        """Fill fields omitted by live combat/reward payloads without overriding state."""
-        fact = self.lookup("cards", card.get("card_id") or card.get("id"))
+        """Fill missing identity/base facts without replacing live instance values."""
+        card_id = card.get("card_id") or card.get("id")
+        fact = self.lookup("cards", card_id)
         runtime = (fact or {}).get("runtime") or {}
         if not runtime:
             return card
         enriched = dict(card)
-        aliases = {
-            "name": "name",
-            "card_type": "type",
-            "rarity": "rarity",
-            "rules_text": "description",
-            "resolved_rules_text": "description",
-            "energy_cost": "cost",
-            "costs_x": "is_x_cost",
-            "dynamic_values": "vars",
+
+        def missing(field: str) -> bool:
+            return enriched.get(field) is None or enriched.get(field) == ""
+
+        # A live description can already describe an upgrade, enchantment or
+        # combat modifier. Prefer it to the immutable base-card description when
+        # only one of the API's two text fields was supplied.
+        if missing("resolved_rules_text") and not missing("rules_text"):
+            enriched["resolved_rules_text"] = enriched["rules_text"]
+        if missing("rules_text") and not missing("resolved_rules_text"):
+            enriched["rules_text"] = enriched["resolved_rules_text"]
+
+        base_text = sanitize_rich_value(runtime.get("description"))
+        live_text = enriched.get("resolved_rules_text") or enriched.get("rules_text")
+        instance_changed = (
+            bool(card.get("upgraded"))
+            or str(card_id or "").strip().endswith("+")
+            or bool(card.get("is_modified"))
+            or (bool(live_text) and live_text != base_text)
+            or any(
+                card.get(destination) is not None and runtime.get(source) is not None
+                and card[destination] != runtime[source]
+                for destination, source in (("energy_cost", "cost"), ("costs_x", "is_x_cost"))
+            )
+        )
+        base_values = {
+            row.get("name"): row for row in runtime.get("vars") or []
+            if isinstance(row, dict)
         }
+        for row in card.get("dynamic_values") or []:
+            if not isinstance(row, dict):
+                continue
+            base = base_values.get(row.get("name")) or {}
+            if (row.get("is_modified") or row.get("was_just_upgraded")
+                    or any(row.get(field) is not None and base.get(field) is not None
+                           and row[field] != base[field]
+                           for field in ("base_value", "current_value", "enchanted_value"))):
+                instance_changed = True
+                break
+
+        aliases = {"name": "name", "card_type": "type", "rarity": "rarity"}
+        if not instance_changed:
+            # The snapshot only proves the unmodified base instance; its upgrade
+            # preview has no trustworthy costs/vars contract. Changed instances
+            # keep unknown fields unknown until the live API supplies them.
+            aliases.update({
+                "rules_text": "description",
+                "resolved_rules_text": "description",
+                "energy_cost": "cost",
+                "costs_x": "is_x_cost",
+                "dynamic_values": "vars",
+            })
         for destination, source in aliases.items():
-            if enriched.get(destination) is None or enriched.get(destination) == "":
+            if missing(destination):
                 value = runtime.get(source)
-                if value is None:
-                    continue
-                enriched[destination] = sanitize_rich_value(value)
+                if value is not None:
+                    enriched[destination] = sanitize_rich_value(value)
         return enriched
 
     def _build_name_index(self) -> dict[str, list[tuple[str, str]]]:
@@ -583,7 +625,14 @@ class NativeGameKnowledge:
         """Build a deterministic, bounded set of native facts relevant to a review."""
         limits = {"cards": 4, "monsters": 3, "relics": 2, "potions": 2, "events": 1,
                   **(limits or {})}
-        selected = self.ids_mentioned(texts)
+        # Explicit run-text mentions retain first priority. IDs within that tier
+        # have a stable order; ranked statistical candidates are appended without
+        # losing their order to a set or a final alphabetical sort.
+        mentioned = self.ids_mentioned(texts)
+        selected = {
+            category: dict.fromkeys(sorted(mentioned.get(category, set())))
+            for category in CORE_CATEGORIES
+        }
 
         card_rows = []
         for card_id, row in (stats.get("cards") or {}).items():
@@ -597,7 +646,7 @@ class NativeGameKnowledge:
             ))
         for _zero_play, _picked, _bias, card_id in sorted(card_rows, reverse=True):
             if card_id in self.runtime_records("cards"):
-                selected["cards"].add(card_id)
+                selected["cards"].setdefault(card_id, None)
             if len(selected["cards"]) >= limits["cards"]:
                 break
 
@@ -612,24 +661,26 @@ class NativeGameKnowledge:
             comp_upper = comp.upper()
             for monster_id in monster_ids:
                 if monster_id in comp_upper:
-                    selected["monsters"].add(monster_id)
+                    selected["monsters"].setdefault(monster_id, None)
             if len(selected["monsters"]) >= limits["monsters"]:
                 break
 
         for event_id, rows in (stats.get("events") or {}).items():
             if rows and _entity_id(event_id) in self.runtime_records("events"):
-                selected["events"].add(_entity_id(event_id))
+                selected["events"].setdefault(_entity_id(event_id), None)
 
         for relic_id, row in sorted((stats.get("relics") or {}).items(),
                                     key=lambda item: int((item[1] or {}).get("picked", 0) or 0)
                                     if isinstance(item[1], dict) else 0, reverse=True):
             if _entity_id(relic_id) in self.runtime_records("relics"):
-                selected["relics"].add(_entity_id(relic_id))
+                selected["relics"].setdefault(_entity_id(relic_id), None)
 
         entities: dict[str, list[dict[str, Any]]] = {}
         for category in CORE_CATEGORIES:
             rows = []
-            for record_id in sorted(selected.get(category, set()))[:limits[category]]:
+            for record_id in selected[category]:
+                if len(rows) >= limits[category]:
+                    break
                 digest = self.entity_digest(category, record_id)
                 if digest:
                     rows.append(digest)
