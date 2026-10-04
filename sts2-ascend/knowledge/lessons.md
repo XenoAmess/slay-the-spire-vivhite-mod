@@ -17178,3 +17178,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.450920300499216局)，BODY_SLAM(16分/2.4634694546099127局)，STOKE(18分/2.3350449476391666局)
 - 策略进化：block_safety: 1.87 → 1.92（普通战斗阵亡，略微上调防御权重）；kill_race_prior_eff: 0.47 → 0.50（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.92 → 1.91（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1962 胜，当前目标进阶 0
+
+## 第 1963 局复盘（2026-10-05 03:35）
+- 结果：💀 失败｜进阶 0｜到达层数 28｜当局评分 28
+- 死因：敌人组合 DECIMILLIPEDE_SEGMENT_BACK+DECIMILLIPEDE_SEGMENT_FRONT+DECIMILLIPEDE_SEGMENT_MIDDLE
+- 本局拿牌：DISMANTLE, SWORD_BOOMERANG, INFERNAL_BLADE, UNRELENTING, TRUE_GRIT, FLAME_BARRIER, ANGER, BLUDGEON, DISMANTLE, EXPECT_A_FIGHT, IMPERVIOUS, SWORD_BOOMERANG, TRUE_GRIT, CINDER, BLUDGEON
+- 本局遗物：UNSETTLING_LAMP, MEAL_TICKET
+- 战斗记录：F15 Monster战 掉血2; F17 Boss战 掉血26; F19 Monster战 掉血15; F20 Monster战 掉血1; F22 Unknown战 掉血48｜竞速投影审计：pool=116/dpt=11.1/ttk=10.4505/tsurv=1.56522（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=10.4505/actual_over_projected=0.57（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=8.88523（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战6回合获胜; F28 Elite战 掉血80｜竞速投影审计：pool=90/dpt=22.275/ttk=4.0404/tsurv=1.57895（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=4.0404/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.80（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.46146（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战6回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(27分/7.05572820926547局)，PROWESS(26分/11.925024694063623局)，FEED(25分/31.874035507385187局)，MASTER_OF_STRATEGY(25分/4.137625734975151局)，MANGLE(25分/39.05921633632224局)
+- 当前低价值卡牌：HAVOC(16分/2.442342079447469局)，BODY_SLAM(16分/2.4548473115187783局)，STOKE(18分/2.3268722903224295局)
+- 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.50 → 0.53（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.91 → 1.90（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F28——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1963 胜，当前目标进阶 0
