@@ -16859,3 +16859,14 @@
 - 当前低价值卡牌：STOKE(18分/2.584957795175705局)，DEFEND_IRONCLAD(18分/2.3362605934551777局)，THE_GAMBIT(18分/3.980295825886582局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（88%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.51 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1933 胜，当前目标进阶 0
+
+## 第 1934 局复盘（2026-10-04 18:39）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：SWORD_BOOMERANG, DISMANTLE, UNRELENTING, ANGER, IMPERVIOUS, SWORD_BOOMERANG, MOLTEN_FIST, TAUNT, CINDER, CINDER, IMPERVIOUS, IMPERVIOUS, JUGGLING, BREAKTHROUGH, CINDER, BURNING_PACT, HEADBUTT, FEED, SPITE, BLUDGEON, SHRUG_IT_OFF, JUGGLING, VICIOUS, RUPTURE
+- 本局遗物：BAG_OF_MARBLES, THE_COURIER, ETERNAL_FEATHER, GAME_PIECE, CENTENNIAL_PUZZLE
+- 战斗记录：F20 Monster战 掉血0; F22 Monster战 掉血44｜自损20（可行动段20/非行动段30，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血6; F25 Unknown战 掉血23; F28 Monster战 掉血30｜自损1（可行动段1/非行动段28，SELF_LOSS_PHASE_OBS）; F31 Monster战 掉血57（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.5374920765522613局)，PROWESS(26分/13.201324270759189局)，FEED(25分/32.03665597760531局)，MANGLE(25分/42.155625049047465局)，PYRE(25分/20.783539067795257局)
+- 当前低价值卡牌：STOKE(18分/2.57591044289259局)，DEFEND_IRONCLAD(18分/2.3280836813780845局)，THE_GAMBIT(18分/3.9663647904959793局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.51（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.98 → 1.97（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.75 → 1.70（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1934 胜，当前目标进阶 0
