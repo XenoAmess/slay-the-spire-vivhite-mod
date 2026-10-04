@@ -110,23 +110,53 @@ class ProviderRateLimitTests(unittest.TestCase):
         )
         self.assertIsNone(llm_review._provider_unavailable_info(ordinary_auth))
 
-    def test_bounded_provider_retry_delay_enforces_global_and_configured_caps(self) -> None:
-        # A provider cannot extend the queue delay beyond the host's hard ceiling,
-        # even when a malformed/overly generous local setting is supplied.
-        self.assertEqual(
-            llm_review._bounded_provider_retry_delay(
-                10_000, {"provider_rate_limit_max_retry_seconds": 10_000}),
-            float(llm_review._REVIEW_DEFERRED_MAX_SECONDS),
-        )
-        self.assertEqual(
-            llm_review._bounded_provider_retry_delay(
-                90, {"provider_rate_limit_max_retry_seconds": 30}),
-            30.0,
-        )
-        self.assertEqual(
-            llm_review._bounded_provider_retry_delay(None, {}),
-            float(llm_review._REVIEW_DEFERRED_BASE_SECONDS),
-        )
+    def test_server_retry_delay_is_not_shortened_by_host_backoff_cap(self) -> None:
+        self.assertEqual(llm_review._bounded_provider_retry_delay(
+            10_000, {"provider_rate_limit_max_retry_seconds": 30}), 10_000.0)
+        self.assertEqual(llm_review._bounded_provider_retry_delay(None, {}), 60.0)
+        self.assertEqual(llm_review._bounded_provider_retry_delay(
+            None, {"provider_rate_limit_max_retry_seconds": 30}), 30.0)
+
+    def test_missing_header_is_distinct_and_uses_bounded_exponential_jitter(self):
+        info = llm_review._provider_rate_limit_info(llm_review.SandboxReviewResult(
+            rc=1, provider_metrics={"rate_limit_detected": True}), {})
+        self.assertEqual(info["retry_after_source"], "fallback")
+        with mock.patch.object(llm_review.random, "uniform", return_value=1.1):
+            waits = [llm_review._provider_retry_backoff(i, {}) for i in (1, 2, 3, 20)]
+        self.assertEqual(waits, [66.0, 132.0, 264.0, 900.0])
+
+    def test_recovered_manifest_preserves_server_absolute_deadline(self):
+        fields = llm_review._manifest_review_queue_fields({
+            "model": "audit", "provider_retry_at": 4600.0,
+            "provider_rate_limit": {"status_code": 429, "retry_after_seconds": 3600.0,
+                                    "retry_after_source": "server"},
+        }, {})
+        self.assertEqual(fields["retry_after"], 4600.0)
+        self.assertEqual(fields["deferred_retry_after_seconds"], 3600.0)
+        self.assertEqual(fields["deferred_retry_after_source"], "server")
+
+    def test_missing_header_finalization_increments_backoff_and_keeps_one_item(self):
+        item = {"run": 1, "queue_id": "retry-one", "runner": "codex", "model": "audit",
+                "retry_same_model": True, "deferred_kind": "provider_rate_limit",
+                "deferred_retry_after_source": "fallback"}
+        waits = []
+        with (mock.patch.object(llm_review.time, "time", return_value=1000.0),
+              mock.patch.object(llm_review.random, "uniform", return_value=1.0),
+              mock.patch.object(llm_review, "load_llm_config", return_value={})):
+            for _ in range(4):
+                self.queue.write_text(json.dumps({
+                    "pending": [], "reviewing": {"runs": [1], "items": [item]},
+                }), encoding="utf-8")
+                waits.append(llm_review._finalize_review_batch(
+                    [item], "deferred", log=lambda _: None))
+                q = llm_review._load_queue_unlocked()
+                self.assertEqual(len(q["pending"]), 1)
+                item = q["pending"][0]
+        self.assertEqual(waits, [60.0, 120.0, 240.0, 480.0])
+        self.assertEqual(item["deferred_count"], 4)
+        self.assertEqual(item["retry_after"], 1480.0)
+        self.assertTrue(item["retry_same_model"])
+        self.assertEqual(item["queue_id"], "retry-one")
 
     def test_finalize_provider_rate_limit_uses_explicit_delay_and_keeps_affinity(self) -> None:
         batch = [{

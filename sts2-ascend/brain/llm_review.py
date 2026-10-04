@@ -36,6 +36,7 @@ import math
 import os
 import py_compile
 import queue
+import random
 import shutil
 import stat
 import subprocess
@@ -3385,6 +3386,7 @@ def _run_review_scoped(know, log=print, model: str | None = None,
                         "provider_rate_limit": dict(rate_limit_info),
                         "retry_after_seconds": rate_limit_info[
                             "retry_after_seconds"],
+                        "retry_after_source": rate_limit_info["retry_after_source"],
                         # A 429 proves the selected provider was reached even
                         # when it emitted no model token; never allow startup
                         # fallback to hand this lineage to another model.
@@ -3872,31 +3874,40 @@ _REVIEW_DEFERRED_HOLD_AFTER = 5
 _REVIEW_DEFERRED_HOLD_SECONDS = 60 * 60
 
 
-def _bounded_provider_retry_delay(value, cfg: dict | None = None) -> float:
-    """Normalize a provider Retry-After to a bounded queue delay.
-
-    ``None``/invalid values intentionally fall back to the normal deferred base
-    delay.  A positive minimum avoids a hot loop when a service returns
-    ``Retry-After: 0`` while still honoring the server value whenever it is
-    within the host's configured safety ceiling.
-    """
+def _provider_backoff_cap(cfg: dict | None = None) -> float:
     config = cfg if isinstance(cfg, dict) else {}
-    cap_value = config.get(
-        "provider_rate_limit_max_retry_seconds", _REVIEW_DEFERRED_MAX_SECONDS)
     try:
-        cap = float(cap_value)
+        cap = float(config.get(
+            "provider_rate_limit_max_retry_seconds", _REVIEW_DEFERRED_MAX_SECONDS))
     except (TypeError, ValueError, OverflowError):
         cap = float(_REVIEW_DEFERRED_MAX_SECONDS)
     if not math.isfinite(cap):
         cap = float(_REVIEW_DEFERRED_MAX_SECONDS)
-    cap = min(float(_REVIEW_DEFERRED_MAX_SECONDS), max(1.0, cap))
+    return min(float(_REVIEW_DEFERRED_MAX_SECONDS), max(1.0, cap))
+
+
+def _explicit_provider_retry_delay(value) -> float | None:
+    if isinstance(value, bool):
+        return None
     try:
         delay = float(value)
     except (TypeError, ValueError, OverflowError):
-        delay = float(_REVIEW_DEFERRED_BASE_SECONDS)
-    if not math.isfinite(delay):
-        delay = float(_REVIEW_DEFERRED_BASE_SECONDS)
-    return min(cap, max(1.0, delay))
+        return None
+    return max(1.0, delay) if math.isfinite(delay) and delay >= 0 else None
+
+
+def _bounded_provider_retry_delay(value, cfg: dict | None = None) -> float:
+    """Preserve a valid server wait; only host fallback delays have a ceiling."""
+    explicit = _explicit_provider_retry_delay(value)
+    if explicit is not None:
+        return explicit
+    return min(_provider_backoff_cap(cfg), float(_REVIEW_DEFERRED_BASE_SECONDS))
+
+
+def _provider_retry_backoff(attempt: int, cfg: dict | None = None) -> float:
+    cap = _provider_backoff_cap(cfg)
+    base = min(cap, _REVIEW_DEFERRED_BASE_SECONDS * (2 ** min(max(0, attempt - 1), 20)))
+    return min(cap, max(1.0, base * random.uniform(0.8, 1.2)))
 
 
 def _provider_rate_limit_info(sandbox: "SandboxReviewResult", cfg: dict) -> dict | None:
@@ -3946,6 +3957,8 @@ def _provider_rate_limit_info(sandbox: "SandboxReviewResult", cfg: dict) -> dict
         "status_code": 429,
         "retry_after_seconds": delay,
         "retry_after_raw": raw_delay,
+        "retry_after_source": (
+            "server" if _explicit_provider_retry_delay(raw_delay) is not None else "fallback"),
         "message": " ".join(message.split())[:500],
         "source": source[:120],
         "failure_code": _PROVIDER_RATE_LIMIT_FAILURE_CODE,
@@ -4035,6 +4048,7 @@ def _validate_queue_item(item, label: str) -> None:
         "backend_key", "runner", "model", "variant", "reasoning_effort",
         "sandbox", "source", "retry_group", "queue_id", "replay_target",
         "run_id", "review_epoch", "deferred_kind", "deferred_reason",
+        "deferred_retry_after_source",
     ):
         value = item.get(key)
         if value is not None and not isinstance(value, str):
@@ -4742,7 +4756,7 @@ def _manifest_review_queue_fields(manifest: dict, cfg: dict) -> dict:
         # Historical packages predate this field and were intentionally sticky.
         raw_sticky = model_started if isinstance(model_started, bool) else True
 
-    return {
+    fields = {
         "profile_id": _normalize_profile_id(manifest.get("profile_id")),
         "backend_key": backend_key,
         "priority": priority,
@@ -4756,6 +4770,19 @@ def _manifest_review_queue_fields(manifest: dict, cfg: dict) -> dict:
         "source": source,
         "retry_same_model": bool(raw_sticky and model),
     }
+    rate_info = manifest.get("provider_rate_limit")
+    if isinstance(rate_info, dict) and rate_info.get("status_code") == 429:
+        delay = _explicit_provider_retry_delay(rate_info.get("retry_after_seconds"))
+        ready_at = _explicit_provider_retry_delay(manifest.get("provider_retry_at"))
+        if delay is not None and ready_at is not None:
+            fields.update({
+                "deferred_kind": _PROVIDER_RATE_LIMIT_DEFERRED_KIND,
+                "deferred_reason": str(rate_info.get("message") or "HTTP 429"),
+                "deferred_retry_after_source": str(rate_info.get("retry_after_source") or "server"),
+                "deferred_retry_after_seconds": delay,
+                "retry_after": ready_at,
+            })
+    return fields
 
 
 def _latest_replay_binding_manifest(
@@ -5647,6 +5674,9 @@ def _recover_salvage_replay_queue(log=print) -> None:
                         "review_epoch": target_epoch,
                         **affinity,
                     }
+                    if "retry_after" in desired:
+                        desired["retry_after"] = max(
+                            float(item.get("retry_after", 0) or 0), desired["retry_after"])
                     if any(item.get(key) != value for key, value in desired.items()):
                         item.update(desired)
                         changed = True
@@ -9738,10 +9768,10 @@ def _save_review_salvage(
         # salvage manifest.  The full translator metrics/transcript remain the
         # forensic source; this field only drives safe sticky requeue recovery.
         "provider_rate_limit": (
-            dict(sandbox.provider_metrics.get("rate_limit") or {})
-            if isinstance(getattr(sandbox, "provider_metrics", None), dict)
-            and isinstance(sandbox.provider_metrics.get("rate_limit"), dict)
-            else {}),
+            _provider_rate_limit_info(sandbox, {}) or {}),
+        "provider_retry_at": (
+            time.time() + rate_info["retry_after_seconds"]
+            if (rate_info := _provider_rate_limit_info(sandbox, {})) is not None else 0),
         "provider_rate_limit_detected": bool(
             isinstance(getattr(sandbox, "provider_metrics", None), dict)
             and (sandbox.provider_metrics.get("rate_limit_detected")
@@ -11271,8 +11301,20 @@ def _finalize_review_batch(batch: list[dict], outcome: str, log=print) -> float:
                     deferred.get("deferred_retry_after_seconds")
                     if deferred_kind == _PROVIDER_RATE_LIMIT_DEFERRED_KIND
                     else None)
-                if explicit_rate_delay is not None:
-                    delay = _bounded_provider_retry_delay(explicit_rate_delay)
+                if deferred_kind == _PROVIDER_RATE_LIMIT_DEFERRED_KIND:
+                    source = str(deferred.get("deferred_retry_after_source") or "server")
+                    if (source == "fallback" and
+                            deferred.get("deferred_retry_after_attempt") != deferred_count):
+                        delay = _provider_retry_backoff(deferred_count, load_llm_config())
+                    else:
+                        delay = _bounded_provider_retry_delay(explicit_rate_delay)
+                    deferred["deferred_retry_after_source"] = source
+                    deferred["deferred_retry_after_seconds"] = delay
+                    deferred["deferred_retry_after_attempt"] = deferred_count
+                    log(f"[llm] HTTP 429 retry profile={_queue_item_profile_id(item)} "
+                        f"queue_id={item.get('queue_id', '')} attempt={deferred_count} "
+                        f"source={source} wait={delay:.1f}s reason="
+                        f"{str(item.get('deferred_reason') or '')[:160]}")
                 else:
                     delay = min(
                         _REVIEW_DEFERRED_MAX_SECONDS,
@@ -11868,8 +11910,12 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
         # Carry the server-advised delay on each queue item.  The finalizer uses
         # this explicit value instead of charging the ordinary model retry
         # backoff, while the already-published plan/salvage fields remain intact.
-        rate_delay = _bounded_provider_retry_delay(
-            status.get("retry_after_seconds"), load_llm_config())
+        rate_source = str(status.get("retry_after_source") or "server")
+        rate_attempt = max(int(item.get("deferred_count", 0) or 0) for item in batch) + 1
+        rate_delay = (
+            _provider_retry_backoff(rate_attempt, load_llm_config())
+            if rate_source == "fallback" else _bounded_provider_retry_delay(
+                status.get("retry_after_seconds"), load_llm_config()))
         rate_reason = str(
             status.get("deferred_reason") or status.get("reason")
             or "provider HTTP 429")[:800]
@@ -11879,6 +11925,8 @@ def _run_batch_review_scoped(agent, batch: list[dict], log, know=None) -> str:
             item["deferred_kind"] = _PROVIDER_RATE_LIMIT_DEFERRED_KIND
             item["deferred_reason"] = rate_reason
             item["deferred_retry_after_seconds"] = rate_delay
+            item["deferred_retry_after_source"] = rate_source
+            item["deferred_retry_after_attempt"] = rate_attempt
             try:
                 previous_ready = float(item.get("retry_after", 0) or 0)
             except (TypeError, ValueError, OverflowError):
