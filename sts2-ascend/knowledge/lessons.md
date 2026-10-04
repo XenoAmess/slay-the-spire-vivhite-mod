@@ -17233,3 +17233,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.408328383982882局)，BODY_SLAM(16分/2.420659459796979局)，STOKE(18分/2.2944667046618332局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.52（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.90 → 1.89（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F22——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1967 胜，当前目标进阶 0
+
+## 第 1968 局复盘（2026-10-05 05:14）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：RAGE, HEADBUTT, EVIL_EYE, THUNDERCLAP, DISMANTLE, ANGER, THUNDERCLAP, ANGER, POMMEL_STRIKE, VICIOUS, UNRELENTING
+- 本局遗物：WAR_PAINT
+- 战斗记录：F8 Monster战 掉血8; F9 Monster战 掉血0; F12 Monster战 掉血37; F14 Monster战 掉血3; F15 Monster战 掉血0; F17 Boss战 掉血80｜竞速投影审计：pool=168/dpt=30/ttk=5.6/tsurv=2.76923（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=5.6/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.61（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.83077（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战10回合阵亡｜竞速Boss有效火力收官对账：samples=7/actual_dpt=16.2857/projected_dpt=25.9069/ratio=0.66/min_ratio=0.06/min_sample=3->4/min_actual_dpt=2/min_projected_dpt=32.4（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=2/actual_dpt=9.5/projected_dpt=32.55/ratio=0.29/min_ratio=0.06|clear_samples=5/actual_dpt=19/projected_dpt=23.2496/ratio=0.81/min_ratio=0.26（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=7/layers_max=0/actual_dpt=16.2857/projected_dpt=25.9069/ratio=0.66/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：PANACHE(27分/6.933114272455787局)，PROWESS(26分/11.717792473529428局)，FEED(25分/32.31663081326163局)，MASTER_OF_STRATEGY(25分/4.065722372860927局)，MANGLE(25分/38.38044808708491局)
+- 当前低价值卡牌：HAVOC(16分/2.399899234638942局)，BODY_SLAM(16分/2.4121871516876894局)，STOKE(18分/2.2864360711955167局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.52 → 0.52（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1968 胜，当前目标进阶 0
