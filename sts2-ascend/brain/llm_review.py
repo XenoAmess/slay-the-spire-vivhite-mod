@@ -6160,10 +6160,10 @@ def _salvage_recovery_needed() -> bool:
     return False
 
 
-def _resume_review_queue_scoped(agent, log=print) -> None:
-    """Resume queued/interrupted reviews immediately after brain startup."""
+def _review_queue_needs_worker_scoped(know, log=print) -> bool:
+    """Probe one profile without starting the shared worker during discovery."""
     if _review_stop_requested():
-        return
+        return False
     llm_enabled = bool(load_llm_config().get("enabled"))
     host_recovery = _salvage_recovery_needed()
     try:
@@ -6172,22 +6172,17 @@ def _resume_review_queue_scoped(agent, log=print) -> None:
             has_work = bool(q.get("pending") or q.get("reviewing"))
     except (ReviewQueueError, OSError) as exc:
         log(f"[llm] 复盘队列暂不可读；保留原文件并交给 worker 自愈：{exc}")
-        # The supervised worker owns the long-lived retry loop.  Start it when
-        # paid review is enabled, or when an ignored salvage manifest proves
-        # host-only receipt/ledger/quarantine work exists.  Otherwise a lock
-        # lasting beyond the short bootstrap retries would strand all recovery
-        # until another game happens to enqueue work.
-        if llm_enabled or host_recovery:
-            _ensure_worker(agent, log)
-        return
-    if host_recovery or (llm_enabled and (
-            has_work or getattr(getattr(agent, "know", None), "root", None) is not None)):
-        _ensure_worker(agent, log)
+        # The supervised worker owns the long-lived retry loop.  Request it when
+        # paid review is enabled, or when a salvage manifest proves host-only
+        # recovery work exists.  Discovery must still probe the other profiles.
+        return llm_enabled or host_recovery
+    return host_recovery or (llm_enabled and (
+        has_work or getattr(know, "root", None) is not None))
 
 
 def resume_review_queue(agent, log=print, profile_id: str | None = None,
                         profile_root: Path | str | None = None) -> None:
-    """Resume profile-local queues without changing the shared worker model."""
+    """Probe every requested profile, then resume the one shared worker."""
     if profile_id is not None or profile_root is not None:
         know = getattr(agent, "know", None)
         resolved_profile = profile_id
@@ -6200,15 +6195,23 @@ def resume_review_queue(agent, log=print, profile_id: str | None = None,
                     f"{profile_paths.profile_id}")
             _register_agent_review_binding(
                 agent, profile_paths, binding.know)
-            _resume_review_queue_scoped(agent, log=log)
+            needs_worker = _review_queue_needs_worker_scoped(binding.know, log=log)
+        if needs_worker:
+            _ensure_worker(agent, log)
         return
 
-    # A normal Agent already owns all CharacterProfile Knowledge instances.
-    # Probe every local queue at startup, but keep the existing one-worker latch.
+    # Register and probe all bindings before the worker can inspect them.  A
+    # failed profile requests its retry without starting a worker halfway through
+    # discovery, and an empty profile can still have a terminal review outbox.
+    needs_worker = False
     for binding in _agent_review_profile_bindings(agent):
         _register_agent_review_binding(agent, binding.paths, binding.know)
         with _review_profile_paths_scope(binding.paths):
-            _resume_review_queue_scoped(agent, log=log)
+            profile_needs_worker = _review_queue_needs_worker_scoped(
+                binding.know, log=log)
+        needs_worker = needs_worker or profile_needs_worker
+    if needs_worker:
+        _ensure_worker(agent, log)
 
 
 def shutdown_worker(log=print, timeout: float = 30.0) -> bool:

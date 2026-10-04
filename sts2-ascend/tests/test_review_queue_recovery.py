@@ -95,6 +95,36 @@ class ProfileQueueFairnessTests(unittest.TestCase):
         self.assertEqual(bad.read_bytes(), b"invalid queue JSON")
         self.assertIsNone(json.loads(healthy.read_text(encoding="utf-8"))["reviewing"])
 
+    def test_startup_probes_remaining_profiles_before_one_worker_request(self):
+        bad = self.bindings[0].paths.queue
+        bad.write_bytes(b"invalid queue JSON")
+        knows = {binding.paths.profile_id: SimpleNamespace(
+            root=binding.paths.root, profile_id=binding.paths.profile_id)
+            for binding in self.bindings}
+        agent = SimpleNamespace(
+            know=knows["ironclad"], profile_id="ironclad", _profile_knowledge=knows)
+        probed = []
+        load = llm_review._load_queue_unlocked
+
+        def probe():
+            probed.append(llm_review._current_profile_paths().profile_id)
+            return load()
+
+        def start(_agent, _log):
+            self.assertEqual(probed, ["ironclad", "vivhite"])
+            self.assertEqual(set(agent._llm_review_profile_bindings), set(knows))
+
+        with (mock.patch.object(llm_review, "load_llm_config",
+                                return_value={"enabled": True}),
+              mock.patch.object(llm_review, "_review_stop_requested", return_value=False),
+              mock.patch.object(llm_review, "_salvage_recovery_needed", return_value=False),
+              mock.patch.object(llm_review, "_load_queue_unlocked", side_effect=probe),
+              mock.patch.object(llm_review, "_ensure_worker", side_effect=start) as ensure):
+            llm_review.resume_review_queue(agent, log=lambda _: None)
+
+        ensure.assert_called_once_with(agent, mock.ANY)
+        self.assertEqual(bad.read_bytes(), b"invalid queue JSON")
+
     def test_claim_read_error_does_not_skip_other_profiles(self):
         original = self.bindings[0].paths.queue.read_bytes()
         self._run_worker(claim_failure=True)
