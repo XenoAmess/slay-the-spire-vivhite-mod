@@ -815,6 +815,8 @@ try {
     }
 
     # Idempotency: reuse only the runner recorded for this workspace/session.
+    # brain-control.<GUID>.ack.json is durable Brain-only takeover audit data.
+    # It is retained across restarts, never a live-owner/residual-process probe.
     $existingSession = Read-JsonFile $sessionFile
     $existingSessionId = Normalize-SessionId (Get-ObjectProperty $existingSession "session_id" "legacy")
     $existingRunnerId = [int](Get-ObjectProperty $existingSession "runner_pid" 0)

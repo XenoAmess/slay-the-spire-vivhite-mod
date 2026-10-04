@@ -675,6 +675,8 @@ try {
             $PSCmdlet.ShouldProcess($sessionFile, "clear completed session metadata")) {
             Remove-Item -LiteralPath $sessionFile -Force -ErrorAction SilentlyContinue
         }
+        # brain-control.<GUID>.ack.json remains as takeover audit evidence; it
+        # contains no process identity and is not a dead-owner cleanup target.
         # The GUID sentinel remains as an ABA guard for delayed old processes. The
         # legacy sentinel is safe to clear after a zero-process verification so
         # standalone viewer/demo diagnostics keep working after a unified stop.

@@ -150,6 +150,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
 - 窗口层巡检必须区分两条不变量：ASCEND-VISION 自身约 500ms 的无激活置顶永远运行；游戏窗口巡检仅在本地直播姬实际为 `Streaming` 时每 60 秒运行，按当前 session 的完整 `game_exe` 精确定位，先无激活恢复游戏 TOPMOST、再恢复 viewer。非 Streaming 或任何状态/窗口读取失败都不得触碰游戏；该路径只允许本地标准库/Win32，不调用 LLM 或网络，token 消耗为 0。
 - `Stop-Agent.ps1` 默认先发 session 哨兵，等待 40 秒协作保存/退出，再对经过 PID、创建时间、可执行文件、命令行和工作区校验的目标兜底；游戏先请求关窗，20 秒后才精确强停。`-WhatIf` 可无写入预览目标。
 - `.runtime/` 由脚本维护。不要手改/删除 `session.json`、PID、lock 或 stop 文件；停止后保留的 GUID sentinel 用于防止旧进程“复活”（ABA），不是垃圾。`knowledge/` 的学习记忆同样不要手工修改。
+- 人工接管的已处理代数由 Brain 单独写入 `.runtime/brain-control.<GUID>.ack.json`（`sts2.ascend-brain-control-ack/v1`）；只有该局排除事务持久化后才推进确认，runner 的控制文件仍为 v1。F10 只恢复动作，审计落盘失败时保留排除 journal/active 并重试；缺少确认文件时按未处理代数幂等补齐。确认文件是会话审计证据，不是进程存活凭据，统一 Stop 保留它。
 - Runner 会在每次创建 Brain 前用纯 Git ref 文件冻结 `STS2_ASCEND_BOOT_HEAD` 与
   `STS2_ASCEND_BOOT_REVIEW_COMMIT`；二者只描述该子进程实际加载的代码/复盘 marker epoch，
   不是外部配置或 Stop 清理目标，不得由启动脚本复用旧值。旧 rollback marker 不得阻塞新复盘：
@@ -160,6 +161,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\sts2-ascend\scripts\Stop-A
   再在锁外等待 `stage=ready`，避免 Agent/Knowledge 初始化重入仓库锁造成父子自锁。启动前若发现
   `prepared` marker，必须先有界证明并完成/撤回事务；无法精确证明时，先把全部目标文件和 patch
   保存进失败包，再恢复已知 Git 树。一次连续断流共用 115 秒绝对预算，回滚热路径不得等待 push。
+- Runner 的重启、崩溃及启动失败计数按退出子进程实际加载的复盘 epoch 分组，回滚在仓库锁内复核目标提交。10 秒导入和 15 秒整体就绪窗口从子进程创建后开始，均受同一 115 秒绝对预算截断；尚未创建子进程的失败不能声称代码已加载。
 
 生命周期维护规则：
 
