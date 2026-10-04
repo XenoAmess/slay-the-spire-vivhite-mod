@@ -586,6 +586,11 @@ class ReviewQueueSafetyTests(unittest.TestCase):
                               encoding="utf-8")
         agent = SimpleNamespace(know=SimpleNamespace(), request_restart=False)
         attempts = 0
+        clock = [0.0]
+
+        def advance_wait(seconds):
+            clock[0] += seconds
+            return False
 
         def flaky_recovery(log):
             nonlocal attempts
@@ -600,7 +605,8 @@ class ReviewQueueSafetyTests(unittest.TestCase):
         try:
             with (mock.patch.object(llm_review, "_review_stop_requested",
                                    return_value=False),
-                  mock.patch.object(llm_review, "_wait_review_stop", return_value=False),
+                  mock.patch.object(llm_review, "_wait_review_stop", side_effect=advance_wait),
+                  mock.patch.object(llm_review.time, "monotonic", side_effect=lambda: clock[0]),
                   mock.patch.object(llm_review, "_kill_orphan_review_processes"),
                   mock.patch.object(llm_review, "_recover_deferred_salvages"),
                   mock.patch.object(llm_review, "_recover_salvage_replay_queue",

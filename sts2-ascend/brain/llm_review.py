@@ -11408,6 +11408,25 @@ def _worker_loop(agent, log) -> None:
     _worker_loop_scoped(agent, log)
 
 
+def _restore_profile_review_queue(binding: _ReviewProfileBinding, log=print) -> bool:
+    """Recover one profile without preventing other profiles from making progress."""
+    try:
+        with _review_profile_paths_scope(binding.paths):
+            with _queue_lock:
+                q = _load_queue_unlocked()
+                if q.get("reviewing"):
+                    recovered = _restore_interrupted_reviewing(q)
+                    _save_queue_unlocked(q)
+                    log("[llm] ?????????????????"
+                        f"profile={binding.paths.profile_id} "
+                        f"? {[item.get('run') for item in recovered]} ?")
+        return True
+    except (ReviewQueueError, OSError) as exc:
+        log("[llm] profile ?????????????????30s ????"
+            f"profile={binding.paths.profile_id}?{exc}?")
+        return False
+
+
 def _worker_loop_body(agent, log) -> None:
     # 进程重启后：先清孤儿（避免与重跑的复盘双写），再把 reviewing 的对局
     # 重新入队——此前直接丢弃标记，被中断复盘覆盖的对局永远丢失复盘。
@@ -11428,8 +11447,11 @@ def _worker_loop_body(agent, log) -> None:
     # before `_save_review_salvage` published a pointer/package.  Preserve only
     # clones with an exact durable queue binding; ambiguous legacy roots remain.
     for binding in bindings:
-        with _review_profile_paths_scope(binding.paths):
-            _recover_unpointed_review_sandboxes(log=log)
+        try:
+            with _review_profile_paths_scope(binding.paths):
+                _recover_unpointed_review_sandboxes(log=log)
+        except (ReviewQueueError, OSError) as exc:
+            log(f"[llm] profile={binding.paths.profile_id} ??????????{exc}")
         if _review_stop_requested():
             return
     # Operator-preserved packages may be the only surviving copy after an older
@@ -11447,37 +11469,24 @@ def _worker_loop_body(agent, log) -> None:
     if _review_stop_requested():
         return
     for binding in bindings:
-        with _review_profile_paths_scope(binding.paths):
-            _recover_salvage_replay_queue(log=log)
+        try:
+            with _review_profile_paths_scope(binding.paths):
+                _recover_salvage_replay_queue(log=log)
+        except (ReviewQueueError, OSError) as exc:
+            log(f"[llm] profile={binding.paths.profile_id} ???????????{exc}")
         if _review_stop_requested():
             return
     _backfill_rejection_ledger(log=log)
     if _review_stop_requested():
         return
-    # Startup recovery is itself a durable queue transaction.  If the file is
-    # temporarily locked/unreadable, retry in place rather than letting the daemon
-    # thread die (or treating the interrupted batch as empty).
+    # Retry each profile independently. An unreadable first queue must not
+    # strand the other character's recovery or live review requests.
+    profile_retry_at: dict[str, float] = {}
     for binding in bindings:
-        while not _review_stop_requested():
-            try:
-                with _review_profile_paths_scope(binding.paths):
-                    with _queue_lock:
-                        q = _load_queue_unlocked()
-                        if q.get("reviewing"):
-                            requeued = _restore_interrupted_reviewing(q)
-                            recovered_runs = [
-                                item.get("run") for item in requeued]
-                            if recovered_runs:
-                                log("[llm] 上场复盘随进程中断，优先恢复追及："
-                                    f"profile={binding.paths.profile_id} "
-                                    f"第 {recovered_runs} 局")
-                            _save_queue_unlocked(q)
-                break
-            except (ReviewQueueError, OSError) as exc:
-                log("[llm] 复盘队列恢复失败，原文件保持不变，30s 后重试："
-                    f"profile={binding.paths.profile_id}（{exc}）")
-                if _wait_review_stop(30):
-                    return
+        if not _restore_profile_review_queue(binding, log=log):
+            profile_retry_at[binding.paths.profile_id] = time.monotonic() + 30.0
+        if _review_stop_requested():
+            return
 
     next_salvage_maintenance = time.monotonic() + 60.0
     profile_cursor = 0
@@ -11506,8 +11515,12 @@ def _worker_loop_body(agent, log) -> None:
                 if _review_stop_requested():
                     return
                 for binding in bindings:
-                    with _review_profile_paths_scope(binding.paths):
-                        _recover_salvage_replay_queue(log=log)
+                    try:
+                        with _review_profile_paths_scope(binding.paths):
+                            _recover_salvage_replay_queue(log=log)
+                    except (ReviewQueueError, OSError) as exc:
+                        profile_retry_at[binding.paths.profile_id] = time.monotonic() + 30.0
+                        log(f"[llm] profile={binding.paths.profile_id} ????????{exc}")
                     if _review_stop_requested():
                         return
                 _resume_host_salvage_closures(log=log)
@@ -11530,8 +11543,26 @@ def _worker_loop_body(agent, log) -> None:
                 ordered = (
                     bindings[profile_cursor:] + bindings[:profile_cursor])
                 for offset, binding in enumerate(ordered):
-                    candidate, candidate_wait = _claim_profile_review_batch(
-                        binding, worker_cfg, log=log)
+                    profile_id = binding.paths.profile_id
+                    retry_at = profile_retry_at.get(profile_id)
+                    if retry_at is not None:
+                        remaining = retry_at - time.monotonic()
+                        if remaining > 0:
+                            profile_waits.append(min(30.0, remaining))
+                            continue
+                        if not _restore_profile_review_queue(binding, log=log):
+                            profile_retry_at[profile_id] = time.monotonic() + 30.0
+                            profile_waits.append(30.0)
+                            continue
+                        profile_retry_at.pop(profile_id, None)
+                    try:
+                        candidate, candidate_wait = _claim_profile_review_batch(
+                            binding, worker_cfg, log=log)
+                    except (ReviewQueueError, OSError) as exc:
+                        profile_retry_at[profile_id] = time.monotonic() + 30.0
+                        profile_waits.append(30.0)
+                        log(f"[llm] profile={profile_id} ??????????{exc}")
+                        continue
                     if candidate:
                         batch = candidate
                         selected_binding = binding
