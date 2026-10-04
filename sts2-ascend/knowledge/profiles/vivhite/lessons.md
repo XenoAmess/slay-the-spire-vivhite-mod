@@ -21127,3 +21127,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.072876771654634局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.218821147184488局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/24.765245385599957局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：4/1917 胜，当前目标进阶 4
+
+## 第 1918 局复盘（2026-10-04 13:18）
+- 结果：🏆 胜利｜进阶 4｜到达层数 48｜当局评分 98
+- 死因：无（胜利）
+- 本局拿牌：VIVHITE_CARD_CRIMSON_AREA, PANIC_BUTTON, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_DIVIDE_AND_CONQUER_CIRCLE, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_ASTRAL_SEARCH, DRAMATIC_ENTRANCE, VIVHITE_CARD_ASTRAL_MEASURE, DRAMATIC_ENTRANCE, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_CRIMSON_AREA, VIVHITE_CARD_ASTRAL_MEASURE, FLASH_OF_STEEL, VIVHITE_CARD_RIEMANN_STAR_ARRAY, VIVHITE_CARD_SCALE_TRANSFORMATION
+- 本局遗物：BAG_OF_PREPARATION, MINIATURE_CANNON, PEN_NIB, LUCKY_FYSH, PENDULUM, GORGET
+- 战斗记录：F35 Monster战 掉血0; F36 Monster战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F37 Monster战 掉血0｜自损9（可行动段9/非行动段5，SELF_LOSS_PHASE_OBS）; F39 Monster战 掉血0｜自损4（可行动段4/非行动段0，SELF_LOSS_PHASE_OBS）; F45 Monster战 掉血0; F48 Boss战 掉血58｜自损13（可行动段13/非行动段39，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=348/dpt=41.9193/ttk=8.30166/tsurv=3.04（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=8.30166/actual_over_projected=1.20（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=5.26166（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战10回合获胜｜竞速Boss有效火力收官对账：samples=6/actual_dpt=50.5556/projected_dpt=42.2224/ratio=1.20/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=50.5556/projected_dpt=42.2224/ratio=1.20/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=50.5556/projected_dpt=42.2224/ratio=1.20/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）
+- 当前高价值卡牌：MANGLE(44分/2.524832790883769局)，FLASH_OF_STEEL(43分/4.499372179152179局)，DRAMATIC_ENTRANCE(38分/11.82748529444387局)，MAYHEM(36分/4.442929146740557局)，JACKPOT(36分/7.747942370275187局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(19分/2.065621702953843局)，VIVHITE_CARD_GEODESIC_VEIL(19分/5.200555273169343局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/24.678567026750358局)
+- 策略进化：block_safety: 2.04 → 2.02（胜利证明当前攻防平衡可行，轻微放开进攻）；elite_grey_safety_mult: 1.50 → 1.40（胜利证明当前精英规避强度足够，放宽灰区悲观系数）；boss_eve_smith_hp_pct: 0.45 → 0.50（胜利证明当前前夜回血线可行，小幅上调回收）；smith_min_hp_pct: 0.45 → 0.50（胜利证明当前常规回血线可行，小幅上调回收）；potion_block_hp_pct: 0.37 → 0.35（胜利证明当前交药时机可行，小幅回收）；power_longfight_bonus_max: 12.00 → 11.50（胜利证明当前长战加成上限可行，小幅回收）；power_longfight_hp_div: 12.00 → 14.00（胜利证明当前长战加成折算可行，小幅回收）；kill_race_prior_eff: 0.37 → 0.40（胜利证明当前竞速先验折算可行，小幅回收）；vivhite_param_life_cost_weight: -3.00 → -2.95（胜利证明当前生命支付估值可行，小幅回收）；进阶提升：4 → 5（胜利解锁更高难度）
+- 生涯战绩：5/1918 胜，当前目标进阶 5
