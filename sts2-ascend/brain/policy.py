@@ -10973,10 +10973,11 @@ class Policy:
 
         The terminal audit is already persisted in the preceding decision
         before the native GAME_OVER state is observed.  Keep this recovery
-        observation-only: require the most recent persisted decision to be the
-        matching terminal end-turn, then rebuild exactly the fields consumed by
-        ``_consume_kill_race_terminal_outcome_note``.  No scoring or action
-        selection reads this snapshot.
+        observation-only: require the most recent persisted combat decision to
+        be the matching terminal end-turn, allowing one trailing native result
+        row that was durable before a retry.  Then rebuild exactly the fields
+        consumed by ``_consume_kill_race_terminal_outcome_note``.  No scoring
+        or action selection reads this snapshot.
         """
         decisions = getattr(ctx, "decisions", None)
         _reported = bool(getattr(
@@ -11000,7 +11001,15 @@ class Policy:
             return
         if not isinstance(decisions, list) or not decisions:
             return
-        row = decisions[-1]
+        _terminal_index = len(decisions) - 1
+        _last_row = decisions[_terminal_index]
+        if (isinstance(_last_row, dict)
+                and str(_last_row.get("screen") or "").upper()
+                in {"GAME_OVER", "VICTORY"}):
+            _terminal_index -= 1
+        if _terminal_index < 0:
+            return
+        row = decisions[_terminal_index]
         if not isinstance(row, dict) or row.get("action") != "end_turn":
             return
         if (floor is not None and row.get("floor") is not None
@@ -11149,7 +11158,7 @@ class Policy:
         if isinstance(_pending.get("output_capacity"), dict):
             _transition_source = (
                 self._find_race_output_capacity_transition_source(
-                    decisions, floor=floor, before_index=len(decisions) - 1))
+                    decisions, floor=floor, before_index=_terminal_index))
             if isinstance(_transition_source, dict):
                 _pending["output_capacity_transition"] = _transition_source
         self._race_terminal_outcome_pending = _pending

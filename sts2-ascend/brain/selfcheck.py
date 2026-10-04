@@ -20765,6 +20765,38 @@ def main() -> int:
         f"已持久 GAME_OVER 行未恢复竞速覆盖终局桥接: " \
         f"{d_persisted_cover}"
 
+    # 3z-5b-cold-reload) A process can restart after the native GAME_OVER row
+    # is durable but before the in-memory terminal pending snapshot exists.
+    # Recover the preceding end_turn in that cold path too; the result row is
+    # only a retry boundary and must not suppress either terminal observation.
+    cold_persisted_cover_pol = policy.Policy(knowledge.Knowledge(tmp))
+    cold_persisted_cover_ctx = _SettleCtx()
+    cold_persisted_cover_ctx.decisions = [
+        dict(row) for row in race_terminal_ctx.decisions
+    ] + [{
+        "screen": "COMBAT", "action": "end_turn", "floor": 33,
+        "reason": d_race_terminal.reason,
+    }, {
+        "screen": "GAME_OVER", "action": "continue_game_over",
+        "floor": 33, "reason": "持久终局结果行",
+    }]
+    d_cold_persisted_cover = cold_persisted_cover_pol.decide(
+        race_terminal_outcome_state, cold_persisted_cover_ctx)
+    assert (d_cold_persisted_cover.action == "continue_game_over"
+            and d_cold_persisted_cover.params == {}
+            and d_cold_persisted_cover.reason.count(
+                "KILL_RACE_TERMINAL_OUTCOME_OBS") == 1
+            and d_cold_persisted_cover.reason.count(
+                "RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS") == 1
+            and "source_round=6/source_action=play_card/coverage=yes"
+                "/decision=all_in/strict_margin=-4.3/pool=106/cap=100"
+                "/margin_floor=-2.0/source_target_hp=44/source_target_block=0"
+                "/source_attack_candidates=0/source_raw_damage_cap=0"
+                "/terminal_round=6/outcome=defeat"
+                in d_cold_persisted_cover.reason), \
+        f"冷重载且 GAME_OVER 已持久时未恢复竞速覆盖终局桥接: " \
+        f"{d_cold_persisted_cover}"
+
     # 3z-5b-fallback) A race-all-in capacity source can survive without the
     # broader KILL_RACE_TERMINAL_AUDIT_OBS tail.  The dedicated terminal join
     # must still be same-floor, same-combat, observation-only, and toggleable.

@@ -16184,3 +16184,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接固定 256 槽入口复现宿主 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（本轮为 `selfcheck temp pool exhausted after 256 allocations`）；随后使用同一 clone 的进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`。提交级 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包，未管理在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; immediate no-play potion rescue integrated)`
+
+## 2026-10-04 runs 1903-1904：冷重载补齐竞速覆盖终局观测
+
+profile_id：`ironclad`
+requested_runs：`1903, 1904`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`_restore_kill_race_terminal_outcome_from_decisions` 冷重载时只看持久决策尾行；当原生 `GAME_OVER` 行已经写入时，它会遮住前一条带 `KILL_RACE_TERMINAL_AUDIT_OBS` 的 `end_turn`，使已有 `RACE_ALLIN_LETHAL_COVER_DECISION_OBS` 无法接回终局。该假设可被证伪：若结果行存在时仍能恢复且恰好生成一次覆盖终局 marker，则缺口不存在。
+- **EVIDENCE**：完整读取 `sts2-ascend/knowledge/runs/20261004-081758_FNK2P9YLRNG7.json`（1903，257 条）与 `sts2-ascend/knowledge/runs/20261004-083821_K7NC96GK4LGU.json`（1904，361 条）。两局均有 2 条覆盖决策且最近 `end_turn` 带终端审计；1903 的 `continue_game_over` 已有 `RACE_ALLIN_LETHAL_COVER_TERMINAL_OUTCOME_OBS`，1904 的终局仅有容量 marker，覆盖终局 marker 缺失。
+- **EXPECTED_SIGNAL**：未来 3–10 个同型终局中，冷重载尾部为同楼层 COMBAT `end_turn` 加一个 `GAME_OVER/VICTORY` 结果行时，覆盖终局 marker 应恰好一次并保留来源回合、coverage/decision、margin 与容量字段；缺少审计、跨楼层/REWARD 边界、关闭开关或重复重试不得命中。`continue_game_over` 与 `{}` 必须不变。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：终端审计恢复允许跳过一个已持久化的 `GAME_OVER/VICTORY` 结果行，从前一条 `end_turn` 恢复；容量来源扫描改用该终端索引。该路径只追加既有终局观测，不进入评分、候选、门控、动作或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入无内存 pending 快照的冷重载夹具，断言 `KILL_RACE_TERMINAL_OUTCOME_OBS` 与覆盖终局 marker 各一次，且 action/params 不变。
+- 未新增或修改策略开关；既有 `race_allin_lethal_cover_terminal_outcome_obs` 仍是窄回滚点。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集 3–10 个同型终局，核对结果行类型、来源 floor/round、marker 次数、覆盖字段与 action/params。
+- **Adjust**：若出现重复 marker、跨战斗/跨楼层串接、结果行误跳过或字段不完整，收紧尾部结果行谓词并保持 observation-only。
+- **Rollback**：将 `race_allin_lethal_cover_terminal_outcome_obs` 设为 `False` 或回退本地提交；预期只移除覆盖终局观测，不改变原动作路径。
+- **Validation**：规定的直接 selfcheck 复现宿主固定 256 槽的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的进程级临时目录扩展适配运行同一入口，退出码 0 且输出 `SELFCHECK OK`。AST 与限定目标 `git diff --check` 通过；真实 1903/1904 只读 marker 对照完成。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; cold-reload terminal observation integrated)`
