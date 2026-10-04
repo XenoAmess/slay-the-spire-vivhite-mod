@@ -21336,3 +21336,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.8913869912602177局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.882487849876633局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/26.049090013320708局)
 - 策略进化：elite_grey_safety_mult: 1.40 → 1.60（精英战灰区进场阵亡，灰区悲观投影系数上调）；vivhite_life_cost_deck_cap: 20.00 → 15.00（双旋钮全尽，白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧——謦欬证据改接拿牌端血税软顶（血税密度扣分在更低卡组血税开始计价））
 - 生涯战绩：5/1936 胜，当前目标进阶 5
+
+## 第 1937 局复盘（2026-10-04 19:31）
+- 结果：💀 失败｜进阶 5｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：VIVHITE_CARD_SCALE_TRANSFORMATION, VIVHITE_CARD_ASTRAL_MEASURE, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_TANGENT_STARLIGHT, VIVHITE_CARD_AXIOM_RING, VIVHITE_CARD_SCALE_TRANSFORMATION, ENTROPY, AUTOMATION
+- 本局遗物：LANTERN, UNCEASING_TOP
+- 战斗记录：F2 Monster战 掉血0｜自损10（可行动段10/非行动段4，SELF_LOSS_PHASE_OBS）; F3 Monster战 掉血0｜自损8（可行动段8/非行动段0，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血0｜自损2（可行动段2/非行动段10，SELF_LOSS_PHASE_OBS）; F9 Unknown战 掉血4｜自损8（可行动段8/非行动段13，SELF_LOSS_PHASE_OBS）; F15 Elite战 掉血33｜自损6（可行动段6/非行动段31，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血81｜自损21（可行动段21/非行动段45，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=192/dpt=24.6326/ttk=7.79454/tsurv=3.73684（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=7.79454/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.41（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.0577（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=17.375/projected_dpt=22.776/ratio=0.79/min_ratio=0.00/min_sample=4->5/min_actual_dpt=0/min_projected_dpt=24.6326（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=17.375/projected_dpt=22.776/ratio=0.79/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=17.375/projected_dpt=22.776/ratio=0.79/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.36211686064595局)，FLASH_OF_STEEL(38分/5.202416898525862局)，DRAMATIC_ENTRANCE(38分/11.065248571676209局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/4.240631317626595局)，MAYHEM(36分/4.156599156214901局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.881267136790807局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.865399142402065局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/25.957918198274086局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -2.98 触底（余量 0.02<步长0.05）且謦欬出牌余量门 3.00 顶格（余量 0.00<步长0.5）且血税软顶 15.00 触底（余量 0.00<步长5.0）——白绮謦欬卡组（本局拿4张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：5/1937 胜，当前目标进阶 5
