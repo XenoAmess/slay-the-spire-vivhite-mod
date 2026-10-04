@@ -16551,3 +16551,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.915273888636852局)，DEFEND_IRONCLAD(18分/2.5772514854945685局)，THE_GAMBIT(18分/4.390872901212952局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
 - 生涯战绩：0/1905 胜，当前目标进阶 0
+
+## 第 1906 局复盘（2026-10-04 09:18）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：HEMOKINESIS, SPITE, INFLAME, SALVO, JUGGLING, BLUDGEON, THRASH, STONE_ARMOR, SPITE, INFLAME, TAUNT, POMMEL_STRIKE
+- 本局遗物：RAZOR_TOOTH
+- 战斗记录：F7 Monster战 掉血0; F9 Monster战 掉血12; F12 Monster战 掉血14｜自损2（可行动段2/非行动段14，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血8｜自损2（可行动段2/非行动段12，SELF_LOSS_PHASE_OBS）; F14 Unknown战 掉血0｜自损2（可行动段2/非行动段0，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血70｜竞速投影审计：pool=238/dpt=8.1/ttk=29.3827/tsurv=4.38462（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=29.3827/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.14（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=24.9981（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战5回合阵亡｜竞速Boss有效火力收官对账：samples=4/actual_dpt=28.25/projected_dpt=18.0018/ratio=1.51/min_ratio=0.62（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=28.25/projected_dpt=18.0018/ratio=1.51/min_ratio=0.62（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=28.25/projected_dpt=18.0018/ratio=1.51/min_ratio=0.62（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.902392881496205局)，PROWESS(26分/13.50165604582972局)，MANGLE(25分/44.31319133523804局)，HELLRAISER(25分/3.1028937807855472局)，FEED(24分/30.027919355943986局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.877070430026624局)，DEFEND_IRONCLAD(18分/2.5682311052953377局)，THE_GAMBIT(18分/4.375504846058707局)
+- 策略进化：block_safety: 2.01 → 2.06（高速失血爆毙（5回合掉血70，每回合14≥14）——按「没挡住」证据上调防御权重）
+- 生涯战绩：0/1906 胜，当前目标进阶 0
