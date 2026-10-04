@@ -2526,7 +2526,11 @@ def resolve_review_plan(
     """
     plans = review_plans_from_config(cfg)
     if not plans:
-        raise ValueError("review model chain is empty")
+        return ReviewPlan(
+            key="disabled", priority=1,
+            runner=str(cfg.get("runner") or "opencode"), model="", every_runs=1,
+            source="fallback", available=False,
+            unavailable_reason="all configured review backends are disabled")
     opencode_models: set[str] | None = None
     codex_models: dict[str, set[str]] | None = None
     reasons: list[str] = []
@@ -4292,6 +4296,42 @@ def _is_batch_accumulation_item(item: dict) -> bool:
     )
 
 
+def _current_accumulation_plan(item: dict, cfg: dict | None) -> ReviewPlan | None:
+    """Re-evaluate only unattempted accumulation against current static config."""
+    if cfg is None or not _is_batch_accumulation_item(item):
+        return None
+    plans = review_plans_from_config(cfg)
+    if not plans:
+        return None
+    model = str(item.get("model") or "")
+    identity = (
+        str(item.get("backend_key") or model),
+        str(item.get("runner") or "opencode"), model,
+        str(item.get("variant") or ""), str(item.get("reasoning_effort") or ""),
+        str(item.get("sandbox") or "workspace-write"),
+    )
+    for plan in plans:
+        if identity == (plan.key, plan.runner, plan.model, plan.variant or "",
+                        plan.reasoning_effort or "", plan.sandbox):
+            return plan
+    # Its old backend was removed/changed before any provider attempt.  The
+    # worker is free to resolve a current backend rather than waiting on old cadence.
+    return plans[0]
+
+
+def _refresh_accumulation_plans(pending: list[dict], cfg: dict) -> bool:
+    changed = False
+    for item in pending:
+        plan = _current_accumulation_plan(item, cfg)
+        if plan is None:
+            continue
+        fields = {**plan.as_queue_fields(), "retry_same_model": False}
+        if any(item.get(key) != value for key, value in fields.items()):
+            item.update(fields)
+            changed = True
+    return changed
+
+
 def _queue_item_ready_at(item: dict, now: float, cfg: dict | None = None) -> float:
     """Combine per-attempt backoff with the bound preferred-model cooldown."""
     if _is_batch_accumulation_item(item):
@@ -4385,8 +4425,10 @@ def _select_review_batch(
             ]
             if accumulating:
                 required = max(
-                    max(1, int(candidate.get("every") or 1))
-                    for candidate in accumulating)
+                    (current.every_runs if current is not None
+                     else max(1, int(candidate.get("every") or 1)))
+                    for candidate in accumulating
+                    for current in [_current_accumulation_plan(candidate, cfg)])
                 distinct_runs = {
                     int(pending[offset]["run"]) for offset in indexes}
                 if len(distinct_runs) < required:
@@ -11331,14 +11373,18 @@ def _claim_profile_review_batch(
             pending = q.get("pending", [])
             if not pending or q.get("reviewing"):
                 return [], retry_wait
+            accumulation_refreshed = _refresh_accumulation_plans(pending, worker_cfg)
             approval_refreshed = _refresh_sticky_approval(pending, worker_cfg)
-            if approval_refreshed:
+            if approval_refreshed or accumulation_refreshed:
                 # Selection itself compares the complete sticky tuple, so
                 # normalize and durably publish old approval snapshots before
                 # the scheduler can inspect a mixed replay group.
                 _save_queue_unlocked(q)
-                log("[llm] pending sticky review execution approval "
-                    "refreshed from exact current backend config")
+                if approval_refreshed:
+                    log("[llm] pending sticky review execution approval "
+                        "refreshed from exact current backend config")
+                if accumulation_refreshed:
+                    log("[llm] ???????????????????????")
             cap = max(1, min(
                 int(worker_cfg.get("review_queue_max", 100)),
                 int(worker_cfg.get("max_runs_in_packet", 100))))

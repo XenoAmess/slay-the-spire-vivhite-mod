@@ -115,5 +115,49 @@ class ProfileQueueFairnessTests(unittest.TestCase):
         self.assertEqual(saved["pending"][0], items[0])
 
 
+class AccumulationConfigTests(unittest.TestCase):
+    @staticmethod
+    def _item():
+        return {
+            "run": 1, "profile_id": "ironclad", "runner": "opencode",
+            "model": "kimi-old", "backend_key": "old", "every": 5,
+            "retry_same_model": False, "deferred_kind": "batch_accumulation",
+        }
+
+    def test_changed_config_releases_one_run_from_old_five_run_cadence(self):
+        cfg = {"review_model_chain": [{
+            "key": "new", "runner": "codex", "model": "new-model", "every_runs": 1,
+        }]}
+        item = self._item()
+        self.assertEqual(llm_review._select_review_batch([item], 100, 1000, cfg), ([0], 0.0))
+        self.assertTrue(llm_review._refresh_accumulation_plans([item], cfg))
+        self.assertEqual((item["backend_key"], item["every"]), ("new", 1))
+        self.assertFalse(item["retry_same_model"])
+
+    def test_unchanged_plan_keeps_minimum_and_attempted_binding_unchanged(self):
+        cfg = {"review_model_chain": [{
+            "key": "old", "runner": "opencode", "model": "kimi-old", "every_runs": 5,
+        }]}
+        item = self._item()
+        self.assertEqual(llm_review._select_review_batch([item], 100, 1000, cfg), ([], 5.0))
+        item["retry_same_model"] = True
+        original = dict(item)
+        self.assertFalse(llm_review._refresh_accumulation_plans([item], cfg))
+        self.assertEqual(item, original)
+
+    def test_explicit_disabled_chain_resolves_unavailable_without_probes(self):
+        cfg = {"review_model_chain": [{
+            "key": "off", "model": "provider/off", "enabled": False,
+        }]}
+        # The runner normalizer's explicit-disable change is merged separately.
+        with (mock.patch.object(llm_review, "review_plans_from_config", return_value=[]),
+              mock.patch.object(llm_review, "runner_binary") as binary,
+              mock.patch.object(llm_review, "_query_available_models") as query):
+            plan = llm_review.resolve_review_plan(cfg, log=lambda _: None)
+        self.assertFalse(plan.available)
+        binary.assert_not_called()
+        query.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
