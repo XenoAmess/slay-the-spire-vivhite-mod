@@ -97,6 +97,17 @@ class AgentEventRecoveryTests(unittest.TestCase):
         self.assertEqual(resumed["n"], 1)
         self.assertEqual(resumed["hp_delta_sum"], -25)
 
+    def test_recovered_event_combat_preserves_historical_danger_classification(self):
+        first = create(self.root)
+        choose(first, state(), "FIGHT")
+        first.know.stats["enemies"]["ENEMY"] = {"encounters": 3, "deaths": 3, "hp_lost_sum": 60}
+        first._track(state("COMBAT", hp=75))
+        self.assertTrue(first.ctx.current_combat_is_hard)
+        restarted = create(self.root)
+        restarted._track(state("COMBAT", hp=75))
+        self.assertTrue(restarted.ctx.current_combat_is_hard)
+        self.assertEqual(restarted.ctx.combat["hp_start"], 75)
+
     def test_real_repeated_choice_is_two_samples_but_unchanged_retry_is_one(self):
         for material_progress in (False, True):
             with self.subTest(material_progress=material_progress):

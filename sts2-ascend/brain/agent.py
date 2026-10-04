@@ -2116,6 +2116,7 @@ class Agent:
             "event_chain": copy.deepcopy(self.ctx.event_chain),
             "pending_event_fight_loss": self.ctx.pending_event_fight_loss,
             "combat": copy.deepcopy(self.ctx.combat),
+            "current_combat_is_hard": self.ctx.current_combat_is_hard,
             "combat_agg": copy.deepcopy(self.ctx.combat_agg),
             "combat_bridge": copy.deepcopy(self.ctx.combat_bridge),
             "last_hp": self.ctx.last_hp, "last_gold": self.ctx.last_gold,
@@ -2170,7 +2171,9 @@ class Agent:
         if isinstance(combat, dict) and all(key in combat for key in (
                 "comp_id", "floor", "hp_start", "hp_start_pct", "node_type")):
             self.ctx.combat = copy.deepcopy(combat)
-            self.ctx.current_combat_is_hard = combat.get("node_type") in ("Elite", "Boss")
+            hard = checkpoint.get("current_combat_is_hard")
+            self.ctx.current_combat_is_hard = (
+                hard if type(hard) is bool else combat.get("node_type") in ("Elite", "Boss"))
         agg = checkpoint.get("combat_agg")
         if isinstance(agg, dict) and all(key in agg for key in (
                 "comp_id", "floor", "hp_lost_sum", "won", "died")):
