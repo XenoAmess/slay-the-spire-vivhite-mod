@@ -17266,3 +17266,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.383129338762094局)，BODY_SLAM(16分/2.395331390918484局)，STOKE(18分/2.2704590275390206局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.52 → 0.52（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.002）；block_safety: 1.94 → 1.93（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.05 → 2.00（行至 F31——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1970 胜，当前目标进阶 0
+
+## 第 1971 局复盘（2026-10-05 06:08）
+- 结果：💀 失败｜进阶 0｜到达层数 15｜当局评分 15
+- 死因：敌人组合 BYGONE_EFFIGY
+- 本局拿牌：HEADBUTT, FLAME_BARRIER, DEMON_FORM, FLAME_BARRIER, SHRUG_IT_OFF, HEADBUTT, VICIOUS, INFLAME, PACTS_END
+- 本局遗物：GORGET
+- 战斗记录：F5 Monster战 掉血61｜竞速投影审计：pool=55/dpt=6/ttk=9.16667/tsurv=3.25（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=9.16667/actual_over_projected=0.87（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=5.91667（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战8回合获胜; F6 Monster战 掉血6; F8 Monster战 掉血1; F11 Monster战 掉血31; F13 Monster战 掉血9; F15 Elite战 掉血29｜竞速投影审计：pool=111/dpt=22.95/ttk=4.8366/tsurv=1.20833（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=4.8366/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.31（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.62827（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(27分/6.86057106728724局)，PROWESS(26分/11.59518577903042局)，FEED(25分/31.97849244032923局)，MASTER_OF_STRATEGY(25分/4.023181528925243局)，MANGLE(25分/37.97886221807601局)
+- 当前低价值卡牌：HAVOC(16分/2.374788386076427局)，BODY_SLAM(16分/2.3869477310502694局)，STOKE(18分/2.262512420942634局)
+- 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）
+- 生涯战绩：0/1971 胜，当前目标进阶 0
