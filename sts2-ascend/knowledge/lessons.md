@@ -17222,3 +17222,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.416787138969274局)，BODY_SLAM(16分/2.429161525134951局)，STOKE(18分/2.3025255440660644局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（89%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.53 → 0.51（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.03，步长 0.03→0.015）
 - 生涯战绩：0/1966 胜，当前目标进阶 0
+
+## 第 1967 局复盘（2026-10-05 04:58）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 LOUSE_PROGENITOR
+- 本局拿牌：CINDER, ANGER, MOLTEN_FIST, SWORD_BOOMERANG, UNRELENTING, CRUELTY, ARMAMENTS, BREAKTHROUGH, EVIL_EYE, TRUE_GRIT, FEED, SWORD_BOOMERANG, PILLAGE, EVIL_EYE, BLUDGEON, CINDER
+- 本局遗物：HORN_CLEAT
+- 战斗记录：F15 Monster战 掉血4; F17 Boss战 掉血14; F19 Monster战 掉血7; F20 Monster战 掉血6; F21 Unknown战 掉血43｜自损1（可行动段1/非行动段39，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=85/dpt=9/ttk=9.44444/tsurv=2.25（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=9.44444/actual_over_projected=0.74（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=7.19444（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战7回合获胜; F22 Monster战 掉血22（阵亡）
+- 当前高价值卡牌：PANACHE(27分/6.957465401360548局)，PROWESS(26分/11.75894879430951局)，FEED(25分/32.4301362902776局)，MASTER_OF_STRATEGY(25分/4.08000238119511局)，MANGLE(25分/38.515251467220175局)
+- 当前低价值卡牌：HAVOC(16分/2.408328383982882局)，BODY_SLAM(16分/2.420659459796979局)，STOKE(18分/2.2944667046618332局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.51 → 0.52（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 1.90 → 1.89（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.10 → 2.05（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1967 胜，当前目标进阶 0
