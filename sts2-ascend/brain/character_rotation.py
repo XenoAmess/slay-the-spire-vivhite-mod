@@ -1269,9 +1269,10 @@ class CharacterRotation:
                     raise CharacterRotationError(
                         f"finalized run {normalized_run_id!r} changed character from "
                         f"{finalized_character} to {explicit_character}")
-                state, reconciled = self._reconcile_idle_schedule(state, counts)
-                if dirty or reconciled:
-                    self._save_unlocked(state)
+                if terminal_persisted:
+                    state, reconciled = self._reconcile_idle_schedule(state, counts)
+                    if dirty or reconciled:
+                        self._save_unlocked(state)
                 return TerminalResult(
                     run_id=normalized_run_id,
                     character=finalized_character,

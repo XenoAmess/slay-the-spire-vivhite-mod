@@ -392,6 +392,62 @@ class CharacterRotationTests(unittest.TestCase):
         self.assertEqual(reloaded.target_character, IRONCLAD)
         self.assertEqual(reloaded.snapshot().finalized_run_ids, ("same-run",))
 
+    def test_unpersisted_duplicate_does_not_reconcile_new_parity(self) -> None:
+        self._set_persisted_runs(vivhite=0, ironclad=10)
+        self._complete(
+            self.rotation, "duplicate-v", VIVHITE,
+            vivhite=1, ironclad=10)
+        before = self.state_path.read_bytes()
+        self._set_persisted_runs(vivhite=10, ironclad=10)
+
+        result = self.rotation.record_terminal(
+            "duplicate-v", terminal_persisted=False,
+            character_id=VIVHITE_ID)
+
+        self.assertFalse(result.advanced)
+        self.assertFalse(result.terminal_persisted)
+        self.assertFalse(result.quota_consumed)
+        self.assertEqual(result.schedule_mode, CATCHUP_MODE)
+        self.assertEqual(self.state_path.read_bytes(), before)
+        persisted = self.rotation.record_terminal(
+            "duplicate-v", terminal_persisted=True)
+        self.assertEqual(persisted.schedule_mode, BALANCED_MODE)
+
+    def test_unpersisted_terminal_never_publishes_v1_migration(self) -> None:
+        self._set_persisted_runs(vivhite=0, ironclad=10)
+        for finalized in (False, True):
+            with self.subTest(finalized=finalized):
+                self.state_path.write_text(json.dumps({
+                    "version": 1,
+                    "next_character": IRONCLAD,
+                    "active_run": None if finalized else {
+                        "run_id": "legacy-v",
+                        "character": VIVHITE,
+                        "character_id": VIVHITE_ID,
+                    },
+                    "finalized_runs": {"legacy-v": VIVHITE} if finalized else {},
+                }), encoding="utf-8")
+                before = self.state_path.read_bytes()
+
+                result = self.rotation.record_terminal(
+                    "legacy-v", terminal_persisted=False,
+                    character_id=VIVHITE_ID)
+
+                self.assertFalse(result.advanced)
+                self.assertFalse(result.terminal_persisted)
+                self.assertEqual(result.character, VIVHITE)
+                self.assertEqual(self.state_path.read_bytes(), before)
+                self.assertEqual(json.loads(before)["version"], 1)
+
+    def test_unpersisted_terminal_does_not_create_state_file(self) -> None:
+        result = self.rotation.record_terminal(
+            "not-yet-persisted", terminal_persisted=False,
+            character_id=VIVHITE_ID)
+
+        self.assertFalse(result.advanced)
+        self.assertFalse(result.quota_consumed)
+        self.assertFalse(self.state_path.exists())
+
     def test_active_run_recovers_the_games_actual_character(self) -> None:
         # The state machine may be introduced while a pre-existing run is active.
         # The game is authoritative for that run even though a fresh rotation would
