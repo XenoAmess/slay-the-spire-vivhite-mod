@@ -212,6 +212,9 @@ def create_isolated_repository(
         archive_path.unlink(missing_ok=True)
 
     _git(destination, ['init', '--quiet'])
+    # Keep the complete frozen tree even when the evaluation directory makes
+    # Windows paths exceed MAX_PATH. This setting belongs only to the new repo.
+    _git(destination, ['config', '--local', 'core.longpaths', 'true'])
     _git(destination, ['config', 'core.autocrlf', 'false'])
     _git(destination, ['config', 'user.name', 'sts2 review evaluator'])
     _git(destination, ['config', 'user.email', 'review-eval@localhost'])

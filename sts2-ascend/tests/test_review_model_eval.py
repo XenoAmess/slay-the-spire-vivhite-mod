@@ -141,6 +141,41 @@ class BackendKeyTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'win32', 'Git for Windows MAX_PATH regression')
+    def test_deep_snapshot_indexes_full_tree_with_only_repo_local_longpaths(self):
+        with tempfile.TemporaryDirectory(prefix='sts2-eval-longpaths-') as root:
+            base = Path(root)
+            source = _source_repo(base)
+            _git(source, 'config', '--local', 'core.longpaths', 'true')
+            relative = (Path('sts2-ascend') / 'tools' /
+                        ('evidence-' + 'x' * 85) / ('layout-' + 'y' * 85) /
+                        ('details-' + 'z' * 85) /
+                        'preserved.bin')
+            original = source / relative
+            original.parent.mkdir(parents=True)
+            original.write_bytes(b'\x00complete frozen evidence\n')
+            _git(source, 'add', '-A')
+            _git(source, 'commit', '--quiet', '-m', 'deep frozen evidence')
+            baseline = _git(source, 'rev-parse', 'HEAD')
+            source_config = (source / '.git' / 'config').read_bytes()
+            isolated = (base / 'output' / ('case-' + 'a' * 42) /
+                        ('attempt-' + 'b' * 42) / 'sandbox' / 'repo')
+            self.assertGreater(len(str(isolated / relative)), 260)
+            self.assertGreater(len(relative.as_posix()), 260)
+
+            review_model_eval.create_isolated_repository(source, baseline, isolated)
+
+            self.assertEqual(_git(isolated, 'config', '--local', '--get',
+                                  'core.longpaths'), 'true')
+            self.assertEqual(_git(isolated, 'ls-files', '--', relative.as_posix()),
+                             relative.as_posix())
+            self.assertEqual((isolated / relative).read_bytes(), original.read_bytes())
+            self.assertFalse(original.samefile(isolated / relative))
+            self.assertEqual(_git(isolated, 'remote'), '')
+            self.assertEqual((source / '.git' / 'config').read_bytes(), source_config)
+            self.assertEqual(_git(source, 'rev-parse', 'HEAD'), baseline)
+            self.assertEqual(_git(isolated, 'status', '--porcelain'), '')
+
     def test_snapshot_has_no_remote_or_shared_git_metadata(self) -> None:
         with tempfile.TemporaryDirectory(prefix='sts2-eval-test-') as root:
             base = Path(root)
