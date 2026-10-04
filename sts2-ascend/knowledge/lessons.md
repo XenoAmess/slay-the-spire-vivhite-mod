@@ -16529,3 +16529,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.992083822366594局)，DEFEND_IRONCLAD(18分/2.595387403825651局)，THE_GAMBIT(18分/4.421771132443685局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长3.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（92%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1903 胜，当前目标进阶 0
+
+## 第 1904 局复盘（2026-10-04 08:49）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 MYTE
+- 本局拿牌：UNRELENTING, BREAKTHROUGH, INFLAME, RAMPAGE, UNRELENTING, SHRUG_IT_OFF, HEADBUTT, CINDER, VICIOUS, INFLAME, CINDER, ARMAMENTS, PRIMAL_FORCE, BREAKTHROUGH, RUPTURE, JUGGLING, SHRUG_IT_OFF, UNMOVABLE
+- 本局遗物：AMETHYST_AUBERGINE
+- 战斗记录：F17 Boss战 掉血45｜竞速投影审计：pool=214/dpt=8.1/ttk=26.4198/tsurv=3.11111（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=26.4198/actual_over_projected=0.26（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=23.3086（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战7回合获胜｜竞速Boss有效火力收官对账：samples=5/actual_dpt=39/projected_dpt=21.31/ratio=2.01/min_ratio=0.40（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=39/projected_dpt=21.31/ratio=2.01/min_ratio=0.40（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=5/layers_max=0/actual_dpt=39/projected_dpt=21.31/ratio=2.01/min_ratio=0.40（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血7; F20 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F22 Monster战 掉血20｜自损1（可行动段1/非行动段25，SELF_LOSS_PHASE_OBS）; F23 Monster战 掉血12｜自损3（可行动段3/非行动段15，SELF_LOSS_PHASE_OBS）; F24 Monster战 掉血44｜竞速投影审计：pool=102/dpt=17.55/ttk=5.81197/tsurv=1.91304（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=5.81197/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=4.70（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=3.89892（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战9回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.9298537168058143局)，PROWESS(26分/13.596666149717406局)，MANGLE(25分/44.625019817467546局)，HELLRAISER(25分/3.1247286030817314局)，FEED(24分/30.23922348988543局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.953611528988311局)，DEFEND_IRONCLAD(18分/2.5863035479122614局)，THE_GAMBIT(18分/4.406294933480132局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.02 → 2.01（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1904 胜，当前目标进阶 0
