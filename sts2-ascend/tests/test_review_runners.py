@@ -279,6 +279,27 @@ class ReviewPlanTests(unittest.TestCase):
         self.assertEqual(command[command.index("--format") + 1], "json")
         self.assertEqual(command[command.index("--dir") + 1], "C:/review/repo")
 
+    def test_opencode_transport_alias_preserves_logical_plan_and_queue_identity(self) -> None:
+        for logical, transport in (
+            ("kimi-for-coding/k3", "kimi-code-plan-cn/k3"),
+            ("kimi-code-plan-cn/k3", "kimi-code-plan-cn/k3"),
+            ("opencode-go/glm-5.3-flash", "opencode-go/glm-5.3-flash"),
+            ("kimi-for-coding/k2.5", "kimi-for-coding/k2.5"),
+        ):
+            with self.subTest(model=logical), tempfile.TemporaryDirectory() as root:
+                plan = ReviewPlan(
+                    key="sticky-backend", priority=1, runner="opencode",
+                    model=logical, variant="max", every_runs=5, source="preferred")
+                identity = plan.as_queue_fields()
+
+                command = build_review_command(
+                    plan, "opencode.exe", Path(root), "read prompt", title="batch")
+
+                self.assertEqual(command[command.index("--model") + 1], transport)
+                self.assertEqual(command[command.index("--variant") + 1], "max")
+                self.assertEqual(plan.model, logical)
+                self.assertEqual(plan.as_queue_fields(), identity)
+
 
 class CodexTranslatorTests(unittest.TestCase):
     def test_structured_http_429_records_retry_after_without_model_work(self) -> None:

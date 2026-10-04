@@ -469,6 +469,13 @@ def runner_binary(cfg: dict, runner: str) -> str | None:
     return shutil.which(os.path.expandvars(str(configured)))
 
 
+def resolve_opencode_model_id(model: str) -> str:
+    """Resolve the proven K3 provider rename without changing logical identity."""
+    if model == "kimi-for-coding/k3":
+        return "kimi-code-plan-cn/k3"
+    return model
+
+
 def build_review_command(
     plan: ReviewPlan, binary: str, workdir: Path | str, prompt: str, *, title: str,
 ) -> list[str]:
@@ -476,7 +483,8 @@ def build_review_command(
     root = str(workdir)
     if plan.runner == "opencode":
         command = [
-            binary, "run", "--model", plan.model, "--format", "json", "--thinking",
+            binary, "run", "--model", resolve_opencode_model_id(plan.model),
+            "--format", "json", "--thinking",
         ]
         if plan.variant:
             command += ["--variant", plan.variant]

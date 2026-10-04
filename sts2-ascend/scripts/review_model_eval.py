@@ -641,8 +641,20 @@ def build_provider_command(
         ]
         return command, None
     if spec.runner == 'opencode':
+        # Keep the frozen logical backend identity while sharing production's
+        # narrowly verified provider-id compatibility mapping.
+        brain_root_text = str(ASCEND_ROOT / 'brain')
+        inserted = brain_root_text not in sys.path
+        if inserted:
+            sys.path.insert(0, brain_root_text)
+        try:
+            from review_runners import resolve_opencode_model_id
+            transport_model = resolve_opencode_model_id(spec.model)
+        finally:
+            if inserted:
+                sys.path.remove(brain_root_text)
         command = [
-            binary, 'run', '--model', spec.model,
+            binary, 'run', '--model', transport_model,
             '--format', 'json', '--thinking',
         ]
         if spec.variant:

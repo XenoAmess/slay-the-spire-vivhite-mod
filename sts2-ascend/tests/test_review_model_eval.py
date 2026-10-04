@@ -44,6 +44,27 @@ def _source_repo(root: Path) -> Path:
 
 
 class BackendKeyTests(unittest.TestCase):
+    def test_opencode_transport_alias_keeps_frozen_logical_backend(self) -> None:
+        for logical, transport in (
+            ('kimi-for-coding/k3', 'kimi-code-plan-cn/k3'),
+            ('kimi-code-plan-cn/k3', 'kimi-code-plan-cn/k3'),
+            ('opencode-go/glm-5.3-flash', 'opencode-go/glm-5.3-flash'),
+            ('kimi-for-coding/k2.5', 'kimi-for-coding/k2.5'),
+        ):
+            with self.subTest(model=logical), tempfile.TemporaryDirectory() as root:
+                key = f'opencode:{logical}@max'
+                spec = review_model_eval.parse_backend_key(key)
+                prompt = Path(root) / 'prompt.md'
+                prompt.write_text('frozen prompt', encoding='utf-8')
+
+                command, stdin_text = review_model_eval.build_provider_command(
+                    spec, 'opencode.exe', Path(root) / 'repo', prompt, 'eval-case')
+
+                self.assertIsNone(stdin_text)
+                self.assertEqual(command[command.index('--model') + 1], transport)
+                self.assertEqual(command[command.index('--variant') + 1], 'max')
+                self.assertEqual((spec.key, spec.model), (key, logical))
+
     def test_explicit_glm_and_luna_keys_preserve_options(self) -> None:
         glm = review_model_eval.parse_backend_key(
             'opencode:opencode-go/glm-5.3-flash@max')
