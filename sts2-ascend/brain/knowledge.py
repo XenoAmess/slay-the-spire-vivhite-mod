@@ -1551,11 +1551,6 @@ DEFAULT_POLICY = {
       # Audit-only marker for an all-in cover rejection when the current
       # affordable raw attack capacity cannot clear the live output pool.
       "race_allin_lethal_cover_rejection_obs": True,
-      # Audit-only marker for the narrower sandpit-shaped rejection: an
-      # executable lethal cover exists, but the existing race-allin behavior
-      # gate keeps the action all-in while SANDPIT_POWER is ticking.  It never
-      # feeds selection; False removes only this suffix.
-      "race_allin_sandpit_cover_rejection_obs": True,
       "race_allin_lethal_cover_terminal_outcome_obs": True,
                                          # Audit-only same-combat join from the persisted
                                          # cover decision to the authoritative GAME_OVER result;
