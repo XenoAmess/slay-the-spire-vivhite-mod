@@ -24098,7 +24098,8 @@ def main() -> int:
     #      尚未满两回合，迟滞锁仍未武装，实际仍可能选中格挡。观测只把最终
     #      选中的格挡牌与 sample_turns 切出，供未来按终局核对延迟入锁是否
     #      消耗输出；① 正例带 marker；② 键=0 严格移除 marker；两者 action/
-    #      params 必须逐位相同。
+    #      params 必须逐位相同。混合攻防牌另带只读分账 marker，不能被
+    #      后续分析误算成纯格挡。
     def rpre_state():
         return {
             "screen": "COMBAT",
@@ -24133,7 +24134,8 @@ def main() -> int:
                     ]},
         }
 
-    def rpre_decide(enabled, behavior=False, affordable_attack=False):
+    def rpre_decide(enabled, behavior=False, affordable_attack=False,
+                    hybrid=False):
         rpre_ctx = type("RPRECTX", (), {
             "combat": {"comp_id": "RPRE_RACE_COMP", "node_type": "Elite"},
             "current_combat_is_hard": False,
@@ -24144,6 +24146,16 @@ def main() -> int:
             rpre_input["combat"]["hand"][0]["energy_cost"] = 1
             rpre_input["combat"]["hand"][0]["dynamic_values"][0][
                 "current_value"] = 1
+        if hybrid:
+            rpre_input["combat"]["hand"][1] = {
+                "index": 1, "card_id": "RPRE_HYBRID", "name": "混合攻防",
+                "playable": True, "energy_cost": 1,
+                "requires_target": True, "valid_target_indices": [0],
+                "dynamic_values": [
+                    {"name": "Damage", "current_value": 6},
+                    {"name": "Block", "current_value": 5},
+                ],
+            }
         rpre_pol = policy.Policy(knowledge.Knowledge(
             Path(tempfile.mkdtemp(prefix="sts2-selfcheck-rpre-"))),
             random.Random(13))
@@ -24172,6 +24184,25 @@ def main() -> int:
             and "RACE_PRELOCK_DEFENSE_OBS" not in d_rpre_off.reason), \
         f"键=0 未严格回滚竞速未锁前格挡观测或改变动作: " \
         f"on={d_rpre_on} off={d_rpre_off}"
+
+    d_rpre_hybrid_on = rpre_decide(True, hybrid=True)
+    d_rpre_hybrid_off = rpre_decide(False, hybrid=True)
+    assert ("RACE_PRELOCK_DEFENSE_OBS" in d_rpre_on.reason
+            and "RACE_PRELOCK_HYBRID_ATTACK_OBS" not in d_rpre_on.reason
+            and d_rpre_hybrid_on.action == "play_card"
+            and d_rpre_hybrid_on.params.get("card_index") == 1
+            and "RACE_PRELOCK_DEFENSE_OBS" in d_rpre_hybrid_on.reason
+            and "RACE_PRELOCK_HYBRID_ATTACK_OBS" in d_rpre_hybrid_on.reason
+            and "伤害6/命中1/格挡5" in d_rpre_hybrid_on.reason), \
+        f"竞速未锁前混合攻防观测未与纯格挡分账: " \
+        f"pure={d_rpre_on} hybrid={d_rpre_hybrid_on}"
+    assert (d_rpre_hybrid_off.action == d_rpre_hybrid_on.action
+            and d_rpre_hybrid_off.params == d_rpre_hybrid_on.params
+            and "RACE_PRELOCK_DEFENSE_OBS" not in d_rpre_hybrid_off.reason
+            and "RACE_PRELOCK_HYBRID_ATTACK_OBS"
+                not in d_rpre_hybrid_off.reason), \
+        f"混合攻防观测关闭后动作漂移或 marker 残留: " \
+        f"on={d_rpre_hybrid_on} off={d_rpre_hybrid_off}"
 
     # 3rpre-free) 1908-F33-T1 选择 INFERNAL_BLADE 的免费攻击生成机会观测：
     #      原生牌面会加入一张本回合可免费打出的随机攻击牌，但旧理由只显示

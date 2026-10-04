@@ -16268,3 +16268,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 在宿主预置固定 256 槽环境复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`（池耗尽）；随后用同一 clone 的进程级受控临时槽适配器运行完整 selfcheck，退出码 0 且末尾为 `SELFCHECK OK`。限定目标 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; free-attack generator observation integrated)`
+
+## 2026-10-04 runs 1909-1910：竞速未锁前混合攻防观测分账
+
+profile_id：`ironclad`
+requested_runs：`1909, 1910`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：现有 `RACE_PRELOCK_DEFENSE_OBS` 只检查选中牌有格挡，因此会把同时造成伤害的攻击+格挡牌按“纯格挡”统计，混淆竞速输出窗口的后续归因；该假设可证伪：纯格挡继续只有旧 marker，混合牌没有新 marker，或新 marker 改变 action/params，均表示假设/实现不成立。
+- **EVIDENCE**：精确链 `sts2-ascend/knowledge/runs/20261004-102708_R9SRGW0NRUUG.json`（1910，252 条）中，D212 的 `防御` 与 D214 的 `铁斩波` 都带 `RACE_PRELOCK_DEFENSE_OBS`；D214 同时包含正伤害与格挡。D211 已证明现有窄行为门会在有可支付攻击时保留攻击，D212 则无可支付攻击，因此本次只修正观测分账，不扩大行为门。
+- **EXPECTED_SIGNAL**：未来 3—10 个同型窗口中，选中的正伤害+格挡牌应在旧 marker 后追加一次 `RACE_PRELOCK_HYBRID_ATTACK_OBS`，并披露伤害/命中/格挡；纯格挡不得出现该 marker，开关关闭及所有 action/params 必须与开启前逐位一致。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：在既有 `race_prelock_defense_obs` 窄条件和旧 marker 内，将 `card_numbers` 的伤害、命中、格挡转为数值；仅当格挡牌还有正伤害时追加 `RACE_PRELOCK_HYBRID_ATTACK_OBS`。不进入评分、候选、目标、竞速判定、动作或 params。
+- `sts2-ascend/brain/selfcheck.py`：加入纯格挡负例、混合攻防正例及关闭开关回滚断言，固定伤害6/命中1/格挡5且 action/params 不漂移。
+- 未新增策略开关；沿用 `race_prelock_defense_obs=False` 作为回滚点。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个 `RACE_PRELOCK_DEFENSE_OBS`，分别统计纯格挡/混合牌 marker、伤害/命中/格挡字段、后续终局归因和 action/params；纯格挡误标与动作漂移应为 0。
+- **Adjust**：若原生多段牌的 `card_numbers` 不能稳定给出命中或出现混合牌漏标，只收紧/修正观测字段判定，不把该信号升级为行为门。
+- **Rollback**：将 `race_prelock_defense_obs` 设为 `False` 或回退本地提交；预期只移除两类 pre-lock 观测，不改变动作路径。
+- **Validation**：直接入口复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的 0777 进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。目标 diff 无空白错误；未写入在线进程、正式 runs/archive、学习记忆或回放包。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; hybrid attack observation integrated)`

@@ -18506,9 +18506,11 @@ class Policy:
                     and not block_locked):
                 try:
                     _prelock_damage, _prelock_block, _prelock_hits = card_numbers(card)
+                    _prelock_damage = float(_prelock_damage or 0.0)
                     _prelock_block = float(_prelock_block or 0.0)
+                    _prelock_hits = float(_prelock_hits or 0.0)
                 except (TypeError, ValueError, OverflowError):
-                    _prelock_block = 0.0
+                    _prelock_damage = _prelock_block = _prelock_hits = 0.0
                 if _prelock_block > 0.0:
                     _prelock_projection_tail = ""
                     _projection = getattr(
@@ -18538,6 +18540,11 @@ class Policy:
                         f"/race_allin={'yes' if race_allin else 'no'}"
                         f"{_prelock_projection_tail}"
                         "（RACE_PRELOCK_DEFENSE_OBS）")
+                    if _prelock_damage > 0.0:
+                        why += (
+                            f"；竞速未锁前混合攻防对账：伤害{_prelock_damage:g}"
+                            f"/命中{_prelock_hits:g}/格挡{_prelock_block:g}"
+                            "（RACE_PRELOCK_HYBRID_ATTACK_OBS）")
             if self._hp_gate_stall_rearm_pending:
                 why += self._consume_hp_gate_stall_rearm_note()
             # 火线漂移补记收口（FOCUS_DRIFT_FLUSH_OBS，第852~856局批复盘，
