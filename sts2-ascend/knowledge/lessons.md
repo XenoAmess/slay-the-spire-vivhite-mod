@@ -16540,3 +16540,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.953611528988311局)，DEFEND_IRONCLAD(18分/2.5863035479122614局)，THE_GAMBIT(18分/4.406294933480132局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（9回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.01，步长 0.03→0.007）；block_safety: 2.02 → 2.01（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.55 → 1.50（行至 F24——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1904 胜，当前目标进阶 0
+
+## 第 1905 局复盘（2026-10-04 09:03）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：INFERNAL_BLADE, THUNDERCLAP, BREAKTHROUGH, RUPTURE, DRAMATIC_ENTRANCE, FIGHT_ME, TAUNT, ARMAMENTS, WHIRLWIND, POMMEL_STRIKE, UPPERCUT, DISMANTLE, BLUDGEON, SWORD_BOOMERANG
+- 本局遗物：GREMLIN_HORN
+- 战斗记录：F3 Monster战 掉血2; F4 Monster战 掉血0; F9 Monster战 掉血0｜自损1（可行动段1/非行动段0，SELF_LOSS_PHASE_OBS）; F13 Monster战 掉血2; F14 Monster战 掉血10; F17 Boss战 掉血68｜自损1（可行动段1/非行动段55，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=137/dpt=42.9/ttk=3.19347/tsurv=0.925926（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=3.19347/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=6.48（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=2.26755（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战6回合阵亡｜竞速Boss有效火力收官对账：samples=3/actual_dpt=42.3333/projected_dpt=25.0628/ratio=2.07/min_ratio=0.86（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=3/actual_dpt=42.3333/projected_dpt=25.0628/ratio=2.07/min_ratio=0.86（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=3/layers_max=0/actual_dpt=42.3333/projected_dpt=25.0628/ratio=2.07/min_ratio=0.86（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.9160992287969942局)，PROWESS(26分/13.549077818193396局)，MANGLE(25分/44.46883224810641局)，HELLRAISER(25分/3.1137920529709455局)，FEED(24分/30.13338620767083局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.915273888636852局)，DEFEND_IRONCLAD(18分/2.5772514854945685局)，THE_GAMBIT(18分/4.390872901212952局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.01，步长 0.03→0.004）
+- 生涯战绩：0/1905 胜，当前目标进阶 0
