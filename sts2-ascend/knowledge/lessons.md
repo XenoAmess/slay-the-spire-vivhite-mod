@@ -17112,3 +17112,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.503026057384824局)，BODY_SLAM(16分/2.5158420023712087局)，STOKE(18分/2.384687232757076局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（84%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1956 胜，当前目标进阶 0
+
+## 第 1957 局复盘（2026-10-05 01:26）
+- 结果：💀 失败｜进阶 0｜到达层数 24｜当局评分 24
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：PILLAGE, INFLAME, ARMAMENTS, PACTS_END, PANACHE, HEADBUTT, UNRELENTING, MANGLE, FIGHT_ME, FLAME_BARRIER, JUGGLING, BREAKTHROUGH
+- 本局遗物：FESTIVE_POPPER, RAINBOW_RING, WAR_PAINT
+- 战斗记录：F6 Monster战 掉血3; F9 Monster战 掉血3; F15 Elite战 掉血10; F17 Boss战 掉血55｜竞速投影审计：pool=218/dpt=22.95/ttk=9.49891/tsurv=3.68421（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=10/projected_ttk=9.49891/actual_over_projected=1.05（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=5.8147（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战10回合获胜｜竞速Boss有效火力收官对账：samples=2/actual_dpt=25/projected_dpt=38.3063/ratio=0.65/min_ratio=0.64/min_sample=5->6/min_actual_dpt=24/min_projected_dpt=37.4625（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=2/actual_dpt=25/projected_dpt=38.3063/ratio=0.65/min_ratio=0.64（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=2/layers_max=0/actual_dpt=25/projected_dpt=38.3063/ratio=0.65/min_ratio=0.64（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血16; F24 Elite战 掉血64｜竞速投影审计：pool=92/dpt=6.075/ttk=15.144/tsurv=3.38843（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=5/projected_ttk=15.144/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.48（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=11.7556（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战5回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(26分/6.1880454016980835局)，PROWESS(26分/12.178546784291198局)，FEED(25分/30.52694480170058局)，MASTER_OF_STRATEGY(25分/4.22559029285422局)，MANGLE(25分/39.889602387695774局)
+- 当前低价值卡牌：HAVOC(16分/2.4942654661839776局)，BODY_SLAM(16分/2.5070365553629097局)，STOKE(18分/2.376340827442426局)
+- 策略进化：elite_grey_safety_mult: 2.00 → 2.20（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.36 → 0.38（行至 F24（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.91 → 1.90（行至 F24（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.20 → 2.15（行至 F24——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1957 胜，当前目标进阶 0
