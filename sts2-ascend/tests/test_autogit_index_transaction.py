@@ -255,5 +255,140 @@ class AutoGitIndexTransactionTests(unittest.TestCase):
         self.assertEqual(self.git("show", ":" + self.path).stdout, "USER = 99\n")
 
 
+    def test_patch_recovery_charges_each_read_to_one_deadline(self):
+        pending = self.pending_commit()
+        next_patch = self.patch("VALUE = 3\n")
+        journal = autogit._progress_index_pending_path()
+        journal_before = journal.read_bytes()
+        index_before = (autogit._git_dir() / "index").read_bytes()
+        clock = [100.0]
+        calls = []
+
+        def slow_read(args, **kwargs):
+            allowed = kwargs["timeout"]
+            calls.append((args[0], allowed))
+            duration = 0.04
+            clock[0] += min(duration, allowed)
+            if allowed < duration:
+                raise subprocess.TimeoutExpired(args, allowed)
+            if args[:2] == ["rev-list", "--parents"]:
+                return subprocess.CompletedProcess(
+                    args, 0, f"{pending.commit} {pending.before_head}\n", "")
+            if args[:2] == ["merge-base", "--is-ancestor"]:
+                return subprocess.CompletedProcess(args, 0, "", "")
+            self.fail(f"Unexpected read after recovery deadline: {args}")
+
+        with mock.patch.object(autogit.time, "monotonic", side_effect=lambda: clock[0]), \
+                mock.patch.object(autogit, "_run_git", side_effect=slow_read):
+            result = autogit.commit_patch_result(
+                next_patch, "bounded recovery", [self.path], push=False,
+                transaction_timeout=0.06, log=lambda _: None)
+        self.assertFalse(result.created)
+        self.assertIn("deadline", result.reason)
+        self.assertEqual([name for name, _ in calls], ["rev-list", "merge-base"])
+        self.assertAlmostEqual(calls[0][1], 0.06)
+        self.assertAlmostEqual(calls[1][1], 0.02)
+        self.assertEqual(journal.read_bytes(), journal_before)
+        self.assertEqual((autogit._git_dir() / "index").read_bytes(), index_before)
+        self.assertEqual(self.target.read_text(encoding="utf-8"), "VALUE = 2\n")
+
+    def test_index_lock_retry_sleep_cannot_extend_deadline(self):
+        clock = [100.0]
+        sleeps = []
+        restore_calls = []
+
+        def busy(*args, **kwargs):
+            restore_calls.append(kwargs["timeout"])
+            clock[0] += 0.04
+            return subprocess.CompletedProcess([], 128, "", "Could not lock index")
+
+        def sleep(duration):
+            sleeps.append(duration)
+            clock[0] += duration
+
+        with mock.patch.object(autogit.time, "monotonic", side_effect=lambda: clock[0]), \
+                mock.patch.object(autogit.time, "sleep", side_effect=sleep), \
+                mock.patch.object(autogit, "_validated_progress_pair_unlocked", return_value=True), \
+                mock.patch.object(autogit, "_index_entries_unlocked", return_value=b"snapshot"), \
+                mock.patch.object(autogit, "_restore_index_snapshot_unlocked", side_effect=busy):
+            with self.assertRaises(TimeoutError):
+                autogit._sync_progress_index_unlocked(
+                    "1" * 40, "2" * 40, [self.path], b"snapshot",
+                    deadline=100.06, log=lambda _: None)
+        self.assertEqual(len(restore_calls), 1)
+        self.assertEqual(len(sleeps), 1)
+        self.assertAlmostEqual(sleeps[0], 0.02)
+        self.assertAlmostEqual(clock[0], 100.06)
+
+    def test_deadline_expiring_before_publish_preserves_real_index(self):
+        pending = self.pending_commit()
+        expected = autogit._index_entries_unlocked([self.path])
+        index_path = autogit._git_dir() / "index"
+        original_bytes = index_path.read_bytes()
+        clock = [100.0]
+        original = autogit._index_matches_commit_unlocked
+
+        def expire_after_verify(*args, **kwargs):
+            verified = original(*args, **kwargs)
+            self.assertTrue(verified)
+            clock[0] = 105.0
+            return verified
+
+        with mock.patch.object(autogit.time, "monotonic", side_effect=lambda: clock[0]), \
+                mock.patch.object(autogit, "_index_matches_commit_unlocked", side_effect=expire_after_verify):
+            with self.assertRaises(TimeoutError):
+                autogit._restore_index_snapshot_unlocked(
+                    pending.commit, [self.path], expected, deadline=105.0)
+        self.assertEqual(index_path.read_bytes(), original_bytes)
+        self.assertFalse(index_path.with_name(index_path.name + ".lock").exists())
+        self.assertFalse(list(index_path.parent.glob(".sts2-autogit-index-*")))
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+
+    def test_rollback_relationship_reads_share_total_deadline(self):
+        pending = self.pending_commit()
+        clock = [100.0]
+        calls = []
+
+        def slow_read(args, **kwargs):
+            allowed = kwargs["timeout"]
+            calls.append((args[0], allowed))
+            clock[0] += min(0.04, allowed)
+            if allowed < 0.04:
+                raise subprocess.TimeoutExpired(args, allowed)
+            self.assertEqual(args[:2], ["rev-list", "--parents"])
+            return subprocess.CompletedProcess(
+                args, 0, f"{pending.commit} {pending.before_head}\n", "")
+
+        with mock.patch.object(autogit.time, "monotonic", side_effect=lambda: clock[0]), \
+                mock.patch.object(autogit, "_run_git", side_effect=slow_read):
+            self.assertFalse(autogit.rollback_review_commit(
+                pending.before_head, pending.commit, [self.path],
+                transaction_timeout=0.06, log=lambda _: None))
+        self.assertEqual([name for name, _ in calls], ["rev-list", "merge-base"])
+        self.assertAlmostEqual(calls[0][1], 0.06)
+        self.assertAlmostEqual(calls[1][1], 0.02)
+        self.assertEqual(self.git("show", ":" + self.path).stdout, "VALUE = 1\n")
+        self.assertEqual(self.git("show", "HEAD:" + self.path).stdout, "VALUE = 2\n")
+
+
+    def test_expired_post_commit_budget_skips_push_and_keeps_success(self):
+        clock = [100.0]
+
+        def expire_after_commit(_provisional):
+            clock[0] = 105.0
+
+        with mock.patch.object(autogit.time, "monotonic", side_effect=lambda: clock[0]), \
+                mock.patch.object(autogit, "_push_with_retry_unlocked") as push:
+            result = autogit.commit_patch_result(
+                self.patch("VALUE = 2\n"), "post commit budget", [self.path],
+                transaction_timeout=5.0, prepare=lambda _: True,
+                finalize_prepare=expire_after_commit, log=lambda _: None)
+        self.assertTrue(result.created, result.reason)
+        self.assertFalse(result.pushed)
+        push.assert_not_called()
+        self.assertTrue(autogit._progress_index_pending_path().exists())
+        self.assertEqual(self.git("show", "HEAD:" + self.path).stdout, "VALUE = 2\n")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -789,6 +789,16 @@ def _index_lock_error(result: subprocess.CompletedProcess[str]) -> bool:
             or "unable to create" in detail and "index" in detail and "lock" in detail)
 
 
+def _git_timeout(deadline: float | None, cap: float) -> float:
+    """Charge every Git command and retry to the caller's absolute deadline."""
+    if deadline is None:
+        return float(cap)
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("Autogit transaction deadline exceeded")
+    return min(float(cap), remaining)
+
+
 def _index_path_unlocked(timeout: float = 10) -> Path:
     """Resolve Git's effective index, including linked worktrees/GIT_INDEX_FILE."""
     result = _run_git([
@@ -802,6 +812,7 @@ def _index_path_unlocked(timeout: float = 10) -> Path:
 
 def _restore_index_snapshot_unlocked(
     commit: str, specs: Sequence[str], expected_index: bytes, *, timeout: float = 10,
+    deadline: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Compare and publish exact entries while holding Git's native index lock.
 
@@ -810,7 +821,7 @@ def _restore_index_snapshot_unlocked(
     and atomic replacement; ordinary concurrent ``git add`` must respect it too.
     """
     args = ["restore", "--staged", f"--source={commit}", "--", *specs]
-    index_path = _index_path_unlocked(timeout=timeout)
+    index_path = _index_path_unlocked(timeout=_git_timeout(deadline, timeout))
     lock_path = index_path.with_name(index_path.name + ".lock")
     try:
         lock_fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
@@ -820,9 +831,12 @@ def _restore_index_snapshot_unlocked(
     lock_identity = os.fstat(lock_fd)
     temp_name = ""
     try:
-        if _index_entries_unlocked(specs, timeout=timeout) != expected_index:
+        current_index = _index_entries_unlocked(
+            specs, timeout=_git_timeout(deadline, timeout))
+        if current_index != expected_index:
             return subprocess.CompletedProcess(
                 args, 128, "", "Target staged snapshot changed; preserving user index")
+        _git_timeout(deadline, timeout)
         temp_fd, temp_name = tempfile.mkstemp(
             prefix=".sts2-autogit-index-", suffix=".tmp", dir=index_path.parent)
         os.close(temp_fd)
@@ -832,12 +846,15 @@ def _restore_index_snapshot_unlocked(
             Path(temp_name).unlink()
         env = os.environ.copy()
         env["GIT_INDEX_FILE"] = temp_name
-        restored = _run_git(args, timeout=timeout, env=env)
+        restored = _run_git(args, timeout=_git_timeout(deadline, timeout), env=env)
         if restored.returncode != 0:
             return restored
-        if _index_matches_commit_unlocked(commit, specs, timeout=timeout, env=env) is not True:
+        verified = _index_matches_commit_unlocked(
+            commit, specs, timeout=_git_timeout(deadline, timeout), env=env)
+        if verified is not True:
             return subprocess.CompletedProcess(
                 args, 128, "", "Temporary index verification failed; preserving real index")
+        _git_timeout(deadline, timeout)
         os.replace(temp_name, index_path)
         return restored
     finally:
@@ -856,6 +873,7 @@ def _restore_index_snapshot_unlocked(
 
 def _sync_progress_index_unlocked(
     parent: str, commit: str, specs: Sequence[str], expected_index: bytes, *, log=print,
+    deadline: float | None = None,
 ) -> bool:
     """Synchronise private-index target paths while preserving external staging.
 
@@ -867,17 +885,20 @@ def _sync_progress_index_unlocked(
     attempts = len(_INDEX_LOCK_RETRY_DELAYS) + 1
     for attempt in range(attempts):
         if _validated_progress_pair_unlocked(
-                parent, commit, specs, timeout=10) is not True:
+                parent, commit, specs, timeout=_git_timeout(deadline, 10),
+                deadline=deadline) is not True:
             log("[git] private index 重试前提交关系或目标路径已变化；保留当前 index")
             return False
-        current_index = _index_entries_unlocked(specs, timeout=10)
+        current_index = _index_entries_unlocked(specs, timeout=_git_timeout(deadline, 10))
         if current_index != expected_index:
             log("[git] private index 重试前发现目标暂存内容已被外部修改；保留用户 index")
             return False
         synced = _restore_index_snapshot_unlocked(
-            commit, specs, expected_index, timeout=10)
+            commit, specs, expected_index, timeout=_git_timeout(deadline, 10),
+            deadline=deadline)
         if synced.returncode == 0:
-            verified = _index_matches_commit_unlocked(commit, specs, timeout=10)
+            verified = _index_matches_commit_unlocked(
+                commit, specs, timeout=_git_timeout(deadline, 10))
             if verified is True:
                 return True
             log("[git] private index 同步后校验不一致；保留当前 index 等待下次精确恢复")
@@ -888,18 +909,21 @@ def _sync_progress_index_unlocked(
             return False
         delay = _INDEX_LOCK_RETRY_DELAYS[attempt]
         log(f"[git] private index 遇到瞬时锁，第{attempt + 1}次重试前等待 {delay:.2f}s")
-        time.sleep(delay)
+        time.sleep(_git_timeout(deadline, delay))
     return False
 
 
 def _validated_progress_pair_unlocked(
     parent: str, commit: str, specs: Sequence[str], *, timeout: float = 10,
+    deadline: float | None = None,
 ) -> bool | None:
     """Return None for an unreadable relationship, False only for proven invalidity."""
     if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
         return False
     try:
-        row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
+        row = _run_git(
+            ["rev-list", "--parents", "-n", "1", commit],
+            timeout=_git_timeout(deadline, timeout))
         if row.returncode != 0:
             return None
         parts = row.stdout.strip().split()
@@ -907,19 +931,26 @@ def _validated_progress_pair_unlocked(
                 or parts[1].lower() != parent.lower():
             return False
         ancestor = _run_git(
-            ["merge-base", "--is-ancestor", commit, "HEAD"], timeout=timeout)
+            ["merge-base", "--is-ancestor", commit, "HEAD"],
+            timeout=_git_timeout(deadline, timeout))
         if ancestor.returncode != 0:
             return False if ancestor.returncode == 1 else None
         unchanged = _run_git(
-            ["diff", "--quiet", commit, "HEAD", "--", *specs], timeout=timeout)
+            ["diff", "--quiet", commit, "HEAD", "--", *specs],
+            timeout=_git_timeout(deadline, timeout))
         if unchanged.returncode == 0:
             return True
         return False if unchanged.returncode == 1 else None
+    except TimeoutError:
+        raise
     except (OSError, subprocess.SubprocessError):
         return None
 
 
-def _recover_pending_progress_indexes_unlocked(log=print) -> None:
+def _recover_pending_progress_indexes_unlocked(
+    log=print, *, deadline: float | None = None,
+) -> None:
+    _git_timeout(deadline, 10)
     entries = _read_progress_index_pending_unlocked()
     if entries is None:
         log("[git] progress index pending marker 无法解析；保留原件，拒绝猜测覆盖")
@@ -928,6 +959,7 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
         return
     remaining: list[dict] = []
     for entry in entries:
+        _git_timeout(deadline, 10)
         parent = str(entry.get("parent") or "")
         commit = str(entry.get("commit") or "")
         try:
@@ -935,7 +967,8 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
         except (TypeError, ValueError):
             remaining.append(entry)
             continue
-        valid_pair = _validated_progress_pair_unlocked(parent, commit, specs)
+        valid_pair = _validated_progress_pair_unlocked(
+            parent, commit, specs, deadline=deadline)
         if valid_pair is None:
             log(f"[git] private index {commit[:8]} relationship read failed; keeping recovery journal")
             remaining.append(entry)
@@ -944,7 +977,8 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
             # A marker can outlive a failed update-ref.  It owns no index data
             # unless its commit is a direct ancestor with unchanged target paths.
             continue
-        matched_commit = _index_matches_commit_unlocked(commit, specs, timeout=10)
+        matched_commit = _index_matches_commit_unlocked(
+            commit, specs, timeout=_git_timeout(deadline, 10))
         if matched_commit is True:
             continue
         index_policy = str(entry.get("index_policy") or "")
@@ -958,14 +992,15 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
                     "保留记录与当前 index")
                 remaining.append(entry)
                 continue
-            expected = _index_entries_unlocked(specs, timeout=10)
+            expected = _index_entries_unlocked(specs, timeout=_git_timeout(deadline, 10))
             if (_index_snapshot_digest(expected) != expected_digest
-                    or _index_entries_unlocked(specs, timeout=10) != expected):
+                    or _index_entries_unlocked(specs, timeout=_git_timeout(deadline, 10)) != expected):
                 log(f"[git] private index {commit[:8]} 的目标 staged 快照已变化；"
                     "保留当前 index 与耐久记录，绝不覆盖用户 staged 内容")
                 remaining.append(entry)
                 continue
-            if _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
+            if _sync_progress_index_unlocked(
+                    parent, commit, specs, expected, log=log, deadline=deadline):
                 kind = str(entry.get("transaction_kind") or "private-index")
                 log(f"[git] 已从耐久记录完成 {kind} index 同步 {commit[:8]}")
             else:
@@ -975,21 +1010,24 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
             log(f"[git] progress index {commit[:8]} 含未知同步策略；保留记录与当前 index")
             remaining.append(entry)
             continue
-        matched_parent = _index_matches_commit_unlocked(parent, specs, timeout=10)
+        matched_parent = _index_matches_commit_unlocked(
+            parent, specs, timeout=_git_timeout(deadline, 10))
         if matched_parent is not True:
             log(f"[git] progress index {commit[:8]} 含非父树暂存内容；保留用户 index 与恢复记录")
             remaining.append(entry)
             continue
-        expected = _index_entries_unlocked(specs, timeout=10)
-        if (_index_matches_commit_unlocked(parent, specs, timeout=10) is not True
-                or _index_entries_unlocked(specs, timeout=10) != expected):
+        expected = _index_entries_unlocked(specs, timeout=_git_timeout(deadline, 10))
+        if (_index_matches_commit_unlocked(parent, specs, timeout=_git_timeout(deadline, 10)) is not True
+                or _index_entries_unlocked(specs, timeout=_git_timeout(deadline, 10)) != expected):
             log(f"[git] progress index {commit[:8]} 取证期间发生变化；留待下次恢复")
             remaining.append(entry)
             continue
-        if _sync_progress_index_unlocked(parent, commit, specs, expected, log=log):
+        if _sync_progress_index_unlocked(
+                parent, commit, specs, expected, log=log, deadline=deadline):
             log(f"[git] 已从耐久记录补齐自动存档 {commit[:8]} 的真实 index")
         else:
             remaining.append(entry)
+    _git_timeout(deadline, 10)
     try:
         _write_progress_index_pending_unlocked(remaining)
     except OSError as exc:
@@ -1296,7 +1334,7 @@ def commit_patch_result(
     provisional: CommitResult | None = None
     prepared = False
     worktree_applied = False
-    deadline = (time.monotonic() + max(0.1, float(transaction_timeout))
+    deadline = (time.monotonic() + max(0.0, float(transaction_timeout))
                 if transaction_timeout is not None else None)
 
     def remaining(default: float) -> float:
@@ -1305,7 +1343,7 @@ def commit_patch_result(
         value = deadline - time.monotonic()
         if value <= 0:
             raise TimeoutError("精确 patch 事务总预算已耗尽")
-        return max(0.1, min(default, value))
+        return min(default, value)
 
     def tx_git(args, *, timeout: float = 90, **kwargs):
         return _run_git(args, timeout=remaining(timeout), **kwargs)
@@ -1321,7 +1359,7 @@ def commit_patch_result(
                 # A prior review commit may have moved HEAD while index.lock kept
                 # the real index at its parent. Repair that exact snapshot before
                 # interpreting the resulting staged path as user intent.
-                _recover_pending_progress_indexes_unlocked(log=log)
+                _recover_pending_progress_indexes_unlocked(log=log, deadline=deadline)
                 staged = _staged_paths_unlocked(timeout=remaining(90))
                 overlap = [path for path in staged if _path_in_specs(path, validated)]
                 if overlap:
@@ -1524,7 +1562,7 @@ def commit_patch_result(
                             if current_target_index == original_target_index:
                                 sync_ok = _sync_progress_index_unlocked(
                                     before, provisional.commit, validated,
-                                    original_target_index, log=log)
+                                    original_target_index, log=log, deadline=deadline)
                                 if sync_ok:
                                     _remove_progress_index_pending_unlocked(
                                         provisional.commit)
@@ -1539,7 +1577,8 @@ def commit_patch_result(
                             log(f"[git] patch commit 已建立，真实 index 后处理异常；"
                                 f"用户 index 未被覆盖：{exc}")
                         try:
-                            pushed = _push_with_retry_unlocked(log=log) if push else False
+                            pushed = (_push_with_retry_unlocked(log=log, timeout_sec=remaining(30))
+                                      if push else False)
                         except Exception as exc:
                             log(f"[git] patch commit 已建立，push 异常，保留供下次重试：{exc}")
                             pushed = False
@@ -1564,11 +1603,13 @@ def commit_patch_result(
 
 
 def _validated_commit_pair_unlocked(
-    parent: str, commit: str, timeout: float = 90,
+    parent: str, commit: str, timeout: float = 90, *, deadline: float | None = None,
 ) -> tuple[str, ...]:
     if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
         raise ValueError("回滚 marker 的 commit hash 格式非法")
-    row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
+    row = _run_git(
+        ["rev-list", "--parents", "-n", "1", commit],
+        timeout=_git_timeout(deadline, timeout))
     if row.returncode != 0:
         raise ValueError("回滚 commit 不存在")
     parts = row.stdout.strip().split()
@@ -1576,11 +1617,11 @@ def _validated_commit_pair_unlocked(
         raise ValueError("回滚只接受已验证的单父提交及其直接父节点")
     if _run_git(
             ["merge-base", "--is-ancestor", commit, "HEAD"],
-            timeout=timeout).returncode != 0:
+            timeout=_git_timeout(deadline, timeout)).returncode != 0:
         raise ValueError("回滚 commit 不在当前 HEAD 历史中")
     changed = _run_git(
         ["diff", "--name-only", "-z", "--no-renames", parent, commit, "--"],
-        timeout=timeout)
+        timeout=_git_timeout(deadline, timeout))
     if changed.returncode != 0:
         raise ValueError(changed.stderr.strip())
     return tuple(_nul_paths(changed.stdout))
@@ -1598,13 +1639,13 @@ def abort_unpublished_review_worktree(
     latter. Any overlap with an external edit fails closed and preserves evidence.
     """
     patch_name = ""
-    deadline = time.monotonic() + max(0.1, float(operation_timeout))
+    deadline = time.monotonic() + max(0.0, float(operation_timeout))
 
     def remaining(cap: float | None = None) -> float:
         value = deadline - time.monotonic()
         if value <= 0:
             raise TimeoutError("prepared marker 恢复总预算已耗尽")
-        return max(0.1, min(value, cap)) if cap is not None else max(0.1, value)
+        return min(value, cap) if cap is not None else value
 
     try:
         with repository_lock(timeout=min(lock_timeout, remaining(lock_timeout))):
@@ -1688,13 +1729,13 @@ def sync_prepared_index(
     Synchronise only when the target index is provably still the parent tree;
     otherwise preserve the user's index byte-for-byte and merely report it.
     """
-    deadline = time.monotonic() + max(0.1, float(operation_timeout))
+    deadline = time.monotonic() + max(0.0, float(operation_timeout))
 
     def remaining() -> float:
         value = deadline - time.monotonic()
         if value <= 0:
             raise TimeoutError("prepared index 同步总预算已耗尽")
-        return max(0.1, value)
+        return value
 
     try:
         with repository_lock(timeout=min(2.0, remaining())):
@@ -1732,7 +1773,7 @@ def sync_prepared_index(
             if _index_matches_commit_unlocked(parent, claimed, timeout=remaining()) is not True:
                 return False
             synced = _restore_index_snapshot_unlocked(
-                current_head, claimed, expected_index, timeout=remaining())
+                current_head, claimed, expected_index, timeout=remaining(), deadline=deadline)
             if synced.returncode != 0:
                 raise RuntimeError(synced.stderr.strip() or "prepared index 同步失败")
             log(f"[git] 已补齐 prepared commit {commit[:8]} 的真实 index 同步")
@@ -1749,16 +1790,17 @@ def rollback_review_commit(
     """以私有 index + 精确反向 patch 撤销一个复盘 commit。"""
     try:
         started = time.monotonic()
-        with repository_lock(timeout=lock_timeout):
-            remaining = max(0.1, transaction_timeout - (time.monotonic() - started))
+        deadline = started + max(0.0, float(transaction_timeout))
+        with repository_lock(timeout=_git_timeout(deadline, lock_timeout)):
+            remaining = _git_timeout(deadline, transaction_timeout)
             changed = _validated_commit_pair_unlocked(
-                parent, commit, timeout=min(3.0, remaining))
+                parent, commit, timeout=min(3.0, remaining), deadline=deadline)
             validated = validate_review_paths(changed)
             if marker_paths is not None:
                 claimed = validate_review_paths(marker_paths)
                 if set(claimed) != set(validated):
                     raise ValueError("marker 路径与 commit 实际路径不一致")
-            remaining = max(0.1, transaction_timeout - (time.monotonic() - started))
+            remaining = _git_timeout(deadline, transaction_timeout)
             patch = _run_git_bytes([
                 "diff", "--binary", "--unified=0", parent, commit, "--", *validated,
             ], timeout=min(3.0, remaining))
@@ -1768,9 +1810,8 @@ def rollback_review_commit(
                 patch.stdout,
                 f"revert(sts2-ascend): 安全撤销复盘 {commit[:8]}",
                 validated, reverse=True, log=log, push=False,
-                lock_timeout=max(0.1, min(lock_timeout, remaining)),
-                transaction_timeout=max(
-                    0.1, transaction_timeout - (time.monotonic() - started)),
+                lock_timeout=_git_timeout(deadline, lock_timeout),
+                transaction_timeout=_git_timeout(deadline, transaction_timeout),
             )
             if not result.created:
                 raise RuntimeError("精确反向 patch 提交失败：" + result.reason)
