@@ -2276,6 +2276,27 @@ class Policy:
                     self._shop_done_floor = int(raw[1])
                 except (TypeError, ValueError):
                     continue
+            elif (isinstance(raw, (tuple, list)) and len(raw) >= 2
+                  and raw[0] == "focus_commit"):
+                # 火线记忆提交（FOCUS_COMMIT）：只有服务端成功接受的定向攻击
+                # 才推进火线三字段；评分候选遍历与失败/丢失的回执一律不改写
+                # （2026-10-04 策略审计反例闭环）。载荷：目标索引、非击杀翻线、
+                # 击杀、多敌。击杀换线仍更新「上一张打出火线」（目标退场后由
+                # 在场校验兜底），但不写粘性记忆也不计翻线；单敌战斗不更新
+                # 打出火线/翻线（与旧收口的多敌门控一致），粘性照旧推进。
+                try:
+                    _fc_target = int(raw[1])
+                    _fc_flip = bool(int(raw[2])) if len(raw) >= 3 else False
+                    _fc_kill = bool(int(raw[3])) if len(raw) >= 4 else False
+                    _fc_multi = bool(int(raw[4])) if len(raw) >= 5 else True
+                except (TypeError, ValueError):
+                    continue
+                if _fc_multi:
+                    if _fc_flip:
+                        self._focus_drift_flips += 1
+                    self._focus_played_index = _fc_target
+                if not _fc_kill:
+                    self._focus_index = _fc_target
 
     @staticmethod
     def _selection_identity(state: dict) -> tuple:
@@ -18670,7 +18691,13 @@ class Policy:
             # 打出的定向攻击牌」记账——打出目标偏离上一张打出火线、非击杀
             # （「可击杀」换线合法不记）、且上一火线目标仍在场（目标已死属于
             # 被迫换线不记）；评分侧静默翻线不记账（避免每 tick 全手牌评分
-            # 副作用虚增）。计数供 _score_play 的阻尼升级读取，本身不改分。
+            # 副作用虚增）。2026-10-04 审计反例闭环：三个持久控制字段
+            # （_focus_index/_focus_played_index/_focus_drift_flips）全部是
+            # 评分/锁的真实消费状态，只在服务端成功回执经 focus_commit 握手
+            # 入账；本处只计算并随 tags 携带提案值，失败/丢失的回执不推进
+            # 任何一项，同一回执由握手游标恰好消费一次（不重复加翻线）。
+            _focus_flip_pending = False
+            _focus_multi_pending = len(enemies) > 1
             if target is not None and len(enemies) > 1:
                 _actual_focus_flip = (
                     self._focus_played_index is not None
@@ -18678,6 +18705,7 @@ class Policy:
                     and "可击杀" not in why
                     and any(e.get("index") == self._focus_played_index
                             for e in enemies))
+                _focus_flip_pending = bool(_actual_focus_flip)
                 # 多强化体重复换线观测（FOCUS_DRIFT_MULTI_SCALER_OBS）：第 1180 局
                 # F35 CRUSHER+ROCKET 在 T1→T2→T5→T7 反复换线，现有漂移/翻线锁
                 # 只分别记录换线与阻尼，无法直接切出「至少第二次实际换线、两名当前
@@ -18699,15 +18727,12 @@ class Policy:
                                 f"非击杀换线，力量体{_scaler_text}仍在场"
                                 "（FOCUS_DRIFT_MULTI_SCALER_OBS）")
                         self._focus_drift_multi_scaler_obs_emitted = True
-                if _actual_focus_flip:
-                    self._focus_drift_flips += 1
                 self._record_focus_identity_flip(
                     next((e for e in enemies if e.get("index") == target), None),
                     enemies, why,
                     bool(pol.get("focus_identity_ambiguity_obs", True)))
                 if self._focus_identity_ambiguity_note:
                     why += self._focus_identity_ambiguity_note
-                self._focus_played_index = target
             if _hp_gate_stall_break:
                 _hp_gate_esc_note = (
                     f"，空过期间意图趋势累计+{self._hp_gate_stall_esc}"
@@ -19229,16 +19254,29 @@ class Policy:
                     hand, energy, incoming, my_hp, my_block, pol,
                     block_locked=block_locked, selected=card,
                     selected_action="play_card")
+            # 火线记忆提交随成功回执入账（FOCUS_COMMIT，2026-10-04 策略审计
+            # 反例）：评分侧已纯化不再写 _focus_index；实际选中的定向攻击把
+            # 目标/翻线/击杀/多敌标记挂进 tags，Agent 只在 HTTP 成功后把 tags
+            # 追加进 credit_tags，_sync_action_handshakes 逐条恰好消费一次——
+            # 失败/回执丢失时 _focus_index、_focus_played_index 与
+            # _focus_drift_flips 三字段都保持决策前取值，与
+            # shop_remove/potion_attempt 同一握手链。
+            _play_tags = [("play_card", card.get("card_id")),
+                          ("play_card_index", card.get("index"),
+                           self._card_key(card)[1]),
+                          ("combat_play_commit", commit_cid, commit_trial,
+                           commit_exhaust, _est, round_no, commit_kill_id,
+                           _commit_chain_pay, incoming,
+                           cctx.get("node_type"))]
+            if target is not None:
+                _play_tags.append((
+                    "focus_commit", target,
+                    int(_focus_flip_pending), int("可击杀" in why),
+                    int(_focus_multi_pending)))
             return Decision("play_card", params,
                             f"战斗：打出【{card.get('name')}】{('→' + tname) if tname else ''}（{why}）；"
                             f"敌意图总伤{incoming}，我方{my_hp}血/{my_block}甲{danger_note}",
-                            tags=[("play_card", card.get("card_id")),
-                                  ("play_card_index", card.get("index"),
-                                   self._card_key(card)[1]),
-                                  ("combat_play_commit", commit_cid, commit_trial,
-                                   commit_exhaust, _est, round_no, commit_kill_id,
-                                   _commit_chain_pay, incoming,
-                                   cctx.get("node_type"))], wait=0.6)
+                            tags=_play_tags, wait=0.6)
         # 僵局强攻（自动恢复、turn≥120 或 AI 判 offense）：绕过评分阈值，
         # 任何伤害牌打最低血敌人。自动恢复只在触发僵局门的当前回合生效。
         if (stall_force_attack or round_no >= 120
@@ -20134,9 +20172,16 @@ class Policy:
                 """
                 slippery = self._enemy_slippery_stack(enemy)
                 hardened_shell = 0.0
+                # 硬化外壳本回合剩余 HP 伤害额度（原生 PowerModel.DisplayAmount
+                # 经 CombatPowerPayload.display_amount 直读）：None=未知（字段
+                # 缺失/显式 null/不可读），0 是有效读数，不得回填总额度 Amount。
+                shell_allowance = None
                 if bool(pol.get("enemy_hardened_shell_dmg_cap", True)):
                     hardened_shell = self._enemy_power_stack(
                         enemy, "hardened_shell", "硬化外壳")
+                    if hardened_shell > 0:
+                        shell_allowance = self._enemy_hardened_shell_remaining(
+                            enemy)
                 # 敌无实体逐hit封顶（ENEMY_INTANGIBLE_DMG_CAP，第1436~1440局批复盘）：
                 # 原生 IntangiblePower.ModifyDamageCap 对持有者把每段伤害上限压到 1
                 # （zhs「将本回合受到的所有伤害和生命减少效果降低为1」），旧口径按牌面
@@ -20146,10 +20191,12 @@ class Policy:
                 # WATERFALL_GIANT=1 在途，1440-F17-T1「全场均为已证实重生体」注记对
                 # 单体 Boss 在产。无实体段按每 hit 封顶 1 走同一逐段结算（格挡照常
                 # 先行吸收、不掉层、broken 恒 0），预测击杀不再穿透无实体窗口，名册
-                # 污染从源头切断；滑溜>0 时滑溜路径已把穿甲 hit 压到 1，无实体不
-                # 重复计价。enemy_intangible_dmg_cap=False 严格回滚旧牌面全额口径。
+                # 污染从源头切断。2026-10-04 策略审计反例：原生 ModifyDamageCap 与
+                # Slippery 是否存在无关——滑溜最后一段破层后无实体仍须继续封顶，
+                # 旧实现只在 slippery<=0 时读取无实体，破层后的穿甲 hit 恢复全额。
+                # enemy_intangible_dmg_cap=False 严格回滚旧牌面全额口径。
                 intangible = 0.0
-                if slippery <= 0 and bool(pol.get("enemy_intangible_dmg_cap", True)):
+                if bool(pol.get("enemy_intangible_dmg_cap", True)):
                     intangible = self._enemy_intangible_stack(enemy)
                 if slippery <= 0 and intangible <= 0 and hardened_shell <= 0:
                     return float(total), float(total) >= _effective_pool(enemy), 0
@@ -20159,8 +20206,10 @@ class Policy:
                     enemy_block = max(0.0, float(enemy.get("block", 0) or 0))
                     layers = max(1, int(math.ceil(slippery))) if slippery > 0 else 0
                     segment_damage = max(0.0, float(dmg))
-                    if slippery <= 0 and intangible > 0:
-                        # 无实体：每 hit 伤害上限 1（不掉层）
+                    if intangible > 0:
+                        # 无实体：ModifyDamageCap 在格挡之前把每 hit 伤害上限
+                        # 压到 1（不掉层，与滑溜是否在场无关——powers.jsonl:138
+                        # 的 ModifyDamageCap 无条件返回 1）
                         segment_damage = min(segment_damage, 1.0)
                     segment_count = max(1, int(hits))
                 except (TypeError, ValueError, OverflowError):
@@ -20168,7 +20217,11 @@ class Policy:
 
                 removed = 0.0
                 broken = 0
-                hardened_shell_remaining = max(0.0, hardened_shell)
+                # 剩余额度未知时评分侧按总额度封顶做保守估计（旧口径上界），
+                # 但击杀结论必须保持未知——不得把总额度伪装成精确斩杀证据。
+                shell_unknown = hardened_shell > 0 and shell_allowance is None
+                shell_left = (hardened_shell if shell_unknown
+                              else max(0.0, shell_allowance or 0.0))
                 for _ in range(segment_count):
                     if hp <= 0:
                         break
@@ -20179,18 +20232,34 @@ class Policy:
                     removed += absorbed
                     if unblocked <= 0:
                         continue
-                    if layers > 0 and unblocked >= 1.0:
+                    # 原生结算次序（rules_commands.jsonl:12，CreatureCmd.Damage）：
+                    # 格挡 → ModifyHpLostBeforeOsty（硬化外壳把 HP 损失钳到本回合
+                    # 剩余额度，powers.jsonl:115）→ ModifyHpLostAfterOsty（滑溜把
+                    # 正 HP 损失钳到 1，powers.jsonl:254）→ LoseHp →
+                    # AfterDamageReceived（滑溜仅在 UnblockedDamage>=1 时掉层）。
+                    # 外壳先把本 hit 钳到 0 时 UnblockedDamage=0：不掉血也不破层。
+                    shell_capped = unblocked
+                    if hardened_shell > 0:
+                        shell_capped = min(shell_capped, shell_left)
+                    if shell_capped <= 0:
+                        hp_lost = 0.0
+                    elif layers > 0 and shell_capped >= 1.0:
                         hp_lost = min(hp, 1.0)
                         layers -= 1
                         broken += 1
+                    elif intangible > 0:
+                        hp_lost = min(hp, 1.0)
                     else:
-                        hp_lost = min(hp, unblocked)
-                    if hardened_shell_remaining > 0:
-                        hp_lost = min(hp_lost, hardened_shell_remaining)
-                        hardened_shell_remaining -= hp_lost
+                        hp_lost = min(hp, shell_capped)
+                    if hardened_shell > 0:
+                        # 额度按实际 HP 损失扣减；耗尽后保持 0，后续 hit 不得
+                        # 恢复全额 HP 伤害。
+                        hp_lost = min(hp_lost, shell_left)
+                        shell_left = max(0.0, shell_left - hp_lost)
                     hp -= hp_lost
                     removed += hp_lost
-                return min(float(total), removed), hp <= 0, broken
+                return (min(float(total), removed),
+                        hp <= 0 and not shell_unknown, broken)
 
             if aoe:
                 eff = 0
@@ -21146,10 +21215,14 @@ class Policy:
                 # 上；键=False 不挂账不补记（严格回滚）。
                 if bool(pol.get("focus_drift_flush_obs", True)):
                     self._focus_drift_pending.append((_drift_from, _drift_to))
-            # 火线记忆只在循环收束后落一次（Winner 定论才记账）；击杀型选择不记
-            # 忆——目标即将退场，索引若被后续敌人重排继承会造成假粘性
-            if best_t is not None and not best_kill:
-                self._focus_index = best_t
+            # 火线记忆不在评分侧落账（2026-10-04 策略审计反例）：本函数对同一
+            # decision 的每张候选各走一遍，评分尚未选定或执行任何候选——把未
+            # 中标候选的目标写进 _focus_index 会让同一张牌在候选遍历前后得到
+            # 不同评分/目标（12.0/A → 12.6/B 实证）。所有候选共享决策前的
+            # _sticky_t 快照；中线推进只在 _combat 实际选牌后随 play_card 决策
+            # 挂 focus_commit 标签，经服务端成功回执由 _sync_action_handshakes
+            # 入账——失败/回执丢失不更新，击杀型选择仍不记账（目标即将退场，
+            # 索引若被后续敌人重排继承会造成假粘性）。
             if _tax_value and best_t is not None:
                 best_s += _tax_value
                 why += (f"｜手牌税止损计价+{_tax_value:.1f}"
@@ -22192,6 +22265,32 @@ class Policy:
         """读取敌人的滑溜层数，兼容 API 的 id/power_id/name 载荷。"""
         return self._enemy_power_stack(enemy, "slipper", "滑溜")
 
+    def _enemy_hardened_shell_remaining(self, enemy: dict) -> float | None:
+        """读取硬化外壳本回合剩余 HP 伤害额度（原生 DisplayAmount 直读）。
+
+        CombatPowerPayload.display_amount 来自原生 PowerModel.DisplayAmount
+        （max(0, Amount - damageReceivedThisTurn)）：它是当前回合的剩余额度，
+        不是次数、不是原始总额度。0 是有效读数（本回合额度已耗尽）；字段
+        缺失、显式 null 或不可解析均为未知（None），不得回填总额度 Amount。
+        """
+        for power in (enemy.get("powers") or []):
+            if not isinstance(power, dict):
+                continue
+            identity = " ".join(str(power.get(key) or "")
+                                for key in ("id", "power_id", "name"))
+            low = identity.lower()
+            if not any(k.lower() in low or k in identity
+                       for k in ("hardened_shell", "硬化外壳")):
+                continue
+            raw = power.get("display_amount")
+            if raw is None or isinstance(raw, bool):
+                return None
+            try:
+                return max(0.0, float(raw))
+            except (TypeError, ValueError, OverflowError):
+                return None
+        return None
+
     def _slippery_burn_cost_key(
             self, why: str, target, cost: float, pol: dict
     ) -> tuple[float, float] | None:
@@ -22480,8 +22579,14 @@ class Policy:
                             _pe_blk = max(0.0, float(_pe.get("block") or 0.0))
                         except (TypeError, ValueError, OverflowError):
                             continue
+                        # 斩杀判断必须计入格挡（2026-10-04 策略审计反例）：
+                        # FirePotion 经 CreatureCmd.Damage 结算，格挡先行吸收；
+                        # 原生 AsleepPower 以 UnblockedDamage != 0 唤醒。未格挡
+                        # 伤害介于 (0, 当前HP) 才是「打不死又唤醒」；穿透格挡
+                        # 真实斩杀与全格挡（不唤醒）两种情形严格放行。
+                        _psg_unblocked = max(0.0, _psg_dmg - _pe_blk)
                         if (self._enemy_asleep_stack(_pe) >= _psg_min
-                                and _pe_blk < _psg_dmg < _pe_hp):
+                                and 0.0 < _psg_unblocked < _pe_hp):
                             _psg_wake = _pe
                             break
                     if _psg_wake is not None:
@@ -23634,61 +23739,98 @@ class Policy:
             r"获得.*(?:能量|力量|敏捷)|回复|治疗|heal|gain.*(?:energy|strength|dexterity)",
             text, re.I))
 
+    @staticmethod
+    def _fixed_supply(entries: list[tuple[float, int]], energy: float) -> float:
+        """固定可用牌集合的预算供给估计（0/1 背包，能量轴有界）。
+
+        entries 为 (面值, 能耗) 对；能耗 0 的牌不占用能量预算、全额计入；
+        X 费按原生三能量回合的名义基线 3 计（与 eval_reward_card 同一口径）；
+        负费/不可出牌值由调用侧剔除。能量轴上限取「预算」与「全部正费候选
+        成本合计」的较小值，复杂度 O(n × min(energy, Σcost)) 有界且确定。
+        精确背包保证单调性：向固定集合增加一张可选牌不会降低供给估计
+        （旧的效率贪心会把 3 费 30 伤挤成 2 费 22 伤）。
+        """
+        free_total = 0.0
+        items: list[tuple[int, float]] = []
+        for value, cost in entries:
+            if value <= 0:
+                continue
+            if cost <= 0:
+                free_total += value
+            else:
+                items.append((int(cost), float(value)))
+        if not items:
+            return free_total
+        try:
+            budget = int(energy)
+        except (TypeError, ValueError, OverflowError):
+            budget = 0
+        budget = max(0, min(budget, sum(cost for cost, _v in items)))
+        # dp[e] = 恰好/至多花费 e 点能量时的最大面值
+        dp = [0.0] * (budget + 1)
+        for cost, value in items:
+            for e in range(budget, cost - 1, -1):
+                cand = dp[e - cost] + value
+                if cand > dp[e]:
+                    dp[e] = cand
+        return free_total + max(dp)
+
     def deck_burst(self, deck: list[dict], energy: float = 3.0) -> float:
-        """卡组一回合期望伤害吞吐量：按「伤害/能耗」降序贪心装满 energy 点能量。
+        """卡组一回合期望伤害吞吐量：固定可用攻击集合的能量预算装箱。
 
         第 88~89 批复盘新增（原为 eval_reward_card 内联逻辑，第 90~91 批复盘
         提取为公共方法）：斩杀竞速投影在战斗头两回合（实测速率样本不足时）
         也需要卡组理论爆发做先验估计，两处必须共用同一套口径。
         零出牌死牌不计入装箱（第529局批复盘）：强制入组牌的面板伤害从未被
         战斗端兑现，计入等于给饥饿判定/竞速预演/药水预留发幻影额度。
+        2026-10-04 策略审计反例：0 费牌不再被 max(1, cost) 当成 1 费消耗
+        预算（3×0费6伤+3费30伤在 3 能量应供给 48，旧值 30；0 能量应供给
+        18，旧值 0）；效率贪心换成有界 0/1 背包，向固定集合增加可选牌不再
+        降低供给估计（3费30伤 + 2费22伤应 ≥30，旧值 22）。
         """
-        burst_energy, burst = energy, 0.0
-        _burst_cards = []
+        entries = []
         for c in deck or []:
             d, _b, h = card_numbers(c)
             if d > 0 and is_attack(c):
                 if self._is_never_played_dead(c.get("card_id", "")):
                     continue
-                _cost = max(1, c.get("energy_cost", 1) or 1)
-                _burst_cards.append((d * h / _cost, _cost, d * h))
-        _burst_cards.sort(reverse=True)
-        for _eff, _cost, _tot in _burst_cards:
-            if burst_energy <= 0:
-                break
-            if _cost > burst_energy:
-                continue
-            burst += _tot
-            burst_energy -= _cost
-        return burst
+                try:
+                    _cost = 3 if c.get("costs_x") else int(
+                        c.get("energy_cost", 1) if c.get("energy_cost")
+                        is not None else 1)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if _cost < 0:
+                    continue  # 负费=不可出牌（Status/诅咒族），不是供给
+                entries.append((float(d * h), _cost))
+        return self._fixed_supply(entries, energy)
 
     def deck_block_burst(self, deck: list[dict], energy: float = 3.0) -> float:
-        """卡组一回合期望格挡吞吐量：与 deck_burst 同式贪心，按「格挡/能耗」装满 energy。
+        """卡组一回合期望格挡吞吐量：与 deck_burst 同式装箱。
 
         第435~440批复盘新增（防守线复核的供给侧）：斩杀竞速投影此前只算
         「裸血 ÷ 意图火力」的可存活回合数——把格挡整项忽略，而当前卡组的
         格挡吞吐恰恰是决定「防守路线是否可行」的第一变量（S42CX 局 89% 血
         进一幕 Boss 照样 5~6 回合整管打空：竞速投影提前判死 → 全攻提速
         blk×0.7 → 不买命 → 自证死期）。口径与 deck_burst 严格同源：
-        同一贪心、同一能量预算、同一 prior_eff 悲观折算——两条路线的账本
-        必须用同一把尺，否则复核本身就是新的乐观偏差。
+        同一有界背包、同一能量预算、同一 prior_eff 悲观折算——两条路线的
+        账本必须用同一把尺，否则复核本身就是新的乐观偏差。0 费格挡不占
+        预算（2026-10-04 策略审计反例同步修复）。
         """
-        block_energy, block = energy, 0.0
-        _block_cards = []
+        entries = []
         for c in deck or []:
             _d, b, _h = card_numbers(c)
             if b > 0 and not is_bad_card(c):
-                _cost = max(1, c.get("energy_cost", 1) or 1)
-                _block_cards.append((b / _cost, _cost, b))
-        _block_cards.sort(reverse=True)
-        for _eff, _cost, _tot in _block_cards:
-            if block_energy <= 0:
-                break
-            if _cost > block_energy:
-                continue
-            block += _tot
-            block_energy -= _cost
-        return block
+                try:
+                    _cost = 3 if c.get("costs_x") else int(
+                        c.get("energy_cost", 1) if c.get("energy_cost")
+                        is not None else 1)
+                except (TypeError, ValueError, OverflowError):
+                    continue
+                if _cost < 0:
+                    continue
+                entries.append((float(b), _cost))
+        return self._fixed_supply(entries, energy)
 
     def deck_effective_burst(self, deck: list[dict], energy: float = 3.0) -> float:
         """引擎有效爆发：deck_burst（攻击面值装箱）+ 力量成长牌的复利授信。
@@ -24675,6 +24817,29 @@ class Policy:
                     _sel_sandpit_clock,
                     self._enemy_power_stack(_e, "sandpit", "沙坑"))
 
+        # 删牌两阶段约束一致化（2026-10-04 策略审计反例 #20）：商店入口只在
+        # 格挡来源数 > min_block_cards 时才把未升级基础防御列为可删，而选牌屏
+        # 的 removal badness 此前无条件优先删防御——膨胀卡组的重复攻击触发
+        # 付费入口后，最终选择仍拆掉防御底线（5×DEFEND+22×同名攻击实测删了
+        # DEFEND 剩 4 张格挡）。两阶段共用同一份选择屏证据：防御 40 分优先
+        # 删除只在删掉后仍守住格挡底线时生效；同名 ≥3 张的注水候选按溢出
+        # 张数线性加价（与商店端 _copies>=3 的付费资格同一判据），冗余攻击
+        # 先于底线防御被删。强制选择确实无其他候选时排序仍给出合法选择
+        # （原生必选屏不阻塞），只是不再优先拆防御。
+        _rm_copies: dict[str, int] = {}
+        for _c in cards:
+            _bid = str(_c.get("card_id") or "").upper().rstrip("+")
+            _rm_copies[_bid] = _rm_copies.get(_bid, 0) + 1
+        _rm_n_block = sum(
+            1 for _c in cards
+            if (is_skill(_c) and card_numbers(_c)[1] > 0)
+            or self._is_basic_defend(_c))
+        try:
+            _rm_min_block = float(
+                self.know.policy.get("min_block_cards", 5) or 0.0)
+        except (TypeError, ValueError, OverflowError):
+            _rm_min_block = 5.0
+
         def badness(c, for_removal=False):
             t = card_type(c).lower()
             if t == "curse":
@@ -24701,8 +24866,16 @@ class Policy:
             # 超出 min_block_cards 的冗余防御是「删掉最不心疼」的候选。
             # 仅付费删牌/变化生效，战斗献祭(tribute)不适用
             if for_removal and self._is_basic_defend(c) and not c.get("upgraded"):
-                return 40
-            return -self.eval_reward_card(c, [])
+                if _rm_n_block > _rm_min_block:
+                    return 40
+                # 删掉它会跌破格挡底线：退回普通估值通道，不再优先拆防御
+            value = -self.eval_reward_card(c, [])
+            if for_removal:
+                _dup = _rm_copies.get(
+                    str(c.get("card_id") or "").upper().rstrip("+"), 0) - 2
+                if _dup > 0:
+                    value += 6.0 * _dup
+            return value
 
         explore_tag = None
         if removing or transforming:
@@ -24736,11 +24909,13 @@ class Policy:
                 SELECTION_RECOVER_COPY_BEST):
             deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            _hp = int((state.get("run") or {}).get("current_hp", _mh) or _mh)
             _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
             ranked = []
             for candidate in candidates:
                 base = self.eval_reward_card(
-                    candidate, deck, max_hp=_mh, act=_sel_act)
+                    candidate, deck, max_hp=_mh, act=_sel_act,
+                    current_hp=_hp)
                 value = character_selection_value(
                     self.character_strategy,
                     character_selection_mode,
@@ -24831,6 +25006,8 @@ class Policy:
             # 一台成型引擎）。门控在饥饿/必败局：走廊健康局面不扭曲既有节奏
             _up_deck = (state.get("run") or {}).get("deck", [])
             _up_mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            _up_hp = int((state.get("run") or {}).get("current_hp", _up_mh)
+                         or _up_mh)
             _up_floor = (state.get("run") or {}).get("floor")
             _up_act = self._floor_act(_up_floor)
             _up_starved = bool(_up_deck) and self.deck_effective_burst(_up_deck) < self._starve_line(_up_mh, act=_up_act)
@@ -24849,7 +25026,7 @@ class Policy:
                 # 同型病灶。传入真实卡组后，饥饿局的高质攻击 +8~12 与占比衰减
                 # 才能真实参与砧子分配
                 v = self.eval_reward_card(c, _up_deck, max_hp=_up_mh,
-                                          act=_up_act) + (_atk_bonus if is_attack(c) else 0.0)
+                                          act=_up_act, current_hp=_up_hp) + (_atk_bonus if is_attack(c) else 0.0)
                 # 第470局批复盘：引擎加分只给触发条件可满足的成长牌——470 局
                 # 零自残卡组里撕裂连续两次吃满 +16 引擎分上砧，两次锻造全废
                 if (_scale_up_bonus > 0.0 and self._is_scaling_power(c)
@@ -24878,6 +25055,11 @@ class Policy:
             # 攻击乘法衰减与格挡稀缺增值双双失效
             deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            # 拿牌入口上下文一致性（2026-10-04 策略审计反例 #10）：REWARD 端
+            # 早已把 current_hp 传给同一 evaluator（白绮生命成本按当前血量
+            # 计价），CARD_SELECTION 通用排序缺省后同一 offer 两入口评分
+            # 分叉（10/78 血同 offer：0.60/1.65 vs 5.60/4.15 名次反转）。
+            _hp = int((state.get("run") or {}).get("current_hp", _mh) or _mh)
             _sel_act = self._floor_act((state.get("run") or {}).get("floor"))
             _sd_notes: dict = {}
 
@@ -24896,7 +25078,7 @@ class Policy:
                 # 不存在，接线随既有回滚键同灭、旧行为零差异。
                 _det: list[str] = []
                 _v = self.eval_reward_card(c, deck, max_hp=_mh, act=_sel_act,
-                                           detail=_det)
+                                           detail=_det, current_hp=_hp)
                 _notes = [n for n in _det
                           if ("BURST_STARVE_SUPPLY_LEVER" in n
                               or "VIVHITE_LIFE_COST_DECK_TAX" in n)]
@@ -25511,6 +25693,7 @@ class Policy:
                             ("option_id", "title", "description")).lower()
         note = ""
         max_hp = max(1, int((run.get("max_hp", 1)) or 1))
+        cur_hp = int(run.get("current_hp", max_hp) or max_hp)
         act = self._floor_act(run.get("floor"))
         if any(term in semantic for term in ("smith", "upgrade", "锻造", "升级")):
             candidates = [(raw, card) for raw, card in target_cards
@@ -25519,7 +25702,8 @@ class Policy:
                 target, card = max(
                     candidates,
                     key=lambda row: (
-                        self.eval_reward_card(row[1], deck, max_hp=max_hp, act=act),
+                        self.eval_reward_card(row[1], deck, max_hp=max_hp,
+                                              act=act, current_hp=cur_hp),
                         str(row[1].get("card_id") or row[1].get("name") or ""),
                         stable_target(row[0]),
                     ))
@@ -25534,7 +25718,8 @@ class Policy:
                 target, card = min(
                     candidates,
                     key=lambda row: (
-                        self.eval_reward_card(row[1], deck, max_hp=max_hp, act=act),
+                        self.eval_reward_card(row[1], deck, max_hp=max_hp,
+                                              act=act, current_hp=cur_hp),
                         str(row[1].get("card_id") or row[1].get("name") or ""),
                         stable_target(row[0]),
                     ))
@@ -26140,10 +26325,13 @@ class Policy:
         deck = self._enrich_cards((state.get("run") or {}).get("deck", []))
         if bundles and "choose_bundle" in actions:
             _mh = max(1, int(((state.get("run") or {}).get("max_hp", 1)) or 1))
+            _hp = int((state.get("run") or {}).get("current_hp", _mh) or _mh)
             best, best_v, detail = None, -1e9, []
             for b in bundles:
                 bundle_cards = self._enrich_cards(b.get("cards", []))
-                v = sum(self.eval_reward_card(c, deck, max_hp=_mh) for c in bundle_cards)
+                v = sum(self.eval_reward_card(c, deck, max_hp=_mh,
+                                              current_hp=_hp)
+                        for c in bundle_cards)
                 names = "、".join(c.get("name", "?") for c in b.get("cards", []))
                 detail.append(f"包{b['index']}[{names}]={v:.1f}")
                 if v > best_v:

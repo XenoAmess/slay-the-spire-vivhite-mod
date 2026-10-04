@@ -8824,9 +8824,13 @@ def main() -> int:
 
     # 3fdo) FOCUS_DRIFT_OBS 火线漂移观测注（第772~783局批复盘）：783-F35
     # CRUSHER+ROCKET 双强化体战逐张火线 0→1→0→0→1 横跳、无一减员阵亡。纯观测
-    # 不改分——① 非击杀换线（集火记忆=甲，乙威胁更高中标）：注记显形且含新旧
-    # 目标名，中线与记忆更新照旧；② 延续集火中标：无注记；③ 击杀换线：无注记
-    # 且记忆不更新；④ focus_drift_obs=False 一键回滚：换线中标但注记消失。
+    # 不改分。2026-10-04 策略审计反例（候选评分污染火线记忆）闭环后：评分侧
+    # 纯化不再写 _focus_index，中线推进只在实际出牌的成功回执经
+    # focus_commit 握手入账（失败/回执丢失不更新）。① 非击杀换线（集火记忆
+    # =甲，乙威胁更高中标）：注记显形且含新旧目标名，中线不被评分污染；
+    # 成功回执入账后中线才推进；② 延续集火中标：无注记；③ 击杀换线：无
+    # 注记且不携带 focus_commit；④ focus_drift_obs=False 一键回滚：换线中标
+    # 但注记消失。
     sl_pol._focus_index = 0
     fd_enemies = [
         sl_enemy(hp=80, layers=None, index=0, intent=5, name="甲"),
@@ -8836,9 +8840,15 @@ def main() -> int:
     _, fd_target, fd_why = sl_pol._score_play(
         fd_card, fd_enemies, 0, 0, 2, sl_pol.know.policy,
         my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
-    assert fd_target == 1 and sl_pol._focus_index == 1 \
+    assert fd_target == 1 and sl_pol._focus_index == 0 \
             and "FOCUS_DRIFT_OBS" in fd_why and "甲→乙" in fd_why, \
-        f"火线漂移注记缺失或中线错误: target={fd_target} why={fd_why}"
+        f"火线漂移注记缺失或评分污染中线: target={fd_target} why={fd_why}"
+    # 实际成功回执（focus_commit 握手）入账后，中线推进到 1
+    sl_pol._sync_action_handshakes(
+        type("FocusReceiptCtx", (),
+             {"credit_tags": [("focus_commit", 1, 0, 0, 1)]})())
+    assert sl_pol._focus_index == 1, \
+        f"成功回执未推进火线记忆: focus={sl_pol._focus_index}"
     _, fd_stay, fd_why2 = sl_pol._score_play(
         dict(fd_card), [dict(e) for e in fd_enemies], 0, 0, 2, sl_pol.know.policy,
         my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
@@ -8873,7 +8883,8 @@ def main() -> int:
     # 阵亡、本批漂移注 17 次）。① 边际互拉被阻尼按住：记忆=甲、乙力量 3 层
     # （教义拉力 8×3/7≈3.43<阻尼 4.0）——甲中标、阻尼注显形、无漂移注、
     # 记忆不漂；② 强拉力仍可换线：乙力量 7 层（+8.0>4.0）——乙中标、漂移注
-    # 照常显形、阻尼注不挂（胜者没吃阻尼）、记忆更新；③ focus_drift_damp=0
+    # 照常显形、阻尼注不挂（胜者没吃阻尼），评分纯化后中线不被候选评分
+    # 污染（记忆推进只认实际出牌成功回执）；③ focus_drift_damp=0
     # 严格回滚：同①场景乙中标、漂移注显形；④ 无教义战斗零变化：旧粘性
     # 延续集火中标、阻尼注不显形。
     def sl_str_enemy(amount, **kw):
@@ -8901,9 +8912,9 @@ def main() -> int:
             sl_str_enemy(7, hp=80, layers=None, index=1, intent=5, name="乙"),
         ], 0, 0, 2, sl_pol.know.policy,
         my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
-    assert fdd_t2 == 1 and sl_pol._focus_index == 1 \
+    assert fdd_t2 == 1 and sl_pol._focus_index == 0 \
             and "FOCUS_DRIFT_OBS" in fdd_w2 and "FOCUS_DRIFT_DAMP" not in fdd_w2, \
-        f"强教义拉力应照常换线且漂移注保留: target={fdd_t2} why={fdd_w2}"
+        f"强教义拉力应照常换线且漂移注保留、评分不污染中线: target={fdd_t2} why={fdd_w2}"
     sl_pol.know.policy["focus_drift_damp"] = 0
     try:
         sl_pol._focus_index = 0
@@ -8932,21 +8943,24 @@ def main() -> int:
     # 3fdf) FOCUS_DRIFT_FLUSH_OBS 火线漂移补记（第852~856局批复盘）：856-F33
     # CRUSHER+ROCKET 实战打出火线 碾碎爪→火箭→碾碎爪→火箭→碾碎爪 逐回合横跳，
     # 全场 FOCUS_DRIFT_OBS 零显形（run 文件计数 0）、阻尼注 29 次在产——
-    # _focus_index 在每 tick 全手牌评分时被各候选攻击牌的评分副作用改写，翻线
-    # 注记落在被评分但未打出牌的 why 上随弃，跨回合漂移对观测/阻尼频率账整体
-    # 隐身。① _score_play 翻线即挂账 pending；② 端到端：先评分牌（手牌序在
-    # 前）静默翻线、打出牌只带「延续集火」——补记挂到实际打出牌且挂账清空；
-    # ③ 打出牌自身评分翻线（why 已带 FOCUS_DRIFT_OBS）去重不补记；④
-    # focus_drift_flush_obs=False 严格回滚（不挂账不补记，finally 复位）；
-    # ⑤ 战斗实例更替连带清空挂账。
+    # 旧实现 _focus_index 在每 tick 全手牌评分时被各候选攻击牌的评分副作用
+    # 改写，翻线注记落在被评分但未打出牌的 why 上随弃，跨回合漂移对观测/阻尼
+    # 频率账整体隐身。2026-10-04 策略审计闭环后评分已纯化（同一 decision 的
+    # 候选共享决策前记忆）：未中标候选的静默翻线仍挂账 pending，由实际打出
+    # 牌的收口补记；打出牌自身评分翻线时 why 已带 FOCUS_DRIFT_OBS，去重不
+    # 补记。① _score_play 翻线即挂账 pending；② 端到端：候选静默翻线挂账、
+    # 打出牌自身同向翻线时自带漂移注——去重不补记且挂账清空；③
+    # focus_drift_flush_obs=False 严格回滚（不挂账不补记，finally 复位），
+    # 打出牌自身漂移注不受挂账键影响；④ 战斗实例更替连带清空挂账。
     sl_pol._focus_index = 0
     sl_pol._focus_drift_pending = []
     _, fdf_t1, fdf_w1 = sl_pol._score_play(
         dict(fd_card), [dict(e) for e in fd_enemies], 0, 0, 2,
         sl_pol.know.policy, my_hp=80, my_max_hp=80, cur_energy=3, run_deck=[])
     assert fdf_t1 == 1 and "FOCUS_DRIFT_OBS" in fdf_w1 \
-            and sl_pol._focus_drift_pending == [("甲", "乙")], \
-        f"评分侧静默翻线未挂账: target={fdf_t1} why={fdf_w1} " \
+            and sl_pol._focus_drift_pending == [("甲", "乙")] \
+            and sl_pol._focus_index == 0, \
+        f"评分侧静默翻线未挂账或评分污染中线: target={fdf_t1} why={fdf_w1} " \
         f"pending={sl_pol._focus_drift_pending}"
     fdf_atk_lo = {"index": 0, "card_id": "STRIKE_IRONCLAD", "name": "打击",
                   "playable": True, "energy_cost": 1, "requires_target": True,
@@ -8972,13 +8986,36 @@ def main() -> int:
     d_fdf2 = sl_pol.decide(fdf_state([dict(fdf_atk_lo), dict(fdf_atk_hi)]), ctx)
     assert d_fdf2.action == "play_card" and d_fdf2.params.get("card_index") == 1 \
             and d_fdf2.params.get("target_index") == 1 \
-            and "延续集火：乙" in d_fdf2.reason \
-            and "FOCUS_DRIFT_OBS" not in d_fdf2.reason \
             and "甲→乙" in d_fdf2.reason \
-            and "FOCUS_DRIFT_FLUSH_OBS" in d_fdf2.reason \
+            and "FOCUS_DRIFT_OBS" in d_fdf2.reason \
+            and "FOCUS_DRIFT_FLUSH_OBS" not in d_fdf2.reason \
+            and sl_pol._focus_drift_pending == [] \
+            and sl_pol._focus_index == 0 \
+            and any(isinstance(_t, (tuple, list)) and len(_t) >= 2
+                    and _t[0] == "focus_commit" and _t[1] == 1
+                    for _t in (d_fdf2.tags or [])), \
+        f"打出牌自身翻线应自带漂移注、去重不补记且选牌不推进中线: " \
+        f"{d_fdf2.params}（{d_fdf2.reason}）pending={sl_pol._focus_drift_pending}"
+    # ②b 补记通道仍覆盖「未中标候选静默翻线、打出牌延续集火」形态：评分
+    #    纯化后 pending 挂账照常，由实际打出牌的收口补记并清空。
+    fdf_atk_stay = {"index": 1, "card_id": "HEAVY_BLOW", "name": "重击",
+                    "playable": True, "energy_cost": 1,
+                    "requires_target": True, "valid_target_indices": [0],
+                    "dynamic_values": [{"name": "Damage", "current_value": 12}]}
+    sl_pol._focus_index = 0
+    sl_pol._focus_drift_pending = []
+    d_fdf2b = sl_pol.decide(
+        fdf_state([dict(fdf_atk_lo), dict(fdf_atk_stay)]), ctx)
+    assert d_fdf2b.action == "play_card" \
+            and d_fdf2b.params.get("card_index") == 1 \
+            and d_fdf2b.params.get("target_index") == 0 \
+            and "延续集火：甲" in d_fdf2b.reason \
+            and "FOCUS_DRIFT_OBS" not in d_fdf2b.reason.split("火线漂移补记")[0] \
+            and "甲→乙" in d_fdf2b.reason \
+            and "FOCUS_DRIFT_FLUSH_OBS" in d_fdf2b.reason \
             and sl_pol._focus_drift_pending == [], \
-        f"静默翻线补记未挂到实际打出牌: {d_fdf2.params}（{d_fdf2.reason}）" \
-        f"pending={sl_pol._focus_drift_pending}"
+        f"候选静默翻线补记未挂到实际打出牌: {d_fdf2b.params}" \
+        f"（{d_fdf2b.reason}）pending={sl_pol._focus_drift_pending}"
     sl_pol._focus_index = 0
     sl_pol._focus_drift_pending = []
     d_fdf3 = sl_pol.decide(fdf_state([dict(fdf_atk_hi)]), ctx)
@@ -8994,7 +9031,6 @@ def main() -> int:
         d_fdf4 = sl_pol.decide(fdf_state([dict(fdf_atk_lo), dict(fdf_atk_hi)]), ctx)
         assert d_fdf4.action == "play_card" \
                 and d_fdf4.params.get("card_index") == 1 \
-                and "FOCUS_DRIFT_OBS" not in d_fdf4.reason \
                 and "FOCUS_DRIFT_FLUSH_OBS" not in d_fdf4.reason \
                 and sl_pol._focus_drift_pending == [], \
             f"focus_drift_flush_obs=False 未严格回滚: {d_fdf4.params}" \
@@ -9038,17 +9074,26 @@ def main() -> int:
                 "run": {"current_hp": 80, "max_hp": 80, "gold": 0, "floor": 9,
                         "deck": []}}
 
+    fdl_ctx = DummyCtx()
+    fdl_ctx.credit_tags = []
     sl_pol._focus_index = 0
     sl_pol._focus_played_index = 0
     sl_pol._focus_drift_flips = 0
-    d_fdl1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), ctx)
+    d_fdl1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), fdl_ctx)
     assert d_fdl1.action == "play_card" and d_fdl1.params.get("target_index") == 1 \
-            and sl_pol._focus_drift_flips == 1 \
-            and sl_pol._focus_played_index == 1 \
+            and sl_pol._focus_drift_flips == 0 \
+            and sl_pol._focus_played_index == 0 \
             and "FOCUS_DRIFT_LOCK" not in d_fdl1.reason, \
-        f"实际打出翻线未记账或首次翻线误挂锁注: {d_fdl1.params}" \
+        f"仅 decide 未回执不得推进火线三字段: {d_fdl1.params}" \
         f"（{d_fdl1.reason}）flips={sl_pol._focus_drift_flips}"
-    d_fdl1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), ctx)
+    # 服务端成功回执（tags 进入 credit_tags）后三字段才一起入账
+    fdl_ctx.credit_tags.extend(d_fdl1.tags or [])
+    sl_pol._sync_action_handshakes(fdl_ctx)
+    assert sl_pol._focus_drift_flips == 1 and sl_pol._focus_played_index == 1 \
+            and sl_pol._focus_index == 1, \
+        f"成功回执未入账火线三字段: focus={sl_pol._focus_index} " \
+        f"played={sl_pol._focus_played_index} flips={sl_pol._focus_drift_flips}"
+    d_fdl1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdl_enemies_flip), fdl_ctx)
     assert d_fdl1b.action == "play_card" \
             and d_fdl1b.params.get("target_index") == 1 \
             and sl_pol._focus_drift_flips == 1, \
@@ -9089,21 +9134,27 @@ def main() -> int:
     d_fdl4 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], [
         sl_enemy(hp=80, layers=None, index=1, intent=30, name="乙"),
         sl_enemy(hp=80, layers=None, index=2, intent=5, name="丙"),
-    ]), ctx)
+    ]), fdl_ctx)
     assert d_fdl4.action == "play_card" and sl_pol._focus_drift_flips == 0 \
-            and sl_pol._focus_played_index == 1, \
+            and sl_pol._focus_played_index == 0, \
         f"上一火线目标已死的被迫换线被误记: {d_fdl4.params}" \
         f" flips={sl_pol._focus_drift_flips}"
+    # 成功回执入账：打出火线推进到 1，翻线仍不计（上一目标已不在场）
+    fdl_ctx.credit_tags.extend(d_fdl4.tags or [])
+    sl_pol._sync_action_handshakes(fdl_ctx)
+    assert sl_pol._focus_drift_flips == 0 and sl_pol._focus_played_index == 1, \
+        f"被迫换线回执入账错误: played={sl_pol._focus_played_index} " \
+        f"flips={sl_pol._focus_drift_flips}"
     sl_pol._focus_combat = object()
     sl_pol._focus_played_index = 1
     sl_pol._focus_drift_flips = 2
     d_fdl5 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], [
         sl_enemy(hp=80, layers=None, index=1, intent=30, name="乙"),
         sl_enemy(hp=80, layers=None, index=2, intent=5, name="丙"),
-    ]), ctx)
+    ]), fdl_ctx)
     assert d_fdl5.action == "play_card" and sl_pol._focus_combat is None \
             and sl_pol._focus_drift_flips == 0 \
-            and sl_pol._focus_played_index == 1, \
+            and sl_pol._focus_played_index is None, \
         f"战斗实例更替未清空翻线锁账: flips={sl_pol._focus_drift_flips}" \
         f" played={sl_pol._focus_played_index}"
     sl_pol._focus_index = None
@@ -9122,14 +9173,25 @@ def main() -> int:
     sl_pol._focus_played_index = 1
     sl_pol._focus_drift_flips = 1
     sl_pol._focus_drift_multi_scaler_obs_emitted = False
-    d_fdm1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+    fdm_ctx = DummyCtx()
+    fdm_ctx.credit_tags = []
+    d_fdm1 = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), fdm_ctx)
     assert d_fdm1.action == "play_card" \
             and d_fdm1.params.get("target_index") == 0 \
-            and sl_pol._focus_drift_flips == 2 \
+            and sl_pol._focus_drift_flips == 1 \
             and "FOCUS_DRIFT_MULTI_SCALER_OBS" in d_fdm1.reason \
             and "甲=12" in d_fdm1.reason and "乙=1" in d_fdm1.reason, \
         f"第二次多强化体换线未追加窄观测: {d_fdm1.params}（{d_fdm1.reason}）"
-    d_fdm1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+    # 成功回执入账（focus_commit 随 tags 进入 credit_tags）后中线与翻线锁
+    # 才推进；同状态再 decide 不重复计数、窄观测按战斗去重
+    fdm_ctx.credit_tags.extend(d_fdm1.tags or [])
+    sl_pol._sync_action_handshakes(fdm_ctx)
+    assert sl_pol._focus_drift_flips == 2 \
+            and sl_pol._focus_played_index == 0 \
+            and sl_pol._focus_index == 0, \
+        f"第二次换线回执未入账: focus={sl_pol._focus_index} " \
+        f"played={sl_pol._focus_played_index} flips={sl_pol._focus_drift_flips}"
+    d_fdm1b = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), fdm_ctx)
     assert d_fdm1b.action == "play_card" \
             and d_fdm1b.params.get("target_index") == 0 \
             and sl_pol._focus_drift_flips == 2 \
@@ -9141,12 +9203,19 @@ def main() -> int:
     sl_pol._focus_drift_multi_scaler_obs_emitted = False
     sl_pol.know.policy["focus_drift_multi_scaler_obs"] = False
     try:
-        d_fdm_rb = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+        fdm_rb_ctx = DummyCtx()
+        fdm_rb_ctx.credit_tags = []
+        d_fdm_rb = sl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies),
+                                 fdm_rb_ctx)
         assert d_fdm_rb.action == "play_card" \
                 and d_fdm_rb.params.get("target_index") == 0 \
-                and sl_pol._focus_drift_flips == 2 \
+                and sl_pol._focus_drift_flips == 1 \
                 and "FOCUS_DRIFT_MULTI_SCALER_OBS" not in d_fdm_rb.reason, \
             f"focus_drift_multi_scaler_obs=False 未严格回滚: {d_fdm_rb.params}（{d_fdm_rb.reason}）"
+        fdm_rb_ctx.credit_tags.extend(d_fdm_rb.tags or [])
+        sl_pol._sync_action_handshakes(fdm_rb_ctx)
+        assert sl_pol._focus_drift_flips == 2, \
+            f"回执入账后翻线计数错误: flips={sl_pol._focus_drift_flips}"
     finally:
         sl_pol.know.policy["focus_drift_multi_scaler_obs"] = True
     sl_pol._focus_index = None
@@ -9177,13 +9246,20 @@ def main() -> int:
     vsl_pol._focus_drift_multi_scaler_obs_emitted = False
     vsl_pol.know.policy["focus_drift_multi_scaler_lock"] = False
     try:
-        d_vsl_rb = vsl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies), ctx)
+        vsl_rb_ctx = DummyCtx()
+        vsl_rb_ctx.credit_tags = []
+        d_vsl_rb = vsl_pol.decide(fdl_state([dict(fdf_atk_hi)], fdm_enemies),
+                                  vsl_rb_ctx)
         assert d_vsl_rb.action == "play_card" \
                 and d_vsl_rb.params.get("target_index") == 0 \
-                and vsl_pol._focus_drift_flips == 2 \
+                and vsl_pol._focus_drift_flips == 1 \
                 and "FOCUS_DRIFT_MULTI_SCALER_OBS" in d_vsl_rb.reason \
                 and "FOCUS_DRIFT_MULTI_SCALER_LOCK" not in d_vsl_rb.reason, \
             f"focus_drift_multi_scaler_lock=False 未严格回滚: {d_vsl_rb.params}（{d_vsl_rb.reason}）"
+        vsl_rb_ctx.credit_tags.extend(d_vsl_rb.tags or [])
+        vsl_pol._sync_action_handshakes(vsl_rb_ctx)
+        assert vsl_pol._focus_drift_flips == 2, \
+            f"回执入账后翻线计数错误: flips={vsl_pol._focus_drift_flips}"
     finally:
         vsl_pol.know.policy["focus_drift_multi_scaler_lock"] = True
     vsl_pol._focus_index = 1

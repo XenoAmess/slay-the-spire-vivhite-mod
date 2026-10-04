@@ -81,6 +81,92 @@ class CombatAuditContracts(unittest.TestCase):
             p._focus_index, 0,
             "Scoring a candidate must not commit its target as the actual focus")
 
+    def focus_combat_state(self) -> dict:
+        hand = [card(0, "STRIKE", damage=6, targets=[0, 1])]
+        return {"screen": "COMBAT",
+                "available_actions": ["play_card", "end_turn"], "turn": 2,
+                "combat": {"player": {"current_hp": 80, "max_hp": 80,
+                                      "block": 0, "energy": 3},
+                           "hand": hand,
+                           "enemies": [enemy(0, incoming=5),
+                                       enemy(1, incoming=30)]},
+                "run": {"current_hp": 80, "max_hp": 80, "gold": 0,
+                        "floor": 9, "deck": []}}
+
+    @staticmethod
+    def focus_ctx() -> SimpleNamespace:
+        return SimpleNamespace(
+            current_combat_is_hard=False, run_finalized=True,
+            finalize_requested=False, credit_tags=[], combat=None,
+            combat_notes=[], pending_event=None, died_in_combat=None,
+            died_to_event=None, rests_healed_at_full=0,
+            death_hp_pct_at_entry=None, death_was_elite=False,
+            run_id=None)
+
+    def focus_policy(self) -> policy.Policy:
+        # decide() needs a real Knowledge (enemy_stance etc.), not a stub.
+        temp = tempfile.TemporaryDirectory(prefix="ascend-focus-audit-")
+        self.addCleanup(temp.cleanup)
+        return policy.Policy(
+            knowledge.Knowledge(Path(temp.name), repair_phantoms=False),
+            random.Random(13))
+
+    def test_focus_commits_only_after_successful_play_receipt(self) -> None:
+        p = self.focus_policy()
+        p._focus_index = 0
+        ctx = self.focus_ctx()
+        decision = p.decide(self.focus_combat_state(), ctx)
+        self.assertEqual(decision.action, "play_card")
+        self.assertEqual(decision.params.get("target_index"), 1)
+        self.assertEqual(
+            p._focus_index, 0,
+            "Selecting a card is not an executed play; focus must not move yet")
+        self.assertIn("focus_commit",
+                      [t[0] for t in (decision.tags or [])
+                       if isinstance(t, (tuple, list)) and t])
+        commit = next(t for t in decision.tags
+                      if isinstance(t, (tuple, list)) and t
+                      and t[0] == "focus_commit")
+        self.assertEqual(commit[1], 1)
+        ctx.credit_tags.extend(decision.tags)  # accepted server receipt
+        p.decide(self.focus_combat_state(), ctx)
+        self.assertEqual(
+            p._focus_index, 1,
+            "An accepted non-lethal targeted play commits its focus target")
+
+    def test_focus_not_committed_when_receipt_missing(self) -> None:
+        p = self.focus_policy()
+        p._focus_index = 0
+        ctx = self.focus_ctx()
+        decision = p.decide(self.focus_combat_state(), ctx)
+        self.assertEqual(decision.action, "play_card")
+        # Failed/disconnected request: tags never enter credit_tags.
+        p.decide(self.focus_combat_state(), ctx)
+        self.assertEqual(
+            p._focus_index, 0,
+            "A lost or failed receipt must not advance the focus memory")
+
+    def test_focus_not_committed_for_lethal_plays(self) -> None:
+        p = self.focus_policy()
+        p._focus_index = 0
+        state = self.focus_combat_state()
+        state["combat"]["enemies"][1]["current_hp"] = 4
+        ctx = self.focus_ctx()
+        decision = p.decide(state, ctx)
+        self.assertEqual(decision.action, "play_card")
+        self.assertEqual(decision.params.get("target_index"), 1)
+        commit = next((t for t in (decision.tags or [])
+                       if isinstance(t, (tuple, list)) and t
+                       and t[0] == "focus_commit"), None)
+        self.assertIsNotNone(commit)
+        self.assertTrue(commit[3], "Lethal plays carry the kill flag")
+        ctx.credit_tags.extend(decision.tags or [])
+        p.decide(self.focus_combat_state(), ctx)
+        self.assertEqual(
+            p._focus_index, 0,
+            "Kill plays keep the established no-sticky-commit semantics")
+        self.assertEqual(p._focus_drift_flips, 0)
+
     def test_other_candidate_evaluation_does_not_change_a_cards_score_or_target(self) -> None:
         p = self.make_policy()
         enemies = [enemy(0, incoming=10), enemy(1, incoming=12)]
@@ -329,6 +415,28 @@ class FixedSupplyAuditContracts(unittest.TestCase):
                 for i in range(3)]
         deck.append(card(3, "THREE_ENERGY_BLOCK", block=30, cost=3, kind="Skill"))
         self.assertAlmostEqual(p.deck_block_burst(deck, energy=3), 48.0)
+
+    def test_x_cost_attack_uses_native_three_energy_nominal_baseline(self) -> None:
+        p = self.make_policy()
+        x_card = card(0, "X_ATTACK", damage=9, cost=0)
+        x_card["costs_x"] = True
+        self.assertAlmostEqual(p.deck_burst([x_card], energy=3), 9.0)
+        self.assertAlmostEqual(
+            p.deck_burst([x_card], energy=2),
+            0.0, "X uses the same nominal 3-energy baseline as the evaluator")
+
+    def test_ordinary_positive_cost_pairs_pack_by_exact_budget(self) -> None:
+        p = self.make_policy()
+        deck = [card(0, "ONE_ENERGY_ATTACK", damage=8, cost=1),
+                card(1, "TWO_ENERGY_ATTACK", damage=14, cost=2)]
+        self.assertAlmostEqual(p.deck_burst(deck, energy=3), 22.0)
+        self.assertAlmostEqual(p.deck_burst(deck, energy=2), 14.0)
+        self.assertAlmostEqual(p.deck_burst(deck, energy=1), 8.0)
+
+    def test_negative_cost_unplayable_values_are_not_supply(self) -> None:
+        p = self.make_policy()
+        deck = [card(0, "UNPLAYABLE_VALUE", damage=50, cost=-1)]
+        self.assertAlmostEqual(p.deck_burst(deck, energy=3), 0.0)
 
 
 if __name__ == "__main__":
