@@ -17024,3 +17024,14 @@
 - 当前低价值卡牌：STOKE(18分/2.4525225106504758局)，DEFEND_IRONCLAD(18分/2.2165668263086675局)，THE_GAMBIT(18分/3.7763731114888244局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.40（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
 - 生涯战绩：0/1948 胜，当前目标进阶 0
+
+## 第 1949 局复盘（2026-10-04 23:04）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：MOLTEN_FIST, MOLTEN_FIST, PILLAGE, FEED, TAUNT, FIGHT_ME, TAUNT, UNRELENTING, RAMPAGE, STONE_ARMOR, CONFLAGRATION, TWIN_STRIKE, STOMP, UNRELENTING, HEMOKINESIS, BLUDGEON, UNRELENTING
+- 本局遗物：HORN_CLEAT, PANTOGRAPH
+- 战斗记录：F19 Monster战 掉血0; F20 Monster战 掉血0; F21 Monster战 掉血23; F22 Monster战 掉血5; F24 Monster战 掉血7; F27 Unknown战 掉血74｜自损2（可行动段2/非行动段57，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：PROWESS(26分/12.524980100200311局)，FEED(25分/31.39532022444549局)，MASTER_OF_STRATEGY(25分/4.345792258060371局)，MANGLE(25分/39.99586359834648局)，PANACHE(25分/4.325051621539169局)
+- 当前低价值卡牌：STOKE(18分/2.4439386818631994局)，DEFEND_IRONCLAD(18分/2.2088088424165875局)，THE_GAMBIT(18分/3.763155805598614局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（7回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.41（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.03，步长 0.03→0.015）；block_safety: 1.93 → 1.92（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.90 → 1.85（行至 F27——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1949 胜，当前目标进阶 0
