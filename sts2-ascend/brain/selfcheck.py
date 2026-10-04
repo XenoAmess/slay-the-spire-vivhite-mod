@@ -17771,15 +17771,16 @@ def main() -> int:
     assert oe["seen"] == 1 and oe["offered"] == 1, \
         f"同一 offer 被重复/按卡槽记 seen: {oe}"
     assert offer_know.stats["card_offer_tracking"] == {
-        "version": 2, "baseline_runs": 0, "offers": 1,
-        "candidate_observations": 1}, \
+        "version": 2, "baseline_runs": 0, "retention_baseline_runs": 0,
+        "offers": 1, "candidate_observations": 1}, \
         f"offer 汇总口径错误: {offer_know.stats['card_offer_tracking']}"
     offer_pol.decide({"screen": "MAP", "run_id": "RUN_CARD_OFFER",
                       "available_actions": [], "map": {"available_nodes": []},
                       "run": {"floor": 2, "deck": []}}, offer_ctx)
     offer_pol.decide(offer_state, offer_ctx)
-    assert offer_know.stats["cards"]["OFFER_NEW"]["seen"] == 2, \
-        "离开 offer 后再次出现的独立同构 offer 未计数"
+    assert (offer_know.stats["cards"]["OFFER_NEW"]["seen"] == 2
+            and offer_know.stats["cards"]["OFFER_NEW"]["offered"] == 2), \
+        "离开 offer 后再次出现的独立同构 offer 未同步计数 seen/offered"
 
     # REWARD 原生直出结构也走相同一次性口径。
     reward_direct = {
