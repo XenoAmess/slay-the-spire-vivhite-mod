@@ -3667,9 +3667,13 @@ class Knowledge:
     def _run_log_path(self, run_id: str) -> Path | None:
         """已有同 run_id 的对局日志（取命名最新者）——增量存档复用同一文件。"""
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in run_id)[:80] or "run"
+        # pathlib.glob suppresses directory enumeration errors on recent Python.
+        # Explicit enumeration preserves the distinction between a missing store
+        # and an existing store that could not be inspected.
         try:
-            matches = sorted((self.root / "runs").glob(f"*_{safe}.json"))
-        except OSError:
+            matches = sorted(path for path in (self.root / "runs").iterdir()
+                             if path.name.endswith(f"_{safe}.json"))
+        except FileNotFoundError:
             return None
         return matches[-1] if matches else None
 
@@ -3682,10 +3686,14 @@ class Knowledge:
             # identity or permanent excluded-from-learning status.
             return read_archived_run(self.root, run_id)
         try:
-            d = json.loads(p.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return None
-        return d if isinstance(d, dict) else None
+            d = json.loads(_read_text_retry(p))
+        except FileNotFoundError:
+            # Compaction may have retired the active copy after enumeration.
+            from compact_knowledge import read_archived_run
+            return read_archived_run(self.root, run_id)
+        if not isinstance(d, dict):
+            raise ValueError(f"run log root must be an object: {p}")
+        return d
 
     def save_run_log(self, run_id: str, log: dict) -> Path:
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in run_id)[:80] or "run"
