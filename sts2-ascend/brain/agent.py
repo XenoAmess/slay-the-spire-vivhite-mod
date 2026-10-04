@@ -1720,8 +1720,8 @@ class Agent:
                 self._mark_manual_takeover(state, source=snapshot.source)
                 acknowledge_pause_generation(snapshot.pause_generation)
             except (OSError, ValueError, CharacterRotationError) as exc:
-                log(f"[agent] ??????/???????????????{exc}")
-                self._dashboard_connection("paused", "??????????")
+                log(f"[agent] 人工接管排除/确认尚未落盘，保持停手并重试：{exc}")
+                self._dashboard_connection("paused", "人工接管证据等待落盘")
                 return True
         self._seen_pause_generation = max(seen, snapshot.pause_generation)
 
@@ -1764,11 +1764,11 @@ class Agent:
             saved = self._save_run_progress({"floor": int(floor or 0)}, force=True)
         except Exception as exc:
             saved = False
-            log(f"[agent] ????????????{exc}")
+            log(f"[agent] 人工接管局审计存档失败：{exc}")
         if not saved:
             self.ctx.finalize_requested = True
             self._native_save_transition_blocked = True
-            log("[agent] ???????????????????????????")
+            log("[agent] 人工接管局审计尚未保存，保留学习排除快照和轮换身份重试")
             return
         rotation = getattr(self, "rotation", None)
         if rotation is not None and run_id != "run_unknown":
@@ -1777,13 +1777,13 @@ class Agent:
             except (CharacterRotationError, OSError, ValueError) as exc:
                 self.ctx.finalize_requested = True
                 self._native_save_transition_blocked = True
-                log(f"[agent] ???????????????????????{exc}")
+                log(f"[agent] 人工接管局释放轮换身份失败，保留排除快照重试：{exc}")
                 return
         try:
             self._finish_run_learning(knowledge, run_id)
         except Exception as exc:
             # The audit remains durable even if the excluded journal survives.
-            log(f"[agent] ?????????????????????{exc}")
+            log(f"[agent] 人工接管局学习快照清理失败（隔离仍有效）：{exc}")
         self.ctx.run_finalized = True
         self.ctx.finalize_requested = False
         self.ctx.combat = None
@@ -1791,10 +1791,10 @@ class Agent:
         self._rotation_unresolved_run_id = ""
         self._native_save_transition_blocked = False
         self._native_continue_recovery_expected = ""
-        result = "??" if victory else "??"
+        result = "胜利" if victory else "结束"
         log(
-            f"[agent] ????? {run_id} ?{result}? F{int(floor or 0)}?"
-            "???????????/???????? LLM ???????????")
+            f"[agent] 人工接管局 {run_id} 已{result}于 F{int(floor or 0)}；"
+            "不增加局数、不更新平均/最高楼层、不进入 LLM 复盘，轮换配额保持原位")
 
     # ---------------- quipper（白绮碎碎念） ----------------
 
