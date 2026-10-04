@@ -16716,3 +16716,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.356051062712849局)，STOKE(18分/2.7055060987159854局)，DEFEND_IRONCLAD(18分/2.4452110187559843局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.43（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F21——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1920 胜，当前目标进阶 0
+
+## 第 1921 局复盘（2026-10-04 14:12）
+- 结果：💀 失败｜进阶 0｜到达层数 31｜当局评分 31
+- 死因：敌人组合 ENTOMANCER
+- 本局拿牌：HEADBUTT, POMMEL_STRIKE, SECOND_WIND, HEADBUTT, THUNDERCLAP, UPPERCUT, STONE_ARMOR, STONE_ARMOR, ULTIMATE_STRIKE, RUPTURE, PILLAGE, ROLLING_BOULDER, HOWL_FROM_BEYOND, JUGGERNAUT, SWORD_BOOMERANG, TWIN_STRIKE, ULTIMATE_STRIKE, TAUNT, FEED, INFLAME, POMMEL_STRIKE, DISMANTLE
+- 本局遗物：SPARKLING_ROUGE, AMETHYST_AUBERGINE, STRIKE_DUMMY
+- 战斗记录：F19 Monster战 掉血21; F20 Monster战 掉血5; F24 Elite战 掉血18｜竞速投影审计：pool=120/dpt=10.125/ttk=11.8519/tsurv=4.27536（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=6/projected_ttk=11.8519/actual_over_projected=0.51（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=7.57649（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战6回合获胜; F27 Monster战 掉血32｜竞速投影审计：pool=99/dpt=13.5/ttk=7.33333/tsurv=4.86111（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=7.33333/actual_over_projected=1.09（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=2.47222（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战8回合获胜; F29 Monster战 掉血22; F31 Elite战 掉血12（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.7024613729219804局)，PROWESS(26分/12.809924960963125局)，FEED(25分/30.444940660688406局)，MANGLE(25分/42.042891172637404局)，PYRE(25分/20.742195806955763局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.319804883993354局)，STOKE(18分/2.6960368273704796局)，DEFEND_IRONCLAD(18分/2.4366527801903386局)
+- 策略进化：elite_grey_safety_mult: 1.45 → 1.65（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.43 → 0.46（行至 F31（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.05 → 2.04（行至 F31（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.65 → 1.60（行至 F31——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1921 胜，当前目标进阶 0
