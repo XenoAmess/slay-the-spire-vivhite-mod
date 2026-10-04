@@ -16595,3 +16595,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.763260456495255局)，DEFEND_IRONCLAD(18分/2.5413589510699484局)，THE_GAMBIT(18分/4.329722657378413局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（91%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.37 → 0.37（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.001）
 - 生涯战绩：0/1909 胜，当前目标进阶 0
+
+## 第 1910 局复盘（2026-10-04 10:35）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 VANTOM
+- 本局拿牌：IRON_WAVE, TREMBLE, STONE_ARMOR, BREAKTHROUGH, FLAME_BARRIER, HEADBUTT, EXPECT_A_FIGHT, RUPTURE, BATTLE_TRANCE, IMPERVIOUS, EXPECT_A_FIGHT, VICIOUS
+- 本局遗物：JOSS_PAPER
+- 战斗记录：F5 Monster战 掉血0｜自损1（可行动段1/非行动段3，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血0; F8 Monster战 掉血17｜自损2（可行动段2/非行动段12，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血5; F13 Monster战 掉血38｜自损1（可行动段1/非行动段27，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血41｜竞速投影审计：pool=171/dpt=3.375/ttk=50.6667/tsurv=4.82353（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=11/projected_ttk=50.6667/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.28（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=45.8431（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战11回合阵亡｜竞速Boss有效火力收官对账：samples=10/actual_dpt=5.2/projected_dpt=5.00219/ratio=1.01/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：slippery_samples=8/actual_dpt=2/projected_dpt=4.78608/ratio=0.47/min_ratio=0.00|clear_samples=2/actual_dpt=18/projected_dpt=5.86667/ratio=3.16/min_ratio=2.19（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=10/layers_max=0/actual_dpt=5.2/projected_dpt=5.00219/ratio=1.01/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.8480455383572725局)，PROWESS(26分/13.313622919399556局)，MANGLE(25分/43.696056083045285局)，FEED(25分/30.602742641751334局)，HELLRAISER(25分/3.0596807988667827局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.725589044897522局)，DEFEND_IRONCLAD(18分/2.5324641947412037局)，THE_GAMBIT(18分/4.3145686280775895局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.75)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1910 胜，当前目标进阶 0
