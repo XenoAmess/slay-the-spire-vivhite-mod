@@ -120,6 +120,17 @@ class KnowledgeHistoryRepairTests(unittest.TestCase):
         self.assertEqual(self._read("stats.json")["global"]["runs"], 10)
         self.assertEqual(self._read("progression.json")["runs_by_ascension"]["0"], 10)
 
+    def test_excluded_run_recovery_defers_legacy_repair_and_preserves_exact_baseline(self):
+        first = knowledge.Knowledge(self.root, repair_phantoms=False)
+        first.begin_run_learning("mixed")
+        first.exclude_run_learning("mixed")
+        baseline = self._read("stats.json")
+        self._run()
+        recovered = knowledge.Knowledge(self.root)
+        self.assertTrue(recovered.run_learning_is_excluded("mixed"))
+        self.assertEqual(self._read("stats.json"), baseline)
+        self.assertEqual(self._read("progression.json")["runs_by_ascension"]["0"], 10)
+
     def test_raw_maximum_migration_uses_closed_autonomous_active_and_catalog_evidence(self):
         self.stats["global"].pop("best_floor_raw")
         self.stats["global"]["best_floor"] = 10

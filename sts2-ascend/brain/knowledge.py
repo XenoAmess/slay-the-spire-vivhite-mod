@@ -47,7 +47,8 @@ DEATH_RATE_PRIOR = 0.10
 # 跳过衰减；novelty_trials（探索配额去重）与 respawn_adds（跨局安全名册）
 # 等记账语义字段不衰减。
 STAT_DECAY_PER_RUN = 0.9965
-_STAT_DECAY_SKIP_KEYS = frozenset({"hp_min", "bias"})
+# Card exposure counts are durable audit facts, independent of decayed samples.
+_STAT_DECAY_SKIP_KEYS = frozenset({"hp_min", "bias", "seen", "offered"})
 
 _MISSING = object()  # 三方合并写盘的「键不存在」哨兵（不能用 None：None 是合法值）
 _SAVE_LOCKS_GUARD = threading.Lock()
@@ -1878,7 +1879,8 @@ DEFAULT_STATS = {
                "elite_death_entry_band": {"low": 0, "healthy": 0}},
     # offered 是 v2 精确口径（迁移后、每个真实 offer 每个 card id 最多 +1）；
     # seen 保留兼容并从 v2 起同步按该口径增加。旧 seen 曾被纯评分调用污染，
-    # card_offer_tracking.baseline_runs 明确可靠统计从哪一局之后开始。
+    # card_offer_tracking.baseline_runs 明确屏幕计数口径的起点；
+    # retention_baseline_runs 记录不再衰减/删除曝光事实的起点，旧损失不反推。
     "cards": {},    # id -> {seen, offered, picked, plays, outcome_sum, bias}
     "card_offer_tracking": {"version": 2, "baseline_runs": 0,
                             "offers": 0, "candidate_observations": 0},
@@ -2217,6 +2219,10 @@ class Knowledge:
                 "offers": 0,
                 "candidate_observations": 0,
             }
+        # Preserve legacy fractional counters as recorded; only the future
+        # retention cutover is new metadata, never a guessed history backfill.
+        self.stats["card_offer_tracking"].setdefault(
+            "retention_baseline_runs", int(self.stats["global"].get("runs", 0) or 0))
         self.stats.setdefault("novelty_trials", {})
         for e in self.stats.get("cards", {}).values():
             e.setdefault("offered", 0)
@@ -2289,6 +2295,10 @@ class Knowledge:
         marker, then replay the target after an interrupted progression write.
         Legacy stores already marked repaired are never recalculated.
         """
+        if not self._learning_write_allowed():
+            # F9 recovery must retain the exact durable pre-run baseline. Defer
+            # legacy corrections until the excluded run transaction is closed.
+            return
         pending = self.stats.get("phantom_repair_pending_progression_v1")
         if isinstance(pending, dict):
             self._complete_phantom_progression_repair(pending)
@@ -3442,7 +3452,7 @@ class Knowledge:
             return
         e = self.stats["cards"].setdefault(card_id, self._empty_card_stats())
         e.setdefault("offered", 0)
-        e["seen"] = int(e.get("seen", 0) or 0) + 1
+        e["seen"] = (e.get("seen", 0) or 0) + 1
         e["offered"] += 1
 
     def commit_card_offer(self, card_ids) -> int:
@@ -3467,9 +3477,13 @@ class Knowledge:
         tracking = self.stats.setdefault("card_offer_tracking", {
             "version": 2,
             "baseline_runs": int(self.stats["global"].get("runs", 0) or 0),
+            "retention_baseline_runs": int(self.stats["global"].get("runs", 0) or 0),
             "offers": 0,
             "candidate_observations": 0,
         })
+        # A restored legacy F9 baseline may predate the retention metadata.
+        tracking.setdefault("retention_baseline_runs",
+                            int(self.stats["global"].get("runs", 0) or 0))
         tracking["offers"] = int(tracking.get("offers", 0) or 0) + 1
         tracking["candidate_observations"] = int(
             tracking.get("candidate_observations", 0) or 0) + len(unique)
@@ -3576,6 +3590,10 @@ class Knowledge:
         噪声级的条目直接清除，避免浮点残渣累积；本局新样本在衰减后入账，
         始终全价。二层账本（events 的 id→option）逐层处理。
         """
+        tracking = self.stats.get("card_offer_tracking")
+        if isinstance(tracking, dict):
+            tracking.setdefault("retention_baseline_runs",
+                                int(self.stats["global"].get("runs", 0) or 0))
         factor = STAT_DECAY_PER_RUN
         skip = _STAT_DECAY_SKIP_KEYS
 
@@ -3600,6 +3618,18 @@ class Knowledge:
             for key in [k for k, e in table.items()
                         if isinstance(e, dict)
                         and float(e.get(counter, 0.0) or 0.0) < 0.5]:
+                if section == "cards":
+                    e = table[key]
+                    # Retire only the low-mass learning outcome. Exposure facts,
+                    # bias and still-significant successful plays remain useful
+                    # independently of whether this card was ever picked.
+                    e["picked"] = 0.0
+                    e["outcome_sum"] = 0.0
+                    if float(e.get("plays", 0.0) or 0.0) < 0.5:
+                        e["plays"] = 0.0
+                    if any(e.get(field, 0) for field in (
+                            "seen", "offered", "plays", "bias")):
+                        continue
                 del table[key]
         # events 是 id -> option -> 账本的二层结构
         events = self.stats.get("events")
