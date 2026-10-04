@@ -461,3 +461,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-10-03 06:47:09 | 第 1817 局 | `a80fed38` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `1ede0b3d` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 1ede0b3d 已推送；远端确认后精确清理对应失败包 |
 <!-- rejection:20261003-102703-1790994423506562800-9eefca76 -->
 | 2026-10-03 10:27:03 | 第 1830 局 | `9eefca76` | path_boundary | luna-max (codex/gpt-5.6-luna@max) | luna-max (codex/gpt-5.6-luna@max) 已补合并闭环 `facb2fe1` | （闭环清理） | luna-max (codex/gpt-5.6-luna@max) 重审结论与提交 facb2fe1 已推送；远端确认后精确清理对应失败包 |
+<!-- rejection:20261004-144122-1791096082457818400-b43b1452 -->
+| 2026-10-04 14:41:22 | 第 1921 局 | `b43b1452` | runner_tool_access_denied | luna-max (codex/gpt-5.6-luna@max) | 待 luna-max (codex/gpt-5.6-luna@max) 重审/补合 | `knowledge/code_backups/review_salvage/20261004-144122-1791096082457818400-b43b1452` | 复盘 runner 工具能力被阻断（1 次），模型未获得读取/执行/写入任务的能力：Traceback (most recent call last): File "G:\workspace\slay-the-spire-vivhite-mod\sts2-ascend\knowledge\code_backups\review_work\sts2-review-sandbox-v2l5w6_l\repo\sts2-ascend\brain\selfcheck.py", li… |
