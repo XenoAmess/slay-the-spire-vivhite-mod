@@ -481,3 +481,5 @@ patch、文件状态、隔离仓提交/stash，确认没有模型源码成果；
 | 2026-10-04 16:50:34 | 第 1922~1926 局 | `b522e718` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20261004-165034-1791103834574079600-b522e718` | 复盘进程未成功完成 |
 <!-- rejection:20261004-173100-1791106260838001000-3340121b -->
 | 2026-10-04 17:31:00 | 第 1922~1926 局 | `3340121b` | process_exit | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20261004-173100-1791106260838001000-3340121b` | 复盘进程未成功完成 |
+<!-- rejection:20261005-020341-1791137021410742700-51a66a20 -->
+| 2026-10-05 02:03:41 | 第 1922~1926 局 | `51a66a20` | timeout | kimi-k3 (opencode/kimi-for-coding/k3) | 待 kimi-k3 (opencode/kimi-for-coding/k3) 重审/补合 | `knowledge/code_backups/review_salvage/20261005-020341-1791137021410742700-51a66a20` | 复盘进程未成功完成 |
