@@ -17189,3 +17189,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.442342079447469局)，BODY_SLAM(16分/2.4548473115187783局)，STOKE(18分/2.3268722903224295局)
 - 策略进化：精英战阵亡但满血线进场（100%≥90%）——证据指向实战执行/卡组强度，灰区悲观系数不吸收；kill_race_prior_eff: 0.50 → 0.53（行至 F28（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.91 → 1.90（行至 F28（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.15 → 2.10（行至 F28——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1963 胜，当前目标进阶 0
+
+## 第 1964 局复盘（2026-10-05 03:57）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：CINDER, CINDER, TRUE_GRIT, RUPTURE, DRUM_OF_BATTLE, TAUNT, THUNDERCLAP, SWORD_BOOMERANG, THUNDERCLAP, SECOND_WIND
+- 本局遗物：BAG_OF_MARBLES
+- 战斗记录：F8 Monster战 掉血0; F11 Unknown战 掉血14; F12 Monster战 掉血8; F14 Monster战 掉血6; F15 Monster战 掉血28; F17 Boss战 掉血46｜竞速投影审计：pool=214/dpt=11.7/ttk=18.2906/tsurv=2.42105（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=18.2906/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.72（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=15.8695（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战9回合阵亡｜竞速Boss有效火力收官对账：samples=5/actual_dpt=22.2/projected_dpt=18.0275/ratio=1.21/min_ratio=0.67/min_sample=6->7/min_actual_dpt=10/min_projected_dpt=14.8333（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=5/actual_dpt=22.2/projected_dpt=18.0275/ratio=1.21/min_ratio=0.67（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=5/layers_max=0/actual_dpt=22.2/projected_dpt=18.0275/ratio=1.21/min_ratio=0.67（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：PANACHE(27分/7.031033160533041局)，PROWESS(26分/11.8832871076344局)，FEED(25分/31.76247638310934局)，MASTER_OF_STRATEGY(25分/4.123144044902738局)，MANGLE(25分/38.92250907914511局)
+- 当前低价值卡牌：HAVOC(16分/2.433793882169403局)，BODY_SLAM(16分/2.4462553459284626局)，STOKE(18分/2.318728237306301局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
+- 生涯战绩：0/1964 胜，当前目标进阶 0
