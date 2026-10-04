@@ -13,8 +13,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "GFKSWEDZ3RLJ"
+   "source": "preferred",
+   "run_id": "GFKSWEDZ3RLJ",
+   "queue_id": "48616-1791099435188283400-0",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1923,
@@ -29,8 +33,12 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "5TDCADTWRTL6"
+   "source": "preferred",
+   "run_id": "5TDCADTWRTL6",
+   "queue_id": "48616-1791099435188283400-1",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
   },
   {
    "run": 1924,
@@ -45,9 +53,32 @@
    "approve_for_me": false,
    "sandbox": "workspace-write",
    "every": 5,
-   "source": "queued",
-   "run_id": "02JA6EGHYBN5"
+   "source": "preferred",
+   "run_id": "02JA6EGHYBN5",
+   "queue_id": "48616-1791099435188283400-2",
+   "retry_same_model": false,
+   "deferred_kind": "batch_accumulation",
+   "deferred_reason": "等待同一 profile 的复盘局数达到当前模型合批门槛"
+  },
+  {
+   "run": 1925,
+   "run_id": "88KNHST112JJ",
+   "profile_id": "ironclad",
+   "review_epoch": "",
+   "queue_id": "terminal-0ca9c59deb0e4e591b7d3aa86ff32101",
+   "time": "2026-10-04 15:44",
+   "backend_key": "kimi-k3",
+   "priority": 1,
+   "runner": "opencode",
+   "model": "kimi-for-coding/k3",
+   "variant": "",
+   "reasoning_effort": "",
+   "approve_for_me": false,
+   "sandbox": "workspace-write",
+   "every": 5,
+   "source": "queued"
   }
  ],
- "reviewing": null
+ "reviewing": null,
+ "terminal_handoff_receipts": {}
 }
