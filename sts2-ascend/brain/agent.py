@@ -1943,12 +1943,30 @@ class Agent:
                 return False
             log(f"[agent] 游戏已就绪：{self.client.base_url}")
             return True
-        log("[agent] 游戏未运行，启动游戏…")
-        exe = os.environ.get("STS2_ASCEND_GAME_LAUNCHER") or self.cfg["game_exe"]
+        # The running session owns its Steam namespace and disk-space minimum.
+        # Reuse Start-Agent's game-only cold launch, never recurse into a new
+        # stack/runner and never fall back from an explicit off session to auto.
+        from lifecycle import RUNTIME_DIR, SESSION_ID, STACK_ROOT
+        recovery = STACK_ROOT / "scripts" / "Invoke-GameRecovery.ps1"
+        session_file = RUNTIME_DIR / "session.json"
+        log("[agent] 游戏未运行，按当前 session 的 SteamMode 复核冷启动…")
         if stop_requested():
             return False
-        subprocess.Popen(["cmd", "/c", exe], cwd=str(Path(exe).parent), shell=False,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            result = subprocess.run(
+                ["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive",
+                 "-ExecutionPolicy", "Bypass", "-File", str(recovery),
+                 "-SessionFile", str(session_file), "-SessionId", SESSION_ID],
+                cwd=str(STACK_ROOT), capture_output=True, text=True, timeout=30,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            if result.returncode != 0:
+                reason = (result.stderr or result.stdout or "unknown recovery failure").strip()
+                log(f"[agent] 游戏冷启动门禁未通过，保持当前模式并等待复核：{reason[:600]}")
+            else:
+                log(f"[agent] session 冷启动结果：{result.stdout.strip()[:900]}")
+        except (OSError, subprocess.SubprocessError) as exc:
+            log(f"[agent] 游戏冷启动工具不可用；不使用备用启动路径：{exc}")
         if not self._wait_for_game_api(timeout_s=300.0, poll_s=4.0):
             return False
         log(f"[agent] 游戏已就绪：{self.client.base_url}")
