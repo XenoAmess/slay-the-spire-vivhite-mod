@@ -17134,3 +17134,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.4855355370523338局)，BODY_SLAM(16分/2.4982619274191395局)，STOKE(18分/2.3680236345463777局)
 - 策略进化：elite_grey_safety_mult: 2.15 → 2.35（精英战灰区进场阵亡，灰区悲观投影系数上调）；kill_race_prior_eff: 0.38 → 0.41（行至 F30（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.90 → 1.89（行至 F30（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.35 → 2.30（行至 F30——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1958 胜，当前目标进阶 0
+
+## 第 1959 局复盘（2026-10-05 02:03）
+- 结果：💀 失败｜进阶 0｜到达层数 22｜当局评分 22
+- 死因：敌人组合 HUNTER_KILLER
+- 本局拿牌：CINDER, BLUDGEON, IMPERVIOUS, RAMPAGE, CINDER, ULTIMATE_STRIKE, SPITE, VICIOUS, FEED, FLAME_BARRIER, PILLAGE, TRUE_GRIT
+- 本局遗物：HAPPY_FLOWER
+- 战斗记录：F15 Monster战 掉血8; F17 Boss战 掉血59｜竞速投影审计：pool=85/dpt=22.56/ttk=3.76773/tsurv=2.2（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=3.76773/actual_over_projected=2.39（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=1.56773（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T5判死→实战9回合获胜｜竞速Boss有效火力收官对账：samples=4/actual_dpt=30.0833/projected_dpt=24.1992/ratio=1.22/min_ratio=0.00/min_sample=5->6/min_actual_dpt=0/min_projected_dpt=22.56（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=4/actual_dpt=30.0833/projected_dpt=24.1992/ratio=1.22/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=4/layers_max=0/actual_dpt=30.0833/projected_dpt=24.1992/ratio=1.22/min_ratio=0.00（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血11; F20 Monster战 掉血0; F21 Monster战 掉血52; F22 Monster战 掉血22｜竞速投影审计：pool=36/dpt=21.2/ttk=1.69811/tsurv=0.0588235（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=1.69811/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=68.00（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=1.63929（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T4判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(26分/6.144804887442368局)，PROWESS(26分/12.093446143999268局)，FEED(25分/31.3136301431625局)，MASTER_OF_STRATEGY(25分/4.196062924285329局)，MANGLE(25分/39.61086381861116局)
+- 当前低价值卡牌：HAVOC(16分/2.476836162672651局)，BODY_SLAM(16分/2.489518010673173局)，STOKE(18分/2.3597355518254655局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.41 → 0.44（行至 F22（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 1.89 → 1.88（行至 F22（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 2.30 → 2.25（行至 F22——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1959 胜，当前目标进阶 0
