@@ -16881,3 +16881,14 @@
 - 当前低价值卡牌：STOKE(18分/2.566894756342466局)，DEFEND_IRONCLAD(18分/2.319935388493261局)，THE_GAMBIT(18分/3.9524825137292434局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1935 胜，当前目标进阶 0
+
+## 第 1936 局复盘（2026-10-04 19:13）
+- 结果：💀 失败｜进阶 0｜到达层数 9｜当局评分 9
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：ANGER, RUPTURE, TRUE_GRIT, HEMOKINESIS, RAMPAGE, PILLAGE, OFFERING
+- 本局遗物：无
+- 战斗记录：F3 Monster战 掉血7; F4 Monster战 掉血1; F5 Monster战 掉血17｜自损2（可行动段2/非行动段17，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血5; F8 Unknown战 掉血29; F9 Monster战 掉血30｜竞速投影审计：pool=72/dpt=13.8/ttk=5.21739/tsurv=1.16667（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=5.21739/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.43（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.05072（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.5127729662943334局)，PROWESS(26分/13.109076717086193局)，FEED(25分/31.812791834797796局)，MANGLE(25分/41.86105208011099局)，PYRE(25分/20.638308892674274局)
+- 当前低价值卡牌：STOKE(18分/2.5579106246952676局)，DEFEND_IRONCLAD(18分/2.311815614633535局)，THE_GAMBIT(18分/3.938648824931191局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1936 胜，当前目标进阶 0
