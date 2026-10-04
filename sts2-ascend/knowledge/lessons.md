@@ -17200,3 +17200,14 @@
 - 当前低价值卡牌：HAVOC(16分/2.433793882169403局)，BODY_SLAM(16分/2.4462553459284626局)，STOKE(18分/2.318728237306301局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1964 胜，当前目标进阶 0
+
+## 第 1965 局复盘（2026-10-05 04:19）
+- 结果：💀 失败｜进阶 0｜到达层数 7｜当局评分 7
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：BREAKTHROUGH, SPITE, UNRELENTING, SWORD_BOOMERANG, TRUE_GRIT, ANGER
+- 本局遗物：无
+- 战斗记录：F2 Monster战 掉血11; F3 Monster战 掉血3; F4 Monster战 掉血0｜自损1（可行动段1/非行动段2，SELF_LOSS_PHASE_OBS）; F5 Monster战 掉血23｜自损1（可行动段1/非行动段20，SELF_LOSS_PHASE_OBS）; F6 Monster战 掉血25｜自损2（可行动段2/非行动段23，SELF_LOSS_PHASE_OBS）; F7 Monster战 掉血32｜竞速投影审计：pool=62/dpt=20.4/ttk=3.03922/tsurv=1.25（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=3.03922/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.20（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=1.78922（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PANACHE(27分/7.006424544471176局)，PROWESS(26分/11.84169560275768局)，FEED(25分/31.65130771576846局)，MASTER_OF_STRATEGY(25分/4.108713040745579局)，MANGLE(25分/38.7862802973681局)
+- 当前低价值卡牌：HAVOC(16分/2.4252756035818104局)，BODY_SLAM(16分/2.437693452217713局)，STOKE(18分/2.310612688475729局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1965 胜，当前目标进阶 0
