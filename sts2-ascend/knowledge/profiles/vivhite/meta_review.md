@@ -6146,3 +6146,38 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ### REPLAY
 
 retry_resolution: none (failed_review_replay.requested_packages=[])
+
+## 2026-10-05 第1930~1958局批：零伤害付血源被后续伤害付血遮蔽
+
+profile_id: `vivhite`
+production_code_commit: pending local commit（最终 SHA 见交付回执）
+
+### ATTRIBUTION
+
+- 本批只修复一个已被第1958局直接复现的观测接线缺口，不把 F17 阵亡归因于单张牌或单个生命支付闸门。普通竞速付血终局对账、终端输出容量、终端锁与竞速行为继续独立保留。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：第1958局 `W0QCA1Q7KK3S` 的 F17 T8 闭域映射记录 `damage_est=0`、付血2、HP `6→4`；同一尾部 T10 又有弦光投影 `damage_est=10`、付血2。原实现只保留最后一次付血，因此终局 `attack_candidates=0/raw_damage_cap=0` 时，零伤害付血与零输出容量联合 marker 被后续有伤害付血遮蔽。
+- **EVIDENCE**：完整原始 run 文件共269条 decisions；packet 标明保留134、裁剪135、`complete_persisted_chain=false`，已按 `full_chain_available_in` 读取源文件。终局同时记录 `KILL_RACE_TERMINAL_OUTPUT_CAPACITY_OBS`（目标血19、攻击候选0、原始伤害容量0）和普通 `KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS`（源为 T10），但缺少 `KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS`。
+- **EXPECTED_SIGNAL**：未来3~10个独立 Vivhite Boss 终局，只要同一尾部存在零伤害付血且终局输出容量为零，联合 marker 应报告最近的 `damage_est=0` 源；普通付血终局 marker 仍报告最近一次付血。marker、楼层/回合接线、去重、action/params、评分与学习统计均不得漂移。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/policy.py`：付血终局恢复继续保留最新付血作为普通 join，同时在同一 bounded COMBAT/CARD_SELECTION 尾部保存最近零伤害付血；零输出容量 join 只消费该旁观源，旧的手工 pending 夹具仍回退到原字段。
+- `sts2-ascend/brain/selfcheck.py`：新增第1958局形状夹具，先注入 T8 零伤害付血、再注入 T10 有伤害付血和零输出终局，断言两个终局 marker 各自取对的源且 `continue_game_over/{}` 不变。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay target。
+
+### VALIDATION
+
+- 直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 的业务断言通过，但宿主固定256槽临时池在收尾报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；使用同一 selfcheck 进程级继承 ACL 的扩容临时子目录重跑，退出码0并输出 `SELFCHECK OK`。
+- 已回读完整目标 diff；`git diff --check` 通过。无意外生产文件进入本批。
+
+### FOLLOW-UP / ROLLBACK
+
+- 后续3~10个独立 Vivhite Boss run 记录 source/terminal 回合、卡牌、`damage_est`、付血、`post_pay_margin`、终局目标血/攻击候选/原始伤害容量、普通与联合 marker、action/params 和胜负；marker 本身不升级为行为闸门。
+- 若零伤害源漏报、错误跨战斗/跨楼层、重复提交，或普通 marker、动作参数、评分发生变化，则关闭 `kill_race_hp_pay_output_capacity_terminal_obs` 或回滚本地提交，保留原有付血与输出容量观测。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

@@ -8960,6 +8960,7 @@ class Policy:
 
         _source = None
         _source_index = None
+        _zero_output_source = None
         _lookback_start = max(0, len(decisions) - 16)
         _number_pattern = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)"
         for _index in range(len(decisions) - 1, _lookback_start - 1, -1):
@@ -9032,14 +9033,24 @@ class Policy:
                     or abs((_values["hp_before"] - _values["hp_after"])
                            - _values["pay"]) > 1e-6):
                 continue
-            _source = {
+            _candidate = {
                 "source_round": _row.get("turn", _row.get("round")),
                 "source_action": _row.get("action") or "play_card",
                 "card": _value_match.group("card").strip() or "?",
                 **_values,
             }
-            _source_index = _index
-            break
+            # Keep the latest valid payment for the ordinary terminal join,
+            # but also retain the latest zero-damage payment.  A later
+            # positive-damage payment must not hide an earlier non-damaging
+            # payment from the zero-output-capacity classification.
+            if _source is None:
+                _source = _candidate
+                _source_index = _index
+            if (_zero_output_source is None
+                    and _values["damage_est"] == 0.0):
+                _zero_output_source = dict(_candidate)
+            if _source is not None and _zero_output_source is not None:
+                break
         if _source is None or _source_index is None:
             return
 
@@ -9057,6 +9068,7 @@ class Policy:
             "terminal_hp": _tail.get("hp"),
             "bridge_decisions": len(decisions) - _source_index - 1,
             "bridge_rounds": _bridge_rounds,
+            "zero_output_source": _zero_output_source,
         }
         self._kill_race_hp_pay_terminal_outcome_reported = False
 
@@ -9327,6 +9339,10 @@ class Policy:
             _enabled = False
         _hp_pending = getattr(
             self, "_kill_race_hp_pay_terminal_outcome_pending", None)
+        if isinstance(_hp_pending, dict):
+            _zero_output_source = _hp_pending.get("zero_output_source")
+            if isinstance(_zero_output_source, dict):
+                _hp_pending = _zero_output_source
         _terminal_pending = getattr(
             self, "_race_terminal_outcome_pending", None)
         _capacity = None

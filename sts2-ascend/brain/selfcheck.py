@@ -22883,6 +22883,66 @@ def main() -> int:
                 "/classification=non_damage_pay_at_zero_output"
                 in d_hp_pay_capacity.reason), \
         f"非伤害付血与零输出容量联合观测缺失或动作漂移: {d_hp_pay_capacity}"
+
+    # A later damaging HP payment must not hide an earlier non-damaging
+    # payment from the zero-output terminal join.  This reproduces the 1958
+    # F17 shape: T8 paid with damage_est=0, then T10 paid with damage_est=10,
+    # while the terminal frame has no attack capacity.
+    hp_pay_capacity_sequence_pol = policy.Policy(knowledge.Knowledge(tmp))
+    hp_pay_capacity_sequence_ctx = _SettleCtx()
+    hp_pay_capacity_sequence_ctx.decisions = [
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 17,
+            "turn": 8,
+            "reason": (
+                "竞速判死自付2血，hp=6->4，incoming=10"
+                "（KILL_RACE_HOPELESS_HP_PAY_OBS）｜"
+                "竞速自付价值对账 card=VIVHITE_CARD_CLOSED_DOMAIN_MAPPING"
+                "/damage_est=0/target_hp=none/target_after_est=none"
+                "/net=-2/post_pay_margin=-6"
+                "（KILL_RACE_HP_PAY_VALUE_OBS）"),
+        },
+        {
+            "screen": "COMBAT", "action": "play_card", "floor": 17,
+            "turn": 10,
+            "reason": (
+                "竞速判死自付2血，hp=3->1，incoming=25"
+                "（KILL_RACE_HOPELESS_HP_PAY_OBS）｜"
+                "竞速自付价值对账 card=VIVHITE_CARD_LUMINOUS_PROJECTION"
+                "/damage_est=10/target_hp=29/target_after_est=19"
+                "/net=8/post_pay_margin=-24"
+                "（KILL_RACE_HP_PAY_VALUE_OBS）"),
+        },
+        {
+            "screen": "COMBAT", "action": "end_turn", "floor": 17,
+            "turn": 10, "hp": 1, "reason": "terminal frame",
+        },
+    ]
+    hp_pay_capacity_sequence_pol._race_terminal_outcome_pending = {
+        "terminal_round": 10,
+        "output_capacity": {
+            "target_hp": 19.0, "target_block": 0.0,
+            "attack_candidates": 0, "raw_damage_cap": 0.0,
+        },
+    }
+    hp_pay_capacity_sequence_pol._restore_kill_race_hp_pay_terminal_outcome_from_decisions(
+        hp_pay_capacity_sequence_pol.know.policy,
+        hp_pay_capacity_sequence_ctx, 17)
+    d_hp_pay_capacity_sequence = hp_pay_capacity_sequence_pol.decide(
+        hp_pay_capacity_state, hp_pay_capacity_sequence_ctx)
+    assert (d_hp_pay_capacity_sequence.action == "continue_game_over"
+            and d_hp_pay_capacity_sequence.params == {}
+            and "KILL_RACE_HP_PAY_TERMINAL_OUTCOME_OBS"
+                in d_hp_pay_capacity_sequence.reason
+            and "/source_round=10/source_action=play_card"
+                "/card=VIVHITE_CARD_LUMINOUS_PROJECTION/damage_est=10"
+                in d_hp_pay_capacity_sequence.reason
+            and "KILL_RACE_HP_PAY_OUTPUT_CAPACITY_TERMINAL_OBS"
+                in d_hp_pay_capacity_sequence.reason
+            and "/source_round=8/source_action=play_card"
+                "/card=VIVHITE_CARD_CLOSED_DOMAIN_MAPPING/damage_est=0"
+                in d_hp_pay_capacity_sequence.reason), \
+        f"后续有伤害付血时零输出付血源被遮蔽或动作漂移: {d_hp_pay_capacity_sequence}"
     assert knowledge.DEFAULT_POLICY[
         "kill_race_hp_pay_output_capacity_terminal_obs"] is True, \
         "DEFAULT_POLICY 缺少竞速付血/零输出容量联合观测开关"
