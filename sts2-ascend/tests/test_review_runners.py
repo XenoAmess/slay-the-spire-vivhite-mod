@@ -80,6 +80,36 @@ class ReviewPlanTests(unittest.TestCase):
 
         self.assertEqual([(plan.key, plan.priority) for plan in plans], [("on", 2)])
 
+    def test_all_explicit_backends_disabled_do_not_restore_legacy_provider(self) -> None:
+        for chain in (
+            [{"key": "off", "enabled": False, "runner": "opencode",
+              "model": "provider/off"}],
+            [{"key": "off", "enabled": False, "runner": "opencode",
+              "model": "provider/off"},
+             {"key": "also-off", "enabled": False, "runner": "codex",
+              "model": "other/off"}],
+        ):
+            with self.subTest(chain=chain):
+                plans = review_plans_from_config({
+                    "review_model_chain": chain,
+                    "preferred_models": ["legacy/preferred"],
+                    "model": "legacy/fallback",
+                })
+
+                self.assertEqual(plans, [])
+
+    def test_absent_or_empty_chain_keeps_legacy_fallback(self) -> None:
+        for override in ({}, {"review_model_chain": []}):
+            with self.subTest(override=override):
+                plans = review_plans_from_config({
+                    "preferred_models": ["legacy/preferred"],
+                    "model": "legacy/fallback",
+                    **override,
+                })
+
+                self.assertEqual([plan.model for plan in plans],
+                                 ["legacy/preferred", "legacy/fallback"])
+
     def test_production_luna_denies_approval_with_workspace_sandbox(self) -> None:
         cfg = json.loads((BRAIN / "config.json").read_text(encoding="utf-8"))
 

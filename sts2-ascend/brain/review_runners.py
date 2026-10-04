@@ -376,6 +376,12 @@ def review_plans_from_config(cfg: dict) -> list[ReviewPlan]:
     raw_chain = cfg.get("review_model_chain")
     plans: list[ReviewPlan] = []
     if isinstance(raw_chain, list) and raw_chain:
+        # Explicitly disabling every configured backend must not resurrect a
+        # legacy/default paid provider. Missing or unusable legacy entries keep
+        # their existing compatibility path below.
+        if all(isinstance(item, dict) and item.get("enabled") is False
+               for item in raw_chain):
+            return []
         usable = [item for item in raw_chain
                   if (isinstance(item, dict)
                       and item.get("enabled", True) is not False
