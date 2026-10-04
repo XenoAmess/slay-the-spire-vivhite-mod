@@ -6074,3 +6074,39 @@ production_code_commit: pending local commit（最终 SHA 见交付回执）
 ### REPLAY
 
 retry_resolution: 20261004-151054-1791097854313751400-53c6e790 integrated
+
+## 2026-10-04 第1923~1926局批：健康覆盖压力下生命支付攻击被余量门误拦
+
+profile_id: `vivhite`
+production_code_commit: `9fcd5a9aaed85919f732efd7948936a5161382d7`（本地提交，未 push）
+
+### ATTRIBUTION
+
+- 本批只处理最新失败局 1926 `GWRREEACZJNJ` 暴露的普通战余量门边界，不把整局失败简单归因于一个开关；生命支付、输出容量、敌方意图和终局仍需独立对账。
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：普通 `Monster`、非致死且非竞速回合中，当前格挡已经覆盖正伤害意图、支付生命后仍高于既有 35% 低血线时，正分生命支付攻击是生产性输出；现有余量门把它拦成 `end_turn`，反而让同一生命成本在后续重复防守中支付。只在这个窄条件放行，低血或未覆盖压力应保持旧门。
+- **EVIDENCE**：1926 完整 47 条 decision 链显示 SHRINKER_BEETLE 战斗在 F2 多次把正分生命支付攻击（例如 T1 约 5.396、T6 约 4.836）留在余量门内；终局 T17、17 回合，`self_loss=44`、`hp_lost=62`，`projected_ttk=4.91071`、`tsurv=0.461538`。原生 v0.111.0 knowledge 对该普通怪记录 Chomp 7 / Stomp 13 意图，支持“已覆盖后仍空过”的边界归因。
+- **EXPECTED_SIGNAL**：未来 3~10 个独立 Vivhite run 中，满足窄条件时出现 `VIVHITE_HP_COVERED_ATTACK_BYPASS`，并看到 `play_card`、目标、支付后 HP、block/incoming 对账；同类局的连续 `end_turn`/终端长战下降。低血、未覆盖、Boss/Elite、致死或竞速回合不得出现该 marker；否则关闭开关并回滚本地提交。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `vivhite_hp_covered_attack_bypass=1`，作为单独可回滚开关。
+- `sts2-ascend/brain/policy.py`：仅在攻击牌、目标存在、`Monster`、`incoming>0`、`block>=incoming`、非致死/非竞速且支付后 HP 高于 35% 最大生命时，解除生命支付余量门并追加 `VIVHITE_HP_COVERED_ATTACK_BYPASS`；其他路径保持原门。
+- `sts2-ascend/brain/selfcheck.py`：增加开关关闭回归夹具和开启放行夹具，锁定 action、card index 与观测 marker。
+- 未修改 runs、stats、progression、profile `policy.json`、lessons、`.runtime`、归档、资产或在线进程；`failed_review_replay.requested_packages=[]`，无 replay target。
+
+### VALIDATION
+
+- 直接入口的业务断言通过，但宿主固定 256 槽临时池在收尾时报告 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 selfcheck 的进程级继承 ACL/`0777` 临时目录适配器执行完整入口，退出码 0，输出 `SELFCHECK OK`。
+- 已完成生产源码与 selfcheck 的完整 diff 回读；`git diff --check` 和 staged diff check 通过，仅有 Git 的 LF/CRLF 提示。源码提交为 `9fcd5a9aaed85919f732efd7948936a5161382d7`。
+
+### FOLLOW-UP / ROLLBACK
+
+- 只收集后续 3~10 个独立 Vivhite 普通战，按 run/floor/turn、incoming/block、hp-pay、支付后 HP、marker、action/params、连续 end-turn、终局与胜负分层；marker 本身不等于假设成立。
+- 若出现未覆盖仍放行、低血触发、非目标场景触发、动作参数漂移，或长战/生存没有可区分改善，将 `vivhite_hp_covered_attack_bypass` 设为 `0`；必要时回滚本地提交，保留观测证据。
+
+### REPLAY
+
+retry_resolution: none (failed_review_replay.requested_packages=[])

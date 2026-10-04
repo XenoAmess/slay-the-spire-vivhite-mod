@@ -3250,6 +3250,53 @@ def main() -> int:
     assert d_g2.action == "play_card", \
         f"致死回合必须豁免余量门（买命/抢斩杀当场兑现）: {d_g2}"
 
+    # 3prs) 健康且已有格挡覆盖时，普通战的正分生命支付攻击不得被余量门
+    #      拦成连续空过（VIVHITE_HP_COVERED_ATTACK_BYPASS）：1926-F2
+    #      SHRINKER_BEETLE 在生命支付后仍远高于低血线、block 已覆盖当前意图，
+    #      但 2 血攻击仍被 +3.0 余量门拦下，最终 17 回合自损44/掉血62。
+    #      仅放行 Monster、非致死/非竞速、目标可选且 block>=incoming 的攻击；
+    #      低血或未覆盖压力继续走旧门，开关=0 严格回滚。
+    def _vgate_covered_monster_state():
+        st = _vgate_state(85, 7)
+        st["combat"]["player"]["block"] = 7
+        st["combat"]["enemies"][0].update({
+            "enemy_id": "SHRINKER_BEETLE",
+            "current_hp": 38,
+            "max_hp": 38,
+        })
+        st["run"]["floor"] = 2
+        return st
+
+    def _vgate_monster_ctx():
+        return SimpleNamespace(
+            combat={"comp_id": "SHRINKER_BEETLE", "node_type": "Monster"},
+            current_combat_is_hard=False, credit_tags=[],
+            stall_analysis_asked=False, stall_analysis_needed=False,
+            stall_giveup=False)
+
+    vknow_cov_off = _vivhite_know("sts2-selfcheck-vhgate-covered-off-")
+    vknow_cov_off.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_cov_off.policy["vivhite_hp_covered_attack_bypass"] = 0
+    vknow_cov_off.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vpol_cov_off = policy.Policy(vknow_cov_off, random.Random(11))
+    d_cov_off = vpol_cov_off.decide(
+        _vgate_covered_monster_state(), _vgate_monster_ctx())
+    assert d_cov_off.action == "end_turn" \
+        and "VIVHITE_HP_COVERED_ATTACK_BYPASS" not in d_cov_off.reason, \
+        f"覆盖攻击回滚开关必须保留旧余量门行为: {d_cov_off}"
+
+    vknow_cov_on = _vivhite_know("sts2-selfcheck-vhgate-covered-on-")
+    vknow_cov_on.policy["vivhite_hp_cost_play_margin"] = 50.0
+    vknow_cov_on.policy["vivhite_hp_covered_attack_bypass"] = 1
+    vknow_cov_on.policy["vivhite_hp_gate_free_turn_relief"] = 0.0
+    vpol_cov_on = policy.Policy(vknow_cov_on, random.Random(11))
+    d_cov_on = vpol_cov_on.decide(
+        _vgate_covered_monster_state(), _vgate_monster_ctx())
+    assert d_cov_on.action == "play_card" \
+        and d_cov_on.params.get("card_index") == 0 \
+        and "VIVHITE_HP_COVERED_ATTACK_BYPASS" in d_cov_on.reason, \
+        f"健康且已有覆盖的正分攻击应越过余量门并留痕: {d_cov_on}"
+
     # 3prt) 謦欬同回合复打递增税（VIVHITE_HP_REPEAT_PLAY_TAX，第 427~433 局批复盘）：
     #      433 局 F30 T2 守恒递归（自我复制引擎牌）六连打，90→30 血单回合自损 60
     #      （全场自损 70 vs 敌方掉血 68），F30 出场 22 血、Boss 37% 血入场四回合

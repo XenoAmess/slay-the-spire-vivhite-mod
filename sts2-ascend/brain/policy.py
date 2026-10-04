@@ -18265,6 +18265,7 @@ class Policy:
             # 謦欬出牌余量门：仅拦「本已过普通阈值、但未过抬升后阈值」的謦欬候选
             # ——普通阈值都过不了的牌维持旧语义（marginal「不空过」通道不受影响）
             _hp_gate_hit = False
+            _hp_margin_gate_hit = False
             _boss_floor_gate_hit = False
             _boss_terminal_gate_hit = False
             _hp_pay = 0.0
@@ -18288,6 +18289,7 @@ class Policy:
                                       + _hp_krh_extra)
                     _hp_gate_hit = (float(pol["play_threshold"]) < score
                                     <= float(pol["play_threshold"]) + _hp_extra)
+                    _hp_margin_gate_hit = _hp_gate_hit
                     if (not _hp_gate_hit
                             and score > float(pol["play_threshold"])
                             and incoming <= 0
@@ -18343,6 +18345,54 @@ class Policy:
                                     f"<{_boss_hp_floor:g}，非击杀牌不放行"
                                     "（VIVHITE_BOSS_FREE_TURN_HP_FLOOR_GATE）")
                             _boss_floor_gate_hit = True
+                    # 1926-F2 SHRINKER_BEETLE exposed a narrow failure mode of the
+                    # otherwise useful margin gate: a healthy, covered-pressure turn still
+                    # lost a positive attack to the gate, then paid the same life
+                    # cost later through repeated defensive turns. Keep the gate
+                    # for uncovered pressure and low HP; only preserve productive
+                    # attacks when the current block already absorbs this intent.
+                    if _hp_margin_gate_hit:
+                        try:
+                            _covered_attack_bypass = bool(int(pol.get(
+                                "vivhite_hp_covered_attack_bypass", 1) or 0))
+                        except (TypeError, ValueError):
+                            _covered_attack_bypass = False
+                        try:
+                            _hp_reject_pct = min(1.0, max(0.0, float(
+                                pol.get("vivhite_hp_pressure_playable_reject_hp_pct",
+                                        0.35) or 0.35)))
+                        except (TypeError, ValueError):
+                            _hp_reject_pct = 0.35
+                        _covered_attack_type = str(
+                            c.get("card_type") or "").casefold()
+                        _covered_attack_entry = self.character_strategy.card(cid)
+                        _covered_attack_is_attack = bool(
+                            _covered_attack_type == "attack"
+                            or (_covered_attack_entry is not None
+                                and _covered_attack_entry.card_type == "attack"))
+                        _post_pay_hp = float(my_hp) - float(_hp_pay)
+                        if (
+                                _covered_attack_bypass
+                                and _covered_attack_is_attack
+                                and target is not None
+                                and cctx.get("node_type") == "Monster"
+                                and not lethal_now
+                                and not kill_race
+                                and not race_allin
+                                and float(incoming) > 0.0
+                                and float(my_block) >= float(incoming)
+                                and float(my_max_hp) > 0.0
+                                and _post_pay_hp > float(my_max_hp) * _hp_reject_pct):
+                            _hp_gate_hit = False
+                            _hp_margin_gate_hit = False
+                            why += (
+                                f"｜謦欬攻击覆盖压力放行：实付{_hp_pay:g}血，"
+                                f"hp={float(my_hp):g}->{_post_pay_hp:g}"
+                                f"/block={float(my_block):g}"
+                                f"/incoming={float(incoming):g}"
+                                f"/score={float(score):.2f}"
+                                "，健康血线保留普通战输出"
+                                "（VIVHITE_HP_COVERED_ATTACK_BYPASS）")
                     if _hp_gate_hit:
                         _gate_formula = (f"实付{_hp_pay:g}血×"
                                          f"{_hp_margin_eff:.2f}")

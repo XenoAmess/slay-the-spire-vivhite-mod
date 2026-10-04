@@ -1323,6 +1323,9 @@ DEFAULT_POLICY = {
                                         # 非攻击謦欬维持门拦），豁免注记留痕对账；0=恢复
                                         # 577~589 批旧口径（一键回滚，旧行为零差异），非白
                                         # 绮角色零改动
+    "vivhite_hp_covered_attack_bypass": 1,  # 健康血线且当前正伤害意图已被格挡覆盖时，普通战
+                                        # 的正分生命支付攻击不被余量门拦截；仅作用于
+                                        # Monster、非致死/非竞速回合，0=严格回滚旧行为。
     "thorns_reflect_pricing": 1,     # 荆棘反伤计价与自杀式斩杀闸（THORNS_REFLECT_PRICING，第 784~789
                                         # 局批复盘新增，静态键）：784-F21 棘刺蟾蜍（SpikesMove 自挂
                                         # 5 层荆棘，mechanics 实证 PowerCmd.Apply<ThornsPower>(5m)）
