@@ -16507,3 +16507,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/11.069434261628285局)，DEFEND_IRONCLAD(18分/2.6136509432040245局)，THE_GAMBIT(18分/4.4528867921253585局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.38 → 0.35（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））；kill_race_prior_eff: 0.35 → 0.37（行至 F33（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：同局净步长 -0.03，步长 0.03→0.015）；block_safety: 2.03 → 2.02（行至 F33（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.60 → 1.55（行至 F33——灰区悲观系数部分胜利回收）
 - 生涯战绩：0/1901 胜，当前目标进阶 0
+
+## 第 1902 局复盘（2026-10-04 08:11）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 CEREMONIAL_BEAST
+- 本局拿牌：MOLTEN_FIST, SWORD_BOOMERANG, CINDER, UNRELENTING, HEADBUTT, UNRELENTING, VICIOUS, TAUNT, HOWL_FROM_BEYOND, CINDER, VICIOUS, MOLTEN_FIST
+- 本局遗物：BAG_OF_PREPARATION, ODDLY_SMOOTH_STONE
+- 战斗记录：F6 Monster战 掉血1; F8 Monster战 掉血9; F11 Monster战 掉血30; F13 Monster战 掉血3; F14 Monster战 掉血6; F17 Boss战 掉血55｜竞速投影审计：pool=179/dpt=6.75/ttk=26.5185/tsurv=3.05556（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=26.5185/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=2.62（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=23.463（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战8回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=24.3333/projected_dpt=14.2504/ratio=1.74/min_ratio=1.07（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=24.3333/projected_dpt=14.2504/ratio=1.74/min_ratio=1.07（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=24.3333/projected_dpt=14.2504/ratio=1.74/min_ratio=1.07（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.9575077918785126局)，PROWESS(26分/13.692344832319444局)，MANGLE(25分/44.939042612482915局)，HELLRAISER(25分/3.1467170753248324局)，FEED(24分/30.452014554589258局)
+- 当前低价值卡牌：BURNING_PACT(17分/11.030691241712587局)，DEFEND_IRONCLAD(18分/2.6045031649028103局)，THE_GAMBIT(18分/4.43730168835292局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（69%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
+- 生涯战绩：0/1902 胜，当前目标进阶 0
