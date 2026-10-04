@@ -16650,3 +16650,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.576217291234745局)，STOKE(18分/2.7630242656688284局)，DEFEND_IRONCLAD(18分/2.4971953981955597局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（65%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收
 - 生涯战绩：0/1914 胜，当前目标进阶 0
+
+## 第 1915 局复盘（2026-10-04 12:03）
+- 结果：💀 失败｜进阶 0｜到达层数 27｜当局评分 27
+- 死因：敌人组合 OVICOPTER
+- 本局拿牌：MOLTEN_FIST, CINDER, TRUE_GRIT, SWORD_BOOMERANG, CRUELTY, EVIL_EYE, SHRUG_IT_OFF, BLUDGEON, UPPERCUT, MOLTEN_FIST, UNMOVABLE, DISMANTLE, FIGHT_ME, BREAKTHROUGH, RAMPAGE, JUGGERNAUT, BREAKTHROUGH, THRUMMING_HATCHET, TAUNT, FLAME_BARRIER, TRUE_GRIT, HOWL_FROM_BEYOND
+- 本局遗物：ODDLY_SMOOTH_STONE, TINY_MAILBOX, ORNAMENTAL_FAN
+- 战斗记录：F17 Boss战 掉血47｜竞速投影审计：pool=158/dpt=6.75/ttk=23.4074/tsurv=4.58333（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=9/projected_ttk=23.4074/actual_over_projected=0.38（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=kill/ratio_valid=yes/ttk_minus_tsurv=18.8241（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战9回合获胜｜竞速Boss有效火力收官对账：samples=7/actual_dpt=19.5714/projected_dpt=15.8769/ratio=1.27/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=7/actual_dpt=19.5714/projected_dpt=15.8769/ratio=1.27/min_ratio=0.06（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：intangible_samples=1/layers_max=1/actual_dpt=1/projected_dpt=18/ratio=0.06/min_ratio=0.06|non_intangible_samples=6/layers_max=0/actual_dpt=22.6667/projected_dpt=15.523/ratio=1.47/min_ratio=0.86（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）; F19 Monster战 掉血5; F21 Monster战 掉血25; F22 Monster战 掉血23; F25 Monster战 掉血49; F27 Monster战 掉血25｜自损2（可行动段2/非行动段18，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.7811744800501614局)，PROWESS(26分/13.08225973888425局)，MANGLE(25分/42.936709166540886局)，FEED(25分/30.070930383513947局)，HELLRAISER(25分/3.006509886240443局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.539200530715423局)，STOKE(18分/2.7533536807389876局)，DEFEND_IRONCLAD(18分/2.4884552143018754局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.50)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（6回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.37 → 0.37（行至 F27（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放；换向阻尼：上一步 -0.00，步长 0.03→0.000）；block_safety: 2.05 → 2.04（行至 F27（一幕Boss已实战击败）——防御权重部分胜利回收）
+- 生涯战绩：0/1915 胜，当前目标进阶 0
