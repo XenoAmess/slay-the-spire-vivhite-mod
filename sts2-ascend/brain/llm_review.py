@@ -6322,10 +6322,26 @@ def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, s
         if git_dir_result.returncode != 0:
             raise OSError("raw clone Git directory lookup failed: "
                           + git_dir_result.stderr[:400])
-        source_objects = Path(git_dir_result.stdout.strip()).resolve() / "objects"
+        source_git_dir = Path(git_dir_result.stdout.strip()).resolve()
+        source_objects = source_git_dir / "objects"
         if not source_objects.is_dir():
             raise OSError(f"raw clone Git objects missing: {source_objects}")
+        source_index = source_git_dir / "index"
+        if source_index.is_file():
+            # Copy bytes and the index timestamp, never hardlink the forensic
+            # original. Keeping its timestamp lets Git detect racily clean entries.
+            shutil.copy2(source_index, index_path)
+            os.chmod(index_path, stat.S_IMODE(index_path.stat().st_mode) | stat.S_IWRITE)
         env = _git_env_with_long_paths()
+        # Capture always checks the complete worktree. Raw clone optimization
+        # flags/hooks must not turn the seeded stat cache into a hidden exclusion.
+        count = int(env["GIT_CONFIG_COUNT"])
+        for key in ("core.ignorestat", "core.fsmonitor", "core.splitIndex",
+                    "core.sparseCheckout", "index.sparse"):
+            env[f"GIT_CONFIG_KEY_{count}"] = key
+            env[f"GIT_CONFIG_VALUE_{count}"] = "false"
+            count += 1
+        env["GIT_CONFIG_COUNT"] = str(count)
         env["GIT_INDEX_FILE"] = str(index_path)
         env["GIT_OBJECT_DIRECTORY"] = str(object_dir)
         env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = str(source_objects)
@@ -6334,6 +6350,52 @@ def _new_private_sandbox_git(repo: Path, prefix: str) -> tuple[Path, dict[str, s
     except Exception:
         _discard_owned_review_temp(root, prefix, log=lambda _message: None)
         raise
+
+
+def _reset_private_sandbox_index(
+    repo: Path, pre_head: str, env: dict[str, str],
+) -> subprocess.CompletedProcess:
+    """Restore the baseline while retaining matching entries' usable stat cache."""
+    args = ["read-tree", "--reset", pre_head]
+    restored = _sandbox_git(repo, args, env=env)
+    if restored.returncode != 0:
+        # An absent/corrupt model index cannot prevent full forensic capture.
+        # Retry from an empty disposable index; the raw index is never touched.
+        Path(env["GIT_INDEX_FILE"]).unlink(missing_ok=True)
+        restored = _sandbox_git(repo, args, env=env)
+        if restored.returncode != 0:
+            return restored
+    # A split index can refer to the raw clone's sharedindex file. Expand only
+    # our copy before clearing entry flags, so later updates stay self-contained.
+    expanded = _sandbox_git(repo, ["update-index", "--no-split-index"], env=env)
+    if expanded.returncode != 0:
+        return expanded
+    for listing, flag, matches in (
+        ("-v", "--no-assume-unchanged", lambda tag: tag.islower()),
+        ("-v", "--no-skip-worktree", lambda tag: tag.lower() == "s"),
+        ("-f", "--no-fsmonitor-valid", lambda tag: tag.islower()),
+    ):
+        listed = _sandbox_git(repo, ["ls-files", listing, "-z"], env=env)
+        if listed.returncode != 0:
+            return listed
+        paths = [record[2:] for record in listed.stdout.split("\0")
+                 if len(record) > 2 and matches(record[0])]
+        # Keep argv well below Windows' command-line limit, including quoting.
+        batch: list[str] = []
+        batch_chars = 0
+        for path in paths:
+            if batch and batch_chars + len(path) + 3 > 8000:
+                cleared = _sandbox_git(repo, ["update-index", flag, "--", *batch], env=env)
+                if cleared.returncode != 0:
+                    return cleared
+                batch, batch_chars = [], 0
+            batch.append(path)
+            batch_chars += len(path) + 3
+        if batch:
+            cleared = _sandbox_git(repo, ["update-index", flag, "--", *batch], env=env)
+            if cleared.returncode != 0:
+                return cleared
+    return restored
 
 
 def _discard_private_sandbox_git(root: Path | None, prefix: str, log=print) -> None:
@@ -6656,7 +6718,7 @@ def _capture_sandbox_wip(repo: Path, pre_head: str,
         # clone 本身是取证原件。所有基线恢复和 force-stage 都只写入
         # disposable index/object store，不移动 raw HEAD，不覆盖 raw index。
         capture_git_root, capture_env = _new_private_sandbox_git(repo, capture_prefix)
-        read_tree = _sandbox_git(repo, ["read-tree", pre_head], env=capture_env)
+        read_tree = _reset_private_sandbox_index(repo, pre_head, capture_env)
         if read_tree.returncode != 0:
             log("[llm] 失败复盘 WIP 基线恢复失败；仅保存诊断元数据")
             return
@@ -10361,8 +10423,8 @@ def _run_review_sandbox(
         # raw HEAD/index/objects 属于失败现场，验收过程绝不改写它们。
         validation_git_root, validation_env = _new_private_sandbox_git(
             sandbox_repo, validation_prefix)
-        read_inventory_base = _sandbox_git(
-            sandbox_repo, ["read-tree", pre_head], env=validation_env)
+        read_inventory_base = _reset_private_sandbox_index(
+            sandbox_repo, pre_head, validation_env)
         if read_inventory_base.returncode != 0:
             result = SandboxReviewResult(rc=rc, out=out, error="隔离仓库基线恢复失败")
             return result
@@ -10405,8 +10467,8 @@ def _run_review_sandbox(
 
         # 自检可能生成新产物；再次把 private index 退回基线，仅导出
         # 验证过的 accepted 精确路径。
-        read_patch_base = _sandbox_git(
-            sandbox_repo, ["read-tree", pre_head], env=validation_env)
+        read_patch_base = _reset_private_sandbox_index(
+            sandbox_repo, pre_head, validation_env)
         stage = _sandbox_git(
             sandbox_repo, ["add", "--all", "--force", "--", *accepted],
             env=validation_env)
