@@ -17002,3 +17002,14 @@
 - 当前低价值卡牌：STOKE(18分/2.469780720882824局)，DEFEND_IRONCLAD(18分/2.232164634735037局)，THE_GAMBIT(18分/3.802947155474491局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（78%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.43 → 0.43（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造）；换向阻尼：上一步 +0.00，步长 0.03→0.000）
 - 生涯战绩：0/1946 胜，当前目标进阶 0
+
+## 第 1947 局复盘（2026-10-04 22:32）
+- 结果：💀 失败｜进阶 0｜到达层数 14｜当局评分 14
+- 死因：敌人组合 FUZZY_WURM_CRAWLER+SHRINKER_BEETLE
+- 本局拿牌：CINDER, CINDER, CRUELTY, ARMAMENTS, IRON_WAVE, MOLTEN_FIST, PACTS_END
+- 本局遗物：VAMBRACE
+- 战斗记录：F4 Monster战 掉血2; F5 Monster战 掉血31; F7 Monster战 掉血15; F9 Monster战 掉血35; F12 Monster战 掉血6; F14 Monster战 掉血29｜竞速投影审计：pool=60/dpt=10.8/ttk=5.55556/tsurv=1.125（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=4/projected_ttk=5.55556/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=3.56（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=4.43056（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T3判死→实战4回合阵亡（阵亡）
+- 当前高价值卡牌：PROWESS(26分/12.613117411391762局)，FEED(25分/30.60920972973444局)，MASTER_OF_STRATEGY(25分/4.376373260310102局)，MANGLE(25分/40.277311380948696局)，PANACHE(25分/4.355486673542213局)
+- 当前低价值卡牌：STOKE(18分/2.4611364883597346局)，DEFEND_IRONCLAD(18分/2.2243520585134644局)，THE_GAMBIT(18分/3.7896368404303304局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（4回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
+- 生涯战绩：0/1947 胜，当前目标进阶 0
