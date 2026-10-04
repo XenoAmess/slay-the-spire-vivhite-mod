@@ -16352,3 +16352,32 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 `py -3 -B sts2-ascend/brain/selfcheck.py` 命中宿主固定 256 槽临时池的既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后用同一 clone 的进程级 0777 临时目录适配器运行完整 selfcheck，退出码 0，末尾为 `SELFCHECK OK`。目标 diff `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; decimillipede reattach terminal observation integrated)`
+
+## 2026-10-04 run 1917：竞速有效火力最低样本上下文
+
+profile_id：`ironclad`
+requested_runs：`1917`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：`RACE_PROJ_EFFECTIVE_DPT_AUDIT` 的 `min_ratio` 能暴露 F33 的低效窗口，但现有收官聚合与终局桥只带最小比值，不带该窗口的 source round 及 actual/projected DPT；因此无法机械区分单一破相窗口与总体火力问题。可证伪条件是：未来 3—10 个匹配样本中，新增的最小样本字段与逐窗口 marker 不一致、跨回合/跨战斗、字段缺失，或 action/params 漂移。
+- **EVIDENCE**：完整链 `sts2-ascend/knowledge/runs/20261004-122439_PVS1QZEMBFQG.json`（1917，405 条；packet 仅保留 105 条、裁剪 300 条，完整链已回读）中，F33 的 D398 记录有效 DPT `sample=4→5/actual=17/projected=29.2/ratio=0.58`，D402 的末窗口为 `sample=5→6/actual=32/projected=29.8/ratio=1.07`；D404 的总体终局对账只有 `samples=4/actual_dpt=37.25/projected_dpt=35.2375/ratio=1.04/min_ratio=0.58`，没有最小样本来源与 DPT 数值。这支持补齐只读上下文，不单独证明该窗口是唯一死因。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立、已锁定且有有效窗口的 Boss 竞速终局，既有 audit 尾部应追加 `min_sample=start→end/min_actual_dpt=/min_projected_dpt=`，聚合终局桥应原样保留这些字段；旧记录缺字段仍可解析，关闭既有 `race_audit_effective_dpt_obs` 时新增审计尾部消失且 action/params 不变。逐窗口与聚合不一致、错边界或动作漂移即证伪。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：复用已计算的 DPT 窗口端点，将 `_boss_prev_round→round_no` 保存到既有样本；`pop_race_audit()` 只在既有最小比值上补出对应 start/end、actual/projected，并让既有终局桥兼容性解析和转发该可选尾部。
+- `sts2-ascend/brain/agent.py`：在既有 `RACE_PROJ_EFFECTIVE_DPT_AUDIT` 收官备注中，仅当四个字段均为有限合法值时追加最小样本上下文。
+- `sts2-ascend/brain/selfcheck.py`：覆盖最小样本聚合、生产收官备注、`GAME_OVER` 终局桥和既有开关/动作参数回归。
+- 不新增旋钮，不进入评分、候选、门控、等待、学习统计、action 或 params；沿用 `race_audit_effective_dpt_obs=False` 作为单键回滚点。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：收集 3—10 个独立匹配终局，逐条对账窗口的 start/end、actual/projected/ratio、分相/无实体分组、终局 outcome 与真实 `applied` 回执；最小字段只能归因，不能直接升级为竞速行为门。
+- **Adjust**：若端点跨战斗、回合含义与逐窗口 marker 不一致，或原生载荷无法稳定提供合法 DPT，收紧同一战斗边界/解析而不改策略；若新增字段引起 action/params 漂移，立即关闭观测。
+- **Rollback**：将 `race_audit_effective_dpt_obs` 设为 `False`，预期移除本次最小样本 audit 尾部并恢复旧收官备注；必要时回退本地 commit，保留本批证据。
+- **Validation**：直接 selfcheck 复现宿主固定 256 槽的 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；同一 clone 的扩容进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。目标源码 AST 解析通过，`git diff --check` 退出码 0；未写入 `.runtime/`、正式 runs/archive、学习记忆、回放包或管理在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; minimum DPT sample context integrated)`

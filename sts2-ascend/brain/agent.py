@@ -3795,6 +3795,42 @@ class Agent:
                         _ra.get("boss_effective_dpt_ratio_mean") or 0.0)
                     _dpt_min_ratio = float(
                         _ra.get("boss_effective_dpt_ratio_min") or 0.0)
+                    _dpt_min_sample_tail = ""
+                    if all(key in _ra for key in (
+                            "boss_effective_dpt_ratio_min_sample_start",
+                            "boss_effective_dpt_ratio_min_sample_end",
+                            "boss_effective_dpt_ratio_min_actual",
+                            "boss_effective_dpt_ratio_min_projected")):
+                        try:
+                            _dpt_min_start = float(_ra[
+                                "boss_effective_dpt_ratio_min_sample_start"])
+                            _dpt_min_end = float(_ra[
+                                "boss_effective_dpt_ratio_min_sample_end"])
+                            _dpt_min_actual = float(_ra[
+                                "boss_effective_dpt_ratio_min_actual"])
+                            _dpt_min_projected = float(_ra[
+                                "boss_effective_dpt_ratio_min_projected"])
+                        except (TypeError, ValueError, OverflowError):
+                            _dpt_min_start = None
+                            _dpt_min_end = None
+                            _dpt_min_actual = None
+                            _dpt_min_projected = None
+                        if (_dpt_min_start is not None
+                                and _dpt_min_end is not None
+                                and _dpt_min_actual is not None
+                                and _dpt_min_projected is not None
+                                and all(math.isfinite(value) for value in (
+                                    _dpt_min_start, _dpt_min_end,
+                                    _dpt_min_actual, _dpt_min_projected))
+                                and _dpt_min_start >= 0.0
+                                and _dpt_min_end >= _dpt_min_start
+                                and _dpt_min_actual >= 0.0
+                                and _dpt_min_projected > 0.0):
+                            _dpt_min_sample_tail = (
+                                f"/min_sample={_dpt_min_start:g}"
+                                f"->{_dpt_min_end:g}"
+                                f"/min_actual_dpt={_dpt_min_actual:g}"
+                                f"/min_projected_dpt={_dpt_min_projected:g}")
                     if (_dpt_samples > 0
                             and all(math.isfinite(value) for value in (
                                 _dpt_actual, _dpt_projected,
@@ -3805,7 +3841,8 @@ class Agent:
                             f"/projected_dpt={_dpt_projected:g}"
                             f"/ratio={_dpt_ratio:.2f}"
                             f"/min_ratio={_dpt_min_ratio:.2f}"
-                            "（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
+                            + _dpt_min_sample_tail
+                            + "（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
                         if bool(self.know.policy.get(
                                 "race_audit_effective_dpt_phase_obs", True)):
                             _phase_parts = []

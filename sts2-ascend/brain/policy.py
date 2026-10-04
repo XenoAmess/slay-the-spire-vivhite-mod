@@ -10063,7 +10063,11 @@ class Policy:
                 rf"/actual_dpt=(?P<actual>{_number_pattern})"
                 rf"/projected_dpt=(?P<projected>{_number_pattern})"
                 rf"/ratio=(?P<ratio>{_number_pattern})"
-                rf"/min_ratio=(?P<min_ratio>{_number_pattern})",
+                rf"/min_ratio=(?P<min_ratio>{_number_pattern})"
+                rf"(?:/min_sample=(?P<min_sample_start>{_number_pattern})"
+                rf"->(?P<min_sample_end>{_number_pattern})"
+                rf"/min_actual_dpt=(?P<min_actual>{_number_pattern})"
+                rf"/min_projected_dpt=(?P<min_projected>{_number_pattern}))?",
                 _source_text)
             if _match is None:
                 continue
@@ -10087,6 +10091,40 @@ class Policy:
                     or _source["min_ratio"] < 0.0):
                 _source = None
                 continue
+            _min_sample_start = _match.group("min_sample_start")
+            _min_sample_end = _match.group("min_sample_end")
+            _min_actual = _match.group("min_actual")
+            _min_projected = _match.group("min_projected")
+            if all(value is not None for value in (
+                    _min_sample_start, _min_sample_end,
+                    _min_actual, _min_projected)):
+                try:
+                    _min_sample_start_value = float(_min_sample_start)
+                    _min_sample_end_value = float(_min_sample_end)
+                    _min_actual_value = float(_min_actual)
+                    _min_projected_value = float(_min_projected)
+                except (TypeError, ValueError, OverflowError):
+                    _min_sample_start_value = None
+                    _min_sample_end_value = None
+                    _min_actual_value = None
+                    _min_projected_value = None
+                if (_min_sample_start_value is not None
+                        and _min_sample_end_value is not None
+                        and _min_actual_value is not None
+                        and _min_projected_value is not None
+                        and all(math.isfinite(value) for value in (
+                            _min_sample_start_value, _min_sample_end_value,
+                            _min_actual_value, _min_projected_value))
+                        and _min_sample_start_value >= 0.0
+                        and _min_sample_end_value >= _min_sample_start_value
+                        and _min_actual_value >= 0.0
+                        and _min_projected_value > 0.0):
+                    _source.update({
+                        "min_sample_start": _min_sample_start_value,
+                        "min_sample_end": _min_sample_end_value,
+                        "min_actual_dpt": _min_actual_value,
+                        "min_projected_dpt": _min_projected_value,
+                    })
             break
         if _source is None:
             return ""
@@ -10103,6 +10141,13 @@ class Policy:
             except (TypeError, ValueError, OverflowError):
                 return "?"
 
+        _min_sample_tail = ""
+        if "min_sample_start" in _source:
+            _min_sample_tail = (
+                f"/min_sample={_round(_source.get('min_sample_start'))}"
+                f"->{_round(_source.get('min_sample_end'))}"
+                f"/min_actual_dpt={_num(_source.get('min_actual_dpt'))}"
+                f"/min_projected_dpt={_num(_source.get('min_projected_dpt'))}")
         _result = "victory" if victory else "defeat"
         return (
             f"；竞速Boss有效火力聚合终局对账：outcome={_result}"
@@ -10112,7 +10157,8 @@ class Policy:
             f"/source_projected_dpt={_num(_source['projected_dpt'])}"
             f"/source_ratio={_num(_source['ratio'])}"
             f"/source_min_ratio={_num(_source['min_ratio'])}"
-            f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
+            + _min_sample_tail
+            + f"/terminal_round={_round(_terminal.get('turn', _terminal.get('round')))}"
             f"/terminal_action={_terminal.get('action') or '?'}"
             f"/terminal_hp={_num(_terminal.get('hp'))}"
             f"/final_hp={_num(final_hp)}"
@@ -15843,6 +15889,8 @@ class Policy:
                                         "actual": _boss_actual,
                                         "projected": _boss_projected_value,
                                         "ratio": _boss_ratio_value,
+                                        "sample_start": _boss_prev_round,
+                                        "sample_end": round_no,
                                         "slippery_layers": float(
                                             _boss_start_slippery),
                                         "intangible_layers": float(
@@ -22722,7 +22770,9 @@ class Policy:
                         if all(math.isfinite(value) for value in (
                                 _actual, _projected, _ratio)):
                             _valid_samples.append(
-                                (_actual, _projected, _ratio))
+                                (_actual, _projected, _ratio,
+                                 _sample.get("sample_start"),
+                                 _sample.get("sample_end")))
                 if _valid_samples:
                     _sample_count = len(_valid_samples)
                     _result.update({
@@ -22739,6 +22789,30 @@ class Policy:
                         "boss_effective_dpt_ratio_min": min(
                             sample[2] for sample in _valid_samples),
                     })
+                    _min_sample = min(
+                        _valid_samples, key=lambda sample: sample[2])
+                    try:
+                        _min_sample_start = float(_min_sample[3])
+                        _min_sample_end = float(_min_sample[4])
+                    except (TypeError, ValueError, OverflowError):
+                        _min_sample_start = None
+                        _min_sample_end = None
+                    if (_min_sample_start is not None
+                            and _min_sample_end is not None
+                            and all(math.isfinite(value) for value in (
+                                _min_sample_start, _min_sample_end))
+                            and _min_sample_start >= 0.0
+                            and _min_sample_end >= _min_sample_start):
+                        _result.update({
+                            "boss_effective_dpt_ratio_min_sample_start": (
+                                _min_sample_start),
+                            "boss_effective_dpt_ratio_min_sample_end": (
+                                _min_sample_end),
+                            "boss_effective_dpt_ratio_min_actual": (
+                                _min_sample[0]),
+                            "boss_effective_dpt_ratio_min_projected": (
+                                _min_sample[1]),
+                        })
                     if bool(self.know.policy.get(
                             "race_audit_effective_dpt_phase_obs", True)):
                         _phase_samples = {"slippery": [], "clear": []}

@@ -284,8 +284,10 @@ def main() -> int:
     assert _ra_snap == {"latched": True, "latch_round": 3, "esc": True}, _ra_snap
     pol._boss_effective_dpt_samples = [
         {"actual": 12.0, "projected": 24.0, "ratio": 0.5,
+         "sample_start": 3, "sample_end": 4,
          "slippery_layers": 2.0, "intangible_layers": 2.0},
         {"actual": 18.0, "projected": 24.0, "ratio": 0.75,
+         "sample_start": 4, "sample_end": 5,
          "slippery_layers": 0.0, "intangible_layers": 0.0},
     ]
     pol._race_audit = {"latched": True, "latch_round": 4, "esc": False}
@@ -295,6 +297,10 @@ def main() -> int:
     assert abs(_ra_dpt["boss_effective_dpt_projected_mean"] - 24.0) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_ratio_mean"] - 0.625) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_ratio_min"] - 0.5) < 1e-9
+    assert _ra_dpt["boss_effective_dpt_ratio_min_sample_start"] == 3.0, _ra_dpt
+    assert _ra_dpt["boss_effective_dpt_ratio_min_sample_end"] == 4.0, _ra_dpt
+    assert abs(_ra_dpt["boss_effective_dpt_ratio_min_actual"] - 12.0) < 1e-9
+    assert abs(_ra_dpt["boss_effective_dpt_ratio_min_projected"] - 24.0) < 1e-9
     assert _ra_dpt["boss_effective_dpt_slippery_samples"] == 1, _ra_dpt
     assert abs(_ra_dpt["boss_effective_dpt_slippery_actual_mean"] - 12.0) < 1e-9
     assert abs(_ra_dpt["boss_effective_dpt_slippery_ratio_mean"] - 0.5) < 1e-9
@@ -16704,8 +16710,10 @@ def main() -> int:
     }
     ra_agent.policy._boss_effective_dpt_samples = [
         {"actual": 10.0, "projected": 20.0, "ratio": 0.5,
+         "sample_start": 3, "sample_end": 4,
          "slippery_layers": 8.0, "intangible_layers": 2.0},
         {"actual": 20.0, "projected": 20.0, "ratio": 1.0,
+         "sample_start": 4, "sample_end": 5,
          "slippery_layers": 0.0, "intangible_layers": 0.0},
     ]
     ra_agent.ctx.combat_agg = _ra_agg(True, False)
@@ -16719,6 +16727,10 @@ def main() -> int:
     assert ("actual_rounds=8/projected_ttk=6.25/actual_over_projected=1.28"
             "（RACE_PROJ_TTK_RATIO_OBS）") in ra_agent.ctx.combat_notes[-1], \
         f"竞速投影实际/预计TTK比值未留痕: {ra_agent.ctx.combat_notes[-1]}"
+    assert ("min_ratio=0.50/min_sample=3->4/min_actual_dpt=10"
+            "/min_projected_dpt=20（RACE_PROJ_EFFECTIVE_DPT_AUDIT）") \
+        in ra_agent.ctx.combat_notes[-1], \
+        f"竞速有效火力最小样本上下文未留痕: {ra_agent.ctx.combat_notes[-1]}"
     assert ("slippery_samples=1/actual_dpt=10/projected_dpt=20/ratio=0.50/min_ratio=0.50"
             "|clear_samples=1/actual_dpt=20/projected_dpt=20/ratio=1.00/min_ratio=1.00"
             "（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）") in ra_agent.ctx.combat_notes[-1], \
@@ -25858,7 +25870,8 @@ def main() -> int:
     _projection_aggregate_note = (
         "F17 Boss战 掉血71｜竞速Boss有效火力收官对账："
         "samples=8/actual_dpt=16.75/projected_dpt=18.3756/ratio=0.92"
-        "/min_ratio=0.53（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
+        "/min_ratio=0.53/min_sample=7->8/min_actual_dpt=9.5"
+        "/min_projected_dpt=18（RACE_PROJ_EFFECTIVE_DPT_AUDIT）")
     _projection_aggregate_terminal_state = {
         "screen": "GAME_OVER",
         "available_actions": ["continue_game_over"],
@@ -25883,6 +25896,8 @@ def main() -> int:
                 "/source_samples=8/source_actual_dpt=16.75"
                 "/source_projected_dpt=18.3756/source_ratio=0.92"
                 "/source_min_ratio=0.53"
+                "/min_sample=7->8/min_actual_dpt=9.5"
+                "/min_projected_dpt=18"
                 "/terminal_round=11/terminal_action=end_turn/terminal_hp=5"
                 "/final_hp=0"
                 in _d_projection_aggregate.reason), \
