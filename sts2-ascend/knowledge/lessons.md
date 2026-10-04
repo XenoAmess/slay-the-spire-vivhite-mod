@@ -16705,3 +16705,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.392424548633064局)，STOKE(18分/2.7150086289171953局)，DEFEND_IRONCLAD(18分/2.4537993163632557局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；boss_entry_min_hp_pct 0.88 距上限仅余 0.02(<步长0.02)，停止加码
 - 生涯战绩：0/1919 胜，当前目标进阶 0
+
+## 第 1920 局复盘（2026-10-04 13:47）
+- 结果：💀 失败｜进阶 0｜到达层数 21｜当局评分 21
+- 死因：敌人组合 THE_OBSCURA
+- 本局拿牌：TWIN_STRIKE, THUNDERCLAP, EVIL_EYE, EVIL_EYE, BREAKTHROUGH, TWIN_STRIKE, VICIOUS, HEMOKINESIS, IRON_WAVE, BLUDGEON, STONE_ARMOR, JUGGLING, HEMOKINESIS, HEMOKINESIS, THRUMMING_HATCHET, HELLRAISER, TRUE_GRIT, EXPECT_A_FIGHT
+- 本局遗物：FESTIVE_POPPER
+- 战斗记录：F9 Unknown战 掉血13｜自损2（可行动段2/非行动段4，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损2（可行动段2/非行动段1，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血22｜自损4（可行动段4/非行动段24，SELF_LOSS_PHASE_OBS）; F19 Monster战 掉血14｜自损6（可行动段6/非行动段8，SELF_LOSS_PHASE_OBS）; F20 Monster战 掉血8｜自损3（可行动段3/非行动段9，SELF_LOSS_PHASE_OBS）; F21 Monster战 掉血58｜自损5（可行动段5/非行动段51，SELF_LOSS_PHASE_OBS）｜竞速投影审计：pool=42/dpt=26.0571/ttk=1.61184/tsurv=0.0454545（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=8/projected_ttk=1.61184/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=176.00（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=1.56639（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T8判死→实战8回合阵亡（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.715465502179609局)，PROWESS(26分/12.85491717106184局)，MANGLE(25分/42.19055812607868局)，FEED(25分/29.54835992040984局)，PYRE(25分/20.815048476623947局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.356051062712849局)，STOKE(18分/2.7055060987159854局)，DEFEND_IRONCLAD(18分/2.4452110187559843局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长2.00)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（8回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收；kill_race_prior_eff: 0.40 → 0.43（行至 F21（一幕Boss已实战击败）——竞速先验折算率获部分胜利释放）；block_safety: 2.06 → 2.05（行至 F21（一幕Boss已实战击败）——防御权重部分胜利回收）；elite_grey_safety_mult: 1.50 → 1.45（行至 F21——灰区悲观系数部分胜利回收）
+- 生涯战绩：0/1920 胜，当前目标进阶 0
