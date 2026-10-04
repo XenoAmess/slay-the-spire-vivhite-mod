@@ -220,6 +220,9 @@ def create_isolated_repository(
     _git(destination, ['config', '--local', 'gc.auto', '0'])
     _git(destination, ['config', '--local', 'maintenance.auto', 'false'])
     _git(destination, ['config', 'core.autocrlf', 'false'])
+    # Preserve frozen CRLF bytes while still checking real trailing spaces.
+    _git(destination, ['config', '--local', 'core.whitespace',
+                       'blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol'])
     _git(destination, ['config', 'user.name', 'sts2 review evaluator'])
     _git(destination, ['config', 'user.email', 'review-eval@localhost'])
     _git(destination, ['add', '-A'])

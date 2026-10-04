@@ -162,6 +162,48 @@ class BackendKeyTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
+    def test_crlf_edits_preserve_baseline_bytes_and_reject_trailing_spaces(self):
+        with tempfile.TemporaryDirectory(prefix='sts2-eval-crlf-') as root:
+            base = Path(root)
+            source = _source_repo(base)
+            _git(source, 'config', '--local', 'core.autocrlf', 'false')
+            original = b'first = 1\r\nsecond = 2\r\n'
+            (source / 'tracked.txt').write_bytes(original)
+            _git(source, 'add', 'tracked.txt')
+            _git(source, 'commit', '--quiet', '-m', 'frozen CRLF baseline')
+            source_head = _git(source, 'rev-parse', 'HEAD')
+            source_config = (source / '.git' / 'config').read_bytes()
+            self.assertEqual(review_model_eval._git(
+                source, ['show', f'{source_head}:tracked.txt'],
+                text=False).stdout, original)
+            isolated = base / 'sandbox' / 'repo'
+            local_head = review_model_eval.create_isolated_repository(
+                source, source_head, isolated)
+            self.assertEqual(_git(isolated, 'config', '--local', '--get',
+                                  'core.whitespace'),
+                             'blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol')
+            self.assertEqual((isolated / 'tracked.txt').read_bytes(), original)
+            self.assertEqual(review_model_eval._git(
+                isolated, ['show', f'{local_head}:tracked.txt'],
+                text=False).stdout, original)
+
+            (isolated / 'tracked.txt').write_bytes(
+                original.replace(b'first = 1', b'first = 3'))
+            _git(isolated, 'diff', '--check')
+
+            (isolated / 'tracked.txt').write_bytes(
+                original.replace(b'first = 1', b'first = 3 '))
+            rejected = review_model_eval._git(
+                isolated, ['diff', '--check'], check=False)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('trailing whitespace', rejected.stdout)
+            self.assertEqual(review_model_eval._git(
+                isolated, ['show', f'{local_head}:tracked.txt'],
+                text=False).stdout, original)
+            self.assertEqual((source / 'tracked.txt').read_bytes(), original)
+            self.assertEqual((source / '.git' / 'config').read_bytes(), source_config)
+            self.assertEqual(_git(source, 'rev-parse', 'HEAD'), source_head)
+
     @unittest.skipUnless(sys.platform == 'win32', 'Git for Windows MAX_PATH regression')
     def test_deep_snapshot_indexes_full_tree_with_only_repo_local_longpaths(self):
         with tempfile.TemporaryDirectory(prefix='sts2-eval-longpaths-') as root:
