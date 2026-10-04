@@ -13018,8 +13018,7 @@ def main() -> int:
                           ttk_obs=True, latched=True, latch_hold=False,
                           esc_rounds=2, hand_override=None,
                           intangible=False, intangible_obs=True,
-                          effective_dpt_obs=True, selected_card_obs=True,
-                          sample_effective_round=False,
+                          effective_dpt_obs=True, sample_effective_round=False,
                           boss_effective_dpt_obs=True, vivhite=False,
                           boss_focus_switch_obs=True, focus_switches=0,
                           boss_state_obs=True, boss_state_powers=None,
@@ -13114,8 +13113,6 @@ def main() -> int:
         cap_pol.know.policy[
             "slippery_ttk_effective_dpt_obs"] = effective_dpt_obs
         cap_pol.know.policy[
-            "slippery_ttk_selected_card_obs"] = selected_card_obs
-        cap_pol.know.policy[
             "boss_race_effective_dpt_obs"] = boss_effective_dpt_obs
         cap_pol.know.policy[
             "boss_race_focus_switch_obs"] = boss_focus_switch_obs
@@ -13195,23 +13192,6 @@ def main() -> int:
         f"滑溜在账时竞速投影缺少破层期观测: {d_combat_slippery.reason}"
     assert "SLIPPERY_TTK_OBS" not in d_combat_cap.reason, \
         f"无滑溜目标误挂破层期观测: {d_combat_cap.reason}"
-    assert knowledge.DEFAULT_POLICY["slippery_ttk_selected_card_obs"] is True
-    assert ("SLIPPERY_SELECTED_CARD_OBS" in d_combat_slippery.reason
-            and "card=CAP_HIT" in d_combat_slippery.reason
-            and "target=CAP_BOSS#0" in d_combat_slippery.reason
-            and "/layers=8/raw=10/hits=1" in d_combat_slippery.reason
-            and "/effective_cap_est=1" in d_combat_slippery.reason
-            and "/target_block=0" in d_combat_slippery.reason), \
-        f"滑溜选牌级原始/有效输出观测缺失: {d_combat_slippery.reason}"
-    d_combat_slippery_selected_off = combat_flip_probe(
-        0.0, slippery=True, selected_card_obs=False)
-    assert (d_combat_slippery_selected_off.action
-            == d_combat_slippery.action
-            and d_combat_slippery_selected_off.params
-            == d_combat_slippery.params
-            and "SLIPPERY_SELECTED_CARD_OBS"
-            not in d_combat_slippery_selected_off.reason), \
-        f"滑溜选牌级观测关闭后动作或理由漂移: {d_combat_slippery_selected_off}"
 
     # 3br-latch-intent-pressure：首次 live Boss 入锁必须保留当前意图、EMA、
     # 蒸汽喷发层与投影端点，作为后续动态火力区间的可证伪连接点；只追加理由，

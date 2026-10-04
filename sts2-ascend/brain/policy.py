@@ -18822,60 +18822,6 @@ class Policy:
             tname = ""
             if target is not None:
                 tname = next((e["name"] for e in (combat.get("enemies") or []) if e.get("index") == target), "")
-            # Selected-card Slippery attribution (SLIPPERY_SELECTED_CARD_OBS):
-            # the round-level effective-DPT audit proves the loss after the
-            # round, but cannot identify the selected card's raw output versus
-            # the one-HP-per-layer cap. This is audit-only and deliberately
-            # excludes AOE/untargeted cards so the estimate remains tied to
-            # the actual target in params.
-            try:
-                _slippery_selected_card_obs = bool(int(float(pol.get(
-                    "slippery_ttk_selected_card_obs", 1) or 0)))
-            except (TypeError, ValueError, OverflowError):
-                _slippery_selected_card_obs = False
-            if (_slippery_selected_card_obs
-                    and target is not None
-                    and _kd > 0
-                    and not ("所有敌人" in _text(card)
-                             or "all enemies" in _text(card).lower()
-                             or (card.get("target_type") or "") == "AllEnemies")):
-                _sl_target = next(
-                    (enemy for enemy in enemies
-                     if isinstance(enemy, dict)
-                     and enemy.get("index") == target), None)
-                if _sl_target is not None:
-                    try:
-                        _sl_layers = max(
-                            0.0, float(self._enemy_slippery_stack(_sl_target)))
-                        _sl_raw_damage = max(0.0, float(_kd or 0.0))
-                        _sl_hits = max(1, int(_kh or 1))
-                    except (TypeError, ValueError, OverflowError):
-                        _sl_layers = 0.0
-                        _sl_raw_damage = 0.0
-                        _sl_hits = 1
-                    if _sl_layers > 0.0 and _sl_raw_damage > 0.0:
-                        _sl_effective_cap = (
-                            min(_sl_layers, _sl_hits) * min(_sl_raw_damage, 1.0)
-                            + max(0.0, _sl_hits - _sl_layers) * _sl_raw_damage)
-                        try:
-                            _sl_target_block = max(
-                                0.0, float(_sl_target.get("block") or 0.0))
-                        except (TypeError, ValueError, OverflowError):
-                            _sl_target_block = 0.0
-                        _sl_card_id = str(
-                            card.get("card_id") or card.get("id")
-                            or card.get("name") or "?").strip().upper()
-                        _sl_target_id = str(
-                            _sl_target.get("enemy_id")
-                            or _sl_target.get("name") or "?").strip().upper()
-                        why += (
-                            f"|滑溜选牌对账 card={_sl_card_id}"
-                            f"/target={_sl_target_id}#{target}"
-                            f"/layers={_sl_layers:g}/raw={_sl_raw_damage:g}"
-                            f"/hits={_sl_hits}"
-                            f"/effective_cap_est={_sl_effective_cap:g}"
-                            f"/target_block={_sl_target_block:g}"
-                            "(SLIPPERY_SELECTED_CARD_OBS)")
             # 竞速判死自付观测（KILL_RACE_HOPELESS_HP_PAY_OBS，第 900~926 局批复盘
             # 新增，静态键）：斩杀竞速投影已判「击杀还需 N 回合＞可存活 M 回合」的
             # tick，出牌仍实付生命——926 局 F48 T8 投影自述击杀还需 4 回合＞可存活

@@ -959,7 +959,6 @@ DEFAULT_POLICY = {
     "kill_race_mode_flip_terminal_outcome_obs": True,  # 将同楼层同战斗的模式翻转来源回接 GAME_OVER；
                                                         # 只记录来源/终局字段，False 严格回滚，不改变 action/params
     "intangible_hp_cost_obs": True,
-    "slippery_ttk_selected_card_obs": True,  # Audit selected single-target Slippery output; no action/scoring effect.
     "low_pool_burst_race_obs": True,  # 低血多敌且近致死、但血池未过竞速门时只追加审计留痕
     "low_pool_burst_card_audit_obs": True,  # 低池爆发观测补充可负担格挡容量与最终动作；只读、可回滚
     "low_pool_burst_terminal_outcome_obs": True,  # 将 survives=no 的低池牌面审计连接到同楼层 GAME_OVER；只读、可回滚
