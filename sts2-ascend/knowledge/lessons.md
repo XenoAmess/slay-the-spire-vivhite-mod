@@ -16793,3 +16793,14 @@
 - 当前低价值卡牌：BURNING_PACT(17分/10.104976419540977局)，STOKE(18分/2.639913144971269局)，DEFEND_IRONCLAD(18分/2.385928722802022局)
 - 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.25)，长战信号停止加码——顶格旋钮不再吸收证据；非 Boss 长战阵亡（5回合），kill_bonus 顶格——长战证据不再溢入 block_safety，防御棘轮停止代偿加码；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、常规锻造线与长战加成折算均顶格——输出饥饿证据彻底停止吸收
 - 生涯战绩：0/1927 胜，当前目标进阶 0
+
+## 第 1928 局复盘（2026-10-04 16:24）
+- 结果：💀 失败｜进阶 0｜到达层数 17｜当局评分 17
+- 死因：敌人组合 KIN_FOLLOWER+KIN_PRIEST
+- 本局拿牌：UNRELENTING, TWIN_STRIKE, SPITE, UNRELENTING, STAMPEDE, SHRUG_IT_OFF, MOLTEN_FIST, IRON_WAVE, HOWL_FROM_BEYOND
+- 本局遗物：BLOOD_VIAL
+- 战斗记录：F4 Monster战 掉血0; F6 Monster战 掉血4; F9 Monster战 掉血11; F13 Monster战 掉血13; F14 Monster战 掉血13; F17 Boss战 掉血78｜竞速投影审计：pool=286/dpt=10.125/ttk=28.2469/tsurv=5.27027（RACE_PROJ_CALIB_AUDIT）｜竞速TTK校准比：actual_rounds=7/projected_ttk=28.2469/actual_over_projected=NA（RACE_PROJ_TTK_RATIO_OBS）/actual_rounds_kind=terminal/ratio_valid=no/actual_over_projected_survival=1.33（RACE_PROJ_SURVIVAL_RATIO_OBS）/ttk_minus_tsurv=22.9766（RACE_PROJ_SURVIVAL_GAP_OBS）｜竞速审计：T2判死→实战7回合阵亡｜竞速Boss有效火力收官对账：samples=6/actual_dpt=31.8333/projected_dpt=26.0532/ratio=1.25/min_ratio=0.47/min_sample=6->7/min_actual_dpt=17/min_projected_dpt=36.4（RACE_PROJ_EFFECTIVE_DPT_AUDIT）｜竞速Boss有效火力分相：clear_samples=6/actual_dpt=31.8333/projected_dpt=26.0532/ratio=1.25/min_ratio=0.47（RACE_PROJ_EFFECTIVE_DPT_PHASE_OBS）｜竞速Boss有效火力无实体分组：non_intangible_samples=6/layers_max=0/actual_dpt=31.8333/projected_dpt=26.0532/ratio=1.25/min_ratio=0.47（RACE_PROJ_EFFECTIVE_DPT_INTANGIBLE_OBS）（阵亡）
+- 当前高价值卡牌：MASTER_OF_STRATEGY(27分/3.612697990872712局)，PROWESS(26分/13.481980068860887局)，FEED(25分/30.689448120614355局)，MANGLE(25分/41.023593002402365局)，PYRE(25分/21.225390250662564局)
+- 当前低价值卡牌：BURNING_PACT(17分/10.069609002072584局)，STOKE(18分/2.63067344896387局)，DEFEND_IRONCLAD(18分/2.3775779722722152局)
+- 策略进化：kill_bonus 20.00 距上限仅余 0.00(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（90%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff: 0.50 → 0.47（饥饿链全顶格，Boss 竞速败北证据改接竞速先验折算率下调（更早全攻提速+前夜更早转锻造））
+- 生涯战绩：0/1928 胜，当前目标进阶 0
