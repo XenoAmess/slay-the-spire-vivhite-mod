@@ -799,8 +799,8 @@ def _sync_progress_index_unlocked(
     """
     attempts = len(_INDEX_LOCK_RETRY_DELAYS) + 1
     for attempt in range(attempts):
-        if not _validated_progress_pair_unlocked(
-                parent, commit, specs, timeout=10):
+        if _validated_progress_pair_unlocked(
+                parent, commit, specs, timeout=10) is not True:
             log("[git] private index 重试前提交关系或目标路径已变化；保留当前 index")
             return False
         current_index = _index_entries_unlocked(specs, timeout=10)
@@ -828,21 +828,29 @@ def _sync_progress_index_unlocked(
 
 def _validated_progress_pair_unlocked(
     parent: str, commit: str, specs: Sequence[str], *, timeout: float = 10,
-) -> bool:
+) -> bool | None:
+    """Return None for an unreadable relationship, False only for proven invalidity."""
     if not _HEX_COMMIT.fullmatch(parent) or not _HEX_COMMIT.fullmatch(commit):
         return False
-    row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
-    parts = row.stdout.strip().split() if row.returncode == 0 else []
-    if len(parts) != 2 or parts[0].lower() != commit.lower() \
-            or parts[1].lower() != parent.lower():
-        return False
-    ancestor = _run_git(
-        ["merge-base", "--is-ancestor", commit, "HEAD"], timeout=timeout)
-    if ancestor.returncode != 0:
-        return False
-    unchanged = _run_git(
-        ["diff", "--quiet", commit, "HEAD", "--", *specs], timeout=timeout)
-    return unchanged.returncode == 0
+    try:
+        row = _run_git(["rev-list", "--parents", "-n", "1", commit], timeout=timeout)
+        if row.returncode != 0:
+            return None
+        parts = row.stdout.strip().split()
+        if len(parts) != 2 or parts[0].lower() != commit.lower() \
+                or parts[1].lower() != parent.lower():
+            return False
+        ancestor = _run_git(
+            ["merge-base", "--is-ancestor", commit, "HEAD"], timeout=timeout)
+        if ancestor.returncode != 0:
+            return False if ancestor.returncode == 1 else None
+        unchanged = _run_git(
+            ["diff", "--quiet", commit, "HEAD", "--", *specs], timeout=timeout)
+        if unchanged.returncode == 0:
+            return True
+        return False if unchanged.returncode == 1 else None
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def _recover_pending_progress_indexes_unlocked(log=print) -> None:
@@ -861,7 +869,12 @@ def _recover_pending_progress_indexes_unlocked(log=print) -> None:
         except (TypeError, ValueError):
             remaining.append(entry)
             continue
-        if not _validated_progress_pair_unlocked(parent, commit, specs):
+        valid_pair = _validated_progress_pair_unlocked(parent, commit, specs)
+        if valid_pair is None:
+            log(f"[git] private index {commit[:8]} relationship read failed; keeping recovery journal")
+            remaining.append(entry)
+            continue
+        if valid_pair is False:
             # A marker can outlive a failed update-ref.  It owns no index data
             # unless its commit is a direct ancestor with unchanged target paths.
             continue
@@ -956,7 +969,7 @@ def _recover_legacy_machine_progress_index_unlocked(log=print) -> bool:
         specs = normalize_paths(raw_paths)
     except ValueError:
         return False
-    if not _validated_progress_pair_unlocked(parent, commit, specs):
+    if _validated_progress_pair_unlocked(parent, commit, specs) is not True:
         return False
     if _index_matches_commit_unlocked(commit, specs, timeout=10) is True:
         return False
