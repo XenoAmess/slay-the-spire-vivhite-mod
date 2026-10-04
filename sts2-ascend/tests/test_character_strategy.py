@@ -1669,7 +1669,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertIn("避免连续点选", accepted_one.reason)
 
     def test_unplayable_life_cost_card_never_enters_settle_latent_roll(self) -> None:
-        combat_token = object()
+        combat_token = {"node_type": "Monster"}
         ctx = SimpleNamespace(
             combat=combat_token,
             current_combat_is_hard=False,
@@ -1732,7 +1732,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertNotIn("结算等待", first.reason + second.reason)
 
     def test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks(self) -> None:
-        combat_token = object()
+        combat_token = {"node_type": "Monster"}
         ctx = SimpleNamespace(
             combat=combat_token,
             current_combat_is_hard=False,
@@ -1821,7 +1821,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertNotIn("手牌未就绪", first.reason + second.reason)
 
     def test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard(self) -> None:
-        combat_token = object()
+        combat_token = {"node_type": "Monster"}
         ctx = SimpleNamespace(
             combat=combat_token,
             current_combat_is_hard=False,
@@ -1882,7 +1882,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertIn("手牌长时间未就绪", timeout.reason)
 
     def test_f17_ringing_native_hook_rejection_skips_forty_tick_settle(self) -> None:
-        combat_token = object()
+        combat_token = {"node_type": "Monster"}
         ctx = SimpleNamespace(
             combat=combat_token,
             current_combat_is_hard=False,
@@ -1963,7 +1963,7 @@ class CharacterStrategyPolicyIntegrationTests(unittest.TestCase):
         self.assertIn("blocked_by_hook", second.reason)
 
     def test_missing_can_play_reason_keeps_settle_and_reports_queue_state(self) -> None:
-        combat_token = object()
+        combat_token = {"node_type": "Monster"}
         ctx = SimpleNamespace(
             combat=combat_token,
             current_combat_is_hard=False,

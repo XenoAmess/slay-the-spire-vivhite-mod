@@ -1448,8 +1448,18 @@ class ReviewQueueSafetyTests(unittest.TestCase):
             })
             return True
 
+        cfg = {
+            "opencode_bin": "opencode",
+            "review_model_chain": [{
+                "key": "glm", "runner": "opencode", "model": "glm",
+                "every_runs": 1, "source": "preferred",
+            }],
+        }
         with (mock.patch.object(llm_review, "load_llm_config",
-                               return_value={"opencode_bin": "opencode"}),
+                               return_value=cfg),
+              mock.patch.object(llm_review, "_preferred_cooldown_remaining",
+                                return_value=0),
+              mock.patch.object(llm_review, "runner_binary", return_value="opencode"),
               mock.patch.object(llm_review.shutil, "which", return_value="opencode"),
               mock.patch.object(llm_review, "run_review", side_effect=changed_without_receipt)):
             outcome = llm_review._run_batch_review(
