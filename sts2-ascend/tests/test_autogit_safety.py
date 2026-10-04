@@ -1329,16 +1329,19 @@ class AutoGitSafetyTests(unittest.TestCase):
         marker = self.repo / "sts2-ascend" / "knowledge" / "pending_restart.json"
         marker.write_text("{}", encoding="utf-8")
         runner.MARKER = marker
-        crashes = [(1, runner.FAST_CRASH_SECONDS + 1)] * runner.MAX_FAST_CRASHES + [(0, 1)]
+        crashes = [runner.BrainRunResult(
+            1, runner.FAST_CRASH_SECONDS + 1, boot_review_commit="e" * 40)
+        ] * runner.MAX_FAST_CRASHES + [(0, 1)]
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=crashes),
                   mock.patch.object(runner, "stop_requested", return_value=False),
-                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
+                  mock.patch.object(runner, "_active_review_commit", return_value="e" * 40),
                   mock.patch.object(runner, "wait_for_stop", return_value=False),
                   mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback,
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 0)
-            rollback.assert_called_once_with()
+            rollback.assert_called_once_with(
+                None, expected_review_commit="e" * 40)
         finally:
             runner.MARKER = old_marker
 
@@ -1347,15 +1350,18 @@ class AutoGitSafetyTests(unittest.TestCase):
         marker = self.repo / "pending_restart.json"
         marker.write_text("{}", encoding="utf-8")
         runner.MARKER = marker
-        restarts = [(runner.RESTART_CODE, 1)] * runner.MAX_REVIEW_RESTARTS + [(0, 1)]
+        restarts = [runner.BrainRunResult(
+            runner.RESTART_CODE, 1, boot_review_commit="e" * 40)
+        ] * runner.MAX_REVIEW_RESTARTS + [(0, 1)]
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=restarts),
                   mock.patch.object(runner, "stop_requested", return_value=False),
-                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
+                  mock.patch.object(runner, "_active_review_commit", return_value="e" * 40),
                   mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback,
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 0)
-                rollback.assert_called_once_with()
+                rollback.assert_called_once_with(
+                    None, expected_review_commit="e" * 40)
         finally:
             runner.MARKER = old_marker
 
@@ -1367,9 +1373,11 @@ class AutoGitSafetyTests(unittest.TestCase):
         try:
             with (mock.patch.object(
                     runner, "_run_brain",
-                    side_effect=[(runner.RESTART_CODE, 1)] * runner.MAX_REVIEW_RESTARTS),
+                    side_effect=[runner.BrainRunResult(
+                        runner.RESTART_CODE, 1, boot_review_commit="e" * 40)
+                    ] * runner.MAX_REVIEW_RESTARTS),
                   mock.patch.object(runner, "stop_requested", return_value=False),
-                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
+                  mock.patch.object(runner, "_active_review_commit", return_value="e" * 40),
                   mock.patch.object(runner, "rollback_from_marker", return_value=False),
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 1)
@@ -1381,16 +1389,19 @@ class AutoGitSafetyTests(unittest.TestCase):
         marker = self.repo / "pending_restart.json"
         marker.write_text("{}", encoding="utf-8")
         runner.MARKER = marker
-        crashes = [(1, runner.FAST_CRASH_SECONDS + 1)] * runner.MAX_FAST_CRASHES
+        crashes = [runner.BrainRunResult(
+            1, runner.FAST_CRASH_SECONDS + 1, boot_review_commit="e" * 40)
+        ] * runner.MAX_FAST_CRASHES
         try:
             with (mock.patch.object(runner, "_run_brain", side_effect=crashes),
                   mock.patch.object(runner, "stop_requested", return_value=False),
-                  mock.patch.object(runner, "_has_active_review_marker", return_value=True),
+                  mock.patch.object(runner, "_active_review_commit", return_value="e" * 40),
                   mock.patch.object(runner, "wait_for_stop", return_value=False),
                   mock.patch.object(runner, "rollback_from_marker", return_value=False) as rollback,
                   mock.patch.object(runner, "log")):
                 self.assertEqual(runner.main(), 1)
-                rollback.assert_called_once_with()
+                rollback.assert_called_once_with(
+                    None, expected_review_commit="e" * 40)
             self.assertTrue(marker.exists(), "失败回滚必须保留 marker 供人工诊断")
         finally:
             runner.MARKER = old_marker
@@ -1413,6 +1424,9 @@ class AutoGitSafetyTests(unittest.TestCase):
 
         self.assertEqual(result[0], 0)
         child_env = popen.call_args.kwargs["env"]
+        self.assertEqual(result.boot_id, child_env["STS2_ASCEND_BOOT_ID"])
+        self.assertEqual(result.boot_head, frozen)
+        self.assertEqual(result.boot_review_commit, loaded_review)
         self.assertEqual(child_env["STS2_ASCEND_BOOT_HEAD"], frozen)
         self.assertEqual(child_env["STS2_ASCEND_BOOT_REVIEW_COMMIT"], loaded_review)
 
@@ -1728,11 +1742,12 @@ class AutoGitSafetyTests(unittest.TestCase):
             "lock-enter", "child-imported", "lock-exit", "child-ready"])
 
     def test_review_startup_failures_roll_back_within_short_retry_budget(self) -> None:
-        failures = [(runner.STARTUP_TIMEOUT_CODE, 10.0)] \
+        failures = [runner.BrainRunResult(
+            runner.STARTUP_TIMEOUT_CODE, 10.0, boot_review_commit="e" * 40)] \
             * runner.MAX_REVIEW_STARTUP_FAILURES + [(0, 1.0)]
         with mock.patch.object(runner, "_run_brain", side_effect=failures), \
                 mock.patch.object(runner, "stop_requested", return_value=False), \
-                mock.patch.object(runner, "_has_active_review_marker", return_value=True), \
+                mock.patch.object(runner, "_active_review_commit", return_value="e" * 40), \
                 mock.patch.object(runner, "wait_for_stop", return_value=False) as wait, \
                 mock.patch.object(runner, "rollback_from_marker", return_value=True) as rollback, \
                 mock.patch.object(runner, "log"):
@@ -1762,7 +1777,7 @@ class AutoGitSafetyTests(unittest.TestCase):
         with mock.patch.object(runner.time, "monotonic", side_effect=monotonic), \
                 mock.patch.object(runner, "_run_brain", side_effect=launch), \
                 mock.patch.object(runner, "stop_requested", return_value=False), \
-                mock.patch.object(runner, "_has_active_review_marker", return_value=False), \
+                mock.patch.object(runner, "_active_review_commit", return_value=""), \
                 mock.patch.object(runner, "wait_for_stop", side_effect=wait), \
                 mock.patch.object(runner, "log"):
             self.assertEqual(runner.main(), 1)

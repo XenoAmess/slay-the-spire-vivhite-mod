@@ -2,7 +2,7 @@
 
 - 大脑以退出码 42 表示"LLM 复盘改了代码，请重启我"
 - 异常退出时**先重试**：每次间隔 10 秒，最多连续 5 次快速崩溃（存活 <90s 才算快速崩溃）
-- **回滚是最后手段**：仅当连续 5 次快速崩溃、且存在 committed 复盘重启标记（pending_restart.json，
+- **回滚是最后手段**：同一已加载复盘版本连续崩溃或重启、且仍有该版本的 committed 标记（pending_restart.json，
   说明可能是复盘改坏了代码）时，才反向应用经单父 commit diff 与 marker 精确互证的 patch；
   patch 冲突或越界就保留现场并拒绝覆盖；成功撤销另存纯文件 tombstone，避免 marker
   被 Windows 短暂锁住时跨 runner 重启重复撤销
@@ -59,6 +59,23 @@ _ROLLED_BACK_COMMITS: set[str] = set()
 _ROLLBACK_TOMBSTONE_LIMIT = 100
 _CHILD_OUTPUT_LIMIT = 8 * 1024
 _CHILD_CAPTURE_JOIN_SECONDS = 0.25
+
+
+class BrainRunResult(tuple):
+    """Keep two-value unpacking while retaining the child's loaded code epoch."""
+
+    boot_id: str
+    boot_head: str
+    boot_review_commit: str
+
+    def __new__(cls, return_code: int, alive_seconds: float, *,
+                boot_id: str = "", boot_head: str = "",
+                boot_review_commit: str = "") -> BrainRunResult:
+        result = super().__new__(cls, (return_code, alive_seconds))
+        result.boot_id = boot_id
+        result.boot_head = boot_head
+        result.boot_review_commit = boot_review_commit
+        return result
 
 
 class _ChildOutputCapture:
@@ -150,6 +167,9 @@ def _startup_context(child_env: dict[str, str]) -> dict[str, object]:
         "base_prefix": str(getattr(sys, "base_prefix", "")),
         "PYTHONHOME": str(child_env.get("PYTHONHOME", "")),
         "marker_path": _resolved_marker_path(),
+        "boot_id": str(child_env.get("STS2_ASCEND_BOOT_ID", "")),
+        "boot_head": str(child_env.get("STS2_ASCEND_BOOT_HEAD", "")),
+        "boot_review_commit": str(child_env.get("STS2_ASCEND_BOOT_REVIEW_COMMIT", "")),
         "cwd": str(BASE_DIR),
         "import_timeout_s": STARTUP_IMPORT_SECONDS,
     }
@@ -703,7 +723,8 @@ def _recover_blocked_prepared_marker(
         return False
 
 
-def rollback_from_marker(deadline: float | None = None) -> bool:
+def rollback_from_marker(deadline: float | None = None, *,
+                         expected_review_commit: str | None = None) -> bool:
     """新代码启动失败：只反向应用 marker 指向的受控复盘 commit。"""
     try:
         # 读取、反向提交与 compare-and-delete 共用同一仓库锁；健康确认或下一轮
@@ -716,6 +737,10 @@ def rollback_from_marker(deadline: float | None = None) -> bool:
             info = json.loads(MARKER.read_text(encoding="utf-8"))
             parent = info["review_parent"]
             commit = info["review_commit"]
+            if (expected_review_commit is not None
+                    and str(commit).strip().lower() != expected_review_commit):
+                log("复盘 marker 已换代；本次退出只属于加载的旧版本，跳过新提交回滚")
+                return False
             if info.get("state") not in (None, "committed"):
                 log("回滚 marker 尚处于 prepared，未证明已加载；拒绝据此回滚")
                 return False
@@ -764,7 +789,17 @@ def rollback_from_marker(deadline: float | None = None) -> bool:
         return False
 
 
-def _run_brain(deadline: float | None = None) -> tuple[int, float]:
+def _rollback_loaded_epoch(commit: str, deadline: float | None = None) -> bool:
+    """A newly published marker is a new boot target, not the prior crash's cause."""
+    if rollback_from_marker(deadline, expected_review_commit=commit):
+        return True
+    if _active_review_commit() != commit:
+        log("回滚检查期间复盘 marker 已变化；重新冻结新版本，不撤销后来提交")
+        return True
+    return False
+
+
+def _run_brain(deadline: float | None = None) -> BrainRunResult:
     """Run one brain generation while remaining responsive to stack shutdown."""
     started = time.monotonic()
     deadline = deadline or (started + OUTAGE_BUDGET_SECONDS)
@@ -773,6 +808,14 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
     capture: _ChildOutputCapture | None = None
     startup_context: dict[str, object] | None = None
     child_started: float | None = None
+    boot_id = ""
+    boot_head = ""
+    loaded_review = ""
+
+    def result(code: int) -> BrainRunResult:
+        return BrainRunResult(
+            code, time.monotonic() - started, boot_id=boot_id,
+            boot_head=boot_head or "", boot_review_commit=loaded_review or "")
 
     def startup_return(
             event: str,
@@ -780,7 +823,7 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
             *,
             rc: int | None = None,
             include_output: bool = True,
-    ) -> tuple[int, float]:
+    ) -> BrainRunResult:
         """Finish bounded pipe capture and emit one failure/stop audit line."""
         if capture is not None:
             capture.finish()
@@ -796,7 +839,7 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
                 capture=capture,
                 include_output=include_output,
             )
-        return code, time.monotonic() - started
+        return result(code)
 
     ready_deadline = min(deadline, time.monotonic() + STARTUP_READY_SECONDS)
     # Keep the repository transaction only until every module and config byte is
@@ -804,11 +847,11 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
     try:
         lock_timeout = _time_left(deadline, 3.0)
         if lock_timeout <= 0:
-            return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+            return result(STARTUP_TIMEOUT_CODE)
         with autogit.repository_lock(timeout=lock_timeout):
             _repair_tombstoned_marker_locked()
             if not _reconcile_prepared_marker(deadline):
-                return RECONCILE_BLOCKED_CODE, time.monotonic() - started
+                return result(RECONCILE_BLOCKED_CODE)
             boot_head = read_git_head(autogit.REPO_DIR)
             loaded_review = _active_review_commit()
             if boot_head:
@@ -855,7 +898,7 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
                 return startup_return("import_timeout", STARTUP_TIMEOUT_CODE)
     except TimeoutError:
         log("冻结 Brain 启动版本等待仓库锁超时；不冒险混载代码，按全局断流预算重试")
-        return STARTUP_TIMEOUT_CODE, time.monotonic() - started
+        return result(STARTUP_TIMEOUT_CODE)
     assert proc is not None
     # Repository lock is now released.  Agent construction/migrations can safely
     # take it; ready still has the same bounded startup deadline.
@@ -895,7 +938,7 @@ def _run_brain(deadline: float | None = None) -> tuple[int, float]:
                         rc=rc,
                         capture=capture,
                         include_output=(rc != 0))
-                return rc, time.monotonic() - started
+                return result(rc)
             except subprocess.TimeoutExpired:
                 if stop_requested() and not stop_logged:
                     log("收到全栈停止请求，等待大脑保存知识库并退出…")
@@ -927,6 +970,9 @@ def main() -> int:
     review_crashes = 0
     review_restarts = 0
     review_startup_failures = 0
+    crash_review = ""
+    restart_review = ""
+    startup_review = ""
     prepared_startup_failures = 0
     outage_deadline: float | None = None
     log("监督进程启动，拉起大脑…")
@@ -936,12 +982,18 @@ def main() -> int:
             return 0
         if outage_deadline is None:
             outage_deadline = time.monotonic() + OUTAGE_BUDGET_SECONDS
-        rc, alive_s = _run_brain(outage_deadline)
+        child_result = _run_brain(outage_deadline)
+        rc, alive_s = child_result
+        loaded_review = getattr(child_result, "boot_review_commit", "")
+        current_review = _active_review_commit()
+        active_review = bool(loaded_review and loaded_review == current_review)
         startup_failure = rc in (STARTUP_TIMEOUT_CODE, RECONCILE_BLOCKED_CODE)
         if not startup_failure:
             # Reaching ready ends this outage epoch.  A later child exit starts a
             # fresh 115-second budget rather than inheriting hours of healthy play.
             outage_deadline = None
+            review_startup_failures = 0
+            startup_review = ""
 
         # 停机期间即使子进程被超时兜底终止，也绝不能重新拉起。
         if stop_requested():
@@ -949,24 +1001,31 @@ def main() -> int:
             return 0
 
         if rc == RESTART_CODE:
-            active_review = _has_active_review_marker()
-            review_restarts = review_restarts + 1 if active_review else 0
+            # A different committed target is an ordinary review handoff. Only
+            # repeated 42 exits from the same already-loaded epoch form a loop.
+            review_restarts = (review_restarts + 1
+                               if active_review and restart_review == loaded_review
+                               else 1 if active_review else 0)
+            restart_review = loaded_review if active_review else ""
             log("大脑请求重启（LLM 复盘更新了代码/策略）"
                 + (f"；复盘标记下连续重启 {review_restarts}/{MAX_REVIEW_RESTARTS}"
                    if review_restarts else ""))
             fast_crashes = 0
             review_crashes = 0
+            crash_review = ""
             if review_restarts >= MAX_REVIEW_RESTARTS and active_review:
                 log(f"复盘标记下连续 {MAX_REVIEW_RESTARTS} 次退出码 {RESTART_CODE}——"
                     "疑似复盘引入重启循环，执行安全 patch 回滚")
-                if not rollback_from_marker():
+                if not _rollback_loaded_epoch(loaded_review):
                     log("重启循环回滚失败；为避免无限热重启，runner 安全停止并保留现场")
                     return 1
                 review_restarts = 0
+                restart_review = ""
             continue
 
         # 只有连续的 42 才构成重启循环；任何其他退出都会切断该序列。
         review_restarts = 0
+        restart_review = ""
 
         if rc == 0:
             log("大脑正常退出，监督进程结束")
@@ -990,9 +1049,11 @@ def main() -> int:
             continue
         prepared_startup_failures = 0
 
-        active_review = _has_active_review_marker()
         if rc == STARTUP_TIMEOUT_CODE:
-            review_startup_failures += 1
+            failed_epoch = loaded_review if active_review else ""
+            review_startup_failures = (review_startup_failures + 1
+                                      if startup_review == failed_epoch else 1)
+            startup_review = failed_epoch
             remaining = _time_left(outage_deadline, OUTAGE_BUDGET_SECONDS)
             label = "复盘代码" if active_review else "Brain"
             log(f"{label}启动握手失败 {review_startup_failures} 次；"
@@ -1002,10 +1063,11 @@ def main() -> int:
                 or remaining <= ROLLBACK_RESERVE_SECONDS))
             if should_rollback:
                 log("复盘代码连续无法完成初始化；在两分钟预算内执行安全 patch 回滚")
-                if not rollback_from_marker(outage_deadline):
+                if not _rollback_loaded_epoch(loaded_review, outage_deadline):
                     log("启动失败回滚未能无损完成；保留现场并停止，拒绝混载未知代码")
                     return 1
                 review_startup_failures = 0
+                startup_review = ""
                 continue
             if remaining <= 0:
                 log("Brain 连续无法完成启动且没有可安全撤销的复盘提交；115 秒断流预算耗尽，保留现场并停止")
@@ -1014,10 +1076,14 @@ def main() -> int:
                 return 0
             continue
         review_startup_failures = 0
+        startup_review = ""
 
         # 异常退出：先耐心重试，回滚只是最后手段
         fast_crashes = 0 if alive_s > FAST_CRASH_SECONDS else fast_crashes + 1
-        review_crashes = review_crashes + 1 if active_review else 0
+        review_crashes = (review_crashes + 1
+                          if active_review and crash_review == loaded_review
+                          else 1 if active_review else 0)
+        crash_review = loaded_review if active_review else ""
         log(f"大脑异常退出（rc={rc}，存活 {alive_s:.0f}s，连续快速崩溃 "
             f"{fast_crashes}/{MAX_FAST_CRASHES}，复盘后崩溃 {review_crashes}/{MAX_FAST_CRASHES}）")
 
@@ -1025,11 +1091,12 @@ def main() -> int:
         # 可以永远逃过最后手段。
         if review_crashes >= MAX_FAST_CRASHES and active_review:
             log(f"复盘后连续 {MAX_FAST_CRASHES} 次异常退出——疑似复盘改坏了代码，执行安全 patch 回滚")
-            if not rollback_from_marker():
+            if not _rollback_loaded_epoch(loaded_review):
                 log("复盘崩溃回滚失败；为避免永久重启/回滚循环，runner 安全停止并保留现场")
                 return 1
             fast_crashes = 0
             review_crashes = 0
+            crash_review = ""
             continue
         if wait_for_stop(RETRY_INTERVAL_SECONDS):
             log("重试等待期间收到停止请求，监督进程结束")
