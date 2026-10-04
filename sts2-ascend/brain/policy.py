@@ -4655,6 +4655,93 @@ class Policy:
             f"{_latch_snapshot_tail}"
             "（KILL_RACE_TERMINAL_AUDIT_OBS）")
 
+    def _race_terminal_latch_gap_observation_note(
+            self, pol, ctx, floor, round_no, my_hp, my_block,
+            incoming, energy) -> str:
+        """Record a durable race source when the live latch is unavailable.
+
+        A readiness fallback can submit a lethal no-card end_turn before the
+        current combat tick rebuilds the race projection.  This marker is
+        deliberately source-only: it never promotes the old row into a live
+        latch and never changes action selection.
+        """
+        try:
+            _enabled = bool(int(float(pol.get(
+                "race_terminal_latch_gap_obs", 1) or 0)))
+        except (TypeError, ValueError, OverflowError, AttributeError):
+            _enabled = False
+        if (not _enabled or bool(getattr(self, "_krace_latch", False))
+                or floor is None):
+            return ""
+        _decisions = getattr(ctx, "decisions", None)
+        if not isinstance(_decisions, list) or not _decisions:
+            return ""
+        _floor_text = str(floor)
+        _marker = "RACE_TERMINAL_LATCH_GAP_OBS"
+        _source = None
+        for _row in reversed(_decisions):
+            if not isinstance(_row, dict):
+                break
+            _screen = str(_row.get("screen") or "").upper()
+            _reason = str(_row.get("reason") or "")
+            if _screen == "COMBAT":
+                pass
+            elif (_screen == "CARD_SELECTION"
+                  and str(_row.get("action") or "").strip()
+                  in {"select_deck_card", "confirm_selection"}
+                  and (str(_row.get("action") or "").strip()
+                       == "select_deck_card"
+                       or "combat_hand_select" in _reason)):
+                pass
+            else:
+                break
+            _row_floor = _row.get("floor")
+            if (_row_floor is not None
+                    and str(_row_floor) != _floor_text):
+                break
+            if _marker in _reason:
+                return ""
+            if "RACE_UPSHIFT_STALE" in _reason:
+                _source = (_row, "RACE_UPSHIFT_STALE")
+                break
+            if "RACE_PROJ_LATCH_INTENT_PRESSURE_OBS" in _reason:
+                _source = (_row, "RACE_PROJ_LATCH_INTENT_PRESSURE_OBS")
+                break
+        if _source is None:
+            return ""
+        _source_row, _source_marker = _source
+
+        def _round_text(value) -> str:
+            try:
+                return str(int(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return "?"
+
+        _source_round = _source_row.get(
+            "turn", _source_row.get("round", "?"))
+        try:
+            _age = int(float(round_no)) - int(float(_source_round))
+            _age_text = str(_age)
+        except (TypeError, ValueError, OverflowError):
+            _age_text = "?"
+        _projection = isinstance(
+            getattr(self, "_race_terminal_projection", None), dict)
+        return (
+            "；竞速终端锁缺口观测："
+            f"floor={_floor_text}"
+            f"/source_round={_round_text(_source_round)}"
+            f"/source_action={_source_row.get('action') or '?'}"
+            f"/source_marker={_source_marker}"
+            f"/source_age={_age_text}"
+            f"/terminal_round={_round_text(round_no)}"
+            f"/terminal_hp={float(my_hp):g}"
+            f"/terminal_block={float(my_block):g}"
+            f"/incoming={float(incoming):g}"
+            f"/energy={float(energy):g}"
+            "/live_latch=no"
+            f"/live_projection={'yes' if _projection else 'no'}"
+            "（RACE_TERMINAL_LATCH_GAP_OBS）")
+
     def _race_mode_flip_observation_note(
             self, ctx, round_no, kill_race, race_allin, pol) -> str:
         """Record an observation-only same-round race-mode transition."""
@@ -14667,6 +14754,12 @@ class Policy:
                     terminal_roster=_terminal_roster,
                     terminal_roster_count=_terminal_roster_count)
                 _lethal_unavailable_note += _terminal_audit_note
+                _race_latch_gap_note = (
+                    self._race_terminal_latch_gap_observation_note(
+                        pol, ctx,
+                        (state.get("run") or {}).get("floor"),
+                        round_no, my_hp, my_block, incoming, energy))
+                _lethal_unavailable_note += _race_latch_gap_note
                 _terminal_output_capacity = None
                 _output_capacity_transition_source = None
                 if _kill_race_state:

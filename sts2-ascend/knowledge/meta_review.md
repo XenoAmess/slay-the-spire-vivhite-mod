@@ -16240,3 +16240,31 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接固定 256 槽入口复现宿主既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED` 临时池耗尽；随后用同一 clone 的 0777 进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`；生产目标 diff `--check` 通过，未写入在线状态、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[])`
+
+## 2026-10-04 runs 1906-1907：持久竞速来源与 live latch 缺口观测
+
+profile_id：`ironclad`
+requested_runs：`1906, 1907`
+production_code_commit：`pending local commit (SHA in delivery response)`
+failed_review_replay：`requested_packages=[]`（无回放目标）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：Boss 竞速已经在持久决策链中出现来源，但致死无牌 `end_turn` 走 `_combat_readiness_wait` 时，当前内存 latch 可能已经丢失；因此该终局不会生成 `KILL_RACE_TERMINAL_AUDIT_OBS`，也无法让 `RACE_UPSHIFT_STALE` 接回终局。若同楼层已有竞速来源而 live latch 仍在终局帧缺失，这个缺口应能被单独观测；若没有同楼层来源、跨越 REWARD 或 live latch 仍在，则不应命中。
+- **EVIDENCE**：完整读取 1907 `EQFEP9TDTV43` 的 218 条决策及其 `sts2-ascend/knowledge/runs/20261004-092544_EQFEP9TDTV43.json`；F17 D192 出现 `RACE_UPSHIFT_STALE`，D216 为 `HP=9/block=0/incoming=23` 的致死无牌空过，但没有 `KILL_RACE_TERMINAL_AUDIT_OBS`，D217 也没有 `RACE_UPSHIFT_STALE_TERMINAL_OUTCOME_OBS`。1906 `GHN4HGZ5AJUF` 同为 F17 失败局，构成同批独立终局证据。
+- **EXPECTED_SIGNAL**：未来 3—10 个 Boss 终局中，若同楼层 COMBAT 尾部存在 `RACE_UPSHIFT_STALE` 或入锁压力来源、当前终局缺少 live latch，应出现恰好一次 `RACE_TERMINAL_LATCH_GAP_OBS`，并保留 source round、source marker、terminal HP/block/incoming/energy；跨楼层、REWARD 边界、无来源或已存在 live latch 不得命中。若持续没有该 marker，假设被证伪；若出现跨界/重复，则立即关闭开关并收紧扫描边界。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `race_terminal_latch_gap_obs`，作为单一可逆观测开关。
+- `sts2-ascend/brain/policy.py`：在致死无牌审计中只读取同楼层、未越过非战斗边界的持久 `RACE_UPSHIFT_STALE`/入锁压力来源；live latch 缺失时追加 `RACE_TERMINAL_LATCH_GAP_OBS`，不恢复 latch、不进入评分或候选、不改变 action/params。
+- `sts2-ascend/brain/selfcheck.py`：加入命中、REWARD 边界和关闭开关夹具，断言 marker 与 action/params 契约。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：只读收集 3—10 个 Boss 同型终局，统计 gap marker 次数、source/terminal round、边界和 action/params；同时核对是否能在后续终局桥接中恢复 stale 观测。
+- **Adjust**：若 marker 缺失，检查来源行是否被合法 CARD_SELECTION 或 readiness 重建截断；若重复或跨界，收紧同战斗尾部谓词，不把 marker 升格为 live latch。
+- **Rollback**：将 `race_terminal_latch_gap_obs` 设为 `False`，预期只移除新增 marker，恢复原 action/params 与既有终局审计路径。
+- **Validation**：直接固定 256-slot 入口复现既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；随后使用同一 clone 的进程级临时目录适配器运行完整 `selfcheck.py`，退出码 0 且末尾为 `SELFCHECK OK`。限定生产目标 `git diff --check` 通过；未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
+
+- `retry_resolution: none (failed_review_replay.requested_packages=[]; race latch gap observation integrated)`

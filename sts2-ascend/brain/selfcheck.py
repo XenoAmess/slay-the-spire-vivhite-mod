@@ -20414,6 +20414,99 @@ def main() -> int:
         and "KILL_RACE_TERMINAL_AUDIT_OBS" not in d_race_terminal_off.reason, \
         f"竞速终端对账关闭后动作或尾缀漂移: {d_race_terminal_off and d_race_terminal_off.reason}"
 
+    # 3z-5-gap) 持久竞速来源与 live latch 脱节时只记录缺口：1907-F17
+    #        D192 已有 RACE_UPSHIFT_STALE，而 D216 的致死无牌路径缺少
+    #        KILL_RACE_TERMINAL_AUDIT_OBS。这个夹具验证同楼层来源会被
+    #        观测、action/params 不变，且跨 REWARD 边界不会误连。
+    assert knowledge.DEFAULT_POLICY[
+        "race_terminal_latch_gap_obs"] is True, \
+        "DEFAULT_POLICY 缺少 race_terminal_latch_gap_obs 默认开关"
+    race_gap_source_row = {
+        "screen": "COMBAT", "action": "play_card", "floor": 33,
+        "turn": 5,
+        "reason": (
+            "战斗：入锁已2回合（≥新鲜窗2），上浮置零"
+            "（RACE_UPSHIFT_STALE）"),
+    }
+    race_gap_know = knowledge.Knowledge(Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-race-latch-gap-")))
+    race_gap_pol = policy.Policy(race_gap_know)
+    race_gap_ctx = _SettleCtx()
+    race_gap_ctx.decisions = [dict(race_gap_source_row)]
+    assert race_gap_pol.decide(
+        _lethal_unavailable_state(True), race_gap_ctx).action == "play_card", \
+        "竞速锁缺口夹具热身帧未进入出牌状态"
+    race_gap_pol._krace_latch = False
+    d_race_gap = None
+    for _ in range(6):
+        d_candidate = race_gap_pol.decide(
+            _lethal_unavailable_state(False), race_gap_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_gap = d_candidate
+            break
+    assert (d_race_gap is not None
+            and d_race_gap.action == d_lethal_empty.action
+            and d_race_gap.params == d_lethal_empty.params
+            and "RACE_TERMINAL_LATCH_GAP_OBS" in d_race_gap.reason
+            and "floor=33/source_round=5/source_action=play_card"
+                in d_race_gap.reason
+            and "/source_marker=RACE_UPSHIFT_STALE/source_age=1"
+                in d_race_gap.reason
+            and "/terminal_round=6/terminal_hp=9/terminal_block=6"
+                in d_race_gap.reason
+            and "/live_latch=no" in d_race_gap.reason), \
+        f"持久竞速来源的 live latch 缺口未留痕或动作漂移: {d_race_gap}"
+
+    race_gap_boundary_pol = policy.Policy(knowledge.Knowledge(
+        Path(tempfile.mkdtemp(prefix="sts2-selfcheck-race-latch-boundary-"))))
+    race_gap_boundary_ctx = _SettleCtx()
+    race_gap_boundary_ctx.decisions = [
+        dict(race_gap_source_row),
+        {"screen": "REWARD", "action": "proceed", "floor": 33,
+         "reason": "奖励边界"},
+    ]
+    assert race_gap_boundary_pol.decide(
+        _lethal_unavailable_state(True), race_gap_boundary_ctx).action \
+        == "play_card", "竞速锁缺口边界夹具热身帧未进入出牌状态"
+    race_gap_boundary_pol._krace_latch = False
+    d_race_gap_boundary = None
+    for _ in range(6):
+        d_candidate = race_gap_boundary_pol.decide(
+            _lethal_unavailable_state(False), race_gap_boundary_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_gap_boundary = d_candidate
+            break
+    assert (d_race_gap_boundary is not None
+            and d_race_gap_boundary.action == d_race_gap.action
+            and d_race_gap_boundary.params == d_race_gap.params
+            and "RACE_TERMINAL_LATCH_GAP_OBS"
+                not in d_race_gap_boundary.reason), \
+        f"竞速锁缺口观测越过 REWARD 边界或动作漂移: {d_race_gap_boundary}"
+
+    race_gap_off_know = knowledge.Knowledge(Path(tempfile.mkdtemp(
+        prefix="sts2-selfcheck-race-latch-gap-off-")))
+    race_gap_off_know.policy["race_terminal_latch_gap_obs"] = False
+    race_gap_off_pol = policy.Policy(race_gap_off_know)
+    race_gap_off_ctx = _SettleCtx()
+    race_gap_off_ctx.decisions = [dict(race_gap_source_row)]
+    assert race_gap_off_pol.decide(
+        _lethal_unavailable_state(True), race_gap_off_ctx).action \
+        == "play_card", "竞速锁缺口关闭夹具热身帧未进入出牌状态"
+    race_gap_off_pol._krace_latch = False
+    d_race_gap_off = None
+    for _ in range(6):
+        d_candidate = race_gap_off_pol.decide(
+            _lethal_unavailable_state(False), race_gap_off_ctx)
+        if d_candidate.action == "end_turn":
+            d_race_gap_off = d_candidate
+            break
+    assert (d_race_gap_off is not None
+            and d_race_gap_off.action == d_race_gap.action
+            and d_race_gap_off.params == d_race_gap.params
+            and "RACE_TERMINAL_LATCH_GAP_OBS"
+                not in d_race_gap_off.reason), \
+        f"竞速锁缺口关闭后动作或既有观测漂移: {d_race_gap_off}"
+
     # 3z-5b) 竞速终端结局对账（KILL_RACE_TERMINAL_OUTCOME_OBS）：
     #        1610-F33 在终端审计后紧接 GAME_OVER；把投影与权威终局结果
     #        绑定，才能统计“判死后阵亡/翻盘”，但不改变 GAME_OVER 动作。
