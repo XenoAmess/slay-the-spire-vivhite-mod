@@ -16409,3 +16409,34 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 selfcheck 复现宿主固定 256 槽限制；进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。1920 只读回放输出 `terminal_round=6` 与 `RUN1920_REPLAY=OK`；目标 diff `--check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; lethal playable rejection terminal join integrated)`
+
+## 2026-10-04 第1921局失败回放：致死无牌预测的同场存活结算观测
+
+日期：2026-10-04
+profile_id：ironclad
+requested_runs：1921（`Q10SLW6X1663`，F31，failed）
+production_code_commit：pending local commit（最终 SHA 见交付回执）
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS（可证伪）**：既有 `LETHAL_UNAVAILABLE_END_TURN_OBS` 只记录致死来袭缺口的当时预测；若同楼层随后出现严格更晚回合且玩家仍有正生命的 `COMBAT` 快照，应追加 `LETHAL_UNAVAILABLE_SETTLEMENT_OBS` 记录“预测后实际存活”，同时 action/params 保持不变。若 marker 在同回合、跨楼层、死亡或重复 source 上出现，或动作参数漂移，则假设被证伪。
+- **EVIDENCE**：完整读取失败局 `Q10SLW6X1663` 的 436 条决策链。D429 为 F31-T1、HP12、Block0、incoming14、`end_turn`，写入 `LETHAL_UNAVAILABLE_END_TURN_OBS`；D430 仍是 F31、T2、HP2 并继续 `play_card`；D435 才以 HP0 `GAME_OVER` 结束。该链说明原 marker 与后续状态之间缺少同场存活对账，但不证明应改变战斗策略。
+- **EXPECTED_SIGNAL**：未来 3—10 个独立同型样本中，仅在同 floor、source 后严格更晚 turn、settlement HP>0 时出现一次结算 marker，并能对账 source/settlement turn、HP、Block、incoming 与 HP delta；跨楼层、同回合、死亡、重复和 action/params 漂移应为 0。
+
+### PRODUCTION_CHANGE
+
+- `sts2-ascend/brain/knowledge.py`：新增默认开启的 `lethal_unavailable_settlement_obs`，关闭时只移除新 marker。
+- `sts2-ascend/brain/policy.py`：在 COMBAT 决策完成既有 HP-pay 记忆后，按最近 64 条同 floor 的 `end_turn`→后续 COMBAT 链追加只读结算说明；不进入评分、候选、等待、动作、参数或学习统计。
+- `sts2-ascend/brain/selfcheck.py`：新增正例、开关关闭和跨楼层边界夹具，并断言 action/params 不变。
+- 未修改 runs、archive、stats、progression、profile `policy.json`、lessons、`.runtime` 或在线进程；失败回放包仅作为证据读取。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：继续收集 3—10 个独立同楼层 source→存活 settlement 样本，按 run/floor/turn 对账字段和重复率；该 marker 不自动升级为行为门。
+- **Adjust**：若出现漏接、误接或链边界不唯一，收紧 combat/连续决策边界；不先改动作策略。
+- **Rollback**：将 `lethal_unavailable_settlement_obs` 设为 `False`，预期只移除新结算 marker，保留既有 end-turn/terminal 观测及 action/params。
+- **Validation**：固定 256 槽入口复现宿主既有 `REVIEW_SELFCHECK_BOOTSTRAP_FAILED`；进程级继承 ACL 临时目录适配运行完整 selfcheck，退出码 0 且输出 `SELFCHECK OK`。目标代码 `git diff --check` 通过，证据包 315/315 文件哈希核对通过。
+
+### REPLAY
+
+retry_resolution: 20261004-144122-1791096082457818400-b43b1452 integrated
