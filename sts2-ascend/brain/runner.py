@@ -802,7 +802,8 @@ def _rollback_loaded_epoch(commit: str, deadline: float | None = None) -> bool:
 def _run_brain(deadline: float | None = None) -> BrainRunResult:
     """Run one brain generation while remaining responsive to stack shutdown."""
     started = time.monotonic()
-    deadline = deadline or (started + OUTAGE_BUDGET_SECONDS)
+    if deadline is None:
+        deadline = started + OUTAGE_BUDGET_SECONDS
     child_env = os.environ.copy()
     proc: subprocess.Popen | None = None
     capture: _ChildOutputCapture | None = None
@@ -814,8 +815,10 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
 
     def result(code: int) -> BrainRunResult:
         return BrainRunResult(
-            code, time.monotonic() - started, boot_id=boot_id,
-            boot_head=boot_head or "", boot_review_commit=loaded_review or "")
+            code, time.monotonic() - started,
+            boot_id=boot_id if proc is not None else "",
+            boot_head=(boot_head or "") if proc is not None else "",
+            boot_review_commit=(loaded_review or "") if proc is not None else "")
 
     def startup_return(
             event: str,
@@ -841,7 +844,6 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
             )
         return result(code)
 
-    ready_deadline = min(deadline, time.monotonic() + STARTUP_READY_SECONDS)
     # Keep the repository transaction only until every module and config byte is
     # resident. Agent/Knowledge construction may itself acquire this same lock.
     try:
@@ -849,9 +851,11 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
         if lock_timeout <= 0:
             return result(STARTUP_TIMEOUT_CODE)
         with autogit.repository_lock(timeout=lock_timeout):
+            lock_acquired = time.monotonic()
             _repair_tombstoned_marker_locked()
             if not _reconcile_prepared_marker(deadline):
                 return result(RECONCILE_BLOCKED_CODE)
+            reconciled = time.monotonic()
             boot_head = read_git_head(autogit.REPO_DIR)
             loaded_review = _active_review_commit()
             if boot_head:
@@ -863,16 +867,34 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
             boot_id = os.urandom(12).hex()
             child_env["STS2_ASCEND_BOOT_ID"] = boot_id
             startup_context = _startup_context(child_env)
+            preflight_finished = time.monotonic()
+            startup_context.update({
+                "lock_wait_elapsed_s": round(max(0.0, lock_acquired - started), 3),
+                "reconcile_elapsed_s": round(max(0.0, reconciled - lock_acquired), 3),
+                "preflight_elapsed_s": round(max(0.0, preflight_finished - started), 3),
+                "outage_remaining_s": round(max(0.0, deadline - preflight_finished), 3),
+                "ready_timeout_s": STARTUP_READY_SECONDS,
+            })
+            if preflight_finished >= deadline:
+                log("Brain 前置版本事务已用尽断流预算；保留现场，不创建超时子进程")
+                return startup_return("preflight_budget_timeout", STARTUP_TIMEOUT_CODE)
             _log_startup_event("launch", startup_context, 0.0)
-            child_started = time.monotonic()
+            launch_started = time.monotonic()
             proc = subprocess.Popen(
                 [sys.executable, "-u", "-m", "brain"], cwd=str(BASE_DIR),
                 env=child_env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
+            child_started = time.monotonic()
+            startup_context["process_launch_elapsed_s"] = round(
+                max(0.0, child_started - launch_started), 3)
+            # The import/initialization window starts once the child exists.
+            # Repository lock/reconciliation retain the same absolute
+            # outage deadline and never grant an extra 115-second epoch.
+            ready_deadline = min(deadline, child_started + STARTUP_READY_SECONDS)
             capture = _ChildOutputCapture(proc)
             import_deadline = min(
-                ready_deadline, time.monotonic() + STARTUP_IMPORT_SECONDS)
+                ready_deadline, child_started + STARTUP_IMPORT_SECONDS)
             while time.monotonic() < import_deadline:
                 rc = proc.poll()
                 if rc is not None:
@@ -891,7 +913,7 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
                     _terminate_startup_child(proc)
                     return startup_return("stop_during_import", 0,
                                           include_output=False)
-                time.sleep(0.05)
+                time.sleep(min(0.05, max(0.0, import_deadline - time.monotonic())))
             else:
                 log(f"Brain 未在 {STARTUP_IMPORT_SECONDS}s 内完成模块/config 导入；终止本代并重试")
                 _terminate_startup_child(proc)
@@ -918,7 +940,7 @@ def _run_brain(deadline: float | None = None) -> BrainRunResult:
             _terminate_startup_child(proc)
             return startup_return("stop_during_ready", 0,
                                   include_output=False)
-        time.sleep(0.05)
+        time.sleep(min(0.05, max(0.0, ready_deadline - time.monotonic())))
     else:
         log(f"Brain 未在 {STARTUP_READY_SECONDS}s 内完成 Agent 初始化；终止本代并重试")
         _terminate_startup_child(proc)
