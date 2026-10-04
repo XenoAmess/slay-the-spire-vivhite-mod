@@ -21292,3 +21292,14 @@
 - 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.932223098680232局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.95144499705795局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/26.41699076171342局)
 - 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长1.75)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但中带进场（85%，≥证据上限 65%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
 - 生涯战绩：5/1932 胜，当前目标进阶 5
+
+## 第 1933 局复盘（2026-10-04 18:25）
+- 结果：💀 失败｜进阶 5｜到达层数 17｜当局评分 17
+- 死因：敌人组合 LAGAVULIN_MATRIARCH
+- 本局拿牌：SHOCKWAVE, VIVHITE_CARD_LOCAL_HOMEOMORPHISM, VIVHITE_CARD_GOLDEN_COMPOSITION, VIVHITE_CARD_TERMINATION_CONDITION, VIVHITE_CARD_AXIOM_RING
+- 本局遗物：PLANISPHERE, UNSETTLING_LAMP
+- 战斗记录：F6 Monster战 掉血0｜自损8（可行动段8/非行动段6，SELF_LOSS_PHASE_OBS）; F12 Monster战 掉血1｜自损16（可行动段16/非行动段12，SELF_LOSS_PHASE_OBS）; F13 Elite战 掉血0｜自损19（可行动段19/非行动段5，SELF_LOSS_PHASE_OBS）; F14 Monster战 掉血0｜自损15（可行动段15/非行动段14，SELF_LOSS_PHASE_OBS）; F15 Unknown战 掉血0｜自损8（可行动段8/非行动段3，SELF_LOSS_PHASE_OBS）; F17 Boss战 掉血78｜自损25（可行动段25/非行动段50，SELF_LOSS_PHASE_OBS）（阵亡）
+- 当前高价值卡牌：MANGLE(44分/2.3954778940017523局)，FLASH_OF_STEEL(43分/4.268855597472198局)，DRAMATIC_ENTRANCE(38分/11.221527091524285局)，VIVHITE_CARD_LUMINOUS_PROJECTION(36分/4.300523292149105局)，MAYHEM(36分/4.21530431403646局)
+- 当前低价值卡牌：VIVHITE_CARD_PREFETCH_FUTURE(15分/2.921960317834851局)，VIVHITE_CARD_GEODESIC_VEIL(19分/4.934114939568248局)，VIVHITE_CARD_PARALLEL_STARFALL(20分/26.324531294047425局)
+- 策略进化：kill_bonus 19.75 距上限仅余 0.25(<步长2.50)，长战信号停止加码——顶格旋钮不再吸收证据；Boss 长战磨死但高血进场（100%≥线 88%）——入场血量非生死变量，入场线停止上调；证据改接拿牌端输出饥饿；burst_starve 双旋钮、饥饿带、前夜锻造线与长战加成上限均顶格——输出饥饿证据停止吸收；kill_race_prior_eff 触底——Boss 输出不足证据彻底停止吸收；vivhite_param_life_cost_weight -3.00 触底（余量 0.00<步长0.05）且謦欬出牌余量门 2.75 顶格（余量 0.25<步长0.5）且血税软顶 17.50 触底（余量 2.50<步长5.0）——白绮謦欬卡组（本局拿3张生命支付牌）阵亡——生命支付权重向保守收紧；三级旋钮全尽，謦欬证据彻底停止吸收并留痕
+- 生涯战绩：5/1933 胜，当前目标进阶 5
