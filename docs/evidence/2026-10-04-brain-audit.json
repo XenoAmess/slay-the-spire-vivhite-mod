@@ -1,0 +1,720 @@
+{
+  "captured_at": "2026-10-04T13:20:52.509421+08:00",
+  "head": "117e872e70c066bd9430d181d6da532796a965a6",
+  "python": "Python 3.14.7",
+  "files": {
+    "sts2-ascend/brain/__main__.py": {
+      "sha256": "2f4b8482e9d979b791a973a412bd1a61bfb725080c8162fdd6b95a70d610a5fa",
+      "lines": 10,
+      "functions": 0,
+      "largest_functions": []
+    },
+    "sts2-ascend/brain/agent.py": {
+      "sha256": "7120695b131054cccc0d9a3a0cdbc23c9d971783480c9067d537c7fbc3bdea0c",
+      "lines": 4910,
+      "functions": 111,
+      "largest_functions": [
+        {
+          "name": "_track",
+          "line": 2037,
+          "lines": 367
+        },
+        {
+          "name": "_ambiguous_action_outcome",
+          "line": 2829,
+          "lines": 320
+        },
+        {
+          "name": "_flush_combat_agg",
+          "line": 3639,
+          "lines": 307
+        }
+      ]
+    },
+    "sts2-ascend/brain/autogit.py": {
+      "sha256": "1b3a1495571ddb1c5b4a3ece0707b8fa9cddc7ba4c0da2631353ea8695924590",
+      "lines": 1699,
+      "functions": 64,
+      "largest_functions": [
+        {
+          "name": "commit_patch_result",
+          "line": 1199,
+          "lines": 286
+        },
+        {
+          "name": "commit_progress_result",
+          "line": 1042,
+          "lines": 146
+        },
+        {
+          "name": "abort_unpublished_review_worktree",
+          "line": 1510,
+          "lines": 76
+        }
+      ]
+    },
+    "sts2-ascend/brain/broadcast_window_patrol.py": {
+      "sha256": "89f649a93ef6efe01f8e6bf74c9b6e34552f404e352a596ce084d7d64179119a",
+      "lines": 197,
+      "functions": 9,
+      "largest_functions": [
+        {
+          "name": "poll",
+          "line": 138,
+          "lines": 60
+        },
+        {
+          "name": "__init__",
+          "line": 118,
+          "lines": 19
+        },
+        {
+          "name": "get_livehime_streaming_state",
+          "line": 62,
+          "lines": 18
+        }
+      ]
+    },
+    "sts2-ascend/brain/character_profiles.py": {
+      "sha256": "cb41e48c894508e0c9d31df97be294826c9c4a169fea5f5b08ecc70416f58f90",
+      "lines": 253,
+      "functions": 26,
+      "largest_functions": [
+        {
+          "name": "__init__",
+          "line": 152,
+          "lines": 28
+        },
+        {
+          "name": "mechanic_weights",
+          "line": 106,
+          "lines": 18
+        },
+        {
+          "name": "strategy",
+          "line": 82,
+          "lines": 12
+        }
+      ]
+    },
+    "sts2-ascend/brain/character_rotation.py": {
+      "sha256": "3b8bfec84718fd2604115145f2c64fc90ff6c4e2774ea626228de1dbd4e8ad85",
+      "lines": 1383,
+      "functions": 39,
+      "largest_functions": [
+        {
+          "name": "_validate_orphan_evidence",
+          "line": 251,
+          "lines": 289
+        },
+        {
+          "name": "record_terminal",
+          "line": 1239,
+          "lines": 117
+        },
+        {
+          "name": "release_orphan_run",
+          "line": 1121,
+          "lines": 87
+        }
+      ]
+    },
+    "sts2-ascend/brain/character_strategy.py": {
+      "sha256": "3d067f6de7be2c58cfc412221b49f98d85723397a9aebe4025b0bd4fbbbc9f16",
+      "lines": 2013,
+      "functions": 40,
+      "largest_functions": [
+        {
+          "name": "estimate_character_card",
+          "line": 1498,
+          "lines": 461
+        },
+        {
+          "name": "character_build_synergy",
+          "line": 949,
+          "lines": 146
+        },
+        {
+          "name": "_ritual_longline_projection",
+          "line": 1404,
+          "lines": 92
+        }
+      ]
+    },
+    "sts2-ascend/brain/client.py": {
+      "sha256": "884a7ecdec4054c1478365aceb525b48e1703dfd077553ebcb7c6375914cea84",
+      "lines": 197,
+      "functions": 12,
+      "largest_functions": [
+        {
+          "name": "_raw_request",
+          "line": 127,
+          "lines": 45
+        },
+        {
+          "name": "_request",
+          "line": 101,
+          "lines": 25
+        },
+        {
+          "name": "_decode",
+          "line": 174,
+          "lines": 24
+        }
+      ]
+    },
+    "sts2-ascend/brain/compact_knowledge.py": {
+      "sha256": "7048d7114bb483b994f0c27a7e8d0f2c74a32b776b92b93d3fd3e2bdf4714331",
+      "lines": 1261,
+      "functions": 49,
+      "largest_functions": [
+        {
+          "name": "_select_working_set",
+          "line": 427,
+          "lines": 80
+        },
+        {
+          "name": "_apply_single_compaction",
+          "line": 1060,
+          "lines": 70
+        },
+        {
+          "name": "_plan_single_compaction",
+          "line": 592,
+          "lines": 49
+        }
+      ]
+    },
+    "sts2-ascend/brain/dashboard_launcher.py": {
+      "sha256": "b283846760adabd0bbbb8f856fc31bbbbec62ab9d0dacf024efeccfac0eb4942",
+      "lines": 186,
+      "functions": 7,
+      "largest_functions": [
+        {
+          "name": "ensure_dashboard_viewer",
+          "line": 109,
+          "lines": 41
+        },
+        {
+          "name": "_pid_alive",
+          "line": 64,
+          "lines": 32
+        },
+        {
+          "name": "resolve_viewer_config",
+          "line": 33,
+          "lines": 29
+        }
+      ]
+    },
+    "sts2-ascend/brain/decision_trace.py": {
+      "sha256": "6778c1d7cfda0a60ea8f22ca611bda4a5b717137e9e782d33e6eb78214297fcd",
+      "lines": 337,
+      "functions": 18,
+      "largest_functions": [
+        {
+          "name": "_state_candidates",
+          "line": 83,
+          "lines": 63
+        },
+        {
+          "name": "finish",
+          "line": 272,
+          "lines": 37
+        },
+        {
+          "name": "build_decision_trace",
+          "line": 200,
+          "lines": 31
+        }
+      ]
+    },
+    "sts2-ascend/brain/floor_stats.py": {
+      "sha256": "ed42f97ebc4e0d0a944a5c657e6946f4091342c1ee97b994cb2a4c92e8e6ae99",
+      "lines": 1527,
+      "functions": 47,
+      "largest_functions": [
+        {
+          "name": "_build",
+          "line": 1258,
+          "lines": 157
+        },
+        {
+          "name": "_build_distribution",
+          "line": 1090,
+          "lines": 94
+        },
+        {
+          "name": "_profile_view",
+          "line": 1185,
+          "lines": 72
+        }
+      ]
+    },
+    "sts2-ascend/brain/knowledge.py": {
+      "sha256": "5c9cd3ca17262a4aaf73372bbd2047052f82d73f49149333643a73ad2e7646e5",
+      "lines": 3697,
+      "functions": 74,
+      "largest_functions": [
+        {
+          "name": "__init__",
+          "line": 2136,
+          "lines": 140
+        },
+        {
+          "name": "commit_room_damage",
+          "line": 3206,
+          "lines": 88
+        },
+        {
+          "name": "enemy_stance",
+          "line": 2685,
+          "lines": 63
+        }
+      ]
+    },
+    "sts2-ascend/brain/lifecycle.py": {
+      "sha256": "5b9b266ae18917b925bf0a64bb21d9c5392e953ca3085c72a728ea0a071c88aa",
+      "lines": 318,
+      "functions": 14,
+      "largest_functions": [
+        {
+          "name": "read_git_head",
+          "line": 22,
+          "lines": 74
+        },
+        {
+          "name": "pid_file",
+          "line": 282,
+          "lines": 37
+        },
+        {
+          "name": "mark_pid_stage",
+          "line": 243,
+          "lines": 36
+        }
+      ]
+    },
+    "sts2-ascend/brain/live_dashboard.py": {
+      "sha256": "9f1e0458397044035c7f421d8fe6d7bb39a089c4d10db520f49d69dd1b250e2f",
+      "lines": 345,
+      "functions": 18,
+      "largest_functions": [
+        {
+          "name": "_apply",
+          "line": 207,
+          "lines": 50
+        },
+        {
+          "name": "_worker",
+          "line": 308,
+          "lines": 38
+        },
+        {
+          "name": "_encode",
+          "line": 258,
+          "lines": 36
+        }
+      ]
+    },
+    "sts2-ascend/brain/llm_review.py": {
+      "sha256": "990487417e83e0080eee0cf3f5f4d924ab7fcf4867f80ece573b33f901f4435d",
+      "lines": 11909,
+      "functions": 295,
+      "largest_functions": [
+        {
+          "name": "_run_review_scoped",
+          "line": 3056,
+          "lines": 720
+        },
+        {
+          "name": "_materialize_retry_evidence",
+          "line": 8151,
+          "lines": 491
+        },
+        {
+          "name": "_run_review_sandbox",
+          "line": 9898,
+          "lines": 400
+        }
+      ]
+    },
+    "sts2-ascend/brain/manual_control.py": {
+      "sha256": "91163fa34d1ad8636590394c9ce7df8811238283c192d5e79d38dc51ba63b2f3",
+      "lines": 311,
+      "functions": 16,
+      "largest_functions": [
+        {
+          "name": "_message_loop",
+          "line": 257,
+          "lines": 54
+        },
+        {
+          "name": "read_control_state",
+          "line": 61,
+          "lines": 34
+        },
+        {
+          "name": "_publish",
+          "line": 126,
+          "lines": 28
+        }
+      ]
+    },
+    "sts2-ascend/brain/native_knowledge.py": {
+      "sha256": "d081d888d05405b6605423ee9de2bd0a788cfa49ef15b9f093d5754594c3e445",
+      "lines": 649,
+      "functions": 30,
+      "largest_functions": [
+        {
+          "name": "_mechanics_highlights",
+          "line": 447,
+          "lines": 102
+        },
+        {
+          "name": "review_digest",
+          "line": 576,
+          "lines": 74
+        },
+        {
+          "name": "_open_latest",
+          "line": 234,
+          "lines": 55
+        }
+      ]
+    },
+    "sts2-ascend/brain/policy.py": {
+      "sha256": "c60184f712abcc407644cd3134c98a8378da2ee5fc1bea6408ad3ccb18b0a8d3",
+      "lines": 26746,
+      "functions": 516,
+      "largest_functions": [
+        {
+          "name": "_combat",
+          "line": 16467,
+          "lines": 3366
+        },
+        {
+          "name": "_score_play",
+          "line": 19834,
+          "lines": 1769
+        },
+        {
+          "name": "_combat_kill_race_projection",
+          "line": 15174,
+          "lines": 1291
+        }
+      ]
+    },
+    "sts2-ascend/brain/reflect.py": {
+      "sha256": "f15afc389c3082410c0391665f117ffa4ff068647aecf590330232fd1bec76ee",
+      "lines": 868,
+      "functions": 9,
+      "largest_functions": [
+        {
+          "name": "finalize_run",
+          "line": 295,
+          "lines": 574
+        },
+        {
+          "name": "_adj_burst_starve",
+          "line": 172,
+          "lines": 66
+        },
+        {
+          "name": "_lc_tighten",
+          "line": 587,
+          "lines": 53
+        }
+      ]
+    },
+    "sts2-ascend/brain/review_context.py": {
+      "sha256": "9a6f69f7e387159675db8745a02dea46f69fb10a58839f7672a96af28213163c",
+      "lines": 22,
+      "functions": 1,
+      "largest_functions": [
+        {
+          "name": "read_text_tail",
+          "line": 7,
+          "lines": 16
+        }
+      ]
+    },
+    "sts2-ascend/brain/review_packet.py": {
+      "sha256": "83a94f2c87de309ebca38a1e53e70b3839779fa5731a8f4f5a3a9b63a966c2f9",
+      "lines": 216,
+      "functions": 10,
+      "largest_functions": [
+        {
+          "name": "_update_failure_chain",
+          "line": 122,
+          "lines": 37
+        },
+        {
+          "name": "_reductions",
+          "line": 75,
+          "lines": 32
+        },
+        {
+          "name": "enforce_packet_budget",
+          "line": 189,
+          "lines": 28
+        }
+      ]
+    },
+    "sts2-ascend/brain/review_runners.py": {
+      "sha256": "399fc811a9f4f50b37fd43a72c4781b1c8091f2e50ee0c8128f373757a3d6cf4",
+      "lines": 974,
+      "functions": 39,
+      "largest_functions": [
+        {
+          "name": "feed",
+          "line": 878,
+          "lines": 89
+        },
+        {
+          "name": "feed",
+          "line": 631,
+          "lines": 80
+        },
+        {
+          "name": "review_plans_from_config",
+          "line": 374,
+          "lines": 77
+        }
+      ]
+    },
+    "sts2-ascend/brain/review_viewer.py": {
+      "sha256": "93726bd866cea3b19ffb11907a5d99f8eb301eacfd402cfcefb58e311aeb4836",
+      "lines": 1924,
+      "functions": 69,
+      "largest_functions": [
+        {
+          "name": "_render_dashboard",
+          "line": 1476,
+          "lines": 152
+        },
+        {
+          "name": "_draw_profile_card_builds",
+          "line": 1306,
+          "lines": 99
+        },
+        {
+          "name": "_render_hud",
+          "line": 1736,
+          "lines": 77
+        }
+      ]
+    },
+    "sts2-ascend/brain/runner.py": {
+      "sha256": "07cc63ca5fecfc8f1faddcd47c69fee22b44d3667adb6f9043a8b2671e4844d1",
+      "lines": 1048,
+      "functions": 31,
+      "largest_functions": [
+        {
+          "name": "_run_brain",
+          "line": 767,
+          "lines": 151
+        },
+        {
+          "name": "main",
+          "line": 920,
+          "lines": 117
+        },
+        {
+          "name": "_save_prepared_recovery_package",
+          "line": 551,
+          "lines": 89
+        }
+      ]
+    },
+    "sts2-ascend/brain/runtime_paths.py": {
+      "sha256": "e4abf44d8bd3f6fa6f586ea0ccd490cbcb4b14dca13383946b988108f4707ec9",
+      "lines": 57,
+      "functions": 3,
+      "largest_functions": [
+        {
+          "name": "_running_under_unittest",
+          "line": 20,
+          "lines": 15
+        },
+        {
+          "name": "resolve_knowledge_dir",
+          "line": 47,
+          "lines": 11
+        },
+        {
+          "name": "_temporary_test_knowledge_dir",
+          "line": 37,
+          "lines": 8
+        }
+      ]
+    },
+    "sts2-ascend/brain/selfcheck.py": {
+      "sha256": "152ae874fbb392048e3ae0e93162953d1b052b5e7dcb780a6fb91c1193b23369",
+      "lines": 26440,
+      "functions": 247,
+      "largest_functions": [
+        {
+          "name": "main",
+          "line": 22,
+          "lines": 26415
+        },
+        {
+          "name": "combat_flip_probe",
+          "line": 13022,
+          "lines": 152
+        },
+        {
+          "name": "wake_race_probe",
+          "line": 6884,
+          "lines": 57
+        }
+      ]
+    },
+    "sts2-ascend/brain/window_layers.py": {
+      "sha256": "43a1a402f91ade0ceb69f709cf89bf0804ccdb577d86abee0ebb901e7a6ce036",
+      "lines": 302,
+      "functions": 15,
+      "largest_functions": [
+        {
+          "name": "find_viewer_hwnd",
+          "line": 237,
+          "lines": 54
+        },
+        {
+          "name": "find_window_for_executable",
+          "line": 141,
+          "lines": 39
+        },
+        {
+          "name": "process_name_running",
+          "line": 103,
+          "lines": 36
+        }
+      ]
+    }
+  },
+  "completed_at": "2026-10-04T13:38:16.089615+08:00",
+  "final_head_before_docs_commit": "04039d79cdbbb15044239be30a24475f5b8689bd",
+  "source_changes_since_snapshot": [],
+  "validation": {
+    "selfcheck": {
+      "log_sha256": "dc1a077fe2c31bf4d57a92711719a3f43b349f758bd7d015f1a8d10daf91f8bd",
+      "local_log": ".work/brain-audit-20261004/selfcheck.log",
+      "tests": null,
+      "seconds": null,
+      "success": true,
+      "summary": [
+        "[agent] 动作 choose_event_option 丢失回执；尚无动作特定效果，等待新状态确认（10/12）",
+        "[agent] 动作 choose_event_option 丢失回执；尚无动作特定效果，等待新状态确认（11/12）",
+        "[agent] 动作 choose_event_option 服务端已受理但连续状态未见效果，释放为精确目标冷却后的重新评估",
+        "  ↳ 动作 choose_treasure_relic 连续刷新竞争×3；仅冷却该精确目标，让同屏其他候选先行",
+        "[agent] 进入战斗：敌方=CM_ENEMY｜历史场均掉血 12.0｜房间类型 Monster",
+        "[agent] 进入战斗：敌方=STALL_NEW｜历史场均掉血 12.0｜房间类型 Monster",
+        "[stall] 分析完成时战斗身份已变化，丢弃过期结论",
+        "SELFCHECK OK"
+      ],
+      "failure_tests": []
+    },
+    "unittest": {
+      "log_sha256": "7f5c18668fbd970073ea026fd77acf935100c07f94d7bc0980d3a04dfb315fdb",
+      "local_log": ".work/brain-audit-20261004/unittest.log",
+      "tests": 912,
+      "seconds": 394.766,
+      "success": false,
+      "summary": [
+        "- deferred",
+        "+ replay_pending",
+        "",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 912 tests in 394.766s",
+        "",
+        "FAILED (failures=3, errors=5)"
+      ],
+      "failure_tests": [
+        "test_f17_ringing_native_hook_rejection_skips_forty_tick_settle (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_f17_ringing_native_hook_rejection_skips_forty_tick_settle)",
+        "test_missing_can_play_reason_keeps_settle_and_reports_queue_state (test_character_strategy.CharacterStrategyPoli cyIntegrationTests.test_missing_can_play_reason_keeps_settle_and_reports_queue_state)",
+        "test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks (test_character_strategy.CharacterStrategyPol icyIntegrationTests.test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks)",
+        "test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard)",
+        "test_unplayable_life_cost_card_never_enters_settle_latent_roll (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_unplayable_life_cost_card_never_enters_settle_latent_roll)",
+        "test_existing_viewer_is_not_spawned_again (test_dashboard_viewer.DashboardLauncherTests.test_existing_viewer_is_not_spawned_again)",
+        "test_missing_viewer_is_spawned_detached (test_dashboard_viewer.DashboardLauncherTests.test_missing_viewer_is_spawned_detached)",
+        "test_successful_code_commit_keeps_replay_pending_until_glm_receipt (test_persistence_fail_closed.ReviewQueueSafet yTests.test_successful_code_commit_keeps_replay_pending_until_glm_receipt)"
+      ]
+    },
+    "dashboard-rerun": {
+      "log_sha256": "aa63e0d949b453e95d022e6dc95ab0161bc9c042b9d39175544f5e415e285be0",
+      "local_log": ".work/brain-audit-20261004/dashboard-rerun.log",
+      "tests": 32,
+      "seconds": 0.037,
+      "success": true,
+      "summary": [
+        "+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
+        "    + CategoryInfo          : NotSpecified: (................................:String) [], RemoteException",
+        "    + FullyQualifiedErrorId : NativeCommandError",
+        " ",
+        "----------------------------------------------------------------------",
+        "Ran 32 tests in 0.037s",
+        "",
+        "OK"
+      ],
+      "failure_tests": []
+    },
+    "strategy-rerun": {
+      "log_sha256": "71e4a27f61fc2b31cd85274cce677b7f3afa4574a4594829635ac941b2a00d25",
+      "local_log": ".work/brain-audit-20261004/strategy-rerun.log",
+      "tests": 57,
+      "seconds": 0.162,
+      "success": false,
+      "summary": [
+        "    or ctx_combat.get(\"node_type\") != \"Boss\"):",
+        "       ^^^^^^^^^^^^^^",
+        "AttributeError: 'object' object has no attribute 'get'",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 57 tests in 0.162s",
+        "",
+        "FAILED (errors=5)"
+      ],
+      "failure_tests": [
+        "test_f17_ringing_native_hook_rejection_skips_forty_tick_settle (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_f17_ringing_native_hook_rejection_skips_forty_tick_settle)",
+        "test_missing_can_play_reason_keeps_settle_and_reports_queue_state (test_character_strategy.CharacterStrategyPoli cyIntegrationTests.test_missing_can_play_reason_keeps_settle_and_reports_queue_state)",
+        "test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks (test_character_strategy.CharacterStrategyPol icyIntegrationTests.test_new_turn_all_non_curse_cards_life_locked_ends_after_two_ticks)",
+        "test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_new_turn_unknown_unplayable_card_keeps_fifteen_tick_guard)",
+        "test_unplayable_life_cost_card_never_enters_settle_latent_roll (test_character_strategy.CharacterStrategyPolicyI ntegrationTests.test_unplayable_life_cost_card_never_enters_settle_latent_roll)"
+      ]
+    },
+    "persistence-rerun": {
+      "log_sha256": "b2c6f06a1c164d63964370b30a5685ff61f4494dd6362f407284122f2791a77d",
+      "local_log": ".work/brain-audit-20261004/persistence-rerun.log",
+      "tests": 79,
+      "seconds": 20.174,
+      "success": false,
+      "summary": [
+        "",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 79 tests in 20.174s",
+        "",
+        "FAILED (failures=1)",
+        "拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain",
+        "拒绝在线改写复盘队列：请先用 Stop-Agent.ps1 -KeepGame 停止 brain"
+      ],
+      "failure_tests": [
+        "test_successful_code_commit_keeps_replay_pending_until_glm_receipt (test_persistence_fail_closed.ReviewQueueSafet yTests.test_successful_code_commit_keeps_replay_pending_until_glm_receipt)"
+      ]
+    }
+  },
+  "scope": "Read-only implementation audit; no production action, model invocation, stack restart, or manual knowledge mutation.",
+  "test_environment": {
+    "PYTHONHOME": "C:\\Users\\xenoa\\AppData\\Local\\Programs\\Python\\Python314",
+    "PYTHONUTF8": "1",
+    "knowledge_root": ".work/brain-audit-20261004/",
+    "full_suite_disable_viewer": true,
+    "targeted_reruns_disable_viewer": false,
+    "dashboard_false_failures_resolved_by_removing_test_environment_override": 2,
+    "remaining_errors": 5,
+    "remaining_failures": 1
+  }
+}
