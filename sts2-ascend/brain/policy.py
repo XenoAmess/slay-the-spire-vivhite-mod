@@ -15218,6 +15218,47 @@ class Policy:
         return Decision(None, {}, "战斗：回合过渡中，等待", wait=0.6)
 
 
+    def _race_pool_primary_secondary(self, enemies, respawn_credit: bool,
+                                     invuln_floor: float) -> tuple | None:
+        """竞速血池的主/次级敌只读分账（RACE_POOL_SECONDARY_OBS 观测位）。
+
+        原生 v0.111.0 击杀级联（CreatureCmd.KillWithoutCheckingWinCondition，
+        mechanics/rules_commands.jsonl 全量提取）：被击杀者是主敌
+        （IsPrimaryEnemy——未持有任何 OwnerIsSecondaryEnemy 增益）且其余
+        存活队友全部为次级敌时，原生直接 Kill 全部次级队友——次级敌血条
+        从不需要玩家亲手清空（THE KIN：神官 190 主池 + 信徒 58×2 次级池，
+        击杀神官即终战；MinionPower.ShouldOwnerDeathTriggerFatal=false 只
+        描述增益自身，不覆盖这条 Kill 路径）。竞速投影的 enemy_hp_total
+        把次级血池一并计价，ttk 被系统性抬高、边界局被推入判死入锁
+        （1926-F17：pool=275/dpt=28.35/ttk=9.7 vs tsurv=6.5，主池口径
+        ≈6.7）。本助手按 enemy_hp_total 同一过滤口径（重生体/无敌帧剔除）
+        把血池拆成主/次级两桶，仅供收官审计披露，不改动 ttk/tsurv/入锁/
+        评分/动作。级联只在「恰好一个存活主敌」时成立：多主敌或无次级敌
+        场面返回 None（分账不适用）。
+        """
+        primary_pool = 0.0
+        secondary_pool = 0.0
+        primary_count = 0
+        secondary_count = 0
+        for e in enemies:
+            if self._is_respawn_add(e) and not respawn_credit:
+                continue
+            try:
+                _hp = max(0, int(e.get("current_hp") or 0))
+            except (TypeError, ValueError):
+                continue
+            if invuln_floor > 0.0 and _hp >= invuln_floor:
+                continue
+            if self._enemy_power_stack(e, "minion", "爪牙") > 0:
+                secondary_pool += float(_hp)
+                secondary_count += 1
+            else:
+                primary_pool += float(_hp)
+                primary_count += 1
+        if primary_count != 1 or secondary_count <= 0:
+            return None
+        return (primary_pool, secondary_pool, secondary_count)
+
     def _combat_kill_race_projection(
             self, state, cctx, pol, enemies, hand, incoming, my_hp,
             my_max_hp, my_block, round_no, stance, stance_defensive_tone,
@@ -16490,6 +16531,35 @@ class Policy:
                                         except (KeyError, TypeError, ValueError,
                                                 OverflowError):
                                             pass
+                                # 主/次级敌血池分账（RACE_POOL_SECONDARY_OBS，
+                                # 第1922~1926局批复盘）：原生击杀级联使次级敌
+                                # 血条不需玩家清空，快照附加主/次级两桶供收官
+                                # 审计核对 ttk 是否被次级血池系统性抬高；保留
+                                # 首次值，与投影快照同一入锁现场，不参与判定。
+                                if (bool(self.know.policy.get(
+                                        "race_pool_secondary_obs", True))
+                                        and "projection_secondary_pool"
+                                        not in _ra_audit):
+                                    _pool_split = (
+                                        self._race_pool_primary_secondary(
+                                            enemies, _respawn_credit,
+                                            _invuln_floor))
+                                    if _pool_split is not None:
+                                        (_primary_pool, _secondary_pool,
+                                         _secondary_count) = _pool_split
+                                        if all(math.isfinite(_pool_value)
+                                               and _pool_value >= 0.0
+                                               for _pool_value in (
+                                                   _primary_pool,
+                                                   _secondary_pool)):
+                                            _ra_audit.update({
+                                                "projection_primary_pool": (
+                                                    _primary_pool),
+                                                "projection_secondary_pool": (
+                                                    _secondary_pool),
+                                                "projection_secondary_count": (
+                                                    int(_secondary_count)),
+                                            })
                                 try:
                                     _intent_drift_enabled = bool(int(float(
                                         pol.get(

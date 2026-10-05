@@ -935,6 +935,14 @@ DEFAULT_POLICY = {
                                                # 由 RACE_PROJ_SURVIVAL_RATIO_OBS 单独校准
     "race_audit_projection_survival_gap_obs": True,  # 只读记录入锁投影 TTK-可存活回合差值；
                                                        # 正值表示投影击杀时间超过预计存活窗口，False 仅移除该观测
+    "race_pool_secondary_obs": True,  # 竞速入锁快照追加主/次级敌血池只读分账
+                                       # （RACE_POOL_SECONDARY_OBS，第1922~1926局批复盘）：
+                                       # 原生击杀级联（CreatureCmd.KillWithoutCheckingWinCondition
+                                       # ——主敌死亡且其余队友全次级时原生 Kill 全部次级
+                                       # 队友）使次级敌血条不需玩家清空，enemy_hp_total
+                                       # 却把它计入 ttk；分账只进收官审计，不改动判定/
+                                       # 评分/动作；False 严格回滚（快照与战斗记录均无
+                                       # 分账字段）
     "race_audit_projection_ratio_terminal_outcome_obs": True,  # 将同楼层战斗记录中的
                                                                # TTK/存活比值接回权威 GAME_OVER；
                                                                # 只读、可回滚，不改变 action/params

@@ -16409,3 +16409,27 @@ failed_review_replay：`requested_packages=[]`（无回放目标）
 - **Validation**：直接 selfcheck 复现宿主固定 256 槽限制；进程级临时目录适配器运行完整入口，退出码 0 且末尾为 `SELFCHECK OK`。1920 只读回放输出 `terminal_round=6` 与 `RUN1920_REPLAY=OK`；目标 diff `--check` 通过。未写入 `.runtime`、正式 runs/archive、学习记忆、回放包或在线进程。
 
 - `retry_resolution: none (failed_review_replay.requested_packages=[]; lethal playable rejection terminal join integrated)`
+
+## Review batch 1922~1926（replay 第4次重审）：RACE_POOL_SECONDARY_OBS 主/次级敌血池分账
+
+### HYPOTHESIS / EVIDENCE / EXPECTED_SIGNAL
+
+- **HYPOTHESIS**：竞速投影的 `enemy_hp_total` 把次级敌（MINION_POWER/爪牙）血池一并计入 ttk；原生击杀级联（`CreatureCmd.KillWithoutCheckingWinCondition`，mechanics/rules_commands.jsonl）在主敌死亡且其余存活队友全次级时直接 Kill 全队，次级血条从不需要玩家亲手清空——因此 ttk 被次级血池系统性抬高，边界局被推入判死入锁。可证伪：若后续单主敌+次级场面的 `ttk_primary=主池/dpt` 与 `ttk` 无系统性差异，假设被削弱。
+- **EVIDENCE**：本批 1926-F17 THE KIN Boss 战（terminal_roster=KIN_FOLLOWER×2+KIN_PRIEST，神官190主池+信徒58×2次级池，击杀神官即终战）竞速入锁 pool=275/dpt=28.35/ttk=9.7 vs tsurv=6.5（主池口径≈6.7），随后 5 回合阵亡；1922/1923 局竞速投影审计 ttk/tsurv 缺口同型。replay target `20261004-161044-...-8906a8b9` 及其 3 个 attempt 包完整可读：attempt3（`...-51a66a20`）wip/retry_candidate.patch 含本观测的完整实现（4 文件 19385 字节），因 8h 超时中断未闭环。
+- **EXPECTED_SIGNAL**：未来 3~10 局出现「恰好一个存活主敌+次级敌」场面且竞速入锁时，战斗记录追加 `/primary_pool/secondary_pool/secondary_count/ttk_primary（RACE_POOL_SECONDARY_OBS）`；`ttk_primary<ttk` 的重复样本支持抬高假设（达 3 例后再评估是否把次级血池移出 ttk 计价的行为化）；多主敌/无次级敌/关闭键场面尾缀严格不出现。
+
+### MINIMUM_CHANGE
+
+- `sts2-ascend/brain/policy.py`：新增只读助手 `_race_pool_primary_secondary`（与 enemy_hp_total 同一重生体/无敌帧过滤口径，按 MINION_POWER/爪牙分主/次两桶；级联只在恰好一个存活主敌时成立，否则返回 None）；入锁快照在 `race_pool_secondary_obs`（默认 True）下附加 `projection_primary_pool/projection_secondary_pool/projection_secondary_count`，保留首次值、不参与 ttk/tsurv/入锁/评分/动作。
+- `sts2-ascend/brain/agent.py`：收官战斗记录在快照带分账时追加只读尾缀；`race_pool_secondary_obs=False` 严格移除尾缀，旧投影/比值/差值段逐位不变。
+- `sts2-ascend/brain/knowledge.py`：默认策略键 `race_pool_secondary_obs: True` 及回滚语义注释。
+- `sts2-ascend/brain/selfcheck.py`：THE KIN 三回合判死入锁夹具（分账=166/116/2、投影主账=两桶之和逐位不变、多主敌/无次级敌不分账、关闭键快照字段严格消失）+ 收官尾缀 on/off 断言。
+
+### CONTINUE / ADJUST / ROLLBACK / VALIDATION
+
+- **Continue**：统计未来 3~10 局 `RACE_POOL_SECONDARY_OBS` 样本中 `ttk - ttk_primary` 分布；若 ≥3 例显示判死局 ttk 虚高跨过 tsurv 而 ttk_primary 不跨，单独立项行为化（次级血池移出 ttk 或降权），本批不改行为。
+- **Adjust**：若出现次级敌血条确需玩家清空的原生反例（OwnerIsSecondaryEnemy 但级联未触发），收紧分账口径或补充反例观测。
+- **Rollback**：`race_pool_secondary_obs=False` 后快照与战斗记录均无分账字段，action/params 逐位不变。
+- **Validation**：`py -3 -B sts2-ascend/brain/selfcheck.py` → **SELFCHECK OK**（含新夹具，收官日志可见 `/primary_pool=190/secondary_pool=116/secondary_count=2/ttk_primary=6.70194`）；`git diff --check` 通过；仅触碰 4 个静态源码文件，未写在线状态/学习记忆/runs/archive。
+
+- `retry_resolution: 20261004-161044-1791101444939049000-8906a8b9 integrated`（attempts b522e718/3340121b 无候选 patch，仅证据；51a66a20 候选 patch 已在当前 HEAD d00004929 上重实现，锚点逐位吻合，agent.py/knowledge.py 落地 blob 与候选逐字节一致）

@@ -3953,6 +3953,33 @@ class Agent:
                             "（RACE_PROJ_SURVIVAL_GAP_OBS）")
                 except (KeyError, TypeError, ValueError, OverflowError):
                     pass
+            # 主/次级敌血池分账披露（RACE_POOL_SECONDARY_OBS，第1922~1926局
+            # 批复盘）：竞速入锁快照附带的次级血池只读分账接入同一条战斗记录
+            # ——原生击杀级联（主敌死亡且其余队友全次级→原生 Kill 全队）使
+            # 次级血条不需玩家清空，ttk_primary=主池/dpt 给出剔除次级血池后
+            # 的击杀投影，供复盘核对判死是否被次级血池系统性抬高；只读，
+            # False 仅移除该尾缀，既有投影/比值/差值段落不受影响。
+            if bool(self.know.policy.get("race_pool_secondary_obs", True)):
+                try:
+                    _sec_primary = float(_ra.get("projection_primary_pool"))
+                    _sec_secondary = float(
+                        _ra.get("projection_secondary_pool"))
+                    _sec_count = int(_ra.get("projection_secondary_count"))
+                    _sec_dpt = float(_ra.get("projection_dpt") or 0.0)
+                except (TypeError, ValueError, OverflowError):
+                    _sec_primary = _sec_secondary = _sec_dpt = 0.0
+                    _sec_count = 0
+                if (all(math.isfinite(_sec_value) and _sec_value >= 0.0
+                        for _sec_value in (_sec_primary, _sec_secondary,
+                                           _sec_dpt))
+                        and _sec_secondary > 0.0 and _sec_dpt > 0.0
+                        and _sec_count > 0):
+                    note += (
+                        f"/primary_pool={_sec_primary:g}"
+                        f"/secondary_pool={_sec_secondary:g}"
+                        f"/secondary_count={_sec_count}"
+                        f"/ttk_primary={_sec_primary / _sec_dpt:g}"
+                        "（RACE_POOL_SECONDARY_OBS）")
             note += (f"｜竞速审计：T{_ra.get('latch_round', '?')}判死→"
                      f"实战{agg.get('rounds', '?')}回合"
                      + ("阵亡" if agg.get("died") else "获胜"))

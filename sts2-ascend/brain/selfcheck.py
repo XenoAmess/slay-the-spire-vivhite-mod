@@ -6996,6 +6996,107 @@ def main() -> int:
         f"突发唤醒火力开关未严格回滚旧 EMA: {d_wake_rb.action}（{d_wake_rb.reason}）"
     know.policy["hard_combat_intent_spike_fire"] = True
 
+    # 3xx-kinpool) 主/次级敌竞速血池分账（RACE_POOL_SECONDARY_OBS，
+    #      第1922~1926局批复盘）：原生击杀级联（CreatureCmd.
+    #      KillWithoutCheckingWinCondition——主敌死亡且其余队友全次级时
+    #      原生 Kill 全部次级队友）使次级敌血条不需玩家清空；THE KIN
+    #      神官 190 主池+信徒 58×2 次级池，击杀神官即终战。竞速投影的
+    #      enemy_hp_total 把次级血池计入 ttk（1926-F17 pool=275/dpt=28.35/
+    #      ttk=9.7 vs tsurv=6.5，主池口径≈6.7）。锚：入锁快照附带主/次级
+    #      分账与次级计数、投影主账（pool=两桶之和、latched/动作）逐位
+    #      不变、观测键关闭后分账字段严格消失、多主敌/无次级敌不分账。
+    def kin_pool_state(turn_no, hp_now, priest_hp):
+        return {
+            "screen": "COMBAT", "available_actions": ["play_card", "end_turn"],
+            "turn": turn_no,
+            "combat": {"player": {"current_hp": hp_now, "max_hp": 80,
+                                  "block": 0, "energy": 3},
+                       "hand": [
+                           {"index": 0, "card_id": "KIN_HIT", "name": "竞速斩",
+                            "playable": True, "energy_cost": 1,
+                            "requires_target": True,
+                            "valid_target_indices": [0],
+                            "dynamic_values": [{"name": "Damage",
+                                                "current_value": 12}]},
+                           {"index": 1, "card_id": "KIN_BLK", "name": "铁壁",
+                            "playable": True, "requires_target": False,
+                            "rules_text": "获得8点格挡",
+                            "dynamic_values": [{"name": "Block",
+                                                "current_value": 8}]}],
+                       "enemies": [
+                           {"index": 0, "enemy_id": "KIN_PRIEST",
+                            "name": "同族神官", "current_hp": priest_hp,
+                            "max_hp": 190, "block": 0,
+                            "is_alive": True, "is_hittable": True,
+                            "intents": [{"total_damage": 6}]},
+                           {"index": 1, "enemy_id": "KIN_FOLLOWER",
+                            "name": "同族信徒", "current_hp": 58,
+                            "max_hp": 59, "block": 0,
+                            "is_alive": True, "is_hittable": True,
+                            "powers": [{"id": "MINION_POWER", "amount": 1}],
+                            "intents": [{"total_damage": 8}]},
+                           {"index": 2, "enemy_id": "KIN_FOLLOWER",
+                            "name": "同族信徒", "current_hp": 58,
+                            "max_hp": 59, "block": 0,
+                            "is_alive": True, "is_hittable": True,
+                            "powers": [{"id": "MINION_POWER", "amount": 1}],
+                            "intents": [{"total_damage": 8}]}]},
+            "run": {"current_hp": hp_now, "max_hp": 80, "gold": 0,
+                    "floor": 17, "deck": []}}
+
+    def kin_pool_probe(obs_on):
+        kin_know = knowledge.Knowledge(
+            Path(tempfile.mkdtemp(prefix="sts2-selfcheck-kinpool-")))
+        kin_ctx = type("KinPoolCtx", (), {"combat": None,
+                                          "current_combat_is_hard": True,
+                                          "credit_tags": []})()
+        kin_ctx.combat = {"comp_id": "KIN_PRIEST", "node_type": "Boss"}
+        kin_pol = policy.Policy(kin_know, random.Random(17))
+        kin_pol.know.policy["race_pool_secondary_obs"] = obs_on
+        kd1 = kin_pol.decide(kin_pool_state(1, 65, 190), kin_ctx)
+        kin_ctx.credit_tags.extend(kd1.tags)
+        kd2 = kin_pol.decide(kin_pool_state(2, 55, 178), kin_ctx)
+        kin_ctx.credit_tags.extend(kd2.tags)
+        kd3 = kin_pol.decide(kin_pool_state(3, 45, 166), kin_ctx)
+        kin_ctx.credit_tags.extend(kd3.tags)
+        return kin_pol, kd3
+
+    kin_pol, kin_d3 = kin_pool_probe(True)
+    assert bool(getattr(kin_pol, "_krace_latch", False)), \
+        f"夹具前提失败：T3 实测判死未入锁（{kin_d3.action}（{kin_d3.reason}））"
+    _kin_audit = getattr(kin_pol, "_race_audit", None) or {}
+    assert _kin_audit.get("latched"), "入锁后审计账未置位"
+    assert _kin_audit.get("projection_primary_pool") == 166.0 \
+        and _kin_audit.get("projection_secondary_pool") == 116.0 \
+        and _kin_audit.get("projection_secondary_count") == 2, \
+        f"入锁快照未附带主/次级血池分账: {_kin_audit}"
+    assert abs(_kin_audit.get("projection_pool", -1.0)
+               - (_kin_audit["projection_primary_pool"]
+                  + _kin_audit["projection_secondary_pool"])) < 1e-9, \
+        f"分账落地后投影主账血池口径漂移: {_kin_audit}"
+    _split_priest = {"index": 0, "enemy_id": "KIN_PRIEST", "current_hp": 190,
+                     "is_alive": True, "is_hittable": True, "powers": []}
+    _split_follower = {"index": 1, "enemy_id": "KIN_FOLLOWER",
+                       "current_hp": 58, "is_alive": True,
+                       "is_hittable": True,
+                       "powers": [{"id": "MINION_POWER", "amount": 1}]}
+    assert kin_pol._race_pool_primary_secondary(
+        [_split_priest, _split_follower], False, 100000.0) \
+        == (190.0, 58.0, 1), "单主敌+单次级敌应分账"
+    assert kin_pol._race_pool_primary_secondary(
+        [_split_priest, dict(_split_priest, index=3), _split_follower],
+        False, 100000.0) is None, "多主敌场面击杀级联不成立，不应分账"
+    assert kin_pol._race_pool_primary_secondary(
+        [_split_priest], False, 100000.0) is None, "无次级敌不应分账"
+    kin_off_pol, kin_off_d3 = kin_pool_probe(False)
+    assert bool(getattr(kin_off_pol, "_krace_latch", False)), \
+        ("夹具前提失败：关闭观测后 T3 未入锁"
+         f"（{kin_off_d3.action}（{kin_off_d3.reason}））")
+    _kin_off_audit = getattr(kin_off_pol, "_race_audit", None) or {}
+    assert "projection_pool" in _kin_off_audit \
+        and "projection_secondary_pool" not in _kin_off_audit, \
+        f"关闭分账观测后快照字段漂移: {_kin_off_audit}"
+
     # 3ww-invuln) 无敌帧血池剔除（RACE_INVULNERABLE_POOL_OBS，第1336~1342局批复盘）：
     #      WATERFALL_GIANT 击倒进 AboutToBlow 后原生 SetMaxAndCurrentHp(999999999)
     #      +HpDisplay.InfiniteWithoutNumbers——不可击杀、随后 ExplodeMove 自爆；
@@ -16978,6 +17079,43 @@ def main() -> int:
     assert "RACE_PROJ_TTK_RATIO_OBS" not in _ra_terminal_off_note \
         and "RACE_PROJ_SURVIVAL_RATIO_OBS" not in _ra_terminal_off_note, \
         f"关闭比值观测后阵亡样本仍有比值尾部: {_ra_terminal_off_note}"
+
+    # 主/次级敌血池分账（RACE_POOL_SECONDARY_OBS，第1922~1926局批复盘）：
+    # 原生击杀级联（rules_commands KillWithoutCheckingWinCondition：主敌
+    # 死亡且其余队友全次级→原生 Kill 全队）使次级血条不需玩家清空；快照
+    # 分账必须披露 primary/secondary/ttk_primary 供复盘核对判死是否被
+    # 次级血池抬高；关闭观测键后尾缀严格消失，旧投影段不受影响。
+    ra_agent.know.policy["race_audit_projection_ratio_obs"] = True
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 3, "esc": False,
+        "projection_pool": 306.0, "projection_dpt": 28.35,
+        "projection_ttk": 10.7936, "projection_tsurv": 6.5,
+        "projection_primary_pool": 190.0,
+        "projection_secondary_pool": 116.0,
+        "projection_secondary_count": 2,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    _ra_sec_note = ra_agent.ctx.combat_notes[-1]
+    assert ("/primary_pool=190/secondary_pool=116/secondary_count=2"
+            "/ttk_primary=6.70194（RACE_POOL_SECONDARY_OBS）") in _ra_sec_note, \
+        f"入锁快照主/次级血池分账未落到战斗记录: {_ra_sec_note}"
+    ra_agent.know.policy["race_pool_secondary_obs"] = False
+    ra_agent.policy._race_audit = {
+        "latched": True, "latch_round": 3, "esc": False,
+        "projection_pool": 306.0, "projection_dpt": 28.35,
+        "projection_ttk": 10.7936, "projection_tsurv": 6.5,
+        "projection_primary_pool": 190.0,
+        "projection_secondary_pool": 116.0,
+        "projection_secondary_count": 2,
+    }
+    ra_agent.ctx.combat_agg = _ra_agg(True, False)
+    ra_agent._flush_combat_agg()
+    _ra_sec_off_note = ra_agent.ctx.combat_notes[-1]
+    assert "RACE_POOL_SECONDARY_OBS" not in _ra_sec_off_note \
+        and "RACE_PROJ_CALIB_AUDIT" in _ra_sec_off_note, \
+        f"关闭分账观测后旧投影段漂移或尾缀残留: {_ra_sec_off_note}"
+    ra_agent.know.policy["race_pool_secondary_obs"] = True
 
     # POST 绝不能由 client 在 ConnectionDown 后透明重放：首个 POST 可能已经
     # 到达游戏，健康探针只能 GET，是否执行交给下一份 /state 做语义对账。
