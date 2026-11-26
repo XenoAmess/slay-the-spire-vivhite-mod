@@ -1,4 +1,4 @@
-# Deploy the STS2-Agent mod into the game mods folder.
+﻿# Deploy the STS2-Agent mod into the game mods folder.
 # -Source auto（默认）：我方 fork 克隆存在（third_party/STS2-Agent）时优先从其当前 checkout 构建
 #   （正常应为与上游对齐的 main，见 third_party/README.md）；否则回退到官方 release zip。
 # 注意：游戏运行时 dll 被锁定，部署会失败——请先关游戏再部署。
