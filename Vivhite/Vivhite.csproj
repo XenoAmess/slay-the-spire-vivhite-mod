@@ -33,9 +33,9 @@
              omit CopyModOnBuild. An explicit CopyModOnBuild value remains authoritative. -->
         <CopyModOnBuild Condition="'$(CopyModOnBuild)' == '' and ('$(RunPckExport)' == 'false' or '$(STS2_SKIP_PCK_EXPORT)' == '1')">false</CopyModOnBuild>
         <CopyModOnBuild Condition="'$(CopyModOnBuild)' == ''">true</CopyModOnBuild>
-        <!-- An offline/no-copy build must not let RitsuLib's transitive package target
-             update the live game independently of this Mod's CopyMod target. -->
-        <RitsuLibAutoCopy Condition="'$(CopyModOnBuild)' == 'false' and '$(RitsuLibAutoCopy)' == ''">false</RitsuLibAutoCopy>
+        <!-- The compile-time package can be older than the installed RitsuLib runtime.
+             Copy its runtime only when a caller explicitly requests dependency deployment. -->
+        <RitsuLibAutoCopy Condition="'$(RitsuLibAutoCopy)' == ''">false</RitsuLibAutoCopy>
         <IroncladSkinValidator>$(MSBuildProjectDirectory)\tools\Validate-IroncladSkin.ps1</IroncladSkinValidator>
         <IroncladSkinRuntimeLayout Condition="'$(IroncladSkinRuntimeLayout)' == ''">v3-five-page</IroncladSkinRuntimeLayout>
         <GodotPckExporter>$(MSBuildProjectDirectory)\tools\Export-ModPck.ps1</GodotPckExporter>

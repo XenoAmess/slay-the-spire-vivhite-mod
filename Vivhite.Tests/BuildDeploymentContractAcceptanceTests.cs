@@ -168,15 +168,24 @@ internal static class BuildDeploymentContractAcceptanceTests
         var defaultProperties = await ReadEvaluatedPropertiesAsync(
             root,
             projectPath,
-            ["RunPckExport", "CopyModOnBuild", "ModPckPath", "ModOutputDir"]);
+            ["RunPckExport", "CopyModOnBuild", "ModPckPath", "ModOutputDir", "RitsuLibAutoCopy"]);
         AcceptanceAssert.Equal("true", defaultProperties["RunPckExport"], "Normal builds must export PCK.");
         AcceptanceAssert.Equal("true", defaultProperties["CopyModOnBuild"], "Normal builds must publish one full batch.");
+        AcceptanceAssert.Equal("false", defaultProperties["RitsuLibAutoCopy"], "Normal builds must preserve the installed RitsuLib runtime.");
         AcceptanceAssert.True(
             !Path.EndsInDirectorySeparator(defaultProperties["ModOutputDir"]),
             "The default live Mod directory must not end in a separator because MSBuild Exec quotes it before later PowerShell arguments.");
         AcceptanceAssert.True(
             !IsPathInside(defaultProperties["ModPckPath"], defaultProperties["ModOutputDir"]),
             "The evaluated PCK candidate path must be outside the live Mod directory.");
+
+        var ritsuLibCopyEnabled = await ReadEvaluatedPropertiesAsync(
+            root,
+            projectPath,
+            ["CopyModOnBuild", "RitsuLibAutoCopy"],
+            "/p:RitsuLibAutoCopy=true");
+        AcceptanceAssert.Equal("true", ritsuLibCopyEnabled["CopyModOnBuild"], "Explicit dependency copying must preserve full Vivhite deployment.");
+        AcceptanceAssert.Equal("true", ritsuLibCopyEnabled["RitsuLibAutoCopy"], "Callers must still be able to explicitly deploy the RitsuLib package.");
 
         var copyDisabled = await ReadEvaluatedPropertiesAsync(
             root,
