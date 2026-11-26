@@ -14,7 +14,7 @@ Languages: [中文](README.md) | English
 
 `Vivhite` is a custom character mod for Slay the Spire 2. Vivhite is a magical girl and master magician with deep knowledge of mathematics, computing, and art. She treats health as material for magical calculation and fights through a “pay Cough to cast → heal through kills or Drain → keep casting” loop.
 
-This README describes the current `0.2.2` implementation. See [Vivhite Character and Alternating Brain Implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md) for the complete 61-card catalog and exact values. The current runtime-bitmap gate passes `92/92`: it extends the earlier `89/89` content baseline with three standalone VFX and has passed same-build atomic deployment and Vulkan in-game verification.
+This README describes the `0.2.3` implementation. The runtime bitmap checks cover all 92 assets, including three standalone VFX. The complete 61-card catalog and exact values are in the [Vivhite character and alternating Brain implementation](../docs/2026-08-30-白绮角色与轮换大脑实现.md).
 
 > **Scope.** This file is the development and installation guide for the `Vivhite/` Godot/.NET
 > mod subproject. Repository-wide training, review, lifecycle, and offline/live-stream safety
@@ -35,12 +35,12 @@ This README describes the current `0.2.2` implementation. See [Vivhite Character
 
 | Item | Verified value | Scope |
 |---|---|---|
-| Mod implementation | `0.2.2` | Current `Vivhite.json` and Workshop material |
-| Game | Slay the Spire 2 `v0.111.0` | Steam `public-beta` branch |
+| Mod implementation | `0.2.3` | Current `Vivhite.json` and Workshop material |
+| Game | Slay the Spire 2 `v0.111.1` | Steam stable in-game acceptance |
 | Renderer | Vulkan | Same-build in-game acceptance only |
 | Engine / SDK | Godot 4.5.1 Mono / `Godot.NET.Sdk` 4.5.1 | Build and PCK export |
 | Target framework | `.NET 9` / `net9.0` | C# assembly and acceptance executable |
-| RitsuLib | `0.5.14` | Compile-time and manifest dependency |
+| RitsuLib | `0.5.14` minimum, `0.6.16` tested | `0.111.0` compatibility package for the tested runtime |
 
 The images below are finished screenshots or Workshop artwork, not runtime atlas inputs. They are
 kept as evidence/materials and do not replace the Source/PCK/in-game gates.
@@ -83,8 +83,7 @@ Place all three artifacts in `<game directory>\mods\Vivhite\`:
 - `Vivhite.json`
 - `Vivhite.pck`
 
-Install the `STS2-RitsuLib` version declared by the manifest as well. The verified runtime
-baseline is STS2 `v0.111.0` on Steam's `public-beta` branch with Vulkan; use this Steam launch option:
+Install `STS2-RitsuLib` at or above the minimum declared in the manifest. The current in-game acceptance used Steam stable `v0.111.1`, the RitsuLib `0.6.16` package for `0.111.0`, and Vulkan. Use this Steam launch option.
 
 ```text
 %command% --rendering-driver vulkan
@@ -118,21 +117,22 @@ Set these values in `local.props` (the file is ignored by Git and must not be co
 >
 > `dependencies[STS2-RitsuLib].min_version` in `Vivhite.json` must match the RitsuLib NuGet version used by the `.csproj`. The build synchronizes that minimum in the candidate manifest. Review `min_game_version` manually.
 
-### Current version snapshot (2026-09-01)
+### Current version snapshot (2026-11-26)
 
 | Item | Value |
 |---|---|
-| Target game | Slay the Spire 2 `0.111.0` |
+| Game | Minimum `0.111.0`, tested on Steam stable `0.111.1` |
 | Engine / SDK | Godot 4.5.1 Mono / `Godot.NET.Sdk` 4.5.1 |
 | Target framework | `.NET 9` / `net9.0` |
 | RitsuLib | `0.5.14` |
-| Vivhite implementation | `0.2.2` |
+| Vivhite implementation | `0.2.3` |
 
 ### Version mapping
 
 | RitsuLib version | Target STS2 version | Project status |
 |---|---|---|
 | `0.5.14` | `0.111.0` | Current compile baseline |
+| `0.6.16` package for `0.111.0` | `0.111.1` | Steam stable Vulkan in-game acceptance |
 
 Before selecting another version, consult the [STS2-RitsuLib releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) and the matching game branch. Do not assume that old APIs or compatibility packages remain drop-in replacements.
 
@@ -388,7 +388,7 @@ exception; see [`AGENTS.md`](../AGENTS.md) for its exact paths and scope.
 
 ## Manifest Format
 
-`Vivhite.json` is the mod manifest. The key fields for the `0.2.2` implementation are:
+`Vivhite.json` is the mod manifest. The `0.2.3` implementation uses the following fields.
 
 ```json
 {
@@ -397,7 +397,7 @@ exception; see [`AGENTS.md`](../AGENTS.md) for its exact paths and scope.
   "pck_name": "Vivhite",
   "author": "VivhiteMod",
   "description": "Adds Vivhite, a magical-girl character with 61 cards, three builds, and uncapped health-magic loops.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "has_pck": true,
   "has_dll": true,
   "affects_gameplay": true,

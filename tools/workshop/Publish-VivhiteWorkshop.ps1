@@ -50,10 +50,12 @@ foreach ($required in @(
 
 $dotnetCommand = Get-Command dotnet -CommandType Application -ErrorAction SilentlyContinue
 $dotnetCandidates = @(
-    $(if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_ROOT)) { Join-Path $env:DOTNET_ROOT "dotnet.exe" }),
-    $(if ($null -ne $dotnetCommand) { $dotnetCommand.Source }),
-    (Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "Microsoft\dotnet\dotnet.exe")
-) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and [IO.File]::Exists($_) }
+    @(
+        $(if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_ROOT)) { Join-Path $env:DOTNET_ROOT "dotnet.exe" }),
+        $(if ($null -ne $dotnetCommand) { $dotnetCommand.Source }),
+        (Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "Microsoft\dotnet\dotnet.exe")
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and [IO.File]::Exists($_) }
+)
 if ($dotnetCandidates.Count -eq 0) { throw "A .NET 9 SDK dotnet.exe was not found." }
 $dotnetExe = [IO.Path]::GetFullPath($dotnetCandidates[0])
 $dotnetRoot = Split-Path -Parent $dotnetExe

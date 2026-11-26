@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 ITEM = ROOT / "workshop" / "workshop-item.json"
+MANIFEST = ROOT / "Vivhite" / "Vivhite.json"
 DESCRIPTION = ROOT / "workshop" / "description.bbcode"
 PREVIEW = ROOT / "workshop" / "preview.jpg"
 PREVIEW_SCRIPT = ROOT / "tools" / "workshop" / "New-VivhiteWorkshopPreview.ps1"
@@ -28,13 +29,15 @@ class WorkshopMaterialContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.item = json.loads(ITEM.read_text(encoding="utf-8"))
+        cls.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         cls.description = DESCRIPTION.read_text(encoding="utf-8")
         cls.preview_bytes = PREVIEW.read_bytes()
         cls.preview_hash = hashlib.sha256(cls.preview_bytes).hexdigest().upper()
 
     def test_metadata_and_preview_are_same_release(self) -> None:
         self.assertEqual(self.item["app_id"], 2868840)
-        self.assertEqual(self.item["version"], "0.2.2")
+        self.assertRegex(self.item["version"], r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+        self.assertEqual(self.item["version"], self.manifest["version"])
         preview = self.item["preview"]
         self.assertEqual(preview["version"], self.item["version"])
         self.assertEqual(preview["sha256"], self.preview_hash)
@@ -59,14 +62,23 @@ class WorkshopMaterialContractTests(unittest.TestCase):
             self.assertEqual(record["sha256"].lower(), match.group("sha"))
 
     def test_description_has_bilingual_current_version_and_changelog(self) -> None:
+        version = self.item["version"]
         self.assertLessEqual(len(self.description.encode("utf-8")), 8000)
-        self.assertEqual(
-            len(re.findall(r"\[h2\](?:更新日志\s*/\s*Changelog|Changelog\s*/\s*更新日志)\[/h2\]", self.description)),
-            2,
+        sections = re.findall(
+            r"\[h2\](?:更新日志\s*/\s*Changelog|Changelog\s*/\s*更新日志)\[/h2\].*?(?=\[h1\]|\Z)",
+            self.description,
+            flags=re.DOTALL | re.IGNORECASE,
         )
-        self.assertEqual(len(re.findall(r"\[h3\]\s*0\.2\.2(?:\s|[（(])", self.description)), 2)
-        self.assertEqual(re.findall(r"\[b\]当前版本：\[/b\]\s*([^\s\[]+)", self.description), ["0.2.2"])
-        self.assertEqual(re.findall(r"\[b\]Version:\[/b\]\s*([^\s\[]+)", self.description), ["0.2.2"])
+        self.assertEqual(len(sections), 2)
+        for section in sections:
+            self.assertRegex(section, rf"\[h3\]\s*{re.escape(version)}(?:\s|[（(])")
+            self.assertEqual(len(re.findall(r"^\[\*\]", section, re.MULTILINE)), 4)
+        self.assertEqual(
+            re.findall(r"\[b\]当前版本：\[/b\]\s*([^\s\[]+)", self.description), [version]
+        )
+        self.assertEqual(
+            re.findall(r"\[b\]Version:\[/b\]\s*([^\s\[]+)", self.description), [version]
+        )
         for term in ("钨合金棍", "Buffer", "事件循环", "public-beta", "Vulkan", "OpenGL3", "D3D12"):
             self.assertIn(term, self.description)
         for term in ("Tungsten Rod", "Event Loop"):
@@ -115,7 +127,7 @@ class WorkshopMaterialContractTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertTrue(output.exists())
             self.assertLess(output.stat().st_size, 1_000_000)
-            self.assertIn("Version                : 0.2.2", result.stdout)
+            self.assertIn(f"Version                : {self.item['version']}", result.stdout)
 
 
 if __name__ == "__main__":

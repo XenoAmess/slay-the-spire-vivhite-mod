@@ -14,7 +14,7 @@
 
 `Vivhite` 是《杀戮尖塔 2》的白绮角色 Mod。白绮是一位精通数学、计算机与艺术的魔法少女、魔法大师；她以生命作为魔法演算材料，通过“支付謦欬施法 → 击杀或汲取回血 → 继续施法”建立战斗循环。
 
-本文描述当前 `0.2.2` 角色实现。完整 61 张卡牌目录与逐牌数值见[《白绮角色与轮换大脑实现》](../docs/2026-08-30-白绮角色与轮换大脑实现.md)。当前运行时位图门禁为 `92/92`：它在既有 `89/89` 内容位图基线上纳入了 3 张独立 VFX，并已完成同批三件套原子部署与 Vulkan 实机验证。
+本文描述当前 `0.2.3` 角色实现。运行时位图验收覆盖 `92/92` 项，包括 3 张独立 VFX。完整 61 张卡牌目录与逐牌数值见[白绮角色与轮换大脑实现](../docs/2026-08-30-白绮角色与轮换大脑实现.md)。
 
 **角色概要：**
 
@@ -61,8 +61,7 @@
 - `Vivhite.json`
 - `Vivhite.pck`
 
-同时安装 manifest 指定版本的 `STS2-RitsuLib`。当前已验证的运行基线是 Steam
-`public-beta` 分支上的 STS2 `v0.111.0`，并使用 Vulkan；Steam 启动项为：
+同时安装满足 manifest 最低版本的 `STS2-RitsuLib`。当前正式版实机验收使用 Steam `v0.111.1`、RitsuLib `0.6.16` 的 `0.111.0` 兼容包和 Vulkan。Steam 启动项如下。
 
 ```text
 %command% --rendering-driver vulkan
@@ -95,21 +94,22 @@ Copy-Item .\local.props.template .\local.props
 >
 > `Vivhite.json` 中 `dependencies[STS2-RitsuLib].min_version` 必须与 `.csproj` 实际编译使用的 RitsuLib NuGet 版本一致。构建会同步候选清单中的依赖最低版本，`min_game_version` 仍需人工确认。
 
-### 当前版本快照（2026-09-01）
+### 当前版本快照（2026-11-26）
 
 | 项 | 值 |
 |---|---|
-| 目标游戏版本 | Slay the Spire 2 `0.111.0` |
+| 游戏版本 | 最低 `0.111.0`，正式版实测 `0.111.1` |
 | 引擎 / SDK | Godot 4.5.1 Mono / `Godot.NET.Sdk` 4.5.1 |
 | 目标框架 | `.NET 9` / `net9.0` |
 | RitsuLib | `0.5.14` |
-| 白绮实现版本 | `0.2.2` |
+| 白绮实现版本 | `0.2.3` |
 
 ### 版本对应表
 
 | RitsuLib 版本 | 目标 STS2 版本 | 本项目状态 |
 |---|---|---|
 | `0.5.14` | `0.111.0` | 当前编译基线 |
+| `0.6.16` 的 `0.111.0` 兼容包 | `0.111.1` | 正式版 Vulkan 实机验收 |
 
 切换其他版本前请先核对 [STS2-RitsuLib Releases](https://github.com/BAKAOLC/STS2-RitsuLib/releases) 与对应游戏分支；不要假设旧 API 或旧兼容包仍可直接使用。
 
@@ -339,7 +339,7 @@ GAME OVER 阶段由 MCP 暴露真实的 `continue_game_over` 动作。Brain 先�
 
 ## Manifest 格式
 
-`Vivhite.json` 是 Mod 清单。`0.2.2` 实现对应的关键字段为：
+`Vivhite.json` 是 Mod 清单。`0.2.3` 使用以下字段。
 
 ```json
 {
@@ -348,7 +348,7 @@ GAME OVER 阶段由 MCP 暴露真实的 `continue_game_over` 动作。Brain 先�
   "pck_name": "Vivhite",
   "author": "VivhiteMod",
   "description": "新增魔法少女角色白绮：61 张专属卡牌、三套构筑与无上限生命魔法循环。",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "has_pck": true,
   "has_dll": true,
   "affects_gameplay": true,

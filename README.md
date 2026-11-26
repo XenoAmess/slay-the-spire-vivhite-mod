@@ -24,11 +24,11 @@
 
 | 项目 | 基线 |
 | --- | --- |
-| 游戏 | Slay the Spire 2 v0.111.0，Steam public-beta |
+| 游戏 | 白绮实机验收使用 Steam 正式版 v0.111.1，最低版本 v0.111.0 |
 | 渲染 | Vulkan（%command% --rendering-driver vulkan；本机 launch_vulkan.bat） |
 | 引擎 / SDK | Godot 4.5.1 Mono · .NET 9 (net9.0) |
-| 基础库 | STS2-RitsuLib 0.5.14 |
-| Mod | ID Vivhite · 版本 0.2.2 · has_dll=true · has_pck=true |
+| 基础库 | STS2-RitsuLib 最低 0.5.14，正式版实测 0.6.16 的 0.111.0 兼容包 |
+| Mod | ID Vivhite · 版本 0.2.3 · has_dll=true · has_pck=true |
 | 内容 | 61 张专属卡牌（3 基础、18 普通、24 罕见、16 稀有）；孤高冠冕初始遗物 |
 | 运行时美术 | 92/92 位图清单；V3 五页角色皮肤与独立 VFX 已完成静态/PCK/实机门禁（见 [离线验收记录](docs/2026-08-28-白绮Hybrid-V3五页总装与离线验收.md) 与 [部署实机记录](docs/2026-08-31-白绮全量部署与实机恢复验证.md)） |
 | Workshop | App 2868840 · 条目 3793741497 · public · 依赖 RitsuLib 条目 3747602295 |
@@ -257,4 +257,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\workshop\Publish-Viv
 
 ## English quick summary
 
-This repository contains the Vivhite custom character for Slay the Spire 2, the sts2-ascend autonomous training stack, and the audited art/build/Workshop toolchain. The verified baseline is STS2 v0.111.0 on Steam public-beta with Vulkan, Godot 4.5.1 Mono, .NET 9, RitsuLib 0.5.14, and Vivhite 0.2.2. Start or stop training only through sts2-ascend/scripts/Start-Agent.ps1 and Stop-Agent.ps1; streaming is a separate explicitly authorized operation and is currently kept offline. See [Vivhite/README.en.md](Vivhite/README.en.md) for the English project guide.
+This repository contains the Vivhite custom character for Slay the Spire 2, the sts2-ascend autonomous training stack, and the art, build, and Workshop toolchain. Vivhite 0.2.3 was verified on Steam stable v0.111.1 with Vulkan and the RitsuLib 0.6.16 compatibility package. The manifest requires game v0.111.0 or newer and RitsuLib 0.5.14 or newer. Use `sts2-ascend/scripts/Start-Agent.ps1` and `Stop-Agent.ps1` to control training. Streaming requires separate authorization. [English project guide](Vivhite/README.en.md)
