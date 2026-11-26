@@ -93,7 +93,7 @@ Copy-Item .\local.props.template .\local.props
 
 > **发布前必须校对 manifest 与 csproj 的版本。**
 >
-> `Vivhite.json` 中 `dependencies[STS2-RitsuLib].version` 必须与 `.csproj` 实际编译使用的 `STS2.RitsuLib` 版本一致。构建会同步该依赖版本；`min_game_version` 仍需人工确认。
+> `Vivhite.json` 中 `dependencies[STS2-RitsuLib].min_version` 必须与 `.csproj` 实际编译使用的 RitsuLib NuGet 版本一致。构建会同步候选清单中的依赖最低版本，`min_game_version` 仍需人工确认。
 
 ### 当前版本快照（2026-09-01）
 
@@ -123,9 +123,11 @@ Copy-Item .\local.props.template .\local.props
 
 一次只能启用一个 RitsuLib 主线或兼容包。切换包时必须同时复核游戏版本、公开 API、manifest 依赖版本和真机加载结果。
 
+默认构建只部署白绮三件套。明确需要部署 NuGet 锁定的 RitsuLib 时，传入 `/p:RitsuLibAutoCopy=true`。
+
 ### 发布前 checklist：版本对齐
 
-1. 构建后确认 `Vivhite.json` 的 `dependencies[STS2-RitsuLib].version` 与实际解析的 NuGet 版本一致。
+1. 构建后确认候选 `Vivhite.json` 的 `dependencies[STS2-RitsuLib].min_version` 与实际解析的 NuGet 版本一致。
 2. 确认 `min_game_version` 与目标游戏分支一致。
 3. 确认 dll、json、pck 三件套被部署到同一 `mods/Vivhite` 目录。
 4. 使用已验证的 Vulkan 启动，并以实际加载日志确认依赖和 Mod 均被识别；若改用
@@ -352,7 +354,7 @@ GAME OVER 阶段由 MCP 暴露真实的 `continue_game_over` 动作。Brain 先�
   "affects_gameplay": true,
   "min_game_version": "0.111.0",
   "dependencies": [
-    { "id": "STS2-RitsuLib", "version": "0.5.14" }
+    { "id": "STS2-RitsuLib", "min_version": "0.5.14" }
   ]
 }
 ```

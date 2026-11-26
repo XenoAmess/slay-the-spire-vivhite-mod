@@ -272,9 +272,13 @@ if ($manifest.id -ne "Vivhite" -or $manifest.version -ne [string]$config.version
     $manifest.min_game_version -ne "0.111.0" -or -not $manifest.has_dll -or -not $manifest.has_pck) {
     throw "The staged manifest does not match the Workshop release contract."
 }
-$dependency = @($manifest.dependencies | Where-Object { $_.id -eq "STS2-RitsuLib" })
-if ($dependency.Count -ne 1 -or $dependency[0].version -ne "0.5.14") {
-    throw "The staged manifest must require exactly STS2-RitsuLib 0.5.14."
+$dependency = @($manifest.dependencies | Where-Object {
+    $_ -is [pscustomobject] -and $_.PSObject.Properties.Name -ccontains "id" -and
+        $_.id -is [string] -and $_.id -ceq "STS2-RitsuLib"
+})
+if ($dependency.Count -ne 1 -or $dependency[0].PSObject.Properties.Name -cnotcontains "min_version" -or
+    $dependency[0].min_version -isnot [string] -or $dependency[0].min_version -cne "0.5.14") {
+    throw "The staged manifest must declare STS2-RitsuLib with min_version 0.5.14."
 }
 $triplet = @(Get-ChildItem -LiteralPath $contentDir -File | Sort-Object Name)
 if ($triplet.Count -ne 3 -or @(Get-ChildItem -LiteralPath $contentDir -Directory).Count -ne 0) {
@@ -288,7 +292,7 @@ $preflight = [ordered]@{
     version = [string]$manifest.version
     min_game_version = [string]$manifest.min_game_version
     dependency_id = [string]$config.dependency_id
-    dependency_version = [string]$dependency[0].version
+    dependency_version = [string]$dependency[0].min_version
     visibility = $Visibility
     preview = $previewEvidence
     changelog = [ordered]@{

@@ -807,22 +807,27 @@ try {
     [IO.File]::Move($temporaryPckPath, $outputFullPath)
 
     Invoke-InjectedFailure "ManifestSync"
-    $manifestText = [IO.File]::ReadAllText($manifestFullPath)
-    $versionPattern = '(?s)"id"\s*:\s*"STS2-RitsuLib".*?"version"\s*:\s*"(?<version>[^"]+)"'
-    $versionMatches = [Text.RegularExpressions.Regex]::Matches($manifestText, $versionPattern)
-    if ($versionMatches.Count -ne 1) {
-        throw "Expected exactly one dependencies[STS2-RitsuLib].version entry in '$manifestFullPath'; found $($versionMatches.Count)."
-    }
-    $versionGroup = $versionMatches[0].Groups["version"]
-    $candidateManifest = $manifestText.Substring(0, $versionGroup.Index) +
-        $RitsuLibVersion +
-        $manifestText.Substring($versionGroup.Index + $versionGroup.Length)
     try {
-        $null = $candidateManifest | ConvertFrom-Json -ErrorAction Stop
+        $manifest = [IO.File]::ReadAllText($manifestFullPath, [Text.UTF8Encoding]::new($false, $true)) |
+            ConvertFrom-Json -ErrorAction Stop
     }
     catch {
-        throw "The synchronized candidate manifest is invalid JSON: $($_.Exception.Message)"
+        throw "The Vivhite source manifest is invalid JSON: $($_.Exception.Message)"
     }
+    if ($manifest -isnot [pscustomobject] -or $manifest.PSObject.Properties.Name -cnotcontains "dependencies" -or
+        $manifest.dependencies -isnot [array]) {
+        throw "The Vivhite source manifest must contain a dependencies array: $manifestFullPath"
+    }
+    $ritsuDependencies = @($manifest.dependencies | Where-Object {
+        $_ -is [pscustomobject] -and $_.PSObject.Properties.Name -ccontains "id" -and
+            $_.id -is [string] -and $_.id -ceq "STS2-RitsuLib"
+    })
+    if ($ritsuDependencies.Count -ne 1 -or $ritsuDependencies[0].PSObject.Properties.Name -cnotcontains "min_version" -or
+        $ritsuDependencies[0].min_version -isnot [string] -or [string]::IsNullOrWhiteSpace($ritsuDependencies[0].min_version)) {
+        throw "Expected exactly one dependencies[STS2-RitsuLib].min_version entry in '$manifestFullPath'."
+    }
+    $ritsuDependencies[0].min_version = $RitsuLibVersion
+    $candidateManifest = $manifest | ConvertTo-Json -Depth 100
 
     Invoke-InjectedFailure "CandidateJson"
     [IO.File]::WriteAllText($candidateJsonPath, $candidateManifest, [Text.UTF8Encoding]::new($false))

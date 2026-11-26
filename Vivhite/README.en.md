@@ -116,7 +116,7 @@ Set these values in `local.props` (the file is ignored by Git and must not be co
 
 > **Align the manifest and csproj before every release.**
 >
-> `dependencies[STS2-RitsuLib].version` in `Vivhite.json` must match the `STS2.RitsuLib` version actually used by the `.csproj`. The build synchronizes that dependency version, while `min_game_version` still requires manual review.
+> `dependencies[STS2-RitsuLib].min_version` in `Vivhite.json` must match the RitsuLib NuGet version used by the `.csproj`. The build synchronizes that minimum in the candidate manifest. Review `min_game_version` manually.
 
 ### Current version snapshot (2026-09-01)
 
@@ -146,9 +146,11 @@ The project pins the current mainline package:
 
 Enable only one mainline or compatibility package at a time. When switching packages, recheck the game version, public APIs, manifest dependency, and in-game loading behavior.
 
+A normal build deploys the Vivhite batch. To deploy the pinned RitsuLib runtime explicitly, pass `/p:RitsuLibAutoCopy=true`.
+
 ### Pre-release checklist: version alignment
 
-1. After building, confirm that `dependencies[STS2-RitsuLib].version` in `Vivhite.json` matches the resolved NuGet version.
+1. After building, confirm that `dependencies[STS2-RitsuLib].min_version` in the candidate `Vivhite.json` matches the resolved NuGet version.
 2. Confirm that `min_game_version` matches the target game branch.
 3. Confirm that the DLL, JSON, and PCK are deployed to the same `mods/Vivhite` directory.
 4. Launch with the verified Vulkan path and use the actual game log to confirm that both the
@@ -401,7 +403,7 @@ exception; see [`AGENTS.md`](../AGENTS.md) for its exact paths and scope.
   "affects_gameplay": true,
   "min_game_version": "0.111.0",
   "dependencies": [
-    { "id": "STS2-RitsuLib", "version": "0.5.14" }
+    { "id": "STS2-RitsuLib", "min_version": "0.5.14" }
   ]
 }
 ```
@@ -416,7 +418,7 @@ exception; see [`AGENTS.md`](../AGENTS.md) for its exact paths and scope.
 | `has_pck` / `has_dll` | This mod distributes both resources and a code assembly |
 | `affects_gameplay` | Must be `true` because Vivhite adds independent gameplay content |
 | `min_game_version` | Minimum compatible STS2 version; keep it aligned with the compile target |
-| `dependencies` | Runtime dependencies; the RitsuLib version must match the NuGet compile version |
+| `dependencies` | Runtime dependencies. The RitsuLib minimum must match the NuGet compile version. |
 
 ## Development Tips
 

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using MegaCrit.Sts2.Core.Modding;
 using Vivhite.Tests.Acceptance;
 
 namespace Vivhite.Tests;
@@ -11,6 +12,26 @@ namespace Vivhite.Tests;
 internal static class BuildDeploymentContractAcceptanceTests
 {
     private static readonly string[] TripletNames = ["Vivhite.dll", "Vivhite.pck", "Vivhite.json"];
+
+    public static void SourceManifestDeclaresNativeDependencyMinimum(RepositorySnapshot repository)
+    {
+        var projectDirectory = Path.Combine(repository.RootDirectory, "Vivhite");
+        var project = XDocument.Load(Path.Combine(projectDirectory, "Vivhite.csproj"));
+        var package = project.Descendants("PackageReference")
+            .Single(reference => ((string?)reference.Attribute("Include"))?.StartsWith("STS2.RitsuLib", StringComparison.Ordinal) == true);
+        var packageVersion = (string?)package.Attribute("Version") ?? throw new InvalidOperationException("Missing RitsuLib package version.");
+
+        AssertNativeDependencyMinimum(Path.Combine(projectDirectory, "Vivhite.json"), packageVersion);
+    }
+
+    private static void AssertNativeDependencyMinimum(string manifestPath, string expectedVersion)
+    {
+        using var stream = File.OpenRead(manifestPath);
+        var manifest = ModManifest.ReadFromStream(stream, out var errors);
+        AcceptanceAssert.True(manifest is not null && (errors is null || errors.Count == 0), "The native game parser must accept the object-style mod manifest.");
+        var dependency = manifest!.dependencies!.Single(entry => entry.id == "STS2-RitsuLib");
+        AcceptanceAssert.Equal(expectedVersion, dependency.minVersion ?? string.Empty, "The native game parser must see the RitsuLib minimum version.");
+    }
 
     public static async Task RejectsSplitDeploymentAndPreservesSafeBuilds(RepositorySnapshot repository)
     {
@@ -315,8 +336,10 @@ internal static class BuildDeploymentContractAcceptanceTests
             {
               "id": "Vivhite",
               "batch_marker": "B-JSON-CONTENT",
+              "version": "2.3.4",
               "dependencies": [
-                { "id": "STS2-RitsuLib", "version": "OLD-VERSION" }
+                { "min_version": "1.2.3", "id": "STS2-RitsuLib" },
+                { "id": "UnrelatedDependency", "min_version": "4.5.6" }
               ]
             }
             """,
@@ -356,6 +379,39 @@ internal static class BuildDeploymentContractAcceptanceTests
             exit 0
             """,
             new UTF8Encoding(false));
+
+        var invalidManifestPath = Path.Combine(inputs, "legacy", "Vivhite.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(invalidManifestPath)!);
+        File.WriteAllText(
+            invalidManifestPath,
+            """
+            {
+              "id": "Vivhite",
+              "dependencies": [
+                { "id": "STS2-RitsuLib", "version": "1.2.3" },
+                { "id": "UnrelatedDependency", "min_version": "4.5.6" }
+              ]
+            }
+            """,
+            new UTF8Encoding(false));
+        var invalidManifestOriginal = InstallBatchA(live);
+        var invalidManifestCandidate = Path.Combine(harnessRoot, "candidates", "legacy-manifest", "Vivhite.pck");
+        var invalidManifestResult = await RunPublisherAsync(
+            root,
+            exportScriptPath,
+            fakeGodot,
+            fakeProject,
+            validator,
+            assemblyPath,
+            invalidManifestPath,
+            invalidManifestCandidate,
+            live,
+            failurePoint: string.Empty);
+        AcceptanceAssert.True(
+            invalidManifestResult.ExitCode != 0 && invalidManifestResult.Output.Contains("dependencies[STS2-RitsuLib].min_version", StringComparison.Ordinal),
+            $"A legacy dependency version must be rejected before publishing.{Environment.NewLine}{invalidManifestResult.Output}");
+        AssertSnapshot(live, invalidManifestOriginal, "Invalid manifest original live batch");
+        AssertNoTransactionResidue(liveParent, "Vivhite", "invalid manifest");
 
         var failurePoints = new[]
         {
@@ -460,12 +516,17 @@ internal static class BuildDeploymentContractAcceptanceTests
         AcceptanceAssert.True(
             File.ReadAllText(Path.Combine(live, "Vivhite.pck"), Encoding.UTF8).Contains("B-PCK-CONTENT", StringComparison.Ordinal),
             "Live PCK must be batch B.");
-        var liveManifest = File.ReadAllText(Path.Combine(live, "Vivhite.json"), Encoding.UTF8);
+        var liveManifestPath = Path.Combine(live, "Vivhite.json");
+        var liveManifest = File.ReadAllText(liveManifestPath, Encoding.UTF8);
         AcceptanceAssert.True(liveManifest.Contains("B-JSON-CONTENT", StringComparison.Ordinal), "Live JSON must be batch B.");
-        AcceptanceAssert.True(liveManifest.Contains("\"version\": \"9.9.9\"", StringComparison.Ordinal), "Live JSON must use the synchronized dependency version.");
-        AcceptanceAssert.True(
-            File.ReadAllText(manifestPath, Encoding.UTF8).Contains("OLD-VERSION", StringComparison.Ordinal),
-            "Candidate synchronization must not rewrite the source manifest.");
+        AssertNativeDependencyMinimum(liveManifestPath, "9.9.9");
+        using var liveManifestDocument = JsonDocument.Parse(liveManifest);
+        var liveManifestRoot = liveManifestDocument.RootElement;
+        AcceptanceAssert.Equal("2.3.4", liveManifestRoot.GetProperty("version").GetString()!, "Candidate synchronization must preserve the mod's own version.");
+        var unrelatedDependency = liveManifestRoot.GetProperty("dependencies").EnumerateArray()
+            .Single(entry => entry.GetProperty("id").GetString() == "UnrelatedDependency");
+        AcceptanceAssert.Equal("4.5.6", unrelatedDependency.GetProperty("min_version").GetString()!, "Candidate synchronization must preserve other dependencies.");
+        AssertNativeDependencyMinimum(manifestPath, "1.2.3");
         AcceptanceAssert.True(!Directory.Exists(Path.GetDirectoryName(successCandidate)), "Success must clean the non-live candidate directory.");
         AssertNoTransactionResidue(liveParent, "Vivhite", "successful B commit");
         AssertNoQuarantineResidue(liveParent, "Vivhite", "successful B commit");
@@ -923,7 +984,7 @@ internal static class BuildDeploymentContractAcceptanceTests
               "id": "Vivhite",
               "batch_marker": "{{marker}}-JSON-CONTENT",
               "dependencies": [
-                { "id": "STS2-RitsuLib", "version": "OLD-VERSION" }
+                { "id": "STS2-RitsuLib", "min_version": "1.2.3" }
               ]
             }
             """,

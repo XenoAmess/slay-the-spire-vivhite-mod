@@ -64,7 +64,7 @@ workshop/.runtime/content/Vivhite/
 ```
 
 打包 manifest 还必须声明 `id=Vivhite`、`min_game_version=0.111.0`、`has_dll=true`、
-`has_pck=true`，并且恰好依赖 `STS2-RitsuLib` `0.5.14`。发布脚本在上传前会重新读取元数据，
+`has_pck=true`，且 `STS2-RitsuLib` 的 `min_version` 为 `0.5.14`。发布脚本在上传前会重新读取元数据，
 所以仅修改旧的 preflight 或 `.runtime` 文件不能改变实际发布版本。
 
 ## 标准发布流程

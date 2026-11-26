@@ -63,7 +63,7 @@ dotnet build /p:RunPckExport=false      # 仅编译 dll（跳过 Godot 打包，
 ```
 
 - 首次 PCK 导出若 Godot 未导入过项目会较慢；可用 `godot --headless --path <proj> --import` 预热。
-- manifest `Vivhite.json` 的 `dependencies[STS2-RitsuLib].version` 由构建自动同步为 NuGet 实际版本。
+- 构建将候选 manifest `Vivhite.json` 的 `dependencies[STS2-RitsuLib].min_version` 同步为 NuGet 实际版本。游戏以此校验最低依赖版本。
 
 ## 真机测试工具链
 

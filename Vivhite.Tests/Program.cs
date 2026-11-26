@@ -88,6 +88,7 @@ internal static class Program
             new("exact 92-file runtime art inventory", RuntimeArtInventoryAcceptanceTests.CoversExactNinetyTwoRuntimeAssets),
             new("no retired runtime placeholders or PNG orphans", RuntimeArtInventoryAcceptanceTests.HasNoRetiredRuntimePlaceholdersOrPngOrphans),
             new("eye-lens glint keeps A=254 and A=255 distinct", RuntimeArtInventoryAcceptanceTests.EyeLensGlintKeepsTransparentAlphaClassesDistinct),
+            new("game parses the RitsuLib manifest minimum version", BuildDeploymentContractAcceptanceTests.SourceManifestDeclaresNativeDependencyMinimum),
             new("PCK deployment contract rejects split builds and preserves full triplet flow", BuildDeploymentContractAcceptanceTests.RejectsSplitDeploymentAndPreservesSafeBuilds)
         ];
 
